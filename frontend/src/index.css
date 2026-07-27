@@ -1,0 +1,4 @@
+/* Tailwind v4 : configuration en CSS, plus de tailwind.config.js.
+   Le thème se personnalise ici via `@theme { ... }`, et le scan des classes est
+   automatique — plus de tableau `content` à tenir à jour. */
+@import 'tailwindcss';

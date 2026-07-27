@@ -1,0 +1,19 @@
+# Secrets / environnement local
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Tests / couverture
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Outils
+.ruff_cache/
+.mypy_cache/

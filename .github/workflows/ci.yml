@@ -1,0 +1,125 @@
+name: CI
+
+# Déclenchement conforme à CONTRIBUTING.md §8 : le pipeline garde la branche
+# d'intégration. Le merge est bloqué si une seule étape échoue.
+on:
+  pull_request:
+    branches: [develop]
+
+# Annule les exécutions obsolètes quand une PR reçoit un nouveau push.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (lint, migration, tests)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: delta_user
+          POSTGRES_PASSWORD: delta_dev_pwd
+          POSTGRES_DB: delta
+        ports:
+          # 5433 côté hôte, comme docker-compose.yml : la chaîne de connexion
+          # est ainsi identique en local et en CI.
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U delta_user -d delta"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # `Settings` valide l'intégralité du .env : les clés POSTGRES_* sont
+      # déclarées dans le modèle, leur absence ferait échouer l'import de
+      # `app.core.config` avant même le premier test.
+      DATABASE_URL: postgresql+psycopg2://delta_user:delta_dev_pwd@localhost:5433/delta
+      POSTGRES_USER: delta_user
+      POSTGRES_PASSWORD: delta_dev_pwd
+      POSTGRES_DB: delta
+      SECRET_KEY: cle_de_test_ci_sans_valeur_en_production
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      API_V1_PREFIX: /api/v1
+      PROJECT_NAME: Delta
+      BACKEND_CORS_ORIGINS: http://localhost:5173
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+
+      - name: Installer les dépendances
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: ruff check app tests alembic
+
+      - name: Format (black --check)
+        run: black --check app tests alembic
+
+      - name: Appliquer la migration sur une base vierge
+        # Vérifie que la migration de base s'applique réellement sur PostgreSQL,
+        # ce qu'aucun test unitaire ne couvre : ils tournent sur SQLite.
+        run: alembic upgrade head
+
+      - name: Vérifier l'absence de dérive modèles / migrations
+        # Échoue si un modèle a changé sans migration correspondante.
+        run: alembic check
+
+      - name: Tests (pytest)
+        run: pytest -q
+
+  frontend:
+    name: Frontend (lint, tests, build)
+    runs-on: ubuntu-latest
+
+    env:
+      # frontend/.env n'est pas versionné : sans cette variable, l'import de
+      # `lib/axiosClient.ts` lève au chargement et toute la suite de tests
+      # échoue.
+      VITE_API_URL: http://localhost:8000/api/v1
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Lint (eslint)
+        run: npm run lint
+
+      - name: Format (prettier --check)
+        run: npm run format:check
+
+      - name: Typage (tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Tests (vitest)
+        run: npm run test
+
+      - name: Build
+        run: npm run build
