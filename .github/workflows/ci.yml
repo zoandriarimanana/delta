@@ -102,7 +102,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          # Node 24 (npm 11), la version de developpement. Node 22 embarque
+          # npm 10, dont le resolveur juge incomplet un lockfile ecrit par
+          # npm 11 : `npm ci` echoue alors sur des dependances optionnelles
+          # absentes. Aligner CI et poste de travail supprime cet ecart.
+          node-version: '24'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
