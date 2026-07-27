@@ -14,8 +14,9 @@ soit repenser le découpage.
 ## Base de données locale (Docker)
 
 Le `docker-compose.yml` à la racine fournit un PostgreSQL 16 de développement,
-exposé sur `localhost:5432` — l'adresse attendue par le `DATABASE_URL` de
-`backend/.env.example`.
+exposé sur **`localhost:5433`** — l'adresse attendue par le `DATABASE_URL` de
+`backend/.env.example`. Le port 5433 et non 5432 : un PostgreSQL installé sur la
+machine occupe généralement 5432, et il n'a pas à être arrêté pour Delta.
 
 ```bash
 docker compose up -d --wait   # démarre postgres et attend qu'il soit prêt
@@ -28,12 +29,19 @@ Le `--wait` s'appuie sur le healthcheck `pg_isready` du service : la commande ne
 rend la main qu'une fois la base réellement en état d'accepter des connexions,
 ce qui évite un `alembic upgrade head` lancé trop tôt.
 
-Utilisateur, base et port sont alignés sur `backend/.env.example`
-(`delta_user` / `delta` / `5432`). Le mot de passe, lui, y est volontairement
-laissé en `change_me` : le compose utilise par défaut `delta_dev_pwd`, qui doit
-correspondre à celui du `backend/.env` local. Les trois variables
-`POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` sont surchargeables depuis
-l'environnement du shell.
+Le compose lit ses identifiants dans `backend/.env` via `env_file` : les clés
+`POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` y vivent à côté de
+`DATABASE_URL`, et doivent rester cohérentes avec lui — c'est la même base. Aucune
+valeur par défaut n'est codée dans le compose : si une clé manque, le conteneur
+échoue bruyamment au lieu de démarrer avec des identifiants inventés.
+
+Avant tout démarrage, copier le gabarit : `cp backend/.env.example backend/.env`.
+
+Ces trois clés sont déclarées dans `Settings` (`core/config.py`) bien que
+l'application ne les utilise pas — elle passe exclusivement par `DATABASE_URL`.
+C'est volontaire : le `.env` reste ainsi intégralement validé, et une clé mal
+orthographiée échoue au démarrage de l'API avec un message clair plutôt que
+silencieusement au `docker compose up`.
 
 ## Backend — arborescence
 
