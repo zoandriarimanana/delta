@@ -1,10 +1,15 @@
 name: CI
 
-# Déclenchement conforme à CONTRIBUTING.md §8 : le pipeline garde la branche
-# d'intégration. Le merge est bloqué si une seule étape échoue.
+# Déclenchement : les deux branches durables. `main` doit y figurer, sinon une
+# PR vers `main` n'obtiendrait jamais les checks exigés par la protection de
+# branche et resterait bloquee indefiniment en « Waiting for status ».
+# Le `push` donne en plus une verification apres merge, la ou seule la PR etait
+# controlee jusqu'ici.
 on:
   pull_request:
-    branches: [develop]
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
 
 # Annule les exécutions obsolètes quand une PR reçoit un nouveau push.
 concurrency:
