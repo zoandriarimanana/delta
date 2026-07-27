@@ -24,14 +24,22 @@ def client_http() -> TestClient:
 
 
 def test_routes_montees_sous_le_prefixe_d_api() -> None:
-    """Seul `auth_router` est monté à ce stade, sous le préfixe configuré.
+    """Toutes les routes exposées, sous le préfixe configuré, et rien d'autre.
 
     Le schéma OpenAPI sert de source : c'est le contrat public de l'API, et il
     ne dépend pas de la façon dont FastAPI structure `app.routes` en interne.
+    Ce test échoue dès qu'un endpoint est ajouté sans être acté ici — y compris
+    un endpoint exposé par mégarde.
     """
+    prefixe = settings.API_V1_PREFIX
+
     assert set(app.openapi()["paths"]) == {
-        f"{settings.API_V1_PREFIX}/auth/inscription",
-        f"{settings.API_V1_PREFIX}/auth/connexion",
+        f"{prefixe}/auth/inscription",
+        f"{prefixe}/auth/connexion",
+        f"{prefixe}/categories-produit",
+        f"{prefixe}/categories-produit/{{id_categorie}}",
+        f"{prefixe}/produits",
+        f"{prefixe}/produits/{{id_produit}}",
     }
 
 

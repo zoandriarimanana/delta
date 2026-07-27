@@ -17,9 +17,10 @@ from app.core.exceptions import (
     AuthentificationInvalide,
     ConflitMetier,
     ErreurMetier,
+    ReferenceInvalide,
     RessourceIntrouvable,
 )
-from app.routers import auth_router
+from app.routers import auth_router, categorie_produit_router, produit_router
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -65,6 +66,20 @@ async def _gerer_ressource_introuvable(
     )
 
 
+@app.exception_handler(ReferenceInvalide)
+async def _gerer_reference_invalide(
+    request: Request, exc: ReferenceInvalide
+) -> JSONResponse:
+    """Clé étrangère du corps ne désignant rien → 422, jamais 404.
+
+    L'URL est valide, c'est le contenu envoyé qui ne l'est pas — au même titre
+    qu'un prix négatif. Voir `docs/architecture.md`.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, content={"detail": str(exc)}
+    )
+
+
 @app.exception_handler(ErreurMetier)
 async def _gerer_erreur_metier(request: Request, exc: ErreurMetier) -> JSONResponse:
     """Filet pour toute erreur métier sans traduction dédiée → 400.
@@ -79,3 +94,5 @@ async def _gerer_erreur_metier(request: Request, exc: ErreurMetier) -> JSONRespo
 
 
 app.include_router(auth_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(categorie_produit_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(produit_router.router, prefix=settings.API_V1_PREFIX)
