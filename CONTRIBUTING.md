@@ -96,6 +96,11 @@ test(produit): ajoute les tests du repository
 - Formatter : `prettier`
 - Linter : `eslint` (règles strictes, `no-unused-vars`, `react-hooks/exhaustive-deps`)
 - `strict: true` dans `tsconfig.json`
+- `noUncheckedIndexedAccess: true` en plus de `strict: true` : un accès indexé
+  (`tableau[0]`, `objet[cle]`) est typé `T | undefined` et doit être traité.
+  C'est ce qui attrape les accès hors bornes et les clés absentes, que `strict`
+  seul laisse passer. Règle d'équipe, pas une option laissée au hasard d'un
+  fichier de config.
 - Un composant = un fichier. Page approchant ~500 lignes → extraction obligatoire
   d'un sous-composant dans le module concerné.
 
