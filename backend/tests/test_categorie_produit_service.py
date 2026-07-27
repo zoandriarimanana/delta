@@ -1,6 +1,7 @@
 """Tests du service CATEGORIE_PRODUIT."""
 
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -178,3 +179,54 @@ def test_viole_contrainte_lit_le_nom_fourni_par_postgres() -> None:
 
     assert viole_contrainte(erreur, CONTRAINTE_LIBELLE_UNIQUE)
     assert not viole_contrainte(erreur, CONTRAINTE_PRODUIT_CATEGORIE)
+
+
+# --- Soft delete -------------------------------------------------------------
+
+
+def test_supprimer_archive_sans_effacer(
+    service: CategorieProduitService, db: Session
+) -> None:
+    """`supprimer` archive : la ligne reste, elle sort seulement des lectures."""
+    categorie = service.creer(CategorieProduitCreate(libelle="Confiture"))
+
+    service.supprimer(categorie.id_categorie)
+
+    assert categorie.supprime_le is not None
+    assert service.lister() == []
+    assert db.get(CategorieProduit, categorie.id_categorie) is not None
+
+
+def test_categorie_supprimable_si_ses_produits_sont_archives(
+    service: CategorieProduitService, db: Session
+) -> None:
+    """Le pré-contrôle ne doit compter que les produits **actifs**.
+
+    Sans filtre sur `supprime_le`, un produit archivé bloquerait la suppression
+    de sa catégorie — un refus qu'aucune règle métier ne justifie, et que
+    l'utilisateur ne pourrait pas lever puisque le produit lui est invisible.
+    """
+    categorie = service.creer(CategorieProduitCreate(libelle="Pâtisserie"))
+    produit = _ajouter_produit(db, categorie.id_categorie)
+    produit.supprime_le = datetime.now(UTC)
+    db.commit()
+
+    service.supprimer(categorie.id_categorie)
+
+    assert categorie.supprime_le is not None
+
+
+def test_libelle_reutilisable_apres_archivage(
+    service: CategorieProduitService,
+) -> None:
+    """L'index partiel libère le libellé, et `get_by_libelle` doit suivre.
+
+    Sans son filtre, deux lignes partageraient le libellé et `one_or_none()`
+    lèverait `MultipleResultsFound` au lieu de laisser recréer la catégorie.
+    """
+    premiere = service.creer(CategorieProduitCreate(libelle="Confiture"))
+    service.supprimer(premiere.id_categorie)
+
+    seconde = service.creer(CategorieProduitCreate(libelle="Confiture"))
+
+    assert seconde.id_categorie != premiere.id_categorie

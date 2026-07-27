@@ -151,3 +151,37 @@ def test_supprimer(service: ProduitService, patisserie: CategorieProduit) -> Non
     assert service.lister() == []
     with pytest.raises(RessourceIntrouvable):
         service.obtenir(produit.id_produit)
+
+
+# --- Soft delete -------------------------------------------------------------
+
+
+def test_supprimer_archive_sans_effacer(
+    service: ProduitService, patisserie: CategorieProduit, db: Session
+) -> None:
+    produit = service.creer(_charge_utile(patisserie.id_categorie))
+
+    service.supprimer(produit.id_produit)
+
+    assert produit.supprime_le is not None
+    assert db.get(Produit, produit.id_produit) is not None
+
+
+def test_le_filtre_par_categorie_masque_les_archives(
+    service: ProduitService, patisserie: CategorieProduit
+) -> None:
+    """Les deux chemins de lecture doivent concorder.
+
+    `lister()` filtre via `BaseRepository`, mais `lister(id_categorie=...)`
+    passe par une requête écrite à la main qui n'hérite de rien. Sans son propre
+    filtre, le catalogue filtré affichait des produits que le catalogue complet
+    masquait.
+    """
+    actif = service.creer(_charge_utile(patisserie.id_categorie, "Éclair"))
+    archive = service.creer(_charge_utile(patisserie.id_categorie, "Millefeuille"))
+    service.supprimer(archive.id_produit)
+
+    complet = [p.nom for p in service.lister()]
+    filtre = [p.nom for p in service.lister(patisserie.id_categorie)]
+
+    assert complet == filtre == [actif.nom]
