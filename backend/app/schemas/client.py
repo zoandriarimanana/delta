@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict
 
 from app.models.client import TypeClient
 from app.schemas.client_particulier import ClientParticulierRead
@@ -20,7 +20,13 @@ class ClientRead(BaseModel):
 
     id_client: int
     type_client: TypeClient
-    email: EmailStr
+    # `str` et non `EmailStr` : ce schema sérialise une valeur qui vient de
+    # notre propre base, la revalider est inutile — et nuisible. L'adresse d'un
+    # client anonymisé (`supprime+42@delta.invalid`) est un nom de domaine
+    # réservé par la RFC 2606, qu'`EmailStr` refuse : la lecture d'un compte
+    # anonymisé échouerait en 500. La validation reste stricte à l'entrée,
+    # là où elle protège (voir `schemas/auth.py`).
+    email: str
     telephone: str | None = None
     adresse: str | None = None
     date_creation_compte: datetime

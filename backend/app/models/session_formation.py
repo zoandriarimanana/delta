@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Date, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.formation import Formation
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from app.models.reservation import Reservation
 
 
-class SessionFormation(Base):
+class SessionFormation(SoftDeleteMixin, Base):
     """Occurrence datée d'une FORMATION, animée par un formateur.
 
     `id_formateur` est nullable : une session peut être ouverte à la

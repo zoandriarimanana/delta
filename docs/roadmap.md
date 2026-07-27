@@ -136,14 +136,39 @@ Ordre d'implémentation contraint par les dépendances. Un arrêt de validation 
 
 ## Règle transverse — suppression d'une entité référencée
 
-Toute suppression d'une entité référencée par une FK NOT NULL doit être catchée
-côté service (`IntegrityError` → message métier propre), à traiter dans le sprint
-qui implémente le CRUD delete de cette entité.
+**Cette règle a changé avec l'arrivée du soft delete. La version précédente
+affirmait que « PostgreSQL refuse la suppression du parent » : c'est faux dès
+qu'on archive au lieu de supprimer.**
 
-Les FK NOT NULL du schéma sont en `ON DELETE RESTRICT` : PostgreSQL **refuse** la
-suppression du parent au lieu de tenter un SET NULL impossible. Le service ne doit
-donc jamais laisser remonter l'erreur brute — il traduit « cette catégorie contient
-encore des produits », pas une trace SQL. La liste des FK concernées est figée par
+Trois chemins coexistent désormais, et ils n'ont pas les mêmes garanties.
+
+| Chemin | Ce que fait la base | Qui protège |
+|---|---|---|
+| `delete()` — archivage | `UPDATE supprime_le` | **personne** : le service, et lui seul |
+| `supprimer_definitivement()` | `DELETE` réel | PostgreSQL, via `ON DELETE RESTRICT` |
+| `ClientService.anonymiser()` | `UPDATE` des colonnes personnelles | sans objet : rien n'est supprimé |
+
+**Le point à retenir : un archivage est un `UPDATE`.** Ni les `ON DELETE
+RESTRICT` ni les `ON DELETE CASCADE` ne se déclenchent. La base n'empêche donc
+plus d'archiver une catégorie qui contient des produits, et n'archive pas non
+plus les lignes d'une commande archivée. Ces deux responsabilités — refuser, et
+propager — passent intégralement aux services :
+
+- **Refuser** : avant d'archiver un parent, compter ses enfants **actifs** et
+  lever un `ConflitMetier`. Un simple `count()` sans filtre sur `supprime_le`
+  compterait des enfants déjà archivés et bloquerait à tort.
+- **Propager** : archiver explicitement les enfants dans la même transaction, là
+  où le schéma prévoyait un `CASCADE`. Quatre FK sont concernées :
+  `client_particulier` et `client_entreprise` → `client`, `ligne_commande` →
+  `commande`, `demande_personnalisation` → `ligne_commande`.
+
+L'interception de l'`IntegrityError` reste nécessaire, mais comme **filet de
+course** : entre le comptage et le `commit`, un enfant a pu apparaître. Le
+service traduit alors « cette catégorie contient encore des produits », jamais
+une trace SQL. Elle redevient la protection principale sur
+`supprimer_definitivement()`, seul chemin où la base tranche encore.
+
+La liste des FK et leurs politiques est figée par
 `backend/tests/test_schema_integrity.py`.
 
 ## Dette technique
@@ -153,6 +178,7 @@ nommer sa tâche d'origine et sa condition de résorption.
 
 | Origine | Dette | Condition de résorption |
 |---|---|---|
+| Soft delete (Sprint 1) | `PERSONNEL` ne dispose pas d'`anonymiser()`, contrairement à `CLIENT`. Les données personnelles d'un salarié archivé restent donc lisibles en base, et un `supprimer_definitivement()` serait de toute façon refusé par les FK `NO ACTION` de `LIVRAISON` et `SESSION_FORMATION`. | Ajouter `PersonnelService.anonymiser()` au sprint 3, avec l'authentification `PERSONNEL` — `PERSONNEL` y devient une identité de connexion, exactement comme `CLIENT`. Ne pas se rabattre sur un détachement des FK : leur `NULL` signifie déjà « pas encore affecté », et le réutiliser pour « effacé » rendrait les deux états indistinguables. |
 | Sprint 1 (CRUD catalogue) | Les écritures sur le catalogue produit sont protégées par authentification client (particulier ou entreprise), PAS par un rôle administrateur — n'importe quel client inscrit peut actuellement modifier le catalogue. La vraie restriction admin attend l'authentification PERSONNEL (sprint 3, nécessite l'ajout d'un mot de passe à PERSONNEL et une modification du MLD). | Ajouter l'authentification `PERSONNEL` au sprint 3 — colonne mot de passe dans `docs/mld.md` + migration Alembic — puis restreindre les écritures du catalogue au personnel habilité. **À traiter avant mise en prod.** |
 | T0.10 (Sprint 0) | Le jeton d'accès est stocké en `localStorage` (`frontend/src/lib/tokenStorage.ts`) : lisible par tout script de la page, donc exfiltrable en cas de faille XSS. | Basculer sur un cookie `httpOnly` + `SameSite`, ce qui suppose de faire émettre le cookie par l'API et d'ajouter une protection CSRF. **À arbitrer avant mise en prod.** |
 | T0.6 (Sprint 0) | Aucune limitation de tentatives sur `/auth/connexion` : ni rate limiting par IP, ni verrouillage temporaire du compte après N échecs. Le hachage bcrypt ralentit une attaque par force brute sans l'empêcher, et rien ne freine le bourrage d'identifiants (credential stuffing). | Ajouter une limitation de débit et un verrouillage progressif. **À traiter avant mise en prod.** |

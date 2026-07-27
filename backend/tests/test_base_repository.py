@@ -10,7 +10,8 @@ from collections.abc import Iterator
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.database import Base
@@ -161,3 +162,125 @@ def test_delete_retire_l_entite(repository: _CategorieProduitRepository) -> None
 
     assert repository.get_by_id(identifiant) is None
     assert repository.list() == []
+
+
+# --- Soft delete -------------------------------------------------------------
+
+
+def test_delete_nemet_aucun_delete_sql(
+    repository: _CategorieProduitRepository, db: Session
+) -> None:
+    """`delete()` archive : la ligne reste en base, horodatée.
+
+    C'est le contrat central du soft delete. Si ce test échoue, `delete()` est
+    redevenu une suppression réelle et des données ont disparu sans retour.
+    """
+    categorie = repository.create({"libelle": "Confiture"})
+    db.commit()
+
+    repository.delete(categorie)
+    db.commit()
+
+    assert categorie.supprime_le is not None
+    lignes = db.execute(text("SELECT count(*) FROM categorie_produit")).scalar()
+    assert lignes == 1, "la ligne a réellement été supprimée"
+
+
+def test_les_archives_disparaissent_des_lectures(
+    repository: _CategorieProduitRepository, db: Session
+) -> None:
+    active = repository.create({"libelle": "Pâtisserie"})
+    archivee = repository.create({"libelle": "Confiture"})
+    repository.delete(archivee)
+    db.commit()
+
+    assert [c.libelle for c in repository.list()] == ["Pâtisserie"]
+    assert repository.get_by_id(archivee.id_categorie) is None
+    assert repository.get_by_id(active.id_categorie) is not None
+
+
+def test_inclure_supprimes_les_fait_remonter(
+    repository: _CategorieProduitRepository, db: Session
+) -> None:
+    """Le paramètre explicite, seul chemin vers les archives."""
+    archivee = repository.create({"libelle": "Confiture"})
+    repository.delete(archivee)
+    db.commit()
+
+    assert len(repository.list(inclure_supprimes=True)) == 1
+    assert (
+        repository.get_by_id(archivee.id_categorie, inclure_supprimes=True) is not None
+    )
+
+
+def test_restaurer_remet_la_ligne_en_circulation(
+    repository: _CategorieProduitRepository, db: Session
+) -> None:
+    categorie = repository.create({"libelle": "Confiture"})
+    repository.delete(categorie)
+    db.commit()
+
+    repository.restaurer(categorie)
+    db.commit()
+
+    assert categorie.supprime_le is None
+    assert [c.libelle for c in repository.list()] == ["Confiture"]
+
+
+def test_valeur_reutilisable_apres_archivage(
+    repository: _CategorieProduitRepository, db: Session
+) -> None:
+    """L'index unique est partiel : le libellé archivé se libère."""
+    premiere = repository.create({"libelle": "Confiture"})
+    repository.delete(premiere)
+    db.commit()
+
+    seconde = repository.create({"libelle": "Confiture"})
+    db.commit()
+
+    assert seconde.id_categorie != premiere.id_categorie
+
+
+def test_deux_lignes_actives_de_meme_valeur_refusees(
+    repository: _CategorieProduitRepository, db: Session
+) -> None:
+    """La partialité ne relâche pas l'unicité entre lignes actives."""
+    repository.create({"libelle": "Confiture"})
+    db.commit()
+
+    # `create` fait un `flush` : la base tranche dès l'insertion, sans attendre
+    # le `commit`.
+    with pytest.raises(IntegrityError):
+        repository.create({"libelle": "Confiture"})
+    db.rollback()
+
+
+def test_supprimer_definitivement_efface_reellement(
+    repository: _CategorieProduitRepository, db: Session
+) -> None:
+    """Le chemin de conformité : cette fois la ligne quitte la base."""
+    categorie = repository.create({"libelle": "Confiture"})
+    db.commit()
+
+    repository.supprimer_definitivement(categorie)
+    db.commit()
+
+    assert db.execute(text("SELECT count(*) FROM categorie_produit")).scalar() == 0
+    assert repository.list(inclure_supprimes=True) == []
+
+
+def test_list_est_ordonnee_de_facon_deterministe(
+    repository: _CategorieProduitRepository,
+) -> None:
+    """Sans ORDER BY, la pagination est indéfinie en SQL.
+
+    Le tri sur la clé primaire garantit que deux pages successives n'omettent ni
+    ne répètent de ligne — quel que soit le plan choisi par le moteur.
+    """
+    for libelle in ("Zeste", "Amande", "Miel"):
+        repository.create({"libelle": libelle})
+
+    identifiants = [c.id_categorie for c in repository.list()]
+
+    assert identifiants == sorted(identifiants)
+    assert [c.libelle for c in repository.list(skip=1, limit=1)] == ["Amande"]

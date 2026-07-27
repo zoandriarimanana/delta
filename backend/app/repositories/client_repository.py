@@ -16,12 +16,26 @@ class ClientRepository(BaseRepository[Client]):
 
     modele = Client
 
-    def get_by_email(self, email: str) -> Client | None:
-        """Retourne le client portant cet e-mail, ou None.
+    def get_by_email(
+        self, email: str, inclure_supprimes: bool = False
+    ) -> Client | None:
+        """Retourne le client **actif** portant cet e-mail, ou None.
 
-        Ne peut pas remonter plus d'une ligne : `uq_client_email` le garantit
-        en base.
+        Le filtre sur `supprime_le` n'est pas cosmétique : `uq_client_email` est
+        un index *partiel*, donc plusieurs lignes peuvent légitimement partager
+        un e-mail — une active et autant d'archivées qu'on veut. Sans ce filtre,
+        `one_or_none()` lèverait `MultipleResultsFound` dès la première
+        réinscription après archivage.
+
+        Avec le filtre, `one_or_none()` reste juste : l'index partiel garantit
+        au plus une ligne active par e-mail.
+
+        `inclure_supprimes=True` lève ce filtre — et peut alors remonter
+        plusieurs lignes. Réservé aux parcours d'archive, qui doivent gérer ce
+        cas eux-mêmes.
         """
-        return self.db.scalars(
-            select(Client).where(Client.email == email)
-        ).one_or_none()
+        requete = select(Client).where(Client.email == email)
+        if not inclure_supprimes:
+            requete = requete.where(Client.supprime_le.is_(None))
+            return self.db.scalars(requete).one_or_none()
+        return self.db.scalars(requete).first()

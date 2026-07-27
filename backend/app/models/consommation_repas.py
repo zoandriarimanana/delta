@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Date, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.abonnement import Abonnement
     from app.models.beneficiaire import Beneficiaire
 
 
-class ConsommationRepas(Base):
+class ConsommationRepas(SoftDeleteMixin, Base):
     """Repas consommé au titre d'un abonnement cantine.
 
     `id_beneficiaire` est NULL lorsque l'abonnement est en

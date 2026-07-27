@@ -10,7 +10,7 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.avis import Avis
@@ -30,7 +30,7 @@ class TypeReservation(StrEnum):
     TABLE = "Table"
 
 
-class Reservation(Base):
+class Reservation(SoftDeleteMixin, Base):
     """Réservation d'une session de formation, d'une salle, d'un logement ou
     d'une table.
 

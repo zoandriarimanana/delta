@@ -61,3 +61,13 @@ select = ["E", "W", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Rend `backend/` importable, donc `from tests.conftest import ...` resolvable.
+# Sans ca, le succes depend de la facon dont l'installation editable expose le
+# projet sur sys.path : ca marchait en local et pas en CI.
+pythonpath = ["."]
+markers = [
+    # Tests qui exigent un vrai PostgreSQL : ils portent sur des objets que
+    # SQLite ne sait pas reproduire (CHECK en syntaxe PostgreSQL, notamment).
+    # Ignores avec un message explicite si la base est injoignable.
+    "postgres: necessite un PostgreSQL joignable via DATABASE_URL",
+]

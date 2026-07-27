@@ -6,11 +6,11 @@ from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, Index, String, func, text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.avis import Avis
@@ -27,7 +27,7 @@ class TypeClient(StrEnum):
     ENTREPRISE = "Entreprise"
 
 
-class Client(Base):
+class Client(SoftDeleteMixin, Base):
     """Surtype CLIENT : données communes au particulier et à l'entreprise.
 
     Les données propres à chaque sous-type vivent dans `client_particulier` et
@@ -37,6 +37,23 @@ class Client(Base):
     """
 
     __tablename__ = "client"
+
+    __table_args__ = (
+        # Index unique PARTIEL, et non contrainte UNIQUE : deux lignes peuvent
+        # partager cette valeur si l'une est archivee. Sans ca, une ligne
+        # supprimee bloquerait sa propre valeur a jamais.
+        # Le nom est conserve a l'identique : PostgreSQL le remonte dans
+        # `diag.constraint_name`, dont depend la traduction des conflits en 409.
+        # `sqlite_where` double `postgresql_where` — sans lui l'index serait
+        # global sur SQLite et les tests vaudraient l'inverse de ce qu'ils disent.
+        Index(
+            "uq_client_email",
+            "email",
+            unique=True,
+            postgresql_where=text("supprime_le IS NULL"),
+            sqlite_where=text("supprime_le IS NULL"),
+        ),
+    )
 
     id_client: Mapped[int] = mapped_column(primary_key=True)
     type_client: Mapped[TypeClient] = mapped_column(
@@ -53,7 +70,7 @@ class Client(Base):
         ),
         nullable=False,
     )
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
     telephone: Mapped[str | None] = mapped_column(String(30))
     adresse: Mapped[str | None] = mapped_column(String(255))
     mot_de_passe: Mapped[str] = mapped_column(String(255), nullable=False)

@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.reservation import Reservation
 
 
-class Logement(Base):
+class Logement(SoftDeleteMixin, Base):
     """Chambre / logement proposé à la nuitée.
 
     `statut` reste une chaîne libre : le MLD n'en fixe pas le domaine.

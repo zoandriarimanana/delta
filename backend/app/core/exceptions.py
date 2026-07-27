@@ -17,3 +17,7 @@ class ConflitMetier(ErreurMetier):
 
 class AuthentificationInvalide(ErreurMetier):
     """Identifiants refusés (HTTP 401)."""
+
+
+class RessourceIntrouvable(ErreurMetier):
+    """La ressource désignée par l'URL n'existe pas (HTTP 404)."""

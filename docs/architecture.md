@@ -105,6 +105,51 @@ dépassent le CRUD générique** :
 Ne jamais réécrire `create`/`get_by_id`/`list`/`update`/`delete` dans un repository
 spécifique — c'est le signe que l'héritage n'est pas utilisé correctement.
 
+### Suppression logique, suppression réelle, anonymisation
+
+Les 20 entités portent `supprime_le` via `SoftDeleteMixin` (`core/database.py`).
+`BaseRepository` en tire trois opérations qu'il ne faut pas confondre.
+
+**`delete()` archive.** Aucun `DELETE` SQL n'est émis : la ligne reste,
+horodatée. C'est le seul chemin que doivent emprunter les règles métier.
+
+**`get_by_id()` et `list()` filtrent par défaut.** Une entité archivée est
+invisible, exactement comme une entité qui n'a jamais existé.
+`inclure_supprimes=True` lève le filtre — paramètre explicite, jamais implicite,
+pour que la consultation d'archives se lise dans le code appelant.
+
+**`restaurer()` peut échouer légitimement.** Les index uniques étant partiels, la
+valeur libérée par l'archivage a pu être réattribuée ; la restauration créerait
+alors un doublon actif, et la base la refuse. Le service traduit — voir
+`ClientService.restaurer`.
+
+**`supprimer_definitivement()` est le vrai `DELETE`.** Il reste nécessaire parce
+que l'archivage, à lui seul, ne satisfait aucun droit à l'effacement : la donnée
+est toujours là. Il est réservé aux entités **sans valeur probante** — le
+catalogue, pour l'essentiel — et ne doit jamais être exposé sur un endpoint sans
+une protection explicite et tracée.
+
+**Pour `CLIENT`, c'est `ClientService.anonymiser()` et rien d'autre.** Un client
+est référencé par des réservations et des avis en `ON DELETE RESTRICT` : le
+`DELETE` serait refusé, et il serait de toute façon la mauvaise réponse. Une
+réservation honorée est une preuve de transaction, généralement soumise à une
+obligation de conservation qui prime sur le droit à l'effacement.
+`anonymiser()` réécrit les données personnelles, conserve `id_client` et
+`type_client`, pose `supprime_le`, et ne touche à aucun enregistrement lié.
+
+L'adresse générée utilise le domaine `delta.invalid`, réservé par la RFC 2606.
+Deux conséquences voulues : elle n'est jamais routable, et `EmailStr` la refuse
+en entrée — personne ne peut donc la soumettre pour usurper un compte anonymisé.
+C'est aussi pourquoi `ClientRead.email` est typé `str` et non `EmailStr` : un
+schema de sortie n'a pas à revalider une valeur issue de notre propre base, et
+le faire ferait échouer en 500 toute lecture d'un compte anonymisé.
+
+**Conséquence transverse, la plus lourde** : un archivage étant un `UPDATE`, ni
+les `ON DELETE RESTRICT` ni les `ON DELETE CASCADE` du schéma ne se déclenchent.
+Refuser l'archivage d'un parent encore référencé, et propager l'archivage à ses
+enfants, deviennent des responsabilités de service. Voir la règle transverse de
+`docs/roadmap.md`.
+
 ### Couches et responsabilités
 
 | Couche | Responsabilité |

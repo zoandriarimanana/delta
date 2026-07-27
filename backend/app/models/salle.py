@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.reservation import Reservation
 
 
-class Salle(Base):
+class Salle(SoftDeleteMixin, Base):
     """Salle louable, tarifée à l'heure et/ou à la journée."""
 
     __tablename__ = "salle"
