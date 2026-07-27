@@ -11,6 +11,30 @@ concerne-t-il une seule entité métier, ou plusieurs ?" Si plusieurs : c'est un
 signe qu'il faut soit un fichier par entité avec une couche d'orchestration à part,
 soit repenser le découpage.
 
+## Base de données locale (Docker)
+
+Le `docker-compose.yml` à la racine fournit un PostgreSQL 16 de développement,
+exposé sur `localhost:5432` — l'adresse attendue par le `DATABASE_URL` de
+`backend/.env.example`.
+
+```bash
+docker compose up -d --wait   # démarre postgres et attend qu'il soit prêt
+docker compose logs -f postgres
+docker compose down           # arrête (les données survivent)
+docker compose down -v        # arrête ET efface le volume de données
+```
+
+Le `--wait` s'appuie sur le healthcheck `pg_isready` du service : la commande ne
+rend la main qu'une fois la base réellement en état d'accepter des connexions,
+ce qui évite un `alembic upgrade head` lancé trop tôt.
+
+Utilisateur, base et port sont alignés sur `backend/.env.example`
+(`delta_user` / `delta` / `5432`). Le mot de passe, lui, y est volontairement
+laissé en `change_me` : le compose utilise par défaut `delta_dev_pwd`, qui doit
+correspondre à celui du `backend/.env` local. Les trois variables
+`POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` sont surchargeables depuis
+l'environnement du shell.
+
 ## Backend — arborescence
 
 ```
@@ -87,8 +111,17 @@ spécifique — c'est le signe que l'héritage n'est pas utilisé correctement.
 
 ```
 src/
+├── main.tsx                  # point d'entree Vite/React
+├── index.css                 # entree Tailwind (@import "tailwindcss")
+├── vite-env.d.ts             # types Vite
 ├── lib/
-│   └── axiosClient.ts        # instance axios unique, intercepteurs
+│   ├── axiosClient.ts        # instance axios unique, intercepteurs
+│   └── tokenStorage.ts       # lecture/ecriture du jeton d'acces
+├── layouts/
+│   └── MainLayout.tsx        # structure de page transverse (nav, pied de page)
+├── pages/                    # pages transverses, hors module metier
+│   ├── AccueilPage.tsx
+│   └── NonTrouveePage.tsx
 ├── features/
 │   ├── salle/
 │   │   ├── salle.types.ts    # interfaces TypeScript
@@ -111,6 +144,71 @@ src/
 Règle de découpe : dès qu'une page approche ~500 lignes, extraire un sous-composant
 dans `pages/` ou un sous-dossier `components/` local au module — jamais dans un
 fichier partagé fourre-tout.
+
+### `src/layouts/`
+
+Contient la **structure de page transverse** : navigation, en-tête, pied de page,
+conteneur dans lequel le routeur injecte la page courante. C'est le seul endroit
+où un composant a le droit de ne se rattacher à aucun module métier — précisément
+parce qu'il les enveloppe tous.
+
+En contrepartie, un layout ne porte **jamais** la logique métier d'un module
+donné : pas d'appel à l'API produit, pas de calcul de panier. S'il faut afficher
+une donnée métier dans la navigation (nombre d'articles du panier, nom du client
+connecté), elle vient d'un hook exposé par le module concerné, que le layout
+consomme sans rien savoir de son implémentation.
+
+`src/layouts/` est au même niveau que `src/features/`, pas dedans : un layout
+n'appartient à aucun module. Ce n'est pas non plus un `src/components/`
+fourre-tout — seule la structure de page y a sa place.
+
+### Client HTTP et stockage du jeton
+
+`lib/axiosClient.ts` porte l'**unique** instance axios. Les fichiers `*.api.ts`
+des modules l'importent et ne créent jamais la leur : c'est ce qui garantit qu'un
+seul endroit détient l'URL de base (`VITE_API_URL`, préfixe `/api/v1` compris),
+l'injection du jeton et le traitement des erreurs d'authentification.
+
+Deux règles de comportement des intercepteurs :
+
+- Un **401** efface le jeton et émet l'événement `delta:non-authentifie`, auquel
+  le layout réagit par une redirection. L'intercepteur ne connaît pas le routeur :
+  la couche HTTP ne doit pas dépendre de la navigation.
+- Un 401 venant de `/auth/connexion` ou `/auth/inscription` est **exclu** de ce
+  traitement : c'est une réponse métier (« mot de passe faux »), pas une session
+  expirée. Sans cette exception, un utilisateur déjà connecté qui se trompe en
+  saisissant un second compte se ferait déconnecter.
+
+L'erreur continue de remonter dans tous les cas : l'intercepteur nettoie, il ne
+décide pas du message à afficher à la place du module appelant.
+
+`lib/tokenStorage.ts` isole le support de stockage — actuellement `localStorage`.
+**Conséquence de sécurité** : le jeton est lisible par tout script exécuté dans la
+page, donc exposé en cas de faille XSS. Un cookie `httpOnly` supprimerait ce
+risque mais impose un travail côté API (émission du cookie, protection CSRF).
+Report inscrit en dette technique dans `docs/roadmap.md`.
+
+### `src/pages/` — pages transverses
+
+Accueil, 404, mentions légales : des pages qui n'appartiennent à **aucun** module
+métier. Elles ne peuvent pas vivre dans `features/<module>/pages/`, qui reste
+réservé aux pages d'un module donné (`features/produit/pages/ProduitListPage.tsx`).
+
+Critère de placement, en une question : *cette page disparaîtrait-elle si on
+retirait un module du produit ?* Si oui, elle va dans `features/<module>/pages/`.
+Sinon, dans `src/pages/`.
+
+Ce dossier n'est pas une porte de sortie pour les pages qu'on ne sait pas classer :
+une page de connexion, par exemple, appartient à `features/auth/` dès que ce module
+existe — elle n'est en `src/pages/` au Sprint 0 que parce qu'aucun module n'est
+encore créé.
+
+### Fichiers d'entrée
+
+`main.tsx`, `index.css`, `index.html` et `vite-env.d.ts` ne sont pas des choix
+d'architecture : ce sont les points d'entrée standard imposés par Vite et React.
+Ils sont listés ci-dessus pour que l'arborescence soit complète, pas parce qu'ils
+relèvent d'une décision de conception.
 
 ## Correspondance modules ↔ tables du MLD
 
