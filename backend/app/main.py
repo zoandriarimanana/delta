@@ -13,7 +13,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.core.exceptions import AuthentificationInvalide, ConflitMetier, ErreurMetier
+from app.core.exceptions import (
+    AuthentificationInvalide,
+    ConflitMetier,
+    ErreurMetier,
+    RessourceIntrouvable,
+)
 from app.routers import auth_router
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -47,6 +52,16 @@ async def _gerer_conflit_metier(request: Request, exc: ConflitMetier) -> JSONRes
     """Ressource déjà existante ou état incompatible → 409."""
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(RessourceIntrouvable)
+async def _gerer_ressource_introuvable(
+    request: Request, exc: RessourceIntrouvable
+) -> JSONResponse:
+    """Ressource désignée par l'URL absente → 404."""
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)}
     )
 
 

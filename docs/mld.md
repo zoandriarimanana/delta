@@ -131,6 +131,60 @@ n'exprime aucune unicité. Ce ne sont pas des règles nouvelles.
 Le cas de `CLIENT.email` est traité à part, dans la section « Acteurs » : il porte une
 règle d'identité, pas seulement une unicité de libellé.
 
+## Suppression logique — `supprime_le`
+
+**Les 20 tables portent une colonne `supprime_le TIMESTAMPTZ NULL.`** `NULL`
+signifie « ligne active » ; une date signifie « ligne archivée ». C'est la seule
+colonne transverse du schéma, et elle n'apparaît pas dans les notations
+`TABLE(...)` ci-dessus pour ne pas les alourdir vingt fois.
+
+Aucune exception : `CLIENT_PARTICULIER` et `CLIENT_ENTREPRISE` la portent aussi,
+bien qu'elles n'aient pas de cycle de vie propre. Deux raisons — un index partiel
+ne peut pas référencer la colonne d'une autre table, or
+`CLIENT_ENTREPRISE.numero_id_fiscal` en a besoin ; et une entité sans la colonne
+forcerait un filtrage conditionnel dans le repository générique. En contrepartie,
+l'archivage d'un `CLIENT` et celui de sa ligne fille se font dans **une seule
+transaction**, comme leur création.
+
+### Index uniques partiels
+
+Six unicités d'identité métier sont des **index uniques partiels**
+`WHERE supprime_le IS NULL`, et non des contraintes `UNIQUE` :
+
+| Index | Colonne | Pourquoi partiel |
+|---|---|---|
+| `uq_client_email` | `CLIENT.email` | un compte archivé bloquerait à vie la réinscription |
+| `uq_personnel_email` | `PERSONNEL.email` | départ puis retour d'un salarié |
+| `uq_client_entreprise_numero_id_fiscal` | `CLIENT_ENTREPRISE.numero_id_fiscal` | la même société doit pouvoir se réinscrire |
+| `uq_beneficiaire_identifiant_badge` | `BENEFICIAIRE.identifiant_badge` | un badge est réattribué |
+| `uq_categorie_produit_libelle` | `CATEGORIE_PRODUIT.libelle` | une catégorie archivée puis recréée |
+| `uq_domaine_formation_libelle` | `DOMAINE_FORMATION.libelle` | idem |
+
+Les noms sont ceux des anciennes contraintes, délibérément : PostgreSQL remonte
+le nom de l'**index** dans `diag.constraint_name`, dont dépend la traduction des
+conflits en HTTP 409.
+
+**Les deux `UNIQUE` de cardinalité restent globales** — `LIVRAISON.#id_commande`
+et `DEMANDE_PERSONNALISATION.#id_ligne`. Elles n'expriment pas une identité mais
+une propriété structurelle : rendues partielles, la table pourrait contenir cinq
+livraisons archivées et une active pour la même commande, et toute requête
+omettant le filtre produirait des totaux faux.
+
+### Trois façons d'effacer, qui ne sont pas interchangeables
+
+| Opération | Effet | Pour quoi |
+|---|---|---|
+| `delete()` | `supprime_le = now()` | l'archivage courant, réversible |
+| `supprimer_definitivement()` | `DELETE` réel, irréversible | entités **sans valeur probante** : `PRODUIT`, `CATEGORIE_PRODUIT`, `SALLE`, `LOGEMENT`, `FORMATION`, `DOMAINE_FORMATION` |
+| `ClientService.anonymiser()` | réécrit les données personnelles, archive, **conserve la ligne** | seul chemin de conformité pour `CLIENT` |
+
+`supprimer_definitivement()` n'est **pas** applicable à un `CLIENT` : les FK en
+`ON DELETE RESTRICT` de `RESERVATION` et `AVIS` le refuseraient, et effacer une
+réservation honorée ou un avis reviendrait à détruire une preuve de transaction,
+généralement soumise à une obligation de conservation qui prime sur le droit à
+l'effacement. L'anonymisation conserve `id_client` et `type_client`, et ne touche
+à aucun enregistrement lié : ceux-ci gardent leur `#id_client`, désormais anonyme.
+
 ## Hypothèse de travail à surveiller
 
 `RESERVATION.#id_client` est actuellement NOT NULL (compte obligatoire pour réserver,

@@ -53,7 +53,10 @@ CHECKS_ATTENDUS = [
     ("avis", "ck_avis_note_intervalle"),
 ]
 
-# Cardinalités (1,1) du schéma conceptuel, traduites en UNIQUE.
+# Cardinalités (1,1) du schéma conceptuel : elles restent des contraintes
+# UNIQUE **globales**. Les rendre partielles laisserait coexister plusieurs
+# lignes archivées et une active pour le même parent, et toute requête omettant
+# le filtre verrait plusieurs livraisons par commande.
 UNIQUES_ATTENDUS = [
     ("livraison", "uq_livraison_id_commande", {"id_commande"}),
     (
@@ -62,6 +65,25 @@ UNIQUES_ATTENDUS = [
         {"id_ligne"},
     ),
 ]
+
+# Unicités d'identité métier : index uniques **partiels**, pour qu'une ligne
+# archivée ne bloque pas sa propre valeur à jamais. Les noms sont conservés à
+# l'identique — PostgreSQL les remonte dans `diag.constraint_name`, et la
+# traduction des conflits en 409 en dépend.
+INDEX_PARTIELS_ATTENDUS = [
+    ("client", "uq_client_email", {"email"}),
+    ("personnel", "uq_personnel_email", {"email"}),
+    (
+        "client_entreprise",
+        "uq_client_entreprise_numero_id_fiscal",
+        {"numero_id_fiscal"},
+    ),
+    ("beneficiaire", "uq_beneficiaire_identifiant_badge", {"identifiant_badge"}),
+    ("categorie_produit", "uq_categorie_produit_libelle", {"libelle"}),
+    ("domaine_formation", "uq_domaine_formation_libelle", {"libelle"}),
+]
+
+CLAUSE_PARTIELLE = "supprime_le IS NULL"
 
 # FK NOT NULL protégées en RESTRICT : PostgreSQL refuse la suppression du parent
 # plutôt que de tenter un SET NULL sur une colonne qui l'interdit.
@@ -134,6 +156,61 @@ def test_unique_constraint_presente(
     )
     assert trouvee is not None, f"UNIQUE `{contrainte}` absent de `{table}`"
     assert {col.name for col in trouvee.columns} == colonnes
+
+
+@pytest.mark.parametrize("table", sorted(TABLES_ATTENDUES))
+def test_chaque_table_porte_supprime_le(table: str) -> None:
+    """Le soft delete est transverse : aucune entité n'y échappe.
+
+    Une table sans cette colonne casserait le filtrage générique de
+    `BaseRepository`, qui la suppose présente partout.
+    """
+    colonnes = Base.metadata.tables[table].columns
+    assert "supprime_le" in colonnes, f"`{table}` n'a pas de colonne supprime_le"
+    assert colonnes["supprime_le"].nullable, "NULL doit signifier « ligne active »"
+
+
+@pytest.mark.parametrize(("table", "index", "colonnes"), INDEX_PARTIELS_ATTENDUS)
+def test_index_partiel_present(table: str, index: str, colonnes: set[str]) -> None:
+    """Chaque unicité d'identité métier est un index unique partiel.
+
+    Trois propriétés sont vérifiées ensemble, et chacune compte : l'index existe
+    sous ce nom exact, il est unique, et il est restreint aux lignes actives.
+    Un index unique mais global bloquerait la réutilisation d'une valeur
+    archivée ; un index partiel mais non unique n'empêcherait plus rien.
+    """
+    trouve = next(
+        (i for i in Base.metadata.tables[table].indexes if i.name == index), None
+    )
+    assert trouve is not None, f"index `{index}` absent de `{table}`"
+    assert trouve.unique, f"`{index}` n'est pas unique"
+    assert {c.name for c in trouve.columns} == colonnes
+
+    for dialecte in ("postgresql", "sqlite"):
+        clause = trouve.dialect_options.get(dialecte, {}).get("where")
+        assert clause is not None, f"`{index}` n'est pas partiel pour {dialecte}"
+        assert str(clause) == CLAUSE_PARTIELLE
+
+    # `sqlite_where` n'est pas un détail : sans lui l'index serait global sur
+    # SQLite, et les tests de réutilisation d'une valeur archivée vaudraient
+    # l'inverse de ce qu'ils affirment.
+
+
+@pytest.mark.parametrize(("table", "index", "_colonnes"), INDEX_PARTIELS_ATTENDUS)
+def test_aucune_unicite_metier_restee_globale(
+    table: str, index: str, _colonnes: set[str]
+) -> None:
+    """Garde-fou : la contrainte d'origine ne doit pas subsister en double.
+
+    Une `UniqueConstraint` oubliée à côté de l'index partiel rendrait ce dernier
+    inopérant — la contrainte globale continuerait de refuser la réutilisation.
+    """
+    globales = {
+        c.name
+        for c in Base.metadata.tables[table].constraints
+        if isinstance(c, UniqueConstraint)
+    }
+    assert index not in globales
 
 
 def _ondelete(table: str, colonne: str) -> str | None:
