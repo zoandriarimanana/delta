@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.avis import Avis
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from app.models.produit import Produit
 
 
-class LigneCommande(Base):
+class LigneCommande(SoftDeleteMixin, Base):
     """Ligne d'une commande : un produit, une quantité, un prix figé.
 
     `prix_unitaire_applique` recopie le prix du produit au moment de la

@@ -11,7 +11,7 @@ from sqlalchemy import Date, ForeignKey, Numeric
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.beneficiaire import Beneficiaire
@@ -33,7 +33,7 @@ class ModeSuivi(StrEnum):
     GLOBAL = "Global"
 
 
-class Abonnement(Base):
+class Abonnement(SoftDeleteMixin, Base):
     """Abonnement cantine souscrit par une entreprise cliente.
 
     Les tarifs sont nullables et mutuellement exclusifs en pratique :

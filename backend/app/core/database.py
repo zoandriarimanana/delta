@@ -3,16 +3,18 @@
 Ce module ne contient aucune logique métier ni aucun mapping d'entité. Il expose
 uniquement les briques dont dépendent les couches supérieures :
 
-- ``engine``       : le moteur de connexion PostgreSQL ;
-- ``SessionLocal`` : la fabrique de sessions ;
-- ``Base``         : la classe mère de tous les modèles de ``app/models/`` ;
-- ``get_db``       : la dépendance FastAPI qui injecte une session par requête.
+- ``engine``           : le moteur de connexion PostgreSQL ;
+- ``SessionLocal``     : la fabrique de sessions ;
+- ``Base``             : la classe mère de tous les modèles de ``app/models/`` ;
+- ``SoftDeleteMixin``  : la colonne ``supprime_le``, portée par chaque entité ;
+- ``get_db``           : la dépendance FastAPI qui injecte une session par requête.
 """
 
 from collections.abc import Generator
+from datetime import datetime
 
-from sqlalchemy import MetaData, create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy import DateTime, MetaData, create_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from app.core.config import settings
 
@@ -64,6 +66,28 @@ class Base(DeclarativeBase):
     """
 
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
+
+
+class SoftDeleteMixin:
+    """Colonne ``supprime_le``, à faire hériter par chaque entité du MLD.
+
+    C'est un *mixin déclaratif* : SQLAlchemy en recopie la colonne dans chaque
+    table qui l'hérite, le mapping reste donc bien par table. La définir une
+    seule fois évite vingt déclarations qui finiraient par diverger — type,
+    nullabilité ou fuseau horaire.
+
+    Elle est volontairement séparée de ``Base`` et non fondue dedans : chaque
+    modèle déclare explicitement ``class Produit(SoftDeleteMixin, Base)``, si
+    bien qu'une entité sans soft delete resterait possible et surtout visible.
+
+    ``NULL`` signifie « ligne active ». C'est ce que testent les index uniques
+    partiels (``WHERE supprime_le IS NULL``) et le filtrage par défaut de
+    ``BaseRepository``.
+    """
+
+    supprime_le: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
 
 
 def get_db() -> Generator[Session, None, None]:

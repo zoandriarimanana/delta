@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Numeric, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.ligne_commande import LigneCommande
     from app.models.produit import Produit
 
 
-class DemandePersonnalisation(Base):
+class DemandePersonnalisation(SoftDeleteMixin, Base):
     """Demande de personnalisation rattachée à une ligne de commande.
 
     `id_produit_base` désigne le produit servant de point de départ à la

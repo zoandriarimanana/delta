@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.domaine_formation import DomaineFormation
     from app.models.session_formation import SessionFormation
 
 
-class Formation(Base):
+class Formation(SoftDeleteMixin, Base):
     """Formation du catalogue, déclinée en sessions datées.
 
     `niveau` reste une chaîne libre : le MLD n'en fixe pas le domaine.

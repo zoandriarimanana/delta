@@ -10,7 +10,7 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Text, func
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.client import Client
@@ -25,7 +25,7 @@ class TypeAvis(StrEnum):
     SERVICE = "Service"
 
 
-class Avis(Base):
+class Avis(SoftDeleteMixin, Base):
     """Avis client portant soit sur une ligne de commande, soit sur une
     réservation.
 

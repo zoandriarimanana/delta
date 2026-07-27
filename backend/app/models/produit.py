@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.categorie_produit import CategorieProduit
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from app.models.ligne_commande import LigneCommande
 
 
-class Produit(Base):
+class Produit(SoftDeleteMixin, Base):
     """Produit vendable (pâtisserie, boulangerie, confiture...)."""
 
     __tablename__ = "produit"

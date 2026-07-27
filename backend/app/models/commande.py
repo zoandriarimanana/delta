@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.client import Client
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from app.models.reservation import Reservation
 
 
-class Commande(Base):
+class Commande(SoftDeleteMixin, Base):
     """Commande de produits, passée avec ou sans compte client.
 
     `id_client` est NULL en mode invité : `nom_invite` et `contact_invite` sont

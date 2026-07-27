@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.commande import Commande
     from app.models.personnel import Personnel
 
 
-class Livraison(Base):
+class Livraison(SoftDeleteMixin, Base):
     """Livraison d'une commande par un membre du personnel.
 
     `id_personnel` est nullable : la livraison est créée dès que la commande

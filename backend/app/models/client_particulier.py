@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Date, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
     from app.models.client import Client
 
 
-class ClientParticulier(Base):
+class ClientParticulier(SoftDeleteMixin, Base):
     """Sous-type « personne physique » de CLIENT.
 
     Mapping 1-1 explicite : `id_client` est à la fois la clé primaire de cette
