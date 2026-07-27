@@ -18,6 +18,13 @@ PERSONNEL(id_personnel, nom, prenom, fonction, email, telephone, date_embauche, 
 Contrainte à porter au niveau applicatif ou trigger : un `CLIENT` a exactement une
 ligne dans l'une des deux tables filles, jamais les deux, jamais aucune.
 
+- `CLIENT.email` est **unique**. Présente au dictionnaire de données d'origine,
+  omise ici par erreur de transcription ; rétablie. Règle métier associée :
+  **un e-mail correspond à une seule identité `CLIENT`** — particulier *ou*
+  entreprise, jamais les deux comptes séparément. Une même personne physique qui
+  représente aussi une société doit donc utiliser deux adresses distinctes.
+  C'est aussi l'identifiant de connexion (voir `docs/roadmap.md`, T0.6).
+
 ## Catalogue formation
 
 ```
@@ -69,6 +76,8 @@ AVIS(id_avis, type_avis, note, commentaire, date_avis, #id_client, #id_ligne, #i
 
 - `#id_personnel` référence `PERSONNEL` (fonction = Livreur).
 - `AVIS.type_avis` ∈ {Produit, Service}.
+- `AVIS.note` ∈ [1, 5] — notation sur 5, bornes incluses. Présente au dictionnaire
+  de données d'origine, omise ici par erreur de transcription ; rétablie.
 
 ## Contraintes d'exclusivité à implémenter en `CHECK` / trigger (pas de l'algèbre relationnelle pure)
 
@@ -88,6 +97,39 @@ AVIS(id_avis, type_avis, note, commentaire, date_avis, #id_client, #id_ligne, #i
      (id_ligne IS NOT NULL) <> (id_reservation IS NOT NULL)
    )
    ```
+4. **AVIS** : la note est bornée.
+   ```sql
+   CHECK (note BETWEEN 1 AND 5)
+   ```
+
+## Cardinalités (1,1) traduites en contrainte `UNIQUE`
+
+Le schéma conceptuel porte déjà ces cardinalités ; la notation `TABLE(...)` ci-dessus
+ne les rend pas visibles, puisqu'une clé étrangère seule autorise le 1-N. Les deux
+`UNIQUE` suivants sont la traduction relationnelle de cette cardinalité, pas un ajout
+de règle métier.
+
+| Colonne | Cardinalité conceptuelle | Contrainte |
+|---|---|---|
+| `LIVRAISON.#id_commande` | une commande donne lieu à au plus une livraison | `UNIQUE (id_commande)` |
+| `DEMANDE_PERSONNALISATION.#id_ligne` | une ligne de commande porte au plus une demande de personnalisation | `UNIQUE (id_ligne)` |
+
+## Unicités métier explicitées
+
+Même traitement que le tableau précédent : ces règles étaient implicites dans le
+schéma conceptuel, elles sont ici écrites noir sur blanc parce qu'une colonne seule
+n'exprime aucune unicité. Ce ne sont pas des règles nouvelles.
+
+| Colonne | Règle métier | Contrainte |
+|---|---|---|
+| `PERSONNEL.email` | l'adresse professionnelle identifie un membre du personnel | `UNIQUE (email)` |
+| `CLIENT_ENTREPRISE.numero_id_fiscal` | un numéro d'identification fiscale désigne une seule entreprise | `UNIQUE (numero_id_fiscal)` |
+| `BENEFICIAIRE.identifiant_badge` | un badge est nominatif, deux bénéficiaires ne peuvent le partager | `UNIQUE (identifiant_badge)` |
+| `CATEGORIE_PRODUIT.libelle` | pas deux catégories de même nom au catalogue | `UNIQUE (libelle)` |
+| `DOMAINE_FORMATION.libelle` | pas deux domaines de formation de même nom | `UNIQUE (libelle)` |
+
+Le cas de `CLIENT.email` est traité à part, dans la section « Acteurs » : il porte une
+règle d'identité, pas seulement une unicité de libellé.
 
 ## Hypothèse de travail à surveiller
 
