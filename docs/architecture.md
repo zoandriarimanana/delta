@@ -160,6 +160,18 @@ enfants, deviennent des responsabilités de service. Voir la règle transverse d
 | `services/` | Logique métier, règles de gestion, orchestration de plusieurs repositories |
 | `routers/` | Endpoints HTTP, validation d'entrée, appel au service correspondant |
 
+### Codes d'erreur : 404 contre 422
+
+Une référence à une entité liée inexistante dans le corps d'une requête renvoie
+**422**, jamais 404 — réservé aux ressources absentes de l'URL.
+
+Autrement dit : `GET /produits/999` sur un produit inconnu donne 404, la
+ressource demandée par l'URL n'existe pas. `POST /produits` avec un
+`id_categorie` inconnu donne 422, la ressource visée par l'URL existe et c'est
+le contenu envoyé qui est invalide — au même titre qu'un prix négatif. La règle
+vaut pour toute FK traversée par une charge utile : `id_formation` d'une
+session, `id_salle` d'une réservation, `id_produit` d'une ligne de commande.
+
 ### Authentification des endpoints protégés
 
 `core/deps.py` porte les dépendances FastAPI transverses. La première,
