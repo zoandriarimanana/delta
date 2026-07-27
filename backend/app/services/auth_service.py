@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AuthentificationInvalide, ConflitMetier
+from app.core.integrite import viole_contrainte
 from app.core.security import hacher_mot_de_passe, verifier_mot_de_passe
 from app.models.client import Client, TypeClient
 from app.repositories.client_particulier_repository import ClientParticulierRepository
@@ -11,6 +12,9 @@ from app.repositories.client_repository import ClientRepository
 from app.schemas.auth import Connexion, InscriptionParticulier
 
 CONTRAINTE_EMAIL_UNIQUE = "uq_client_email"
+
+# Fragment par lequel SQLite designe cette contrainte, faute de la nommer.
+INDICE_EMAIL = "client.email"
 
 # Hash bcrypt d'une valeur arbitraire, comparé quand l'e-mail est inconnu afin
 # que la connexion coûte le même temps qu'il existe ou non — sans quoi la durée
@@ -23,20 +27,11 @@ class EmailDejaUtilise(ConflitMetier):
 
 
 def _est_conflit_email(erreur: IntegrityError) -> bool:
-    """Distingue une violation de `uq_client_email` d'une autre violation.
-
-    PostgreSQL expose le nom de la contrainte violée via `diag` (psycopg2), ce
-    qui est le test fiable. On retombe sur le message brut pour les backends qui
-    ne fournissent pas ce diagnostic — SQLite, utilisé par les tests, dit
-    « UNIQUE constraint failed: client.email ».
-    """
-    nom_contrainte = getattr(
-        getattr(erreur.orig, "diag", None), "constraint_name", None
+    """Distingue une violation de `uq_client_email` d'une autre violation."""
+    return (
+        viole_contrainte(erreur, CONTRAINTE_EMAIL_UNIQUE)
+        or "client.email" in str(erreur.orig).lower()
     )
-    if nom_contrainte:
-        return nom_contrainte == CONTRAINTE_EMAIL_UNIQUE
-    message = str(erreur.orig).lower()
-    return CONTRAINTE_EMAIL_UNIQUE in message or "client.email" in message
 
 
 class AuthService:
