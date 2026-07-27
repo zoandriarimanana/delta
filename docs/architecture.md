@@ -115,6 +115,42 @@ spécifique — c'est le signe que l'héritage n'est pas utilisé correctement.
 | `services/` | Logique métier, règles de gestion, orchestration de plusieurs repositories |
 | `routers/` | Endpoints HTTP, validation d'entrée, appel au service correspondant |
 
+### Authentification des endpoints protégés
+
+`core/deps.py` porte les dépendances FastAPI transverses. La première,
+`get_current_client`, est le **socle réutilisé par tous les endpoints protégés
+des sprints suivants** : elle lit l'en-tête `Authorization: Bearer`, valide le
+jeton via `decoder_jeton_acces`, charge le `CLIENT` correspondant au `sub` et le
+retourne. Elle lève `AuthentificationInvalide` — traduite en 401 par les
+gestionnaires globaux de `main.py` — si le jeton est absent, invalide, expiré,
+ou si le client qu'il désigne n'existe plus en base. Ce dernier cas compte : un
+jeton reste cryptographiquement valide jusqu'à son expiration, même après la
+suppression du compte.
+
+Un endpoint s'y branche ainsi :
+
+```python
+ClientConnecte = Annotated[Client, Depends(get_current_client)]
+
+@router.post("/produit")
+def creer(donnees: ProduitCreate, client: ClientConnecte, db: SessionBase): ...
+```
+
+**Pourquoi `core/deps.py` et non `core/security.py`.** `security.py` ne connaît
+ni FastAPI ni la base : il manipule des chaînes et des dates, et reste testable
+sans serveur ni session. `get_current_client` a besoin des trois — le framework
+pour la déclaration de dépendance, la session pour charger le client, le
+repository pour la requête. Les mélanger ferait de `security.py` un module
+couplé à toute la stack.
+
+**Cette dépendance authentifie, elle n'autorise pas.** Le schéma n'a aucune
+notion de rôle : `CLIENT` ne porte pas de drapeau administrateur, et `PERSONNEL`
+n'a pas de mot de passe, donc ne peut pas se connecter. Tout client inscrit,
+particulier ou entreprise, est donc équivalent du point de vue des droits. Les
+écritures du catalogue produit reposent sur cette seule barrière au sprint 1 —
+report inscrit en dette technique dans `docs/roadmap.md`, à résorber avec
+l'authentification `PERSONNEL` du sprint 3.
+
 ## Frontend — arborescence
 
 ```
