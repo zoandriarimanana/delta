@@ -5,9 +5,10 @@ from __future__ import annotations
 from decimal import Decimal
 from enum import StrEnum
 from typing import TYPE_CHECKING
+from uuid import UUID
 
+from sqlalchemy import CheckConstraint, ForeignKey, Numeric, String, Uuid
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, SoftDeleteMixin
@@ -62,8 +63,28 @@ class Commande(SoftDeleteMixin, Base):
     """
 
     __tablename__ = "commande"
+    __table_args__ = (
+        # Contrainte n°5 du MLD : client identifié XOR invité. Elle n'est pas
+        # reportée en applicatif comme celle de CLIENT (T0.7) — l'insertion se
+        # fait en un seul temps, il n'y a aucun état transitoire à tolérer.
+        CheckConstraint(
+            "(id_client IS NOT NULL) <> (nom_invite IS NOT NULL)",
+            name="client_ou_invite",
+        ),
+    )
 
     id_commande: Mapped[int] = mapped_column(primary_key=True)
+    #: UUID généré **uniquement** en mode invité, NULL sinon. Seul moyen pour un
+    #: invité de revenir sur sa commande : il n'a ni compte ni jeton. Un UUID et
+    #: non l'identifiant séquentiel, qui serait énumérable.
+    #:
+    #: `UNIQUE` globale et non index partiel : un UUID n'est jamais réattribué,
+    #: il n'y a donc aucune valeur à libérer à l'archivage. SQL considère par
+    #: ailleurs les NULL comme distincts, les commandes connectées ne se gênent
+    #: donc pas entre elles.
+    reference_publique: Mapped[UUID | None] = mapped_column(
+        Uuid(), unique=True, default=None
+    )
     nom_invite: Mapped[str | None] = mapped_column(String(150))
     contact_invite: Mapped[str | None] = mapped_column(String(150))
     type_commande: Mapped[TypeCommande] = mapped_column(

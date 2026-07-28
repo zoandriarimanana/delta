@@ -228,3 +228,118 @@ def test_lecture_de_sa_propre_commande(
 
     assert reponse.status_code == 200
     assert reponse.json()["id_commande"] == creee["id_commande"]
+
+
+# --- Parcours invité ----------------------------------------------------------
+
+INVITE = {"nom_invite": "Rakoto Jean", "contact_invite": "+261340000000"}
+
+
+def _corps_invite(id_produit: int, quantite: int = 2) -> dict:
+    return {**_corps(id_produit, quantite), **INVITE}
+
+
+def test_commande_invitee_sans_jeton_retourne_201(
+    client_http: TestClient, eclair: Produit
+) -> None:
+    """Le parcours invité est public : c'est sa raison d'être."""
+    reponse = client_http.post(
+        f"{COMMANDES}/invite", json=_corps_invite(eclair.id_produit)
+    )
+
+    assert reponse.status_code == 201
+    corps = reponse.json()
+    assert corps["id_client"] is None
+    assert corps["nom_invite"] == "Rakoto Jean"
+    assert corps["reference_publique"] is not None
+
+
+def test_la_reference_est_rendue_a_la_validation(
+    client_http: TestClient, eclair: Produit
+) -> None:
+    """Sans elle, l'invité perd définitivement l'accès à sa commande.
+
+    C'est ce qui impose à l'interface de la lui présenter (issue #15).
+    """
+    corps = client_http.post(
+        f"{COMMANDES}/invite", json=_corps_invite(eclair.id_produit)
+    ).json()
+
+    relue = client_http.get(f"{COMMANDES}/invite/{corps['reference_publique']}")
+
+    assert relue.status_code == 200
+    assert relue.json()["id_commande"] == corps["id_commande"]
+
+
+def test_lecture_par_reference_est_publique(
+    client_http: TestClient, eclair: Produit
+) -> None:
+    """Aucun en-tête d'authentification : l'invité n'en a pas."""
+    corps = client_http.post(
+        f"{COMMANDES}/invite", json=_corps_invite(eclair.id_produit)
+    ).json()
+
+    reponse = client_http.get(f"{COMMANDES}/invite/{corps['reference_publique']}")
+
+    assert reponse.status_code == 200
+
+
+def test_reference_inconnue_retourne_404(client_http: TestClient) -> None:
+    assert client_http.get(f"{COMMANDES}/invite/{uuid4()}").status_code == 404
+
+
+def test_reference_malformee_retourne_422(client_http: TestClient) -> None:
+    """Le type de la route rejette avant d'atteindre la base."""
+    assert client_http.get(f"{COMMANDES}/invite/pas-un-uuid").status_code == 422
+
+
+def test_commande_invitee_absente_de_l_historique(
+    client_http: TestClient, entete: dict[str, str], eclair: Produit
+) -> None:
+    client_http.post(f"{COMMANDES}/invite", json=_corps_invite(eclair.id_produit))
+
+    assert client_http.get(COMMANDES, headers=entete).json() == []
+
+
+def test_commande_invitee_illisible_par_son_identifiant(
+    client_http: TestClient, entete: dict[str, str], eclair: Produit
+) -> None:
+    """L'identifiant séquentiel ne doit pas ouvrir une commande invitée.
+
+    Sans quoi la référence UUID ne servirait à rien : il suffirait d'essayer les
+    identifiants à la suite.
+    """
+    corps = client_http.post(
+        f"{COMMANDES}/invite", json=_corps_invite(eclair.id_produit)
+    ).json()
+
+    reponse = client_http.get(f"{COMMANDES}/{corps['id_commande']}", headers=entete)
+
+    assert reponse.status_code == 404
+
+
+@pytest.mark.parametrize("champ_manquant", ["nom_invite", "contact_invite"])
+def test_identite_invite_incomplete_retourne_422(
+    client_http: TestClient, eclair: Produit, champ_manquant: str
+) -> None:
+    corps = _corps_invite(eclair.id_produit)
+    del corps[champ_manquant]
+
+    assert client_http.post(f"{COMMANDES}/invite", json=corps).status_code == 422
+
+
+def test_un_jeton_expire_ne_bascule_pas_en_mode_invite(
+    client_http: TestClient, eclair: Produit
+) -> None:
+    """Le point central du choix de deux chemins distincts.
+
+    Sur l'endpoint authentifié, un jeton invalide doit donner 401 — jamais une
+    commande anonyme que le client ne retrouverait pas dans son historique.
+    """
+    reponse = client_http.post(
+        COMMANDES,
+        json=_corps(eclair.id_produit),
+        headers={"Authorization": "Bearer jeton.invalide"},
+    )
+
+    assert reponse.status_code == 401

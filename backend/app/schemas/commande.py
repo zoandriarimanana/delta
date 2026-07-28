@@ -1,6 +1,7 @@
 """Schemas Pydantic de l'entité COMMANDE."""
 
 from decimal import Decimal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -25,12 +26,33 @@ class CommandeCreate(BaseModel):
     lignes: list[LigneCommandeCreate] = Field(min_length=1)
 
 
+class CommandeInviteCreate(CommandeCreate):
+    """Charge utile d'une commande passée sans compte.
+
+    Endpoint distinct de la commande connectée, et non un `id_client` optionnel :
+    un jeton absent ne doit **jamais** faire basculer silencieusement en mode
+    invité. Un jeton expiré donnerait alors une commande anonyme au lieu d'un 401,
+    et le client ne retrouverait jamais sa commande dans son historique.
+
+    `contact_invite` est obligatoire ici alors que le `CHECK` de la base ne porte
+    que sur `nom_invite` : une commande sans aucun moyen de recontacter
+    l'acheteur n'a pas de sens, mais un `CHECK` à trois colonnes se lirait mal
+    pour ce qu'il apporte.
+    """
+
+    nom_invite: str = Field(min_length=1, max_length=150)
+    contact_invite: str = Field(min_length=1, max_length=150)
+
+
 class CommandeRead(BaseModel):
     """Commande en sortie d'API, lignes incluses."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id_commande: int
+    #: Renseignée uniquement en mode invité. C'est l'unique moyen pour l'invité
+    #: de revenir sur sa commande : elle doit lui être présentée à la validation.
+    reference_publique: UUID | None = None
     type_commande: TypeCommande
     statut: StatutCommande
     montant_total: Decimal

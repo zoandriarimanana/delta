@@ -1,12 +1,14 @@
 """Endpoints de COMMANDE.
 
-Réservés au client authentifié à ce stade. Le parcours invité relève de
-l'issue #14 : il ajoutera un chemin distinct plutôt que de rendre celui-ci
-optionnellement authentifié — un jeton absent ne doit jamais faire basculer
-silencieusement en mode invité.
+Deux parcours, deux chemins **distincts** — et non un seul endpoint dont
+l'authentification serait optionnelle. Un jeton absent ne doit jamais faire
+basculer silencieusement en mode invité : un jeton expiré donnerait alors une
+commande anonyme au lieu d'un 401, et le client ne la retrouverait jamais dans
+son historique.
 """
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
@@ -14,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import ClientConnecte
 from app.core.exceptions import RessourceIntrouvable
-from app.schemas.commande import CommandeCreate, CommandeRead
+from app.schemas.commande import CommandeCreate, CommandeInviteCreate, CommandeRead
 from app.services.commande_service import CommandeService
 
 router = APIRouter(prefix="/commandes", tags=["commande"])
@@ -38,6 +40,42 @@ def creer(
     serveur : les envoyer n'a aucun effet.
     """
     commande = CommandeService(db).creer(donnees, client)
+    return CommandeRead.model_validate(commande)
+
+
+@router.post(
+    "/invite",
+    response_model=CommandeRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Passer une commande sans compte",
+)
+def creer_pour_invite(donnees: CommandeInviteCreate, db: SessionBase) -> CommandeRead:
+    """Crée une commande sans authentification.
+
+    La réponse porte une `reference_publique` : **c'est le seul moyen pour
+    l'invité de revenir sur sa commande**, il n'a ni compte ni jeton. L'interface
+    doit la lui présenter immédiatement (issue #15).
+    """
+    commande = CommandeService(db).creer_pour_invite(donnees)
+    return CommandeRead.model_validate(commande)
+
+
+@router.get(
+    "/invite/{reference_publique}",
+    response_model=CommandeRead,
+    summary="Consulter une commande invitée",
+)
+def obtenir_par_reference(reference_publique: UUID, db: SessionBase) -> CommandeRead:
+    """Lecture publique par référence.
+
+    Sans authentification, par construction. La référence est un UUID
+    précisément pour n'être pas énumérable : exposer ce chemin sur
+    l'identifiant séquentiel laisserait parcourir toutes les commandes.
+
+    Une référence inconnue répond 404, comme une référence appartenant à une
+    commande archivée.
+    """
+    commande = CommandeService(db).obtenir_par_reference(reference_publique)
     return CommandeRead.model_validate(commande)
 
 
