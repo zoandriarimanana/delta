@@ -2,6 +2,8 @@
 
 import { Link } from 'react-router';
 
+import { usePanier } from '@/features/commande/commande.hooks';
+
 import { estDisponible, formaterPrix } from '../produit.service';
 import type { Produit } from '../produit.types';
 
@@ -11,6 +13,7 @@ interface Proprietes {
 
 export default function ProduitCarte({ produit }: Proprietes) {
   const disponible = estDisponible(produit);
+  const panier = usePanier();
 
   return (
     <li className="rounded border border-slate-200 bg-white p-4">
@@ -28,6 +31,16 @@ export default function ProduitCarte({ produit }: Proprietes) {
       >
         {disponible ? `En stock (${produit.stock_disponible})` : 'Épuisé'}
       </p>
+      {disponible && (
+        <button
+          type="button"
+          onClick={() => panier.ajouter(produit)}
+          aria-label={`Ajouter ${produit.nom} au panier`}
+          className="mt-3 rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
+        >
+          Ajouter au panier
+        </button>
+      )}
     </li>
   );
 }

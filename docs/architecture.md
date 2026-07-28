@@ -242,6 +242,14 @@ src/
 │   │   └── pages/
 │   │       ├── ProduitListPage.tsx
 │   │       └── ProduitDetailPage.tsx
+│   ├── commande/
+│   │   ├── commande.types.ts
+│   │   ├── commande.api.ts
+│   │   ├── commande.service.ts    # regles de panier, fonctions pures
+│   │   ├── commande.panier.ts     # persistance du panier + abonnement
+│   │   ├── commande.hooks.ts
+│   │   ├── components/
+│   │   └── pages/
 │   ├── formation/
 │   ├── abonnement/
 │   ├── reservation/
@@ -310,6 +318,23 @@ Ce dossier n'est pas une porte de sortie pour les pages qu'on ne sait pas classe
 une page de connexion, par exemple, appartient à `features/auth/` dès que ce module
 existe — elle n'est en `src/pages/` au Sprint 0 que parce qu'aucun module n'est
 encore créé.
+
+### Le panier n'a pas d'entité serveur
+
+`docs/mld.md` ne comporte **aucune table panier** : il vit dans le navigateur
+jusqu'à la validation, qui crée la `COMMANDE` et ses `LIGNE_COMMANDE`. Deux
+conséquences assumées — le panier est perdu au changement d'appareil, et il est
+lisible par tout script de la page, comme le jeton.
+
+`commande.panier.ts` est un magasin externe minimal (`useSyncExternalStore`)
+plutôt qu'un contexte React : le compteur de la barre de navigation et la page
+panier doivent partager le même état sans qu'un fournisseur enveloppe toute
+l'application. C'est aussi ce qui permet au layout de n'afficher qu'une valeur
+issue d'un hook du module, sans logique métier propre.
+
+**Le total affiché par le panier est indicatif.** Le montant enregistré est
+calculé par le serveur à partir des prix du catalogue au moment de la commande :
+le panier est un brouillon, pas un engagement de prix.
 
 ### Fichiers d'entrée
 

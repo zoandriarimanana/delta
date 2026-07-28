@@ -7,6 +7,9 @@
 
 import { BrowserRouter, Route, Routes } from 'react-router';
 
+import CommandeInviteePage from '@/features/commande/pages/CommandeInviteePage';
+import PanierPage from '@/features/commande/pages/PanierPage';
+import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
 import ProduitDetailPage from '@/features/produit/pages/ProduitDetailPage';
 import ProduitListPage from '@/features/produit/pages/ProduitListPage';
 import MainLayout from '@/layouts/MainLayout';
@@ -26,6 +29,9 @@ export default function App() {
           <Route index element={<AccueilPage />} />
           <Route path="produits" element={<ProduitListPage />} />
           <Route path="produits/:idProduit" element={<ProduitDetailPage />} />
+          <Route path="panier" element={<PanierPage />} />
+          <Route path="commande" element={<TunnelCommandePage />} />
+          <Route path="commandes/invite/:reference" element={<CommandeInviteePage />} />
           <Route path="connexion" element={<ConnexionPage />} />
           <Route path="*" element={<NonTrouveePage />} />
         </Route>
