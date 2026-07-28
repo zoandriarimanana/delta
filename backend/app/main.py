@@ -20,7 +20,12 @@ from app.core.exceptions import (
     ReferenceInvalide,
     RessourceIntrouvable,
 )
-from app.routers import auth_router, categorie_produit_router, produit_router
+from app.routers import (
+    auth_router,
+    categorie_produit_router,
+    commande_router,
+    produit_router,
+)
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -96,3 +101,4 @@ async def _gerer_erreur_metier(request: Request, exc: ErreurMetier) -> JSONRespo
 app.include_router(auth_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(categorie_produit_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(produit_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(commande_router.router, prefix=settings.API_V1_PREFIX)

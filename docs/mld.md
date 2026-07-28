@@ -64,6 +64,15 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
 ```
 
 - `COMMANDE.#id_client` est NULL si commande en mode invité (`nom_invite`/`contact_invite` alors renseignés).
+- `COMMANDE.type_commande` ∈ {En_ligne, Sur_place, A_emporter}
+- `COMMANDE.statut` ∈ {En_attente, Confirmee, En_preparation, Livree, Servie, Annulee}
+  Règle de service, **non exprimable en `CHECK`** puisqu'elle croise deux
+  colonnes : une commande `Sur_place` se termine sur `Servie`, les deux autres
+  types sur `Livree`.
+- `COMMANDE.montant_total` est **figé à la création** : il vaut la somme des
+  lignes au moment où la commande est passée, et n'est jamais recalculé. Une
+  ligne archivée ensuite ne le modifie pas — c'est une donnée d'archive, pas une
+  vue dérivée de `LIGNE_COMMANDE`.
 - `COMMANDE.#id_reservation` est NULL sauf si la commande découle d'une réservation de table honorée sur place.
 - `RESERVATION.type_reservation` ∈ {Formation, Salle, Logement, Table}.
 
