@@ -12,7 +12,12 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import creer_jeton_acces
-from app.schemas.auth import Connexion, InscriptionParticulier, Token
+from app.schemas.auth import (
+    Connexion,
+    InscriptionEntreprise,
+    InscriptionParticulier,
+    Token,
+)
 from app.schemas.client import ClientRead
 from app.services.auth_service import AuthService
 
@@ -40,6 +45,23 @@ def inscrire(donnees: InscriptionParticulier, db: SessionBase) -> ClientRead:
     auditer.
     """
     client = AuthService(db).inscrire_particulier(donnees)
+    return ClientRead.model_validate(client)
+
+
+@router.post(
+    "/inscription-entreprise",
+    response_model=ClientRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Inscrire un client entreprise",
+)
+def inscrire_entreprise(donnees: InscriptionEntreprise, db: SessionBase) -> ClientRead:
+    """Crée un compte entreprise.
+
+    Répond 409 si l'e-mail **ou** le numéro d'identification fiscale est déjà
+    pris, avec un message distinct dans chaque cas. Ne renvoie pas de jeton :
+    même choix que pour le particulier, un seul chemin d'émission à auditer.
+    """
+    client = AuthService(db).inscrire_entreprise(donnees)
     return ClientRead.model_validate(client)
 
 

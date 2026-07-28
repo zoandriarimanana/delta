@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 from app.models.client import TypeClient
+from app.schemas.client_entreprise import ClientEntrepriseRead
 from app.schemas.client_particulier import ClientParticulierRead
 
 
@@ -30,4 +31,6 @@ class ClientRead(BaseModel):
     telephone: str | None = None
     adresse: str | None = None
     date_creation_compte: datetime
+    # Une seule des deux est renseignee : ce sont des sous-types exclusifs.
     particulier: ClientParticulierRead | None = None
+    entreprise: ClientEntrepriseRead | None = None

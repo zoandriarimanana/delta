@@ -20,8 +20,9 @@ from app.models.client_entreprise import ClientEntreprise
 from app.models.client_particulier import ClientParticulier
 from app.models.reservation import Reservation, TypeReservation
 from app.models.salle import Salle
-from app.schemas.auth import Connexion, InscriptionParticulier
+from app.schemas.auth import Connexion, InscriptionEntreprise, InscriptionParticulier
 from app.schemas.client import ClientRead
+from app.schemas.client_entreprise import ClientEntrepriseCreate
 from app.schemas.client_particulier import ClientParticulierCreate
 from app.services.auth_service import AuthService
 from app.services.client_service import MENTION_ANONYME, ClientService
@@ -282,3 +283,70 @@ def test_reservation_reste_lisible_apres_anonymisation(
     assert relue.id_client == client.id_client, "le lien vers le client est rompu"
     assert relue.statut == "Confirmee"
     assert relue.client.email.endswith("@delta.invalid"), "client non anonymisé"
+
+
+# --- Propagation aux lignes filles -------------------------------------------
+
+
+def test_anonymisation_archive_aussi_la_ligne_fille(
+    db: Session, service: ClientService
+) -> None:
+    """Un archivage est un UPDATE : le CASCADE du sous-type ne se déclenche pas.
+
+    Sans propagation explicite, la ligne fille restait active sous un parent
+    archivé — état incohérent, et surtout bloquant : sa valeur unique restait
+    prise par l'index partiel.
+    """
+    client = _inscrire(db)
+
+    service.anonymiser(client.id_client)
+
+    assert client.supprime_le is not None
+    assert client.particulier.supprime_le is not None
+
+
+def test_numero_fiscal_libere_apres_anonymisation(
+    db: Session, service: ClientService
+) -> None:
+    """Une société anonymisée doit pouvoir se réinscrire avec son numéro fiscal.
+
+    Il désigne une personne morale de façon permanente : le lui interdire à vie
+    reviendrait à la radier, pas à effacer ses données personnelles.
+    """
+    auth = AuthService(db)
+    premiere = auth.inscrire_entreprise(
+        InscriptionEntreprise(
+            email="contact@societe.mg",
+            mot_de_passe=MOT_DE_PASSE,
+            identite=ClientEntrepriseCreate(
+                raison_sociale="Société Delta", numero_id_fiscal="1234567890"
+            ),
+        )
+    )
+
+    service.anonymiser(premiere.id_client)
+
+    seconde = auth.inscrire_entreprise(
+        InscriptionEntreprise(
+            email="nouveau@societe.mg",
+            mot_de_passe=MOT_DE_PASSE,
+            identite=ClientEntrepriseCreate(
+                raison_sociale="Société Delta", numero_id_fiscal="1234567890"
+            ),
+        )
+    )
+
+    assert seconde.id_client != premiere.id_client
+
+
+def test_restauration_reactive_aussi_la_ligne_fille(
+    db: Session, service: ClientService
+) -> None:
+    """La restauration doit défaire exactement ce que l'archivage a fait."""
+    client = _inscrire(db)
+    service.anonymiser(client.id_client)
+
+    service.restaurer(client.id_client)
+
+    assert client.supprime_le is None
+    assert client.particulier.supprime_le is None

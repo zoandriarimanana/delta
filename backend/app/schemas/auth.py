@@ -8,6 +8,7 @@ vivent donc ici plutôt que dans le schema d'une des deux entités.
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.core.security import LONGUEUR_MAX_MOT_DE_PASSE_OCTETS
+from app.schemas.client_entreprise import ClientEntrepriseCreate
 from app.schemas.client_particulier import ClientParticulierCreate
 
 LONGUEUR_MIN_MOT_DE_PASSE = 8
@@ -36,6 +37,25 @@ class InscriptionParticulier(BaseModel):
     telephone: str | None = Field(default=None, max_length=30)
     adresse: str | None = Field(default=None, max_length=255)
     identite: ClientParticulierCreate
+
+    @field_validator("mot_de_passe")
+    @classmethod
+    def _mot_de_passe_pas_trop_long(cls, valeur: str) -> str:
+        return _valider_longueur_mot_de_passe(valeur)
+
+
+class InscriptionEntreprise(BaseModel):
+    """Charge utile d'inscription d'un client entreprise.
+
+    Mêmes champs de compte que le particulier — l'e-mail et le mot de passe
+    vivent sur CLIENT, communs aux deux sous-types. Seule `identite` change.
+    """
+
+    email: EmailStr
+    mot_de_passe: str = Field(min_length=LONGUEUR_MIN_MOT_DE_PASSE)
+    telephone: str | None = Field(default=None, max_length=30)
+    adresse: str | None = Field(default=None, max_length=255)
+    identite: ClientEntrepriseCreate
 
     @field_validator("mot_de_passe")
     @classmethod
