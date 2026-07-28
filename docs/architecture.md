@@ -234,7 +234,14 @@ src/
 │   │       ├── SalleDetailPage.tsx
 │   │       └── SalleReservationForm.tsx   # composant separe, pas fondu dans la page
 │   ├── produit/
-│   │   └── ... (meme structure)
+│   │   ├── produit.types.ts
+│   │   ├── produit.api.ts
+│   │   ├── produit.service.ts
+│   │   ├── produit.hooks.ts
+│   │   ├── components/          # sous-composants locaux au module
+│   │   └── pages/
+│   │       ├── ProduitListPage.tsx
+│   │       └── ProduitDetailPage.tsx
 │   ├── formation/
 │   ├── abonnement/
 │   ├── reservation/

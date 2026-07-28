@@ -12,6 +12,7 @@ import { NavLink, Outlet } from 'react-router';
 
 const LIENS = [
   { vers: '/', libelle: 'Accueil', exact: true },
+  { vers: '/produits', libelle: 'Catalogue', exact: false },
   { vers: '/connexion', libelle: 'Connexion', exact: false },
 ];
 

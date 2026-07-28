@@ -1,12 +1,14 @@
 /**
  * Racine de l'application : routeur et table de routes, rien d'autre.
  *
- * Pas de dossier `features/` à ce stade (Sprint 0) — les modules métier et
- * leurs routes viendront s'y greffer au sprint 1.
+ * Les routes des modules métier se greffent ici, en important leurs pages
+ * depuis `features/<module>/pages/`.
  */
 
 import { BrowserRouter, Route, Routes } from 'react-router';
 
+import ProduitDetailPage from '@/features/produit/pages/ProduitDetailPage';
+import ProduitListPage from '@/features/produit/pages/ProduitListPage';
 import MainLayout from '@/layouts/MainLayout';
 import SessionExpiree from '@/lib/SessionExpiree';
 import AccueilPage from '@/pages/AccueilPage';
@@ -22,6 +24,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<MainLayout />}>
           <Route index element={<AccueilPage />} />
+          <Route path="produits" element={<ProduitListPage />} />
+          <Route path="produits/:idProduit" element={<ProduitDetailPage />} />
           <Route path="connexion" element={<ConnexionPage />} />
           <Route path="*" element={<NonTrouveePage />} />
         </Route>
