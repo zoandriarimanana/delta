@@ -20,6 +20,7 @@ from app.core.database import Base, get_db
 from app.core.security import decoder_jeton_acces
 from app.main import app
 from app.models.client import Client
+from app.models.client_entreprise import ClientEntreprise
 from app.models.client_particulier import ClientParticulier
 
 AUTH = f"{settings.API_V1_PREFIX}/auth"
@@ -44,8 +45,16 @@ def client_http() -> Iterator[TestClient]:
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+    # `client_entreprise` est necessaire bien qu'aucun test ici ne la peuple :
+    # `ClientRead` expose desormais la relation `entreprise`, donc sa
+    # serialisation interroge la table a chaque reponse.
     Base.metadata.create_all(
-        engine, tables=[Client.__table__, ClientParticulier.__table__]
+        engine,
+        tables=[
+            Client.__table__,
+            ClientParticulier.__table__,
+            ClientEntreprise.__table__,
+        ],
     )
 
     def _get_db() -> Iterator[Session]:
@@ -168,3 +177,110 @@ def test_connexion_email_inconnu_retourne_401_avec_le_meme_message(
 
     assert inconnu.status_code == mauvais.status_code == 401
     assert inconnu.json()["detail"] == mauvais.json()["detail"]
+
+
+# --- Inscription entreprise ---------------------------------------------------
+
+INSCRIPTION_ENTREPRISE = {
+    "email": "contact@societe.mg",
+    "mot_de_passe": "motdepasse123",
+    "identite": {
+        "raison_sociale": "Société Delta",
+        "numero_id_fiscal": "1234567890",
+        "secteur_activite": "Restauration",
+    },
+}
+
+
+def test_inscription_entreprise_retourne_201(client_http: TestClient) -> None:
+    reponse = client_http.post(
+        f"{AUTH}/inscription-entreprise", json=INSCRIPTION_ENTREPRISE
+    )
+
+    assert reponse.status_code == 201
+    corps = reponse.json()
+    assert corps["type_client"] == "Entreprise"
+    assert corps["entreprise"]["raison_sociale"] == "Société Delta"
+    assert corps["particulier"] is None
+
+
+def test_inscription_entreprise_n_expose_pas_le_mot_de_passe(
+    client_http: TestClient,
+) -> None:
+    corps = client_http.post(
+        f"{AUTH}/inscription-entreprise", json=INSCRIPTION_ENTREPRISE
+    ).json()
+
+    assert "mot_de_passe" not in corps
+    assert "$2b$" not in str(corps)
+
+
+def test_email_en_double_retourne_409(client_http: TestClient) -> None:
+    client_http.post(f"{AUTH}/inscription-entreprise", json=INSCRIPTION_ENTREPRISE)
+
+    reponse = client_http.post(
+        f"{AUTH}/inscription-entreprise",
+        json={
+            **INSCRIPTION_ENTREPRISE,
+            "identite": {
+                **INSCRIPTION_ENTREPRISE["identite"],
+                "numero_id_fiscal": "9999",
+            },
+        },
+    )
+
+    assert reponse.status_code == 409
+    assert "e-mail" in reponse.json()["detail"]
+
+
+def test_numero_fiscal_en_double_retourne_409_avec_son_propre_message(
+    client_http: TestClient,
+) -> None:
+    """Les deux conflits doivent être distinguables par le client de l'API."""
+    client_http.post(f"{AUTH}/inscription-entreprise", json=INSCRIPTION_ENTREPRISE)
+
+    reponse = client_http.post(
+        f"{AUTH}/inscription-entreprise",
+        json={**INSCRIPTION_ENTREPRISE, "email": "autre@societe.mg"},
+    )
+
+    assert reponse.status_code == 409
+    assert "fiscale" in reponse.json()["detail"]
+
+
+def test_entreprise_se_connecte_sur_le_meme_endpoint(client_http: TestClient) -> None:
+    """La connexion n'a pas été dupliquée : elle porte sur CLIENT."""
+    inscrit = client_http.post(
+        f"{AUTH}/inscription-entreprise", json=INSCRIPTION_ENTREPRISE
+    ).json()
+
+    reponse = client_http.post(
+        f"{AUTH}/connexion",
+        json={
+            "email": INSCRIPTION_ENTREPRISE["email"],
+            "mot_de_passe": INSCRIPTION_ENTREPRISE["mot_de_passe"],
+        },
+    )
+
+    assert reponse.status_code == 200
+    charge = decoder_jeton_acces(reponse.json()["access_token"])
+    assert charge is not None
+    assert charge["sub"] == str(inscrit["id_client"])
+
+
+@pytest.mark.parametrize("champ_manquant", ["raison_sociale", "numero_id_fiscal"])
+def test_champs_obligatoires_manquants_retournent_422(
+    client_http: TestClient, champ_manquant: str
+) -> None:
+    identite = {
+        k: v
+        for k, v in INSCRIPTION_ENTREPRISE["identite"].items()
+        if k != champ_manquant
+    }
+
+    reponse = client_http.post(
+        f"{AUTH}/inscription-entreprise",
+        json={**INSCRIPTION_ENTREPRISE, "identite": identite},
+    )
+
+    assert reponse.status_code == 422

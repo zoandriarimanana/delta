@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError as PydanticValidationError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AuthentificationInvalide, ConflitMetier
@@ -20,8 +21,9 @@ from app.models.client_entreprise import ClientEntreprise
 from app.models.client_particulier import ClientParticulier
 from app.models.reservation import Reservation, TypeReservation
 from app.models.salle import Salle
-from app.schemas.auth import Connexion, InscriptionParticulier
+from app.schemas.auth import Connexion, InscriptionEntreprise, InscriptionParticulier
 from app.schemas.client import ClientRead
+from app.schemas.client_entreprise import ClientEntrepriseCreate
 from app.schemas.client_particulier import ClientParticulierCreate
 from app.services.auth_service import AuthService
 from app.services.client_service import MENTION_ANONYME, ClientService
@@ -282,3 +284,109 @@ def test_reservation_reste_lisible_apres_anonymisation(
     assert relue.id_client == client.id_client, "le lien vers le client est rompu"
     assert relue.statut == "Confirmee"
     assert relue.client.email.endswith("@delta.invalid"), "client non anonymisé"
+
+
+# --- Propagation aux lignes filles -------------------------------------------
+
+
+def test_anonymisation_archive_aussi_la_ligne_fille_particulier(
+    db: Session, service: ClientService
+) -> None:
+    """Un archivage est un UPDATE : le CASCADE du sous-type ne se déclenche pas.
+
+    Sans propagation explicite, la ligne fille restait active sous un parent
+    archivé — état incohérent, et surtout bloquant : sa valeur unique restait
+    prise par l'index partiel.
+    """
+    client = _inscrire(db)
+
+    service.anonymiser(client.id_client)
+
+    assert client.supprime_le is not None
+    assert client.particulier.supprime_le is not None
+
+
+def test_numero_fiscal_libere_apres_anonymisation(
+    db: Session, service: ClientService
+) -> None:
+    """Une société anonymisée doit pouvoir se réinscrire avec son numéro fiscal.
+
+    Il désigne une personne morale de façon permanente : le lui interdire à vie
+    reviendrait à la radier, pas à effacer ses données personnelles.
+    """
+    auth = AuthService(db)
+    premiere = auth.inscrire_entreprise(
+        InscriptionEntreprise(
+            email="contact@societe.mg",
+            mot_de_passe=MOT_DE_PASSE,
+            identite=ClientEntrepriseCreate(
+                raison_sociale="Société Delta", numero_id_fiscal="1234567890"
+            ),
+        )
+    )
+
+    service.anonymiser(premiere.id_client)
+
+    seconde = auth.inscrire_entreprise(
+        InscriptionEntreprise(
+            email="nouveau@societe.mg",
+            mot_de_passe=MOT_DE_PASSE,
+            identite=ClientEntrepriseCreate(
+                raison_sociale="Société Delta", numero_id_fiscal="1234567890"
+            ),
+        )
+    )
+
+    assert seconde.id_client != premiere.id_client
+
+
+def test_restauration_reactive_aussi_la_ligne_fille_particulier(
+    db: Session, service: ClientService
+) -> None:
+    """La restauration doit défaire exactement ce que l'archivage a fait."""
+    client = _inscrire(db)
+    service.anonymiser(client.id_client)
+
+    service.restaurer(client.id_client)
+
+    assert client.supprime_le is None
+    assert client.particulier.supprime_le is None
+
+
+def test_restauration_dun_particulier_refusee_apres_propagation(
+    db: Session, service: ClientService
+) -> None:
+    """Collision d'e-mail sur un compte dont la ligne fille est archivée aussi.
+
+    Complète `test_restauration_refusee_si_email_reattribue`, qui archive par un
+    `clients.delete()` direct : la ligne fille y reste active, donc le chemin de
+    propagation n'est jamais exercé sous collision. Ici le compte est archivé par
+    `anonymiser()`, donc les deux lignes le sont, et la restauration doit
+    échouer **proprement** — sans laisser la ligne fille réactivée alors que le
+    parent ne l'est pas.
+    """
+    ancien = _inscrire(db)
+    service.anonymiser(ancien.id_client)
+    assert ancien.particulier.supprime_le is not None, "propagation attendue"
+
+    # L'adresse d'origine est libre : c'est l'objet de l'index partiel.
+    _inscrire(db)
+
+    # `anonymiser` a réécrit l'e-mail de l'ancien compte ; on le remet à sa
+    # valeur d'origine pour provoquer exactement la collision visée.
+    ancien.email = EMAIL
+    db.flush()
+
+    with pytest.raises(ConflitMetier) as capture:
+        service.restaurer(ancien.id_client)
+
+    assert "restauration impossible" in str(capture.value)
+    # La cause prouve que le refus vient bien de la base, et non d'un
+    # pré-contrôle applicatif qui produirait le même message.
+    assert isinstance(capture.value.__cause__, IntegrityError)
+    db.refresh(ancien)
+    db.refresh(ancien.particulier)
+    assert ancien.supprime_le is not None, "le parent doit rester archivé"
+    assert (
+        ancien.particulier.supprime_le is not None
+    ), "la ligne fille ne doit pas rester réactivée après un rollback"

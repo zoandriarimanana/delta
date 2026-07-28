@@ -17,7 +17,9 @@ from app.models.client import Client
 from app.repositories.client_repository import ClientRepository
 
 CONTRAINTE_EMAIL_UNIQUE = "uq_client_email"
+CONTRAINTE_FISCAL_UNIQUE = "uq_client_entreprise_numero_id_fiscal"
 INDICE_EMAIL = "client.email"
+INDICE_FISCAL = "client_entreprise.numero_id_fiscal"
 
 # Domaine réservé par la RFC 2606 : jamais routable, donc jamais joignable par
 # erreur. L'adresse générée reste syntaxiquement valide, ce qui évite qu'une
@@ -78,9 +80,34 @@ class ClientService:
             client.entreprise.raison_sociale = MENTION_ANONYME
             client.entreprise.nom_contact_referent = None
 
-        self.clients.delete(client)
+        self._archiver_avec_sa_ligne_fille(client)
         self.db.commit()
         return client
+
+    def _lignes_filles(self, client: Client) -> list[object]:
+        """Retourne la ligne fille du client, s'il en a une.
+
+        Le MLD en garantit exactement une — l'invariant n'étant tenu qu'au
+        niveau applicatif (T0.7), on ne suppose rien et on collecte ce qui est
+        présent.
+        """
+        return [f for f in (client.particulier, client.entreprise) if f is not None]
+
+    def _archiver_avec_sa_ligne_fille(self, client: Client) -> None:
+        """Archive le CLIENT **et** sa ligne fille, dans la même transaction.
+
+        Un archivage est un `UPDATE` : le `ON DELETE CASCADE` des sous-types ne
+        se déclenche pas. Propager est donc une responsabilité de service (voir
+        la règle transverse de `docs/roadmap.md`).
+
+        Ne pas le faire laissait la ligne fille active sous un parent archivé,
+        avec une conséquence concrète : son `numero_id_fiscal` restait pris par
+        l'index partiel, et une société anonymisée ne pouvait plus jamais se
+        réinscrire avec le sien.
+        """
+        for fille in self._lignes_filles(client):
+            self.clients.delete(fille)  # type: ignore[arg-type]
+        self.clients.delete(client)
 
     def restaurer(self, id_client: int) -> Client:
         """Réactive un compte archivé.
@@ -103,6 +130,8 @@ class ClientService:
 
         try:
             self.clients.restaurer(client)
+            for fille in self._lignes_filles(client):
+                self.clients.restaurer(fille)  # type: ignore[arg-type]
             self.db.commit()
         except IntegrityError as erreur:
             self.db.rollback()
@@ -110,6 +139,11 @@ class ClientService:
                 raise ConflitMetier(
                     "Un compte actif utilise déjà cet e-mail, "
                     "restauration impossible."
+                ) from erreur
+            if viole_contrainte(erreur, CONTRAINTE_FISCAL_UNIQUE, INDICE_FISCAL):
+                raise ConflitMetier(
+                    "Une entreprise active utilise déjà ce numéro "
+                    "d'identification fiscale, restauration impossible."
                 ) from erreur
             raise
         return client

@@ -35,6 +35,7 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
 
     assert set(app.openapi()["paths"]) == {
         f"{prefixe}/auth/inscription",
+        f"{prefixe}/auth/inscription-entreprise",
         f"{prefixe}/auth/connexion",
         f"{prefixe}/categories-produit",
         f"{prefixe}/categories-produit/{{id_categorie}}",
