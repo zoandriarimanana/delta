@@ -2,6 +2,8 @@
 
 import { Link, useParams } from 'react-router';
 
+import { usePanier } from '@/features/commande/commande.hooks';
+
 import EtatRequete from '../components/EtatRequete';
 import { useCategories, useProduit } from '../produit.hooks';
 import { estDisponible, formaterPrix, libelleCategorie } from '../produit.service';
@@ -26,6 +28,7 @@ export default function ProduitDetailPage() {
   // `null` désactive la requête : voir `useProduit`.
   const produit = useProduit(identifiant);
   const categories = useCategories();
+  const panier = usePanier();
 
   if (identifiant === null) {
     return (
@@ -77,6 +80,21 @@ export default function ProduitDetailPage() {
                 valeur={produit.donnees.est_livrable ? 'Oui' : 'Non'}
               />
             </dl>
+            {/* Un produit épuisé ne peut pas être ajouté : le bouton disparaît
+                plutôt que d'échouer silencieusement au clic. */}
+            {estDisponible(produit.donnees) ? (
+              <button
+                type="button"
+                onClick={() => panier.ajouter(produit.donnees!)}
+                className="mt-6 rounded bg-slate-900 px-4 py-2 text-white"
+              >
+                Ajouter au panier
+              </button>
+            ) : (
+              <p className="mt-6 text-slate-500">
+                Ce produit est épuisé, il ne peut pas être commandé.
+              </p>
+            )}
           </>
         )}
       </EtatRequete>

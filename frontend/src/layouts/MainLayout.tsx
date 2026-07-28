@@ -10,6 +10,8 @@
 
 import { NavLink, Outlet } from 'react-router';
 
+import { usePanier } from '@/features/commande/commande.hooks';
+
 const LIENS = [
   { vers: '/', libelle: 'Accueil', exact: true },
   { vers: '/produits', libelle: 'Catalogue', exact: false },
@@ -24,6 +26,11 @@ function classeLien({ isActive }: { isActive: boolean }): string {
 }
 
 export default function MainLayout() {
+  // La donnée vient d'un hook exposé par `features/commande/` : le layout
+  // l'affiche sans rien savoir de la façon dont le panier est tenu. Aucune
+  // logique métier n'est écrite ici (cf. `docs/architecture.md`).
+  const { nombre } = usePanier();
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
@@ -40,6 +47,17 @@ export default function MainLayout() {
                 {lien.libelle}
               </NavLink>
             ))}
+            <NavLink to="/panier" className={classeLien}>
+              Panier
+              {nombre > 0 && (
+                <span
+                  data-testid="compteur-panier"
+                  className="ml-2 rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white"
+                >
+                  {nombre}
+                </span>
+              )}
+            </NavLink>
           </nav>
         </div>
       </header>
