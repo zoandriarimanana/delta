@@ -14,10 +14,11 @@ laissé en base.
 """
 
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
@@ -30,7 +31,7 @@ from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
 from app.models.commande import StatutCommande, TypeCommande
 from app.models.produit import Produit
-from app.schemas.commande import CommandeCreate
+from app.schemas.commande import CommandeCreate, CommandeInviteCreate
 from app.schemas.ligne_commande import LigneCommandeCreate
 from app.services.commande_service import CommandeService
 
@@ -347,3 +348,146 @@ def test_historique_isole_les_clients(
 
     assert len(service.lister_du_client(client)) == 1
     assert len(service.lister_du_client(autre)) == 1
+
+
+# --- Parcours invité ----------------------------------------------------------
+
+
+def _commande_invite(id_produit: int, quantite: int = 2) -> CommandeInviteCreate:
+    return CommandeInviteCreate(
+        type_commande=TypeCommande.A_EMPORTER,
+        lignes=[LigneCommandeCreate(id_produit=id_produit, quantite=quantite)],
+        nom_invite="Rakoto Jean",
+        contact_invite="+261340000000",
+    )
+
+
+def test_commande_invitee_sans_client(
+    service: CommandeService, eclair: Produit
+) -> None:
+    commande = service.creer_pour_invite(_commande_invite(eclair.id_produit))
+
+    assert commande.id_client is None
+    assert commande.nom_invite == "Rakoto Jean"
+    assert commande.contact_invite == "+261340000000"
+
+
+def test_reference_publique_generee_pour_un_invite(
+    service: CommandeService, eclair: Produit
+) -> None:
+    """Seul moyen pour l'invité de revenir sur sa commande."""
+    commande = service.creer_pour_invite(_commande_invite(eclair.id_produit))
+
+    assert isinstance(commande.reference_publique, UUID)
+
+
+def test_pas_de_reference_pour_un_client_identifie(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    """Un client retrouve ses commandes par son historique : rien à générer."""
+    commande = service.creer(_commande(eclair.id_produit), client)
+
+    assert commande.reference_publique is None
+
+
+def test_deux_commandes_invitees_ont_des_references_distinctes(
+    service: CommandeService, eclair: Produit
+) -> None:
+    premiere = service.creer_pour_invite(_commande_invite(eclair.id_produit, 1))
+    seconde = service.creer_pour_invite(_commande_invite(eclair.id_produit, 1))
+
+    assert premiere.reference_publique != seconde.reference_publique
+
+
+def test_lecture_par_reference(service: CommandeService, eclair: Produit) -> None:
+    commande = service.creer_pour_invite(_commande_invite(eclair.id_produit))
+
+    relue = service.obtenir_par_reference(commande.reference_publique)
+
+    assert relue.id_commande == commande.id_commande
+
+
+def test_reference_inconnue_leve_ressource_introuvable(
+    service: CommandeService,
+) -> None:
+    with pytest.raises(RessourceIntrouvable):
+        service.obtenir_par_reference(uuid4())
+
+
+def test_commande_invitee_archivee_devient_introuvable(
+    service: CommandeService, eclair: Produit
+) -> None:
+    """Une référence valide ne ressuscite pas une commande archivée."""
+    commande = service.creer_pour_invite(_commande_invite(eclair.id_produit))
+    reference = commande.reference_publique
+    service.supprimer(commande.id_commande)
+
+    with pytest.raises(RessourceIntrouvable):
+        service.obtenir_par_reference(reference)
+
+
+def test_commande_invitee_absente_de_tout_historique(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    """Sans `id_client`, elle ne peut apparaître dans aucun historique."""
+    service.creer_pour_invite(_commande_invite(eclair.id_produit))
+
+    assert service.lister_du_client(client) == []
+
+
+def test_le_stock_est_decremente_aussi_pour_un_invite(
+    service: CommandeService, eclair: Produit, db: Session
+) -> None:
+    service.creer_pour_invite(_commande_invite(eclair.id_produit, quantite=3))
+
+    db.refresh(eclair)
+    assert eclair.stock_disponible == 7
+
+
+def test_contact_invite_obligatoire() -> None:
+    """Le CHECK de la base ne porte que sur `nom_invite` ; le schema complète.
+
+    Une commande sans moyen de recontacter l'acheteur n'a pas de sens, mais un
+    CHECK à trois colonnes se lirait mal pour ce qu'il apporte.
+    """
+    with pytest.raises(ValueError):
+        CommandeInviteCreate(
+            type_commande=TypeCommande.A_EMPORTER,
+            lignes=[LigneCommandeCreate(id_produit=1, quantite=1)],
+            nom_invite="Rakoto",
+        )
+
+
+def test_le_check_refuse_une_commande_sans_commanditaire(
+    service: CommandeService, eclair: Produit, db: Session
+) -> None:
+    """Garde-fou de la base, court-circuitant le service.
+
+    Si la contrainte n'existait pas, une commande orpheline pourrait être écrite
+    par tout chemin ne passant pas par le service — import SQL, script de seed.
+    """
+    with pytest.raises(IntegrityError):
+        service.commandes.create(
+            {
+                "type_commande": TypeCommande.EN_LIGNE,
+                "statut": StatutCommande.EN_ATTENTE,
+                "montant_total": Decimal("0"),
+            }
+        )
+    db.rollback()
+
+
+def test_le_check_refuse_client_et_invite_a_la_fois(
+    service: CommandeService, client: Client, db: Session
+) -> None:
+    with pytest.raises(IntegrityError):
+        service.commandes.create(
+            {
+                "type_commande": TypeCommande.EN_LIGNE,
+                "statut": StatutCommande.EN_ATTENTE,
+                "montant_total": Decimal("0"),
+                "id_client": client.id_client,
+                "nom_invite": "Rakoto",
+            }
+        )
+    db.rollback()

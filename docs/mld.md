@@ -57,13 +57,19 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 ## Transactions
 
 ```
-COMMANDE(id_commande, nom_invite, contact_invite, type_commande, statut, montant_total, #id_client, #id_reservation)
+COMMANDE(id_commande, reference_publique, nom_invite, contact_invite, type_commande, statut, montant_total, #id_client, #id_reservation)
 LIGNE_COMMANDE(id_ligne, quantite, prix_unitaire_applique, #id_commande, #id_produit)
 DEMANDE_PERSONNALISATION(id_personnalisation, description_demande, ingredients_specifiques, supplement_prix, #id_ligne, #id_produit_base)
 RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_personnes, statut, avec_hebergement, #id_client, #id_session, #id_salle, #id_logement)
 ```
 
 - `COMMANDE.#id_client` est NULL si commande en mode invité (`nom_invite`/`contact_invite` alors renseignés).
+- `COMMANDE.reference_publique` est un **UUID généré uniquement en mode invité**,
+  NULL sinon. C'est le seul moyen pour un invité de revenir sur sa commande : il
+  n'a pas de compte, donc pas de jeton. Un UUID et non l'identifiant séquentiel,
+  qui serait énumérable. Contrainte `UNIQUE (reference_publique)` **globale** et
+  non partielle : un UUID n'est jamais réattribué, il n'y a donc aucune valeur à
+  libérer à l'archivage.
 - `COMMANDE.type_commande` ∈ {En_ligne, Sur_place, A_emporter}
 - `COMMANDE.statut` ∈ {En_attente, Confirmee, En_preparation, Livree, Servie, Annulee}
   Règle de service, **non exprimable en `CHECK`** puisqu'elle croise deux
@@ -110,6 +116,18 @@ AVIS(id_avis, type_avis, note, commentaire, date_avis, #id_client, #id_ligne, #i
    ```sql
    CHECK (note BETWEEN 1 AND 5)
    ```
+5. **COMMANDE** : une commande est passée par un client identifié **ou** par un
+   invité, jamais les deux, jamais ni l'un ni l'autre.
+   ```sql
+   CHECK ((id_client IS NOT NULL) <> (nom_invite IS NOT NULL))
+   ```
+   Contrairement à la contrainte n°1, celle-ci n'est **pas** reportée au niveau
+   applicatif : l'insertion d'une commande se fait en un seul temps, la
+   contrainte n'a aucun état transitoire à tolérer.
+
+   `contact_invite` n'y figure pas — un `CHECK` à trois colonnes se lirait mal
+   pour ce qu'il apporte. Son caractère obligatoire en mode invité est porté par
+   le schema d'entrée, qui refuse la charge utile avant la base.
 
 ## Cardinalités (1,1) traduites en contrainte `UNIQUE`
 

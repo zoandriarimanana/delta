@@ -2,6 +2,8 @@
 
 from collections.abc import Sequence
 from decimal import Decimal
+from typing import Any
+from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
 
@@ -16,7 +18,7 @@ from app.models.produit import Produit
 from app.repositories.commande_repository import CommandeRepository
 from app.repositories.ligne_commande_repository import LigneCommandeRepository
 from app.repositories.produit_repository import ProduitRepository
-from app.schemas.commande import CommandeCreate
+from app.schemas.commande import CommandeCreate, CommandeInviteCreate
 from app.schemas.ligne_commande import LigneCommandeCreate
 
 
@@ -37,6 +39,18 @@ class CommandeService:
     def obtenir(self, id_commande: int) -> Commande:
         """Retourne une commande, ou lève `RessourceIntrouvable` (404)."""
         commande = self.commandes.get_by_id(id_commande)
+        if commande is None:
+            raise RessourceIntrouvable("Commande introuvable.")
+        return commande
+
+    def obtenir_par_reference(self, reference: UUID) -> Commande:
+        """Retourne la commande invitée portant cette référence, ou 404.
+
+        Seul chemin de lecture d'un invité. La référence est un UUID
+        précisément pour qu'il ne soit pas énumérable, contrairement à
+        l'identifiant séquentiel exposé par `GET /commandes/{id}`.
+        """
+        commande = self.commandes.get_by_reference_publique(reference)
         if commande is None:
             raise RessourceIntrouvable("Commande introuvable.")
         return commande
@@ -82,7 +96,41 @@ class CommandeService:
         )
 
     def creer(self, donnees: CommandeCreate, client: Client) -> Commande:
+        """Crée une commande au nom du client authentifié.
+
+        `id_client` vient du jeton, jamais du corps de la requête : l'accepter
+        laisserait commander au nom d'autrui.
+        """
+        return self._creer(donnees, {"id_client": client.id_client})
+
+    def creer_pour_invite(self, donnees: CommandeInviteCreate) -> Commande:
+        """Crée une commande sans compte, et lui attribue une référence publique.
+
+        La `reference_publique` est générée **ici et seulement ici** : une
+        commande passée par un client identifié n'en a pas besoin, il retrouve la
+        sienne par son historique.
+
+        C'est le seul moyen pour l'invité de revenir sur sa commande. Elle doit
+        donc lui être présentée à la validation — l'interface en porte la
+        responsabilité (issue #15).
+        """
+        return self._creer(
+            donnees,
+            {
+                "nom_invite": donnees.nom_invite,
+                "contact_invite": donnees.contact_invite,
+                "reference_publique": uuid4(),
+            },
+        )
+
+    def _creer(
+        self, donnees: CommandeCreate, identification: dict[str, Any]
+    ) -> Commande:
         """Crée une commande et ses lignes en une seule transaction.
+
+        `identification` porte ce qui distingue les deux parcours — soit
+        `id_client`, soit le couple invité et sa référence. Le reste est commun,
+        et le `CHECK` de la base garantit qu'on ne fournit jamais les deux.
 
         Ce que le serveur impose, et n'accepte donc pas depuis la requête :
 
@@ -103,7 +151,7 @@ class CommandeService:
                 "type_commande": donnees.type_commande,
                 "statut": StatutCommande.EN_ATTENTE,
                 "montant_total": Decimal("0"),
-                "id_client": client.id_client,
+                **identification,
             }
         )
 
