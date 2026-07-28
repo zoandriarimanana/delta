@@ -4,7 +4,7 @@ Ordre de priorisation : dépendances techniques d'abord, puis cœur transactionn
 puis modules métier du plus généraliste au plus spécifique, paiement en ligne et
 back-office avancé en dernier.
 
-**Sprint courant : Sprint 1.** Mettre à jour cette ligne à chaque changement de sprint.
+**Sprint courant : Sprint 2.** Mettre à jour cette ligne à chaque changement de sprint.
 
 Avant de commencer une tâche : vérifier la Definition of Ready dans `CONTRIBUTING.md`.
 Avant de clore une tâche : vérifier la Definition of Done dans `CONTRIBUTING.md`.
@@ -62,10 +62,10 @@ Ordre d'implémentation contraint par les dépendances. Un arrêt de validation 
 
 ## Sprint 1 — Comptes clients & catalogue produits
 
-- [ ] CRUD `CATEGORIE_PRODUIT`, `PRODUIT` (admin)
-- [ ] Inscription/connexion `CLIENT_ENTREPRISE` (distinct du particulier)
-- [ ] Catalogue public : liste + fiche produit (React)
-- [ ] Recherche / filtre par catégorie
+- [x] CRUD `CATEGORIE_PRODUIT`, `PRODUIT` (admin)
+- [x] Inscription/connexion `CLIENT_ENTREPRISE` (distinct du particulier)
+- [x] Catalogue public : liste + fiche produit (React)
+- [x] Recherche / filtre par catégorie
 
 ## Sprint 2 — Commande & panier (cœur transactionnel)
 
