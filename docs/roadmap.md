@@ -4,7 +4,7 @@ Ordre de priorisation : dépendances techniques d'abord, puis cœur transactionn
 puis modules métier du plus généraliste au plus spécifique, paiement en ligne et
 back-office avancé en dernier.
 
-**Sprint courant : Sprint 2.** Mettre à jour cette ligne à chaque changement de sprint.
+**Sprint courant : Sprint 3.** Mettre à jour cette ligne à chaque changement de sprint.
 
 Avant de commencer une tâche : vérifier la Definition of Ready dans `CONTRIBUTING.md`.
 Avant de clore une tâche : vérifier la Definition of Done dans `CONTRIBUTING.md`.
@@ -69,10 +69,15 @@ Ordre d'implémentation contraint par les dépendances. Un arrêt de validation 
 
 ## Sprint 2 — Commande & panier (cœur transactionnel)
 
-- [ ] Création `COMMANDE` + `LIGNE_COMMANDE`, calcul `montant_total`
-- [ ] Parcours commande invité (sans compte) vs connecté
-- [ ] Panier + tunnel de commande (React)
-- [ ] Historique des commandes du client
+- [x] Création `COMMANDE` + `LIGNE_COMMANDE`, calcul `montant_total`
+- [x] Parcours commande invité (sans compte) vs connecté
+- [x] Panier + tunnel de commande (React)
+- [x] Historique des commandes du client
+
+`COMMANDE.date_commande` a été ajoutée pendant ce sprint : le MLD n'en portait
+aucune, et l'historique se triait faute de mieux sur `id_commande`. Ce n'était
+pas une omission de transcription mais un manque réel du dictionnaire de données
+d'origine — voir `docs/mld.md`.
 
 ## Sprint 3 — Personnel, personnalisation & livraison
 
