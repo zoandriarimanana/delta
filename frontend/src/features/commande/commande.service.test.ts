@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ajouterAuPanier,
+  formaterDate,
   formaterMontant,
   modifierQuantite,
   nombreArticles,
@@ -154,5 +155,19 @@ describe('versLignesEnvoyees', () => {
     const envoyees = versLignesEnvoyees([ligne({ quantite: 4 })]);
 
     expect(envoyees).toEqual([{ id_produit: 1, quantite: 4 }]);
+  });
+});
+
+describe('formaterDate', () => {
+  it('rend une date lisible en français', () => {
+    const rendu = formaterDate('2026-07-29T09:30:00+00:00');
+
+    expect(rendu).toContain('juillet');
+    expect(rendu).toContain('2026');
+  });
+
+  it('rend la valeur brute plutôt qu’« Invalid Date »', () => {
+    // Une donnée illisible vaut mieux qu'un message qui ressemble à un bogue.
+    expect(formaterDate('pas une date')).toBe('pas une date');
   });
 });

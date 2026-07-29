@@ -17,7 +17,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import update
+from sqlalchemy import text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -29,7 +29,7 @@ from app.core.exceptions import (
 from app.core.security import hacher_mot_de_passe
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
-from app.models.commande import StatutCommande, TypeCommande
+from app.models.commande import Commande, StatutCommande, TypeCommande
 from app.models.produit import Produit
 from app.schemas.commande import CommandeCreate, CommandeInviteCreate
 from app.schemas.ligne_commande import LigneCommandeCreate
@@ -348,6 +348,46 @@ def test_historique_isole_les_clients(
 
     assert len(service.lister_du_client(client)) == 1
     assert len(service.lister_du_client(autre)) == 1
+
+
+def test_historique_date_les_commandes(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    commande = service.creer(_commande(eclair.id_produit), client)
+
+    assert commande.date_commande is not None
+    # `TIMESTAMPTZ` : sans fuseau, deux serveurs configurés différemment
+    # produiraient des instants incomparables.
+    assert commande.date_commande.tzinfo is not None
+
+
+def test_historique_trie_par_date_et_non_par_identifiant(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """Le tri suit la chronologie, même quand elle contredit la séquence.
+
+    Les insertions étant séquentielles, `id DESC` et `date DESC` coïncident en
+    conditions normales : un test qui se contenterait de créer deux commandes
+    passerait avec l'un comme avec l'autre, et ne prouverait rien. On force donc
+    les deux ordres à diverger.
+    """
+    ancienne = service.creer(_commande(eclair.id_produit), client)
+    recente = service.creer(_commande(eclair.id_produit), client)
+
+    # La plus petite date est posée sur le plus grand identifiant : c'est
+    # exactement ce qu'une reprise de données antérieures produirait.
+    db.execute(
+        update(Commande)
+        .where(Commande.id_commande == recente.id_commande)
+        .values(date_commande=text("now() - interval '2 days'"))
+    )
+    db.commit()
+
+    historique = [c.id_commande for c in service.lister_du_client(client)]
+
+    assert historique == [ancienne.id_commande, recente.id_commande]
+    # Le tri par identifiant aurait donné l'ordre inverse.
+    assert historique != sorted(historique, reverse=True)
 
 
 # --- Parcours invité ----------------------------------------------------------

@@ -118,3 +118,25 @@ export function versLignesEnvoyees(panier: LignePanier[]): LigneCommandeEnvoyee[
     quantite: ligne.quantite,
   }));
 }
+
+/**
+ * Met en forme une date de commande, dans le même esprit que `formaterMontant`.
+ *
+ * `Intl` et non un découpage manuel : c'est lui qui connaît l'ordre des
+ * composants et les séparateurs du français. La date arrive en UTC et s'affiche
+ * dans le fuseau du navigateur — c'est bien l'heure locale du client qui
+ * l'intéresse, pas celle du serveur.
+ *
+ * Une valeur illisible est rendue telle quelle plutôt que sous forme d'« Invalid
+ * Date » : mieux vaut une donnée brute qu'un message qui ressemble à un bogue.
+ */
+export function formaterDate(valeur: string): string {
+  const date = new Date(valeur);
+  if (Number.isNaN(date.getTime())) {
+    return valeur;
+  }
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+  }).format(date);
+}

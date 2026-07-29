@@ -21,6 +21,8 @@ export interface LigneCommandeLue {
 
 export interface Commande {
   id_commande: number;
+  /** Horodatage ISO 8601 avec fuseau, posé par la base. */
+  date_commande: string;
   /**
    * Renseignée **uniquement** pour une commande invitée. C'est l'unique moyen
    * pour l'invité de revenir sur sa commande : il n'a ni compte ni jeton.

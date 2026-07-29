@@ -29,6 +29,7 @@ const REFERENCE = '8f14e45f-ceea-467a-9f5a-1f0a1f0a1f0a';
 
 const COMMANDE_INVITEE: Commande = {
   id_commande: 7,
+  date_commande: '2026-07-29T09:30:00+00:00',
   reference_publique: REFERENCE,
   type_commande: 'A_emporter',
   statut: 'En_attente',

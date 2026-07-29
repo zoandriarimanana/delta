@@ -12,6 +12,7 @@ import { Link } from 'react-router';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
 import RecapitulatifCommande from '../components/RecapitulatifCommande';
+import { formaterDate } from '../commande.service';
 import { useHistorique } from '../commande.hooks';
 
 export default function HistoriqueCommandesPage() {
@@ -77,6 +78,15 @@ export default function HistoriqueCommandesPage() {
             <h2 className="font-medium text-slate-900">
               Commande n° {commande.id_commande}
             </h2>
+            {/* La date répond à « quand ai-je commandé ? », ce qu'un numéro ne
+                dit pas. `<time>` porte la valeur brute pour les lecteurs
+                d'écran et les outils, le texte reste lisible. */}
+            <time
+              dateTime={commande.date_commande}
+              className="mt-1 block text-sm text-slate-500"
+            >
+              {formaterDate(commande.date_commande)}
+            </time>
             <RecapitulatifCommande commande={commande} />
           </li>
         ))}

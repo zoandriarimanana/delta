@@ -33,6 +33,7 @@ const PRODUIT: Produit = {
 
 const COMMANDE: Commande = {
   id_commande: 7,
+  date_commande: '2026-07-29T09:30:00+00:00',
   reference_publique: null,
   type_commande: 'En_ligne',
   statut: 'En_attente',

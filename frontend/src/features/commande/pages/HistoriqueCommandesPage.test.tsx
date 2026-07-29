@@ -22,6 +22,8 @@ vi.mock('../commande.api');
 function commande(surcharge: Partial<Commande> = {}): Commande {
   return {
     id_commande: 7,
+    // Date fixe : un test ne doit pas dépendre du jour où il tourne.
+    date_commande: '2026-07-29T09:30:00+00:00',
     reference_publique: null,
     type_commande: 'En_ligne',
     statut: 'En_attente',
@@ -98,6 +100,15 @@ describe('client connecté', () => {
     // montant que le total, et un `getByText` sur la seule somme serait ambigu.
     expect(screen.getByText(/Total : 7 000,00 Ar/)).toBeDefined();
     expect(screen.getByText(/Statut : En_attente/)).toBeDefined();
+  });
+
+  it('date chaque commande', async () => {
+    // Un numéro de commande ne dit pas *quand* elle a été passée.
+    afficher();
+
+    const date = await screen.findByText(/juillet 2026/);
+    // La valeur brute reste portée par l'attribut, pour les lecteurs d'écran.
+    expect(date.getAttribute('datetime')).toBe('2026-07-29T09:30:00+00:00');
   });
 
   it('n’envoie aucun identifiant de client', async () => {

@@ -57,12 +57,27 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 ## Transactions
 
 ```
-COMMANDE(id_commande, reference_publique, nom_invite, contact_invite, type_commande, statut, montant_total, #id_client, #id_reservation)
+COMMANDE(id_commande, date_commande, reference_publique, nom_invite, contact_invite, type_commande, statut, montant_total, #id_client, #id_reservation)
 LIGNE_COMMANDE(id_ligne, quantite, prix_unitaire_applique, #id_commande, #id_produit)
 DEMANDE_PERSONNALISATION(id_personnalisation, description_demande, ingredients_specifiques, supplement_prix, #id_ligne, #id_produit_base)
 RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_personnes, statut, avec_hebergement, #id_client, #id_session, #id_salle, #id_logement)
 ```
 
+- `COMMANDE.date_commande` est un `TIMESTAMPTZ NOT NULL DEFAULT now()`, posé par
+  la base et non par l'application : c'est l'horloge du serveur qui fait foi.
+  Elle était **absente du dictionnaire de données d'origine** ; ce n'est pas une
+  omission de transcription comme `CLIENT.email` ou `AVIS.note`, mais un manque
+  réel, relevé au sprint 2 en construisant l'historique client.
+
+  Deux besoins l'imposent. L'historique se trie du plus récent au plus ancien :
+  sans date, l'ordre reposait sur `id_commande DESC`, qui n'est un proxy de la
+  chronologie que tant que les identifiants restent séquentiels — une reprise de
+  données ou une insertion hors API le fausserait sans que rien ne le signale.
+  Et un client doit pouvoir lire *quand* il a commandé ; un numéro de commande
+  ne le lui dit pas.
+
+  Ne pas confondre avec `supprime_le` : l'une date la création du fait, l'autre
+  son archivage. Une commande porte toujours la première, rarement la seconde.
 - `COMMANDE.#id_client` est NULL si commande en mode invité (`nom_invite`/`contact_invite` alors renseignés).
 - `COMMANDE.reference_publique` est un **UUID généré uniquement en mode invité**,
   NULL sinon. C'est le seul moyen pour un invité de revenir sur sa commande : il
