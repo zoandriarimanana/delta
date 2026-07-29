@@ -8,6 +8,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router';
 
 import CommandeInviteePage from '@/features/commande/pages/CommandeInviteePage';
+import HistoriqueCommandesPage from '@/features/commande/pages/HistoriqueCommandesPage';
 import PanierPage from '@/features/commande/pages/PanierPage';
 import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
 import ProduitDetailPage from '@/features/produit/pages/ProduitDetailPage';
@@ -31,7 +32,11 @@ export default function App() {
           <Route path="produits/:idProduit" element={<ProduitDetailPage />} />
           <Route path="panier" element={<PanierPage />} />
           <Route path="commande" element={<TunnelCommandePage />} />
+          {/* Déclarée avant `commandes` : sans quoi rien ne change ici, les
+              deux chemins n'ayant pas le même nombre de segments — mais l'ordre
+              reste plus lisible du plus spécifique au plus général. */}
           <Route path="commandes/invite/:reference" element={<CommandeInviteePage />} />
+          <Route path="commandes" element={<HistoriqueCommandesPage />} />
           <Route path="connexion" element={<ConnexionPage />} />
           <Route path="*" element={<NonTrouveePage />} />
         </Route>

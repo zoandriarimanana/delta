@@ -40,3 +40,16 @@ export async function recupererCommandeInvitee(reference: string): Promise<Comma
   const reponse = await axiosClient.get<Commande>(`${CHEMIN}/invite/${reference}`);
   return reponse.data;
 }
+
+/**
+ * Historique du client authentifié.
+ *
+ * Le filtre vient du jeton, jamais d'un paramètre : c'est ce qui empêche de
+ * lire l'historique d'autrui. Les commandes archivées n'y figurent pas, et les
+ * commandes invitées non plus — sans `id_client`, elles n'appartiennent à aucun
+ * historique par construction.
+ */
+export async function recupererHistorique(): Promise<Commande[]> {
+  const reponse = await axiosClient.get<Commande[]>(CHEMIN);
+  return reponse.data;
+}

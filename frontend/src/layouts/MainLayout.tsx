@@ -1,16 +1,17 @@
 /**
  * Structure de page transverse : en-tête, navigation, pied de page.
  *
- * Aucune donnée métier ici, et aucune logique de session — pas de « Bonjour
- * X », pas de compteur de panier, pas de lien conditionné à l'état de
- * connexion. Quand ces éléments arriveront, ils viendront de hooks exposés par
- * les modules concernés (`features/<module>/`), que ce layout consommera sans
- * rien savoir de leur implémentation (cf. `docs/architecture.md`).
+ * Le compteur de panier et le lien conditionné à la session sont affichés ici,
+ * mais aucune règle métier n'y est écrite : les deux valeurs viennent de hooks
+ * — `usePanier` exposé par `features/commande/`, `useEstConnecte` par `lib/` —
+ * que ce layout consomme sans rien savoir de leur implémentation
+ * (cf. `docs/architecture.md`).
  */
 
 import { NavLink, Outlet } from 'react-router';
 
 import { usePanier } from '@/features/commande/commande.hooks';
+import { useEstConnecte } from '@/lib/useEstConnecte';
 
 const LIENS = [
   { vers: '/', libelle: 'Accueil', exact: true },
@@ -30,6 +31,10 @@ export default function MainLayout() {
   // l'affiche sans rien savoir de la façon dont le panier est tenu. Aucune
   // logique métier n'est écrite ici (cf. `docs/architecture.md`).
   const { nombre } = usePanier();
+  // L'état de session vient de `lib/`, pas d'un module métier : il n'appartient
+  // à aucun. Proposer « Mes commandes » à un visiteur non connecté le mènerait
+  // à une page qu'il ne peut pas utiliser.
+  const connecte = useEstConnecte();
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -47,6 +52,11 @@ export default function MainLayout() {
                 {lien.libelle}
               </NavLink>
             ))}
+            {connecte && (
+              <NavLink to="/commandes" className={classeLien}>
+                Mes commandes
+              </NavLink>
+            )}
             <NavLink to="/panier" className={classeLien}>
               Panier
               {nombre > 0 && (
