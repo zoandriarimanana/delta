@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, ForeignKey, Numeric, String, Uuid
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    String,
+    Uuid,
+    func,
+)
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -74,6 +83,21 @@ class Commande(SoftDeleteMixin, Base):
     )
 
     id_commande: Mapped[int] = mapped_column(primary_key=True)
+    #: Horodatage de passation, posé par la base (`now()`) et non par
+    #: l'application : c'est l'horloge du serveur qui fait foi, pas celle du
+    #: processus Python qui a traité la requête.
+    #:
+    #: `TIMESTAMPTZ` et non `TIMESTAMP` : une commande est un fait daté, et la
+    #: même colonne servira aux commandes prises sur place comme en ligne. Sans
+    #: fuseau, deux serveurs configurés différemment produiraient des instants
+    #: incomparables.
+    #:
+    #: `NOT NULL` sans valeur par défaut applicative : une commande sans date
+    #: n'a pas de sens, et le `server_default` garantit que même une insertion
+    #: hors API — script de seed, correction manuelle — en porte une.
+    date_commande: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
     #: UUID généré **uniquement** en mode invité, NULL sinon. Seul moyen pour un
     #: invité de revenir sur sa commande : il n'a ni compte ni jeton. Un UUID et
     #: non l'identifiant séquentiel, qui serait énumérable.

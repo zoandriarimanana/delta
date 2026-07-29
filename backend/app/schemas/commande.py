@@ -1,5 +1,6 @@
 """Schemas Pydantic de l'entité COMMANDE."""
 
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -50,6 +51,9 @@ class CommandeRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id_commande: int
+    #: Horodatage de passation, posé par la base. Exposé parce qu'un client doit
+    #: pouvoir lire *quand* il a commandé : un numéro ne le lui dit pas.
+    date_commande: datetime
     #: Renseignée uniquement en mode invité. C'est l'unique moyen pour l'invité
     #: de revenir sur sa commande : elle doit lui être présentée à la validation.
     reference_publique: UUID | None = None

@@ -4,12 +4,11 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
-import { lireJeton } from '@/lib/tokenStorage';
-
 import {
   creerCommande,
   creerCommandeInvite,
   recupererCommandeInvitee,
+  recupererHistorique,
 } from './commande.api';
 import {
   abonnerAuPanier,
@@ -147,11 +146,6 @@ function messageDErreur(erreur: unknown): string {
   return typeof detail === 'string' ? detail : MESSAGE_ERREUR_PAR_DEFAUT;
 }
 
-/** Vrai si un jeton est présent. Détermine le parcours proposé au tunnel. */
-export function useEstConnecte(): boolean {
-  return lireJeton() !== null;
-}
-
 export interface EtatCommande {
   commande: Commande | null;
   chargement: boolean;
@@ -195,6 +189,61 @@ export function useCommandeInvitee(reference: string | null): EtatCommande {
       actif = false;
     };
   }, [reference]);
+
+  return etat;
+}
+
+export interface EtatHistorique {
+  commandes: Commande[];
+  chargement: boolean;
+  erreur: string | null;
+}
+
+/**
+ * Historique du client connecté, du plus récent au plus ancien.
+ *
+ * Aucune requête n'est émise sans jeton : elle serait refusée en 401, ce qui
+ * effacerait le jeton et déclencherait une redirection — un effet de bord
+ * absurde pour un visiteur qui n'était simplement pas connecté.
+ *
+ * Le tri vient du serveur ; le refaire ici masquerait une régression côté API.
+ */
+export function useHistorique(actif: boolean): EtatHistorique {
+  const [etat, setEtat] = useState<EtatHistorique>({
+    commandes: [],
+    chargement: actif,
+    erreur: null,
+  });
+
+  useEffect(() => {
+    if (!actif) {
+      setEtat({ commandes: [], chargement: false, erreur: null });
+      return;
+    }
+
+    let enCours = true;
+    setEtat({ commandes: [], chargement: true, erreur: null });
+
+    recupererHistorique()
+      .then((commandes) => {
+        if (enCours) {
+          setEtat({ commandes, chargement: false, erreur: null });
+        }
+      })
+      .catch(() => {
+        if (enCours) {
+          setEtat({
+            commandes: [],
+            chargement: false,
+            erreur: 'Vos commandes n’ont pas pu être chargées.',
+          });
+        }
+      });
+
+    return () => {
+      enCours = false;
+    };
+  }, [actif]);
 
   return etat;
 }
