@@ -9,7 +9,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
-import { useEstConnecte, usePanier, useValidationCommande } from '../commande.hooks';
+import { useEstConnecte } from '@/lib/useEstConnecte';
+
+import { usePanier, useValidationCommande } from '../commande.hooks';
 import { formaterMontant } from '../commande.service';
 import type { Commande, TypeCommande } from '../commande.types';
 

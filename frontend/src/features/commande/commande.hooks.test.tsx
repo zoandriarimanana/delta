@@ -9,11 +9,11 @@
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerJeton } from '@/lib/tokenStorage';
+import { effacerJeton } from '@/lib/tokenStorage';
 
 import { creerCommande, creerCommandeInvite } from './commande.api';
 import { resynchroniserPanier } from './commande.panier';
-import { useEstConnecte, usePanier, useValidationCommande } from './commande.hooks';
+import { usePanier, useValidationCommande } from './commande.hooks';
 import type { Commande } from './commande.types';
 import type { Produit } from '@/features/produit/produit.types';
 
@@ -212,15 +212,5 @@ describe('useValidationCommande', () => {
     });
 
     expect(commande!.reference_publique).not.toBeNull();
-  });
-});
-
-describe('useEstConnecte', () => {
-  it('suit la présence du jeton', () => {
-    expect(renderHook(() => useEstConnecte()).result.current).toBe(false);
-
-    enregistrerJeton('jeton.de.test');
-
-    expect(renderHook(() => useEstConnecte()).result.current).toBe(true);
   });
 });
