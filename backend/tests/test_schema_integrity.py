@@ -51,6 +51,14 @@ CHECKS_ATTENDUS = [
     ("reservation", "ck_reservation_cible_unique"),
     ("avis", "ck_avis_cible_xor"),
     ("avis", "ck_avis_note_intervalle"),
+    ("commande", "ck_commande_client_ou_invite"),
+    # Domaines fermés. Ils ne sont pas décoratifs : deux règles de service
+    # comparent `personnel.fonction` pour refuser une affectation incohérente
+    # (#25, sprint 4). Sur une chaîne libre, « livreur » et « Livreur » seraient
+    # deux valeurs distinctes et la comparaison passerait à côté.
+    ("personnel", "ck_personnel_fonction_personnel"),
+    ("commande", "ck_commande_type_commande"),
+    ("commande", "ck_commande_statut_commande"),
 ]
 
 # Cardinalités (1,1) du schéma conceptuel : elles restent des contraintes

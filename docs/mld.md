@@ -10,7 +10,7 @@ CLIENT(id_client, type_client, email, telephone, adresse, mot_de_passe, date_cre
 CLIENT_PARTICULIER(#id_client, nom, prenom, date_naissance)
 CLIENT_ENTREPRISE(#id_client, raison_sociale, numero_id_fiscal, secteur_activite, nom_contact_referent)
 BENEFICIAIRE(id_beneficiaire, nom, prenom, identifiant_badge, statut, #id_abonnement)
-PERSONNEL(id_personnel, nom, prenom, fonction, email, telephone, date_embauche, specialite, zone_livraison)
+PERSONNEL(id_personnel, nom, prenom, fonction, est_administrateur, email, telephone, date_embauche, specialite, zone_livraison)
 ```
 
 `CLIENT_PARTICULIER` et `CLIENT_ENTREPRISE` sont des sous-types exclusifs de `CLIENT`
@@ -24,6 +24,33 @@ ligne dans l'une des deux tables filles, jamais les deux, jamais aucune.
   entreprise, jamais les deux comptes séparément. Une même personne physique qui
   représente aussi une société doit donc utiliser deux adresses distinctes.
   C'est aussi l'identifiant de connexion (voir `docs/roadmap.md`, T0.6).
+
+- `PERSONNEL.fonction` ∈ {Formateur, Livreur, Cuisinier, Receptionniste, Autre}.
+  Domaine formel, `CHECK` en base, et non chaîne libre : deux règles de service
+  le comparent — un cuisinier ne peut pas être affecté à une livraison
+  (`LIVRAISON.#id_personnel`), un livreur ne peut pas être formateur
+  (`SESSION_FORMATION.#id_formateur`). Ces clés étrangères pointent vers
+  `PERSONNEL` tout entier : **rien en base ne garantit la cohérence de
+  fonction**, la vérification revient au service. Sur une chaîne libre, elle
+  comparerait « livreur », « Livreur » et « Livreur » avec une espace finale
+  comme trois valeurs distinctes, et laisserait passer l'affectation sans rien
+  signaler. `Autre` est délibéré : un poste non prévu ne doit pas bloquer une
+  embauche ni forcer une migration.
+
+- `PERSONNEL.est_administrateur` est un booléen `NOT NULL DEFAULT false`,
+  **orthogonal à `fonction`** : l'un porte un droit, l'autre un métier. Un
+  formateur peut administrer le catalogue produit, un cuisinier non — dériver
+  les droits de la fonction confondrait les deux notions et rendrait ce cumul
+  inexprimable.
+
+  Le `DEFAULT false` est posé en base et pas seulement dans l'application : une
+  insertion hors API — script de seed, correction manuelle — ne doit pas pouvoir
+  créer un administrateur par omission. Le sens de la valeur par défaut n'est pas
+  neutre ici, il est le moins privilégié.
+
+  Absent du dictionnaire de données d'origine, comme `COMMANDE.date_commande` :
+  le MLD ne portait aucune notion de droits, et les écritures du catalogue
+  étaient de ce fait ouvertes à tout client authentifié (dette du Sprint 1).
 
 ## Catalogue formation
 

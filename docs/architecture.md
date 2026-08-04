@@ -200,6 +200,18 @@ pour la déclaration de dépendance, la session pour charger le client, le
 repository pour la requête. Les mélanger ferait de `security.py` un module
 couplé à toute la stack.
 
+### Lectures publiques, lectures protégées
+
+Le catalogue produit expose ses **lectures** publiquement : un visiteur doit
+pouvoir parcourir les produits sans compte. `PERSONNEL` fait l'inverse — **toutes
+ses opérations exigent un jeton, lectures comprises**. Un annuaire de salariés
+porte des noms, des adresses professionnelles, des téléphones et des dates
+d'embauche ; rien n'y a vocation à être lisible anonymement.
+
+Le critère n'est donc pas « lecture contre écriture » mais **la nature de la
+donnée**. Une entité dont la lecture publique n'a pas de sens métier ne doit pas
+hériter du réglage du catalogue par simple imitation.
+
 **Cette dépendance authentifie, elle n'autorise pas.** Le schéma n'a aucune
 notion de rôle : `CLIENT` ne porte pas de drapeau administrateur, et `PERSONNEL`
 n'a pas de mot de passe, donc ne peut pas se connecter. Tout client inscrit,
