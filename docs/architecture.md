@@ -212,6 +212,49 @@ Le critère n'est donc pas « lecture contre écriture » mais **la nature de la
 donnée**. Une entité dont la lecture publique n'a pas de sens métier ne doit pas
 hériter du réglage du catalogue par simple imitation.
 
+### Amorçage du premier administrateur
+
+`PERSONNEL.est_administrateur` n'est exposé par **aucun** endpoint : ni
+`PersonnelCreate` ni `PersonnelUpdate` ne le portent, et `PERSONNEL.mot_de_passe`
+non plus. Un champ qu'on n'expose pas est un champ qu'aucune faille
+d'autorisation ne peut atteindre — la protection est structurelle, elle ne dépend
+pas de la dépendance branchée sur l'endpoint.
+
+Reste la question de l'œuf et de la poule : créer le premier administrateur
+supposerait d'en être déjà un. Elle se résout **hors de l'API**, par
+`backend/scripts/creer_admin.py`, qui écrit directement en base :
+
+```bash
+cd backend
+.venv/bin/python -m scripts.creer_admin \
+    --email chef@delta.mg --nom Rakoto --prenom Jean --fonction Autre
+```
+
+Sans terminal interactif — conteneur, CI — le mot de passe se transmet par
+l'environnement :
+
+```bash
+DELTA_ADMIN_MOT_DE_PASSE='…' .venv/bin/python -m scripts.creer_admin \
+    --email chef@delta.mg --nom Rakoto --prenom Jean --fonction Autre
+```
+
+**Le mot de passe n'est jamais un argument de ligne de commande.** Il resterait
+en clair dans `~/.bash_history` et serait visible de tout utilisateur de la
+machine dans la sortie de `ps`. Le script ne propose donc pas l'option, et un
+test le vérifie — la commodité serait ici une régression de sécurité.
+
+Exécuter ce script suppose un accès au serveur et aux identifiants de la base,
+c'est-à-dire un niveau de privilège qui rend la question de l'élévation sans
+objet. C'est ce qui le distingue d'un endpoint, et pourquoi il passe par le
+repository plutôt que par `PersonnelService` : le service est consommé par le
+router, et y placer une opération qui accorde des droits inviterait tôt ou tard
+à l'exposer.
+
+`mot_de_passe` est **nullable** : certaines fonctions n'ont structurellement pas
+besoin d'un compte de connexion. `NULL` signifie « pas de compte » et non « mot
+de passe vide » — `get_current_personnel` refusera l'authentification, avec le
+même message uniforme que les autres refus.
+
 **Cette dépendance authentifie, elle n'autorise pas.** Le schéma n'a aucune
 notion de rôle : `CLIENT` ne porte pas de drapeau administrateur, et `PERSONNEL`
 n'a pas de mot de passe, donc ne peut pas se connecter. Tout client inscrit,
