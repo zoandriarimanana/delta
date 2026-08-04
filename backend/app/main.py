@@ -24,6 +24,7 @@ from app.routers import (
     auth_router,
     categorie_produit_router,
     commande_router,
+    personnel_router,
     produit_router,
 )
 
@@ -102,3 +103,4 @@ app.include_router(auth_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(categorie_produit_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(produit_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(commande_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(personnel_router.router, prefix=settings.API_V1_PREFIX)

@@ -45,6 +45,9 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/commandes/{{id_commande}}",
         f"{prefixe}/commandes/invite",
         f"{prefixe}/commandes/invite/{{reference_publique}}",
+        f"{prefixe}/personnel",
+        f"{prefixe}/personnel/{{id_personnel}}",
+        f"{prefixe}/personnel/{{id_personnel}}/restauration",
     }
 
 
