@@ -97,14 +97,19 @@ def test_est_administrateur_defaut_faux(service: PersonnelService) -> None:
     assert service.creer(_donnees()).est_administrateur is False
 
 
-def test_est_administrateur_orthogonal_a_la_fonction(service: PersonnelService) -> None:
-    """Un formateur peut être administrateur : droit et métier sont distincts."""
-    personnel = service.creer(
-        _donnees(fonction=FonctionPersonnel.FORMATEUR, est_administrateur=True)
-    )
+def test_le_service_ne_peut_pas_accorder_le_droit_d_administration(
+    service: PersonnelService,
+) -> None:
+    """`est_administrateur` n'est pas dans `PersonnelCreate`, donc pas dans le
+    `model_dump()` passé au repository.
+
+    Le seul chemin qui l'écrit est le script d'amorçage — voir
+    `test_creer_admin.py`. L'orthogonalité entre droit et métier y est vérifiée.
+    """
+    personnel = service.creer(_donnees(fonction=FonctionPersonnel.FORMATEUR))
 
     assert personnel.fonction is FonctionPersonnel.FORMATEUR
-    assert personnel.est_administrateur is True
+    assert personnel.est_administrateur is False
 
 
 # --- Unicité de l'e-mail ------------------------------------------------------
@@ -209,12 +214,43 @@ def test_modification_partielle_ne_touche_que_les_champs_fournis(
     assert personnel.specialite == "Pâtisserie"
 
 
-def test_promotion_en_administrateur(service: PersonnelService) -> None:
+def test_la_modification_ne_promeut_pas_administrateur(
+    service: PersonnelService,
+) -> None:
+    """Une modification ne doit pas être une porte dérobée vers ce que la
+    création interdit.
+
+    `PersonnelUpdate` ignore la clé inconnue : la mise à jour aboutit, mais sans
+    toucher au droit.
+    """
     personnel = service.creer(_donnees())
 
-    service.modifier(personnel.id_personnel, PersonnelUpdate(est_administrateur=True))
+    service.modifier(
+        personnel.id_personnel,
+        PersonnelUpdate.model_validate({"nom": "Rabe", "est_administrateur": True}),
+    )
 
-    assert personnel.est_administrateur is True
+    assert personnel.nom == "Rabe"
+    assert personnel.est_administrateur is False
+
+
+def test_le_service_ne_peut_pas_poser_de_mot_de_passe(
+    service: PersonnelService,
+) -> None:
+    """Créer un compte de connexion n'est pas une opération d'annuaire."""
+    personnel = service.creer(
+        PersonnelCreate.model_validate(
+            {
+                "nom": "Rakoto",
+                "prenom": "Jean",
+                "fonction": "Livreur",
+                "email": "jean@delta.mg",
+                "mot_de_passe": "MotDePasse123456",
+            }
+        )
+    )
+
+    assert personnel.mot_de_passe is None
 
 
 def test_changement_de_fonction(service: PersonnelService) -> None:

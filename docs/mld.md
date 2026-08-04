@@ -10,7 +10,7 @@ CLIENT(id_client, type_client, email, telephone, adresse, mot_de_passe, date_cre
 CLIENT_PARTICULIER(#id_client, nom, prenom, date_naissance)
 CLIENT_ENTREPRISE(#id_client, raison_sociale, numero_id_fiscal, secteur_activite, nom_contact_referent)
 BENEFICIAIRE(id_beneficiaire, nom, prenom, identifiant_badge, statut, #id_abonnement)
-PERSONNEL(id_personnel, nom, prenom, fonction, est_administrateur, email, telephone, date_embauche, specialite, zone_livraison)
+PERSONNEL(id_personnel, nom, prenom, fonction, est_administrateur, mot_de_passe, email, telephone, date_embauche, specialite, zone_livraison)
 ```
 
 `CLIENT_PARTICULIER` et `CLIENT_ENTREPRISE` sont des sous-types exclusifs de `CLIENT`
@@ -51,6 +51,22 @@ ligne dans l'une des deux tables filles, jamais les deux, jamais aucune.
   Absent du dictionnaire de données d'origine, comme `COMMANDE.date_commande` :
   le MLD ne portait aucune notion de droits, et les écritures du catalogue
   étaient de ce fait ouvertes à tout client authentifié (dette du Sprint 1).
+
+  **Ni cette colonne ni `mot_de_passe` ne sont exposées par l'API** — elles sont
+  absentes des schemas d'entrée comme de sortie. Le seul chemin d'écriture est le
+  script d'amorçage `backend/scripts/creer_admin.py`, hors HTTP (voir
+  `docs/architecture.md`).
+
+- `PERSONNEL.mot_de_passe` est **nullable**, contrairement à `CLIENT.mot_de_passe`.
+  La différence est structurelle et non un oubli : tout `CLIENT` se connecte —
+  c'est la raison d'être du compte — alors que certaines fonctions du personnel
+  n'ont aucun besoin de le faire. `NULL` signifie « pas de compte de connexion »
+  et non « mot de passe vide » : l'authentification est refusée, avec le même
+  message uniforme que tout autre refus.
+
+  Absente du dictionnaire de données d'origine, pour la même raison
+  qu'`est_administrateur` : le MLD ne faisait de `PERSONNEL` qu'une entité
+  référencée, jamais une identité de connexion.
 
 ## Catalogue formation
 

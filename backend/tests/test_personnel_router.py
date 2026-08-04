@@ -294,3 +294,80 @@ def test_restauration_refusee_si_adresse_reprise(
     )
 
     assert reponse.status_code == 409
+
+
+# --- Élévation de privilège ---------------------------------------------------
+
+
+def test_creation_ignore_est_administrateur_force_dans_le_corps(
+    client_http: TestClient, entete: dict[str, str], db: Session
+) -> None:
+    """Le cœur de la protection : le champ est absent du schema, pas seulement
+    absent des exemples.
+
+    Pydantic ignore silencieusement les clés inconnues : la requête est donc
+    acceptée en 201. Ce qu'on vérifie, c'est que la valeur n'a atteint ni la
+    réponse ni la base. Sans ce test, la protection tiendrait à un comportement
+    par défaut de Pydantic que rien ne documente ici.
+    """
+    reponse = client_http.post(
+        PERSONNEL, json={**VALIDE, "est_administrateur": True}, headers=entete
+    )
+
+    assert reponse.status_code == 201
+    assert reponse.json()["est_administrateur"] is False
+
+    en_base = db.get(Personnel, reponse.json()["id_personnel"])
+    assert en_base is not None
+    assert en_base.est_administrateur is False
+
+
+def test_modification_ne_peut_pas_promouvoir_administrateur(
+    client_http: TestClient, entete: dict[str, str], db: Session
+) -> None:
+    """La modification ne doit pas être une porte dérobée vers ce que la
+    création interdit."""
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.put(
+        f"{PERSONNEL}/{cree['id_personnel']}",
+        json={"est_administrateur": True},
+        headers=entete,
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["est_administrateur"] is False
+
+    en_base = db.get(Personnel, cree["id_personnel"])
+    assert en_base is not None
+    assert en_base.est_administrateur is False
+
+
+def test_mot_de_passe_ni_ecrit_ni_lu_par_l_api(
+    client_http: TestClient, entete: dict[str, str], db: Session
+) -> None:
+    """Une empreinte n'a rien à faire dans une réponse, et l'API ne doit pas
+    pouvoir en poser une."""
+    reponse = client_http.post(
+        PERSONNEL, json={**VALIDE, "mot_de_passe": "MotDePasse123456"}, headers=entete
+    )
+
+    assert reponse.status_code == 201
+    assert "mot_de_passe" not in reponse.json()
+
+    en_base = db.get(Personnel, reponse.json()["id_personnel"])
+    assert en_base is not None
+    assert en_base.mot_de_passe is None
+
+
+def test_les_champs_sensibles_sont_absents_du_schema_ouvert() -> None:
+    """Verrou de conception, indépendant du comportement de Pydantic.
+
+    Si quelqu'un rétablit ces champs dans les schemas d'entrée, ce test tombe
+    même si les trois précédents continuaient de passer par accident.
+    """
+    from app.schemas.personnel import PersonnelCreate, PersonnelUpdate
+
+    for schema in (PersonnelCreate, PersonnelUpdate):
+        assert "est_administrateur" not in schema.model_fields
+        assert "mot_de_passe" not in schema.model_fields

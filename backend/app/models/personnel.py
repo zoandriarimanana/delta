@@ -94,6 +94,15 @@ class Personnel(SoftDeleteMixin, Base):
     est_administrateur: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    #: Empreinte du mot de passe, **nullable** : certaines fonctions n'ont
+    #: structurellement pas besoin d'un compte de connexion — un cuisinier peut
+    #: n'avoir jamais à s'authentifier. `NULL` signifie donc « pas de compte »,
+    #: et non « mot de passe vide » : `get_current_personnel` refusera
+    #: l'authentification, avec le même message uniforme que les autres refus.
+    #:
+    #: Jamais exposée par l'API, ni en lecture ni en écriture : absente de
+    #: `PersonnelCreate`, `PersonnelUpdate` et `PersonnelRead`.
+    mot_de_passe: Mapped[str | None] = mapped_column(String(255), default=None)
 
     sessions_formation: Mapped[list[SessionFormation]] = relationship(
         back_populates="formateur"
