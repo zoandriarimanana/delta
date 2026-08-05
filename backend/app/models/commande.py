@@ -14,6 +14,7 @@ from sqlalchemy import (
     ForeignKey,
     Numeric,
     String,
+    Text,
     Uuid,
     func,
 )
@@ -109,6 +110,14 @@ class Commande(SoftDeleteMixin, Base):
     reference_publique: Mapped[UUID | None] = mapped_column(
         Uuid(), unique=True, default=None
     )
+    #: Adresse saisie au tunnel, pour tout client — invité comme connecté.
+    #: Elle ne se déduit **pas** de `CLIENT.adresse`, qui est l'adresse de
+    #: profil : on se fait livrer au bureau, chez un tiers, ailleurs qu'à son
+    #: domicile. Et un invité n'en a aucune.
+    #:
+    #: `NULL` signifie « pas de livraison demandée » : c'est sa présence qui
+    #: déclenche la création de la `LIVRAISON`.
+    adresse_livraison: Mapped[str | None] = mapped_column(Text)
     nom_invite: Mapped[str | None] = mapped_column(String(150))
     contact_invite: Mapped[str | None] = mapped_column(String(150))
     type_commande: Mapped[TypeCommande] = mapped_column(

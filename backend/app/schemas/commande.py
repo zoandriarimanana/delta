@@ -24,6 +24,10 @@ class CommandeCreate(BaseModel):
     """
 
     type_commande: TypeCommande
+    #: Saisie au tunnel. Sa **présence** demande une livraison ; son absence
+    #: signifie retrait. C'est le seul déclencheur : ni le type de commande ni
+    #: `PRODUIT.est_livrable` ne décident à la place du client.
+    adresse_livraison: str | None = Field(default=None, min_length=1, max_length=500)
     lignes: list[LigneCommandeCreate] = Field(min_length=1)
 
 
@@ -61,6 +65,7 @@ class CommandeRead(BaseModel):
     statut: StatutCommande
     montant_total: Decimal
     id_client: int | None = None
+    adresse_livraison: str | None = None
     nom_invite: str | None = None
     contact_invite: str | None = None
     lignes: list[LigneCommandeRead] = []

@@ -118,12 +118,27 @@ d'origine — voir `docs/mld.md`.
       `PRODUIT.supplement_personnalisation`, tarif fixé au catalogue par un
       administrateur, puis recopié et figé. Un `CHECK` garantit qu'un produit
       personnalisable en porte toujours un — voir `docs/mld.md`.
-- [ ] `LIVRAISON` : création automatique si commande livrable, affectation livreur
-      — ⚠️ la cohérence fonction du personnel (Formateur/Livreur) doit être vérifiée
-      dans le service au moment de l'affectation, ce n'est pas garanti par la FK.
-      `LIVRAISON.#id_personnel` pointe vers `PERSONNEL` tout entier : rien en base
-      n'empêche d'affecter un cuisinier à une livraison.
-- [ ] Suivi de statut livraison côté client
+- [x] `LIVRAISON` : création automatique si commande livrable, affectation livreur
+      — la cohérence de fonction **est** vérifiée dans le service
+      (`LivraisonService.affecter_livreur`), la FK ne la garantissant pas :
+      `LIVRAISON.#id_personnel` pointe vers `PERSONNEL` tout entier.
+      — **Le déclencheur est `COMMANDE.adresse_livraison`**, et lui seul. Ni
+      `type_commande` ni `PRODUIT.est_livrable` ne décident à la place du
+      client : ils ne servent qu'à refuser une demande incohérente (422).
+      — `LIVRAISON.date_heure_prevue` est devenue **nullable**. La livraison naît
+      avec la commande, alors qu'aucune tournée n'est planifiée ; la garder
+      obligatoire forçait à inventer une date, donc à écrire une promesse que
+      rien ne garantit.
+      — **Synchronisation LIVRAISON → COMMANDE** à sens unique : seul le
+      passage à `Livree` fait avancer `COMMANDE.statut`. `Echouee` ne bascule
+      pas vers `Annulee` — relancer, rembourser ou annuler sont des décisions
+      humaines, et ces actions relèvent d'un futur module de gestion
+      administrative des commandes. Manque **volontaire**, pas une dette : #25
+      se contente de ne pas casser la cohérence en l'attendant. Règle écrite
+      dans `docs/architecture.md`.
+- [x] Suivi de statut livraison côté **backend** — `LivraisonPublique` n'expose
+      que le statut et les dates, jamais le livreur ni l'adresse. Le rendu React
+      reste à faire en #26.
 
 ## Sprint 4 — Formation
 
