@@ -2,7 +2,7 @@
 
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # Bornes alignées sur les colonnes du modèle : `Numeric(10, 2)` et les
 # `String(n)`. Les dupliquer ici est volontaire — le schema rejette en 422 avant
@@ -24,12 +24,43 @@ class ProduitCreate(BaseModel):
     unite_mesure: str = Field(min_length=1, max_length=30)
     stock_disponible: int = Field(default=0, ge=0)
     est_personnalisable: bool = False
+    #: Tarif de la personnalisation, par unité. Obligatoire dès que
+    #: `est_personnalisable` vaut `True` — voir le validateur ci-dessous.
+    supplement_personnalisation: Decimal | None = Field(
+        default=None, ge=0, max_digits=PRIX_MAX_CHIFFRES, decimal_places=PRIX_DECIMALES
+    )
     est_livrable: bool = True
     id_categorie: int
 
+    @model_validator(mode="after")
+    def _exiger_un_supplement_si_personnalisable(self) -> "ProduitCreate":
+        """Refuse un produit personnalisable sans tarif de personnalisation.
+
+        Le `CHECK` en base dit la même chose et reste la garantie réelle, y
+        compris pour les écritures hors API. Celui-ci existe pour produire un
+        **422 lisible** plutôt qu'une erreur d'intégrité traduite après coup.
+
+        Sans lui, un administrateur créerait un produit personnalisable sans
+        tarif, et la personnalisation serait gratuite sans que quiconque l'ait
+        décidé.
+        """
+        if self.est_personnalisable and self.supplement_personnalisation is None:
+            raise ValueError(
+                "Un produit personnalisable doit porter un "
+                "supplement_personnalisation."
+            )
+        return self
+
 
 class ProduitUpdate(BaseModel):
-    """Mise à jour partielle. Voir `CategorieProduitUpdate` pour la convention."""
+    """Mise à jour partielle. Voir `CategorieProduitUpdate` pour la convention.
+
+    La cohérence entre `est_personnalisable` et `supplement_personnalisation`
+    **ne peut pas** être vérifiée ici : une mise à jour partielle ne porte que
+    les champs fournis, et rendre un produit personnalisable est légitime si son
+    tarif est déjà en base. Seul le service, qui voit l'état courant, peut
+    trancher — voir `ProduitService.modifier`.
+    """
 
     nom: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
@@ -39,6 +70,9 @@ class ProduitUpdate(BaseModel):
     unite_mesure: str | None = Field(default=None, min_length=1, max_length=30)
     stock_disponible: int | None = Field(default=None, ge=0)
     est_personnalisable: bool | None = None
+    supplement_personnalisation: Decimal | None = Field(
+        default=None, ge=0, max_digits=PRIX_MAX_CHIFFRES, decimal_places=PRIX_DECIMALES
+    )
     est_livrable: bool | None = None
     id_categorie: int | None = None
 
@@ -55,5 +89,7 @@ class ProduitRead(BaseModel):
     unite_mesure: str
     stock_disponible: int
     est_personnalisable: bool
+    #: `None` pour un produit non personnalisable.
+    supplement_personnalisation: Decimal | None = None
     est_livrable: bool
     id_categorie: int

@@ -428,6 +428,42 @@ une page de connexion, par exemple, appartient à `features/auth/` dès que ce m
 existe — elle n'est en `src/pages/` au Sprint 0 que parce qu'aucun module n'est
 encore créé.
 
+### La personnalisation naît avec sa ligne
+
+`DEMANDE_PERSONNALISATION` n'a **ni router ni service propres**, et ce n'est pas
+un oubli. Elle se crée uniquement dans le corps de `POST /commandes`, portée par
+`LigneCommandeCreate.personnalisation`, et son supplément entre dans le calcul
+unique de `montant_total`.
+
+Lui donner un endpoint reviendrait à permettre d'en ajouter une après coup, donc
+à choisir entre deux mauvaises options : un supplément que le client paie sans le
+voir dans son montant, ou un `montant_total` recalculé — alors que c'est une
+donnée d'archive figée à la création.
+
+Deux champs du modèle ne sont donc jamais acceptés depuis la requête.
+`supplement_prix`, pour la même raison que `prix_unitaire_applique` : l'accepter
+laisserait le client fixer ce qu'il paie. Et `id_produit_base`, déduit du produit
+de la ligne — le laisser saisir ouvrirait une incohérence qu'il faudrait ensuite
+détecter et refuser, alors que la déduire supprime le cas.
+
+Le supplément vient de `PRODUIT.supplement_personnalisation`, tarif fixé au
+catalogue par un administrateur — donc protégé par
+`get_current_personnel_administrateur`, comme le reste des écritures catalogue.
+Il est recopié à la commande puis figé, et multiplié par la quantité : le tarif
+est par unité, comme `prix_unitaire` dont il est le voisin.
+
+La cohérence « personnalisable ⇒ tarif renseigné » est vérifiée à **trois**
+niveaux, et ce n'est pas une redondance gratuite. Le `CHECK` en base est la
+garantie réelle, y compris hors API. `ProduitCreate` la répète pour produire un
+422 lisible. Et `ProduitService.modifier` la reprend parce qu'elle croise la
+charge utile et l'état courant : rendre un produit personnalisable sans fournir
+de tarif est légitime s'il en porte déjà un, ce qu'un schema d'entrée ne peut
+pas savoir.
+
+L'archivage se propage sur **deux** niveaux et non un seul : `COMMANDE` →
+`LIGNE_COMMANDE` → `DEMANDE_PERSONNALISATION`. Les deux `ON DELETE CASCADE` du
+schéma ne se déclenchent pas, un archivage étant un `UPDATE`.
+
 ### Le panier n'a pas d'entité serveur
 
 `docs/mld.md` ne comporte **aucune table panier** : il vit dans le navigateur

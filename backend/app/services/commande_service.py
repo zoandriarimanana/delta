@@ -14,8 +14,12 @@ from app.core.exceptions import (
 )
 from app.models.client import Client
 from app.models.commande import Commande, StatutCommande
+from app.models.ligne_commande import LigneCommande
 from app.models.produit import Produit
 from app.repositories.commande_repository import CommandeRepository
+from app.repositories.demande_personnalisation_repository import (
+    DemandePersonnalisationRepository,
+)
 from app.repositories.ligne_commande_repository import LigneCommandeRepository
 from app.repositories.produit_repository import ProduitRepository
 from app.schemas.commande import CommandeCreate, CommandeInviteCreate
@@ -35,6 +39,7 @@ class CommandeService:
         self.commandes = CommandeRepository(db)
         self.lignes = LigneCommandeRepository(db)
         self.produits = ProduitRepository(db)
+        self.personnalisations = DemandePersonnalisationRepository(db)
 
     def obtenir(self, id_commande: int) -> Commande:
         """Retourne une commande, ou lève `RessourceIntrouvable` (404)."""
@@ -58,6 +63,62 @@ class CommandeService:
     def lister_du_client(self, client: Client) -> Sequence[Commande]:
         """Historique d'un client, les plus récentes d'abord."""
         return self.commandes.lister_par_client(client.id_client)
+
+    def _rattacher_personnalisation(
+        self,
+        demandee: LigneCommandeCreate,
+        produit: Produit,
+        ligne: LigneCommande,
+    ) -> Decimal:
+        """Crée la demande jointe à la ligne, et retourne son supplément.
+
+        Retourne `Decimal("0")` quand aucune personnalisation n'est demandée :
+        l'appelant additionne sans se soucier du cas.
+
+        Le supplément **ne vient pas de la requête** : il est lu sur
+        `PRODUIT.supplement_personnalisation`, fixé au catalogue par un
+        administrateur, puis recopié et figé — même règle que
+        `prix_unitaire_applique`, dont il partage la logique et le sort.
+
+        Il est multiplié par la quantité : le tarif est par unité, comme
+        `prix_unitaire` dont il est le voisin. Personnaliser trois gâteaux, c'est
+        trois fois le travail.
+
+        Le `CHECK` en base garantit qu'un produit personnalisable porte toujours
+        un tarif : `supplement_personnalisation` ne peut pas être `None` ici.
+
+        `id_produit_base` est déduit du produit de la ligne : le laisser saisir
+        ouvrirait une incohérence qu'il faudrait ensuite détecter.
+        """
+        if demandee.personnalisation is None:
+            return Decimal("0")
+
+        self._refuser_produit_non_personnalisable(produit)
+
+        creee = self.personnalisations.create(
+            {
+                "id_ligne": ligne.id_ligne,
+                "id_produit_base": produit.id_produit,
+                "supplement_prix": produit.supplement_personnalisation,
+                **demandee.personnalisation.model_dump(),
+            }
+        )
+        return creee.supplement_prix * demandee.quantite
+
+    def _refuser_produit_non_personnalisable(self, produit: Produit) -> None:
+        """Lève `ReferenceInvalide` (422) si le produit n'accepte pas de demande.
+
+        422 et non 409 : la charge utile désigne un produit qui existe, c'est la
+        combinaison envoyée qui est invalide — au même titre qu'une quantité
+        négative. Le conflit, lui, décrirait un état de la base qui a changé.
+
+        `est_personnalisable` est une propriété du catalogue, pas une préférence
+        du client : un pain de mie ne se personnalise pas parce qu'on le demande.
+        """
+        if not produit.est_personnalisable:
+            raise ReferenceInvalide(
+                f"Le produit « {produit.nom} » n'accepte pas de personnalisation."
+            )
 
     def _produit_commandable(self, ligne: LigneCommandeCreate) -> Produit:
         """Charge le produit visé, ou lève `ReferenceInvalide` (422).
@@ -159,7 +220,7 @@ class CommandeService:
         for ligne in donnees.lignes:
             produit = self._produit_commandable(ligne)
             self._reserver_le_stock(produit, ligne.quantite)
-            self.lignes.create(
+            ligne_creee = self.lignes.create(
                 {
                     "id_commande": commande.id_commande,
                     "id_produit": produit.id_produit,
@@ -168,6 +229,7 @@ class CommandeService:
                 }
             )
             montant += produit.prix_unitaire * ligne.quantite
+            montant += self._rattacher_personnalisation(ligne, produit, ligne_creee)
 
         commande.montant_total = montant
         self.db.commit()
@@ -177,15 +239,19 @@ class CommandeService:
         """Archive une commande **et ses lignes**, dans la même transaction.
 
         Le schéma prévoit `ON DELETE CASCADE` de `LIGNE_COMMANDE` vers
-        `COMMANDE`, mais un archivage est un `UPDATE` : la cascade ne se
-        déclenche pas. Propager est une responsabilité de service (règle
-        transverse de `docs/roadmap.md`).
+        `COMMANDE`, et de `DEMANDE_PERSONNALISATION` vers `LIGNE_COMMANDE`, mais
+        un archivage est un `UPDATE` : aucune des deux cascades ne se déclenche.
+        Propager est une responsabilité de service (règle transverse de
+        `docs/roadmap.md`), sur **deux** niveaux et non un seul.
 
         `montant_total` n'est pas remis à zéro : il reste la trace de ce qui a
         été commandé.
         """
         commande = self.obtenir(id_commande)
         for ligne in self.lignes.lister_par_commande(id_commande):
+            personnalisation = self.personnalisations.get_by_ligne(ligne.id_ligne)
+            if personnalisation is not None:
+                self.personnalisations.delete(personnalisation)
             self.lignes.delete(ligne)
         self.commandes.delete(commande)
         self.db.commit()

@@ -102,7 +102,22 @@ d'origine — voir `docs/mld.md`.
       — `CLIENT` et `PERSONNEL` ont des clés primaires qui se recouvrent : sans
       la revendication `type`, leurs jetons seraient indiscernables. Chaque
       dépendance rejette le jeton de l'autre.
-- [ ] `DEMANDE_PERSONNALISATION` rattachée à une ligne de commande
+- [x] `DEMANDE_PERSONNALISATION` rattachée à une ligne de commande
+      — **Limite assumée, et non une dette** : une personnalisation se crée
+      **uniquement à la création de la commande**, dans la même transaction que
+      sa ligne, et son supplément entre dans le calcul unique de
+      `montant_total`. Aucun endpoint ne permet d'en ajouter ni d'en modifier
+      une après coup. Autoriser l'ajout a posteriori obligerait soit à laisser
+      le client payer un supplément invisible dans son montant, soit à
+      recalculer `montant_total`, qui est une **donnée d'archive** figée à la
+      création (cf. `docs/mld.md`). Ce n'est pas un report : c'est un arbitrage,
+      il n'appelle aucune résorption.
+      — `supplement_prix` n'est **pas accepté depuis la requête**, pour la même
+      raison que `prix_unitaire_applique` : il suffirait d'envoyer `0` pour
+      obtenir une personnalisation gratuite. Il est lu sur
+      `PRODUIT.supplement_personnalisation`, tarif fixé au catalogue par un
+      administrateur, puis recopié et figé. Un `CHECK` garantit qu'un produit
+      personnalisable en porte toujours un — voir `docs/mld.md`.
 - [ ] `LIVRAISON` : création automatique si commande livrable, affectation livreur
       — ⚠️ la cohérence fonction du personnel (Formateur/Livreur) doit être vérifiée
       dans le service au moment de l'affectation, ce n'est pas garanti par la FK.

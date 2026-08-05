@@ -80,6 +80,8 @@ class ProduitService:
         if "id_categorie" in modifications:
             self._verifier_categorie(modifications["id_categorie"])
 
+        self._verifier_coherence_personnalisation(produit, modifications)
+
         try:
             self.produits.update(produit, modifications)
             self.db.commit()
@@ -89,6 +91,37 @@ class ProduitService:
                 raise ReferenceInvalide("La catégorie visée n'existe pas.") from erreur
             raise
         return produit
+
+    def _verifier_coherence_personnalisation(
+        self, produit: Produit, modifications: dict
+    ) -> None:
+        """Refuse en 422 un produit personnalisable laissé sans tarif.
+
+        La vérification vit ici et non dans `ProduitUpdate` parce qu'elle croise
+        la charge utile et l'**état courant** : rendre un produit
+        personnalisable sans fournir de tarif est parfaitement légitime s'il en
+        porte déjà un en base. Le schema, qui ne voit que les champs envoyés, ne
+        peut pas en juger.
+
+        Deux chemins mènent au trou, et un seul test les couvre tous les deux :
+        activer `est_personnalisable` sans tarif, ou effacer le tarif d'un
+        produit qui reste personnalisable.
+
+        Le `CHECK` en base dit la même chose et reste la garantie réelle ; ceci
+        produit un message lisible avant qu'il ne se déclenche.
+        """
+        personnalisable = modifications.get(
+            "est_personnalisable", produit.est_personnalisable
+        )
+        supplement = modifications.get(
+            "supplement_personnalisation", produit.supplement_personnalisation
+        )
+
+        if personnalisable and supplement is None:
+            raise ReferenceInvalide(
+                "Un produit personnalisable doit porter un "
+                "supplement_personnalisation."
+            )
 
     def supprimer(self, id_produit: int) -> None:
         """Supprime un produit du catalogue."""

@@ -82,10 +82,44 @@ SESSION_FORMATION(id_session, date_debut, date_fin, places_restantes, statut, #i
 
 ```
 CATEGORIE_PRODUIT(id_categorie, libelle)
-PRODUIT(id_produit, nom, description, prix_unitaire, unite_mesure, stock_disponible, est_personnalisable, est_livrable, #id_categorie)
+PRODUIT(id_produit, nom, description, prix_unitaire, unite_mesure, stock_disponible, est_personnalisable, supplement_personnalisation, est_livrable, #id_categorie)
 SALLE(id_salle, nom, capacite, tarif_horaire, tarif_journee, equipements)
 LOGEMENT(id_logement, type_chambre, capacite, tarif_nuitee, statut)
 ```
+
+- `PRODUIT.supplement_personnalisation` est le tarif de la personnalisation,
+  **par produit et par unité** — comme `prix_unitaire`, dont il est le voisin
+  direct. Il est fixé au catalogue par un administrateur, et **jamais** soumis
+  par le client : l'accepter depuis une commande reviendrait à le laisser fixer
+  ce qu'il paie.
+
+  Absent du dictionnaire de données d'origine, qui portait
+  `est_personnalisable` sans jamais dire ce que la personnalisation coûte. Sans
+  cette colonne, `DEMANDE_PERSONNALISATION.supplement_prix` n'avait aucune
+  source : il valait `0`, et toute personnalisation était de fait gratuite.
+
+  `NULL` signifie « produit non personnalisable », et rien d'autre. La colonne
+  est nullable, mais pas librement — un `CHECK` interdit qu'un produit
+  personnalisable soit dépourvu de tarif :
+
+  ```sql
+  CHECK (NOT est_personnalisable OR supplement_personnalisation IS NOT NULL)
+  ```
+
+  Une implication et non une équivalence : un produit **non** personnalisable a
+  le droit de conserver un tarif dormant, par exemple après avoir été retiré de
+  la personnalisation sans qu'on efface son prix. L'inverse — personnalisable
+  sans tarif — est le seul cas dangereux, puisqu'il rendrait la personnalisation
+  gratuite sans que personne l'ait décidé.
+
+  La contrainte est en base et pas seulement dans le schema d'entrée : une
+  reprise de données ou une correction manuelle ne doit pas pouvoir créer ce
+  trou. Elle est répétée côté API pour produire un 422 lisible plutôt qu'une
+  erreur d'intégrité.
+
+  Le montant est **recopié** dans `DEMANDE_PERSONNALISATION.supplement_prix` à
+  la commande, puis figé — même règle que `LIGNE_COMMANDE.prix_unitaire_applique` :
+  une évolution du catalogue ne rétroagit pas sur les commandes passées.
 
 ## Abonnement (cantine B2B)
 
