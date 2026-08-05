@@ -8,10 +8,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflitMetier, RessourceIntrouvable
+from app.core.security import hacher_mot_de_passe, verifier_mot_de_passe
 from app.models.personnel import FonctionPersonnel, Personnel
 from app.schemas.personnel import PersonnelCreate, PersonnelUpdate
 from app.services.personnel_service import (
     CONTRAINTE_EMAIL_UNIQUE,
+    DOMAINE_ANONYME,
+    MENTION_ANONYME,
     PersonnelService,
 )
 from tests.conftest import creer_engine_sqlite, erreur_integrite_postgres
@@ -350,3 +353,118 @@ def test_restauration_refusee_si_l_adresse_a_ete_reattribuee(
 def test_restaurer_inconnu_leve_introuvable(service: PersonnelService) -> None:
     with pytest.raises(RessourceIntrouvable):
         service.restaurer(99999)
+
+
+# --- Anonymisation -------------------------------------------------------------
+
+
+def test_anonymisation_efface_les_donnees_personnelles(
+    service: PersonnelService,
+) -> None:
+    personnel = service.creer(
+        _donnees(telephone="+261340000000", specialite="Pâtisserie")
+    )
+
+    service.anonymiser(personnel.id_personnel)
+
+    assert personnel.nom == MENTION_ANONYME
+    assert personnel.prenom == MENTION_ANONYME
+    assert personnel.telephone is None
+    assert personnel.specialite is None
+    assert DOMAINE_ANONYME in personnel.email
+
+
+def test_anonymisation_conserve_la_ligne_et_son_identifiant(
+    service: PersonnelService,
+) -> None:
+    """La ligne reste : `LIVRAISON` et `SESSION_FORMATION` la référencent, et une
+    livraison honorée est une trace d'exécution."""
+    personnel = service.creer(_donnees())
+    identifiant = personnel.id_personnel
+
+    service.anonymiser(identifiant)
+
+    assert service.personnels.get_by_id(identifiant, inclure_supprimes=True) is not None
+
+
+def test_anonymisation_conserve_fonction_et_date_d_embauche(
+    service: PersonnelService,
+) -> None:
+    """Ni l'une ni l'autre n'identifie quelqu'un, et les deux restent utiles à
+    l'exploitation des enregistrements liés."""
+    personnel = service.creer(
+        _donnees(fonction=FonctionPersonnel.FORMATEUR, date_embauche=date(2024, 3, 1))
+    )
+
+    service.anonymiser(personnel.id_personnel)
+
+    assert personnel.fonction is FonctionPersonnel.FORMATEUR
+    assert personnel.date_embauche == date(2024, 3, 1)
+
+
+def test_anonymisation_archive_aussi(service: PersonnelService) -> None:
+    """Anonymiser et archiver ne sont pas deux mécanismes concurrents."""
+    personnel = service.creer(_donnees())
+
+    service.anonymiser(personnel.id_personnel)
+
+    assert personnel.supprime_le is not None
+    with pytest.raises(RessourceIntrouvable):
+        service.obtenir(personnel.id_personnel)
+
+
+def test_anonymisation_retire_le_droit_d_administration(
+    db: Session, service: PersonnelService
+) -> None:
+    """Un compte anonymisé ne doit plus porter aucun droit."""
+    personnel = service.creer(_donnees())
+    personnel.est_administrateur = True
+    db.commit()
+
+    service.anonymiser(personnel.id_personnel)
+
+    assert personnel.est_administrateur is False
+
+
+def test_anonymisation_rend_la_connexion_impossible(
+    db: Session, service: PersonnelService
+) -> None:
+    """Le mot de passe est remplacé par le haché d'un secret que personne ne
+    détient — pas simplement effacé."""
+    personnel = service.creer(_donnees())
+    personnel.mot_de_passe = hacher_mot_de_passe("motdepasse123")
+    db.commit()
+    ancienne_empreinte = personnel.mot_de_passe
+
+    service.anonymiser(personnel.id_personnel)
+
+    assert personnel.mot_de_passe is not None
+    assert personnel.mot_de_passe != ancienne_empreinte
+    assert not verifier_mot_de_passe("motdepasse123", personnel.mot_de_passe)
+
+
+def test_adresse_anonyme_non_soumissible(service: PersonnelService) -> None:
+    """`delta.invalid` est réservé par la RFC 2606 : `EmailStr` la refuse en
+    entrée, personne ne peut donc la soumettre pour usurper le compte."""
+    personnel = service.creer(_donnees())
+    service.anonymiser(personnel.id_personnel)
+
+    with pytest.raises(ValueError):
+        PersonnelCreate(
+            nom="X", prenom="Y", fonction=FonctionPersonnel.AUTRE, email=personnel.email
+        )
+
+
+def test_anonymiser_un_inconnu_leve_introuvable(service: PersonnelService) -> None:
+    with pytest.raises(RessourceIntrouvable):
+        service.anonymiser(99999)
+
+
+def test_anonymiser_un_deja_archive_reste_possible(service: PersonnelService) -> None:
+    """L'archivage précède souvent la demande d'effacement, pas l'inverse."""
+    personnel = service.creer(_donnees())
+    service.supprimer(personnel.id_personnel)
+
+    service.anonymiser(personnel.id_personnel)
+
+    assert personnel.nom == MENTION_ANONYME

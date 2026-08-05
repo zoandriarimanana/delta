@@ -17,10 +17,11 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
 from app.main import app
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
+from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.produit import Produit
 from tests.conftest import creer_engine_sqlite
 
@@ -38,7 +39,10 @@ PRODUIT_VALIDE = {
 @pytest.fixture
 def db() -> Iterator[Session]:
     engine = creer_engine_sqlite(
-        Client.__table__, CategorieProduit.__table__, Produit.__table__
+        Client.__table__,
+        Personnel.__table__,
+        CategorieProduit.__table__,
+        Produit.__table__,
     )
     with Session(engine) as session:
         yield session
@@ -61,7 +65,28 @@ def client_http(db: Session) -> Iterator[TestClient]:
 
 @pytest.fixture
 def entete_authentifie(db: Session) -> dict[str, str]:
-    """Jeton d'un client particulier inscrit — aucun rôle particulier."""
+    """Jeton d'un administrateur : les écritures du catalogue lui sont réservées.
+
+    C'était un jeton de client jusqu'à #23 — n'importe quel compte inscrit
+    pouvait modifier le catalogue. C'était la dette du Sprint 1.
+    """
+    admin = Personnel(
+        nom="Chef",
+        prenom="Test",
+        fonction=FonctionPersonnel.AUTRE,
+        email="admin@delta.mg",
+        est_administrateur=True,
+        mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+    )
+    db.add(admin)
+    db.commit()
+    jeton = creer_jeton_acces(admin.id_personnel, TypeSujet.PERSONNEL)
+    return {"Authorization": f"Bearer {jeton}"}
+
+
+@pytest.fixture
+def entete_client(db: Session) -> dict[str, str]:
+    """Jeton d'un client inscrit : ne doit plus ouvrir aucune écriture."""
     client = Client(
         type_client=TypeClient.PARTICULIER,
         email="jean@example.mg",
@@ -69,7 +94,25 @@ def entete_authentifie(db: Session) -> dict[str, str]:
     )
     db.add(client)
     db.commit()
-    return {"Authorization": f"Bearer {creer_jeton_acces(client.id_client)}"}
+    jeton = creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
+    return {"Authorization": f"Bearer {jeton}"}
+
+
+@pytest.fixture
+def entete_agent(db: Session) -> dict[str, str]:
+    """Jeton d'un salarié non administrateur : authentifié mais sans droit."""
+    agent = Personnel(
+        nom="Agent",
+        prenom="Test",
+        fonction=FonctionPersonnel.CUISINIER,
+        email="agent@delta.mg",
+        est_administrateur=False,
+        mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+    )
+    db.add(agent)
+    db.commit()
+    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
+    return {"Authorization": f"Bearer {jeton}"}
 
 
 @pytest.fixture
@@ -265,3 +308,54 @@ def test_cycle_complet_sur_un_produit(
     )
     assert suppression.status_code == 204
     assert client_http.get(f"{PRODUITS}/{cree['id_produit']}").status_code == 404
+
+
+# --- Restriction administrateur (dette du Sprint 1, close en #23) --------------
+
+
+@pytest.mark.parametrize(
+    ("methode", "chemin", "corps"),
+    [
+        ("post", CATEGORIES, {"libelle": "Boulangerie"}),
+        ("post", PRODUITS, {"nom": "X", "prix_unitaire": "1.00", "unite_mesure": "u"}),
+    ],
+)
+def test_un_jeton_client_n_ouvre_plus_les_ecritures(
+    client_http: TestClient,
+    entete_client: dict[str, str],
+    methode: str,
+    chemin: str,
+    corps: dict,
+) -> None:
+    """La dette du Sprint 1 en une assertion.
+
+    Jusqu'à #23, ce même appel réussissait : n'importe quel compte inscrit
+    pouvait modifier le catalogue. Le jeton est désormais refusé en 401 — pas en
+    403 : la revendication `type` ne correspond pas, on ne sait donc pas qui
+    appelle.
+    """
+    reponse = getattr(client_http, methode)(chemin, json=corps, headers=entete_client)
+
+    assert reponse.status_code == 401
+
+
+def test_un_salarie_sans_droit_recoit_403(
+    client_http: TestClient, entete_agent: dict[str, str]
+) -> None:
+    """403 et non 401 : le salarié est identifié, il lui manque un droit.
+
+    La distinction n'est pas cosmétique — un 401 l'inviterait à se reconnecter
+    pour un problème que la reconnexion ne réglera pas.
+    """
+    reponse = client_http.post(
+        CATEGORIES, json={"libelle": "Boulangerie"}, headers=entete_agent
+    )
+
+    assert reponse.status_code == 403
+
+
+def test_les_lectures_restent_publiques(client_http: TestClient) -> None:
+    """La restriction ne déborde pas sur les lectures : un visiteur doit pouvoir
+    parcourir le catalogue sans compte."""
+    assert client_http.get(CATEGORIES).status_code == 200
+    assert client_http.get(PRODUITS).status_code == 200

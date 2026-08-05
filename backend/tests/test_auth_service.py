@@ -137,11 +137,13 @@ def test_authentification_email_inconnu(service: AuthService) -> None:
 
 def test_jeton_emis_identifie_le_client(service: AuthService) -> None:
     """Le `sub` du JWT porte l'identifiant du client, sous forme de chaîne."""
-    from app.core.security import creer_jeton_acces
+    from app.core.security import TypeSujet, creer_jeton_acces
 
     client = service.inscrire_particulier(_inscription())
 
-    charge_utile = decoder_jeton_acces(creer_jeton_acces(client.id_client))
+    charge_utile = decoder_jeton_acces(
+        creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
+    )
 
     assert charge_utile is not None
     assert charge_utile["sub"] == str(client.id_client)

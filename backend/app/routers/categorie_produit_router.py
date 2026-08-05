@@ -1,8 +1,12 @@
 """Endpoints de CATEGORIE_PRODUIT.
 
-Lectures publiques, écritures réservées aux clients authentifiés — voir la
-ligne de dette « Sprint 1 (CRUD catalogue) » dans `docs/roadmap.md` : il ne
-s'agit pas d'une restriction administrateur, le schéma n'en porte pas la notion.
+**Lectures publiques**, **écritures réservées aux administrateurs**
+(`PERSONNEL.est_administrateur`).
+
+Jusqu'au sprint 3, ces écritures n'étaient protégées que par une
+authentification client : n'importe quel compte inscrit pouvait modifier le
+catalogue, faute d'une notion de droits dans le schéma. C'était la dette
+« Sprint 1 (CRUD catalogue) », close ici.
 """
 
 from typing import Annotated
@@ -11,7 +15,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import ClientConnecte
+from app.core.deps import PersonnelAdministrateur
 from app.schemas.categorie_produit import (
     CategorieProduitCreate,
     CategorieProduitRead,
@@ -51,9 +55,9 @@ def obtenir(id_categorie: int, db: SessionBase) -> CategorieProduitRead:
     summary="Créer une catégorie",
 )
 def creer(
-    donnees: CategorieProduitCreate, client: ClientConnecte, db: SessionBase
+    donnees: CategorieProduitCreate, admin: PersonnelAdministrateur, db: SessionBase
 ) -> CategorieProduitRead:
-    """409 si le libellé est déjà pris. Authentification requise."""
+    """409 si le libellé est déjà pris. Réservé aux administrateurs."""
     categorie = CategorieProduitService(db).creer(donnees)
     return CategorieProduitRead.model_validate(categorie)
 
@@ -66,10 +70,10 @@ def creer(
 def modifier(
     id_categorie: int,
     donnees: CategorieProduitUpdate,
-    client: ClientConnecte,
+    admin: PersonnelAdministrateur,
     db: SessionBase,
 ) -> CategorieProduitRead:
-    """Mise à jour partielle. Authentification requise."""
+    """Mise à jour partielle. Réservé aux administrateurs."""
     categorie = CategorieProduitService(db).modifier(id_categorie, donnees)
     return CategorieProduitRead.model_validate(categorie)
 
@@ -79,6 +83,11 @@ def modifier(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Supprimer une catégorie",
 )
-def supprimer(id_categorie: int, client: ClientConnecte, db: SessionBase) -> None:
-    """409 si des produits référencent encore la catégorie. Authentification requise."""
+def supprimer(
+    id_categorie: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> None:
+    """409 si des produits référencent encore la catégorie.
+
+    Réservé aux administrateurs.
+    """
     CategorieProduitService(db).supprimer(id_categorie)

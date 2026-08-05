@@ -6,10 +6,13 @@ annuaire du personnel porte des données personnelles de salariés : nom, adress
 professionnelle, téléphone, date d'embauche. Rien n'y a vocation à être exposé
 anonymement.
 
-La barrière est provisoirement `get_current_client`, seule disponible à ce
-stade : tout client inscrit passe donc. C'est insuffisant et inscrit comme tel
-dans `docs/roadmap.md` ; #23 la remplace par
-`get_current_personnel_administrateur`.
+Deux niveaux, et non un seul. **Consulter** l'annuaire est ouvert à tout
+salarié authentifié : savoir qui livre ou qui forme fait partie du travail
+courant. **L'écrire** — créer, modifier, archiver, restaurer — est réservé aux
+administrateurs : c'est de la gestion du personnel, pas de la consultation.
+
+Aucun jeton client n'ouvre plus rien ici : `get_current_personnel` refuse un
+jeton émis pour un client, la revendication `type` ne correspondant pas.
 """
 
 from typing import Annotated
@@ -18,7 +21,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import ClientConnecte
+from app.core.deps import PersonnelAdministrateur, PersonnelConnecte
 from app.models.personnel import FonctionPersonnel
 from app.schemas.personnel import PersonnelCreate, PersonnelRead, PersonnelUpdate
 from app.services.personnel_service import PersonnelService
@@ -30,7 +33,7 @@ SessionBase = Annotated[Session, Depends(get_db)]
 
 @router.get("", response_model=list[PersonnelRead], summary="Lister le personnel")
 def lister(
-    client: ClientConnecte,
+    agent: PersonnelConnecte,
     db: SessionBase,
     fonction: Annotated[
         FonctionPersonnel | None,
@@ -53,7 +56,7 @@ def lister(
     summary="Obtenir un membre du personnel",
 )
 def obtenir(
-    id_personnel: int, client: ClientConnecte, db: SessionBase
+    id_personnel: int, agent: PersonnelConnecte, db: SessionBase
 ) -> PersonnelRead:
     """404 si l'identifiant de l'URL ne désigne personne, ou une ligne archivée."""
     personnel = PersonnelService(db).obtenir(id_personnel)
@@ -67,7 +70,7 @@ def obtenir(
     summary="Créer un membre du personnel",
 )
 def creer(
-    donnees: PersonnelCreate, client: ClientConnecte, db: SessionBase
+    donnees: PersonnelCreate, admin: PersonnelAdministrateur, db: SessionBase
 ) -> PersonnelRead:
     """409 si l'adresse professionnelle est déjà prise par une ligne active."""
     personnel = PersonnelService(db).creer(donnees)
@@ -82,7 +85,7 @@ def creer(
 def modifier(
     id_personnel: int,
     donnees: PersonnelUpdate,
-    client: ClientConnecte,
+    admin: PersonnelAdministrateur,
     db: SessionBase,
 ) -> PersonnelRead:
     """Mise à jour partielle : seuls les champs fournis sont écrits."""
@@ -95,7 +98,9 @@ def modifier(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Archiver un membre du personnel",
 )
-def supprimer(id_personnel: int, client: ClientConnecte, db: SessionBase) -> None:
+def supprimer(
+    id_personnel: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> None:
     """Archive la ligne. Aucun `DELETE` SQL n'est émis.
 
     Les livraisons et sessions de formation qui la référencent sont conservées
@@ -111,7 +116,7 @@ def supprimer(id_personnel: int, client: ClientConnecte, db: SessionBase) -> Non
     summary="Restaurer un membre du personnel archivé",
 )
 def restaurer(
-    id_personnel: int, client: ClientConnecte, db: SessionBase
+    id_personnel: int, admin: PersonnelAdministrateur, db: SessionBase
 ) -> PersonnelRead:
     """Réactive une ligne archivée — le retour d'un salarié.
 

@@ -37,6 +37,7 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/auth/inscription",
         f"{prefixe}/auth/inscription-entreprise",
         f"{prefixe}/auth/connexion",
+        f"{prefixe}/auth/personnel/connexion",
         f"{prefixe}/categories-produit",
         f"{prefixe}/categories-produit/{{id_categorie}}",
         f"{prefixe}/produits",

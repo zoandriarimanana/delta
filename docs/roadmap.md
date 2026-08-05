@@ -93,6 +93,15 @@ d'origine — voir `docs/mld.md`.
       seul chemin est le script d'amorçage `backend/scripts/creer_admin.py`
       (cf. `docs/architecture.md`), en attendant une route dédiée et protégée
       par `get_current_personnel_administrateur` en #23.
+- [x] Authentification `PERSONNEL` : revendication `type` dans le jeton,
+      `get_current_personnel` et `get_current_personnel_administrateur`,
+      `PersonnelService.anonymiser()`
+      — les deux dettes du Sprint 1 sont levées : les écritures du catalogue
+      produit sont désormais réservées aux administrateurs, et `PERSONNEL`
+      dispose de son anonymisation.
+      — `CLIENT` et `PERSONNEL` ont des clés primaires qui se recouvrent : sans
+      la revendication `type`, leurs jetons seraient indiscernables. Chaque
+      dépendance rejette le jeton de l'autre.
 - [ ] `DEMANDE_PERSONNALISATION` rattachée à une ligne de commande
 - [ ] `LIVRAISON` : création automatique si commande livrable, affectation livreur
       — ⚠️ la cohérence fonction du personnel (Formateur/Livreur) doit être vérifiée
@@ -192,8 +201,6 @@ nommer sa tâche d'origine et sa condition de résorption.
 
 | Origine | Dette | Condition de résorption |
 |---|---|---|
-| Soft delete (Sprint 1) | `PERSONNEL` ne dispose pas d'`anonymiser()`, contrairement à `CLIENT`. Les données personnelles d'un salarié archivé restent donc lisibles en base, et un `supprimer_definitivement()` serait de toute façon refusé par les FK `NO ACTION` de `LIVRAISON` et `SESSION_FORMATION`. | Ajouter `PersonnelService.anonymiser()` au sprint 3, avec l'authentification `PERSONNEL` — `PERSONNEL` y devient une identité de connexion, exactement comme `CLIENT`. Ne pas se rabattre sur un détachement des FK : leur `NULL` signifie déjà « pas encore affecté », et le réutiliser pour « effacé » rendrait les deux états indistinguables. |
-| Sprint 1 (CRUD catalogue) | Les écritures sur le catalogue produit sont protégées par authentification client (particulier ou entreprise), PAS par un rôle administrateur — n'importe quel client inscrit peut actuellement modifier le catalogue. La vraie restriction admin attend l'authentification PERSONNEL (sprint 3, nécessite l'ajout d'un mot de passe à PERSONNEL et une modification du MLD). | Ajouter l'authentification `PERSONNEL` au sprint 3 — colonne mot de passe dans `docs/mld.md` + migration Alembic — puis restreindre les écritures du catalogue au personnel habilité. **À traiter avant mise en prod.** |
 | Sprint 2 (parcours invité) | Une commande passée en invité ne peut pas être rattachée à un compte créé ensuite : le client la perd de vue dès qu'il s'inscrit, alors qu'elle porte le même `contact_invite`. Écarté volontairement du sprint 2. | Le rattachement suppose de faire confiance à une adresse non vérifiée. À traiter avec un mécanisme de vérification d'e-mail, qui n'existe nulle part dans le projet — donc pas avant qu'il soit décidé. |
 | T0.10 (Sprint 0) | Le jeton d'accès est stocké en `localStorage` (`frontend/src/lib/tokenStorage.ts`) : lisible par tout script de la page, donc exfiltrable en cas de faille XSS. | Basculer sur un cookie `httpOnly` + `SameSite`, ce qui suppose de faire émettre le cookie par l'API et d'ajouter une protection CSRF. **À arbitrer avant mise en prod.** |
 | T0.6 (Sprint 0) | Aucune limitation de tentatives sur `/auth/connexion` : ni rate limiting par IP, ni verrouillage temporaire du compte après N échecs. Le hachage bcrypt ralentit une attaque par force brute sans l'empêcher, et rien ne freine le bourrage d'identifiants (credential stuffing). | Ajouter une limitation de débit et un verrouillage progressif. **À traiter avant mise en prod.** |

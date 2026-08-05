@@ -203,8 +203,10 @@ couplé à toute la stack.
 ### Lectures publiques, lectures protégées
 
 Le catalogue produit expose ses **lectures** publiquement : un visiteur doit
-pouvoir parcourir les produits sans compte. `PERSONNEL` fait l'inverse — **toutes
-ses opérations exigent un jeton, lectures comprises**. Un annuaire de salariés
+pouvoir parcourir les produits sans compte ; ses **écritures** sont réservées aux
+administrateurs. `PERSONNEL` va plus loin — **toutes ses opérations exigent un
+jeton, lectures comprises**, la lecture étant ouverte à tout salarié et l'écriture
+aux seuls administrateurs. Un annuaire de salariés
 porte des noms, des adresses professionnelles, des téléphones et des dates
 d'embauche ; rien n'y a vocation à être lisible anonymement.
 
@@ -255,13 +257,65 @@ besoin d'un compte de connexion. `NULL` signifie « pas de compte » et non « m
 de passe vide » — `get_current_personnel` refusera l'authentification, avec le
 même message uniforme que les autres refus.
 
-**Cette dépendance authentifie, elle n'autorise pas.** Le schéma n'a aucune
-notion de rôle : `CLIENT` ne porte pas de drapeau administrateur, et `PERSONNEL`
-n'a pas de mot de passe, donc ne peut pas se connecter. Tout client inscrit,
-particulier ou entreprise, est donc équivalent du point de vue des droits. Les
-écritures du catalogue produit reposent sur cette seule barrière au sprint 1 —
-report inscrit en dette technique dans `docs/roadmap.md`, à résorber avec
-l'authentification `PERSONNEL` du sprint 3.
+**Cette dépendance authentifie, elle n'autorise pas.** Aucun droit ne se dérive
+d'un compte client : tout client inscrit, particulier ou entreprise, est
+équivalent. Les opérations réservées passent par
+`get_current_personnel_administrateur`.
+
+### Deux populations, deux jetons
+
+`CLIENT` et `PERSONNEL` sont deux tables distinctes dont **les clés primaires se
+recouvrent** : le client n°5 et le salarié n°5 existent tous les deux. Un jeton
+ne portant que `sub` serait donc ambigu, et `get_current_client` chargerait un
+client à partir du jeton d'un salarié. Ce n'est pas un inconfort de typage, c'est
+une confusion d'identité.
+
+Le jeton porte donc une revendication **`type`**, valant `client` ou `personnel`,
+fixée à l'émission et vérifiée à chaque lecture. Chaque dépendance exige la
+sienne et **rejette celle de l'autre**, avec le message uniforme habituel.
+
+`creer_jeton_acces` prend le type en paramètre **obligatoire, sans valeur par
+défaut** : un défaut ferait qu'un futur point d'émission produirait un jeton
+client sans que personne s'en aperçoive.
+
+Un jeton **sans** revendication `type` est refusé. Il ne peut venir que d'une
+version antérieure à ce cloisonnement, et le lire par défaut comme un jeton
+client rouvrirait exactement la confusion qu'on ferme. Le coût est une
+reconnexion des sessions ouvertes — ce qu'une expiration aurait imposé de toute
+façon.
+
+| Dépendance | Exige | Refuse |
+|---|---|---|
+| `get_current_client` | `type = client`, compte actif | jeton personnel, compte archivé |
+| `get_current_personnel` | `type = personnel`, compte actif, `mot_de_passe` non nul | jeton client, compte sans connexion |
+| `get_current_personnel_administrateur` | ci-dessus **plus** `est_administrateur` | salarié sans droit → **403** |
+
+### Authentifier n'est pas autoriser : 401 contre 403
+
+Les deux premières dépendances **authentifient** : à leur échec, on ne sait pas
+qui appelle, c'est un **401**. La troisième **autorise** : l'appelant est
+identifié, il lui manque un droit, c'est un **403** (`AutorisationInsuffisante`).
+
+Les deux codes ne se substituent pas. Répondre 401 à un salarié non
+administrateur l'inviterait à se reconnecter pour un problème que sa reconnexion
+ne réglera pas. Le 403 ne porte pas d'en-tête `WWW-Authenticate`, qui réclame des
+identifiants alors que les siens sont valides.
+
+Le droit vient de `est_administrateur` et **jamais de `fonction`** : l'un porte un
+droit, l'autre un métier (cf. `docs/mld.md`). Un formateur peut administrer le
+catalogue, un cuisinier non.
+
+### Anonymisation du personnel
+
+`PersonnelService.anonymiser()` est à `PERSONNEL` ce que `ClientService.anonymiser()`
+est à `CLIENT` : le seul chemin de conformité au droit à l'effacement. L'archivage
+seul ne suffit pas — la ligne reste, et avec elle le nom, l'adresse
+professionnelle et le téléphone.
+
+Sont conservés `id_personnel`, `fonction` et `date_embauche` : ni la fonction ni
+l'ancienneté n'identifient quelqu'un, et les livraisons comme les sessions
+gardent leur `#id_personnel`, désormais anonyme. `est_administrateur` repasse à
+`false` — un compte anonymisé ne porte plus aucun droit.
 
 ## Frontend — arborescence
 
