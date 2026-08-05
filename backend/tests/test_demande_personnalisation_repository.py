@@ -53,6 +53,7 @@ def ligne(db: Session) -> LigneCommande:
         unite_mesure="piece",
         stock_disponible=10,
         est_personnalisable=True,
+        supplement_personnalisation=Decimal("4.00"),
         id_categorie=categorie.id_categorie,
     )
     db.add(produit)

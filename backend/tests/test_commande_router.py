@@ -357,6 +357,7 @@ def gateau(db: Session, eclair: Produit) -> Produit:
         unite_mesure="piece",
         stock_disponible=10,
         est_personnalisable=True,
+        supplement_personnalisation=Decimal("4.00"),
         id_categorie=eclair.id_categorie,
     )
     db.add(produit)
@@ -419,15 +420,18 @@ def test_produit_non_personnalisable_retourne_422(
 def test_supplement_envoye_par_le_client_est_ignore(
     client_http: TestClient, entete: dict[str, str], gateau: Produit
 ) -> None:
-    """Sinon il suffirait d'envoyer `0` pour une personnalisation gratuite."""
+    """Sinon il suffirait d'envoyer `0` pour une personnalisation gratuite.
+
+    Le tarif retenu est celui du catalogue (4.00), pas celui de la requête.
+    """
     corps = _corps_personnalise(gateau.id_produit)
     corps["lignes"][0]["personnalisation"]["supplement_prix"] = "-999.00"
 
     reponse = client_http.post(COMMANDES, json=corps, headers=entete)
 
     assert reponse.status_code == 201
-    assert reponse.json()["lignes"][0]["personnalisation"]["supplement_prix"] == "0.00"
-    assert reponse.json()["montant_total"] == "25.00"
+    assert reponse.json()["lignes"][0]["personnalisation"]["supplement_prix"] == "4.00"
+    assert reponse.json()["montant_total"] == "29.00"  # 25.00 + 4.00
 
 
 def test_produit_base_envoye_par_le_client_est_ignore(

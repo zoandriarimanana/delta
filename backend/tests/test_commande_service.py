@@ -546,6 +546,7 @@ def gateau(db: Session, eclair: Produit) -> Produit:
         unite_mesure="piece",
         stock_disponible=10,
         est_personnalisable=True,
+        supplement_personnalisation=Decimal("4.00"),
         id_categorie=eclair.id_categorie,
     )
     db.add(produit)
@@ -643,34 +644,79 @@ def test_supplement_ne_vient_pas_de_la_requete() -> None:
     assert not hasattr(charge, "supplement_prix")
 
 
-def test_supplement_entre_dans_le_montant_total(
-    service: CommandeService,
-    client: Client,
-    gateau: Produit,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Le supplément vaut 0 faute de tarif au MLD, mais il est bien additionné.
-
-    On substitue une valeur non nulle pour vérifier que le calcul l'intègre :
-    avec 0, l'assertion passerait même si l'addition avait été oubliée. Le jour
-    où un tarif existera, `montant_total` restera juste.
-    """
-    monkeypatch.setattr(
-        "app.services.commande_service.SUPPLEMENT_PERSONNALISATION", Decimal("5.00")
-    )
-
-    commande = service.creer(_commande_personnalisee(gateau.id_produit), client)
-
-    assert commande.montant_total == Decimal("30.00")  # 25.00 + 5.00
-
-
-def test_supplement_nul_par_defaut(
+def test_supplement_lu_sur_le_produit_commande(
     service: CommandeService, client: Client, gateau: Produit
 ) -> None:
-    """État actuel, à faire évoluer le jour où un tarif entre au MLD."""
+    """Le montant vient du catalogue, pas d'une valeur inventée par le service.
+
+    Le tarif du gâteau est 4.00 et son prix 25.00 : le total doit être 29.00.
+    Une valeur de test arbitraire ne prouverait rien — c'est bien
+    `PRODUIT.supplement_personnalisation` qui doit être appliqué.
+    """
     commande = service.creer(_commande_personnalisee(gateau.id_produit), client)
 
-    assert commande.montant_total == gateau.prix_unitaire
+    assert gateau.supplement_personnalisation == Decimal("4.00")
+    assert commande.montant_total == Decimal("29.00")  # 25.00 + 4.00
+
+
+def test_deux_produits_ont_des_supplements_distincts(
+    service: CommandeService, client: Client, gateau: Produit, db: Session
+) -> None:
+    """Le tarif varie **par produit** : c'est tout l'intérêt de la colonne.
+
+    Un supplément global aurait donné le même montant pour les deux.
+    """
+    macaron = Produit(
+        nom="Macaron personnalisé",
+        prix_unitaire=Decimal("10.00"),
+        unite_mesure="piece",
+        stock_disponible=10,
+        est_personnalisable=True,
+        supplement_personnalisation=Decimal("1.50"),
+        id_categorie=gateau.id_categorie,
+    )
+    db.add(macaron)
+    db.commit()
+
+    total_gateau = service.creer(
+        _commande_personnalisee(gateau.id_produit), client
+    ).montant_total
+    total_macaron = service.creer(
+        _commande_personnalisee(macaron.id_produit), client
+    ).montant_total
+
+    assert total_gateau == Decimal("29.00")  # 25.00 + 4.00
+    assert total_macaron == Decimal("11.50")  # 10.00 + 1.50
+
+
+def test_supplement_applique_par_unite(
+    service: CommandeService, client: Client, gateau: Produit
+) -> None:
+    """Personnaliser trois gâteaux, c'est trois fois le travail.
+
+    Le tarif est par unité, comme `prix_unitaire` dont il est le voisin.
+    """
+    commande = service.creer(
+        _commande_personnalisee(gateau.id_produit, quantite=3), client
+    )
+
+    assert commande.montant_total == Decimal("87.00")  # 3 × (25.00 + 4.00)
+
+
+def test_supplement_fige_apres_evolution_du_catalogue(
+    service: CommandeService, client: Client, gateau: Produit, db: Session
+) -> None:
+    """Même règle que `prix_unitaire_applique` : le tarif est recopié, pas lu."""
+    commande = service.creer(_commande_personnalisee(gateau.id_produit), client)
+
+    gateau.supplement_personnalisation = Decimal("99.00")
+    db.commit()
+
+    ligne = service.lignes.lister_par_commande(commande.id_commande)[0]
+    demande = service.personnalisations.get_by_ligne(ligne.id_ligne)
+    assert demande is not None
+    assert demande.supplement_prix == Decimal("4.00")
+    assert commande.montant_total == Decimal("29.00")
 
 
 def test_archivage_propage_a_la_personnalisation(

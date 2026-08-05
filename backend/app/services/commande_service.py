@@ -25,15 +25,6 @@ from app.repositories.produit_repository import ProduitRepository
 from app.schemas.commande import CommandeCreate, CommandeInviteCreate
 from app.schemas.ligne_commande import LigneCommandeCreate
 
-#: Supplément appliqué à une demande de personnalisation.
-#:
-#: Nul, et c'est un manque assumé : le MLD ne porte **aucun tarif** de
-#: personnalisation, ni sur `PRODUIT` ni ailleurs. En inventer un ici serait une
-#: règle métier sortie de nulle part. La constante existe pour que ce vide porte
-#: un nom et un seul point de changement, plutôt que d'être un `0` anonyme perdu
-#: dans le calcul.
-SUPPLEMENT_PERSONNALISATION = Decimal("0")
-
 
 class CommandeService:
     """Règles de gestion des commandes.
@@ -84,11 +75,17 @@ class CommandeService:
         Retourne `Decimal("0")` quand aucune personnalisation n'est demandée :
         l'appelant additionne sans se soucier du cas.
 
-        Le supplément **ne vient pas de la requête** : il vaut
-        `SUPPLEMENT_PERSONNALISATION`, dont la valeur nulle est un manque assumé
-        et documenté. Il est néanmoins additionné plutôt qu'ignoré — le jour où
-        un tarif existera, `montant_total` restera juste sans que la forme du
-        calcul change.
+        Le supplément **ne vient pas de la requête** : il est lu sur
+        `PRODUIT.supplement_personnalisation`, fixé au catalogue par un
+        administrateur, puis recopié et figé — même règle que
+        `prix_unitaire_applique`, dont il partage la logique et le sort.
+
+        Il est multiplié par la quantité : le tarif est par unité, comme
+        `prix_unitaire` dont il est le voisin. Personnaliser trois gâteaux, c'est
+        trois fois le travail.
+
+        Le `CHECK` en base garantit qu'un produit personnalisable porte toujours
+        un tarif : `supplement_personnalisation` ne peut pas être `None` ici.
 
         `id_produit_base` est déduit du produit de la ligne : le laisser saisir
         ouvrirait une incohérence qu'il faudrait ensuite détecter.
@@ -102,11 +99,11 @@ class CommandeService:
             {
                 "id_ligne": ligne.id_ligne,
                 "id_produit_base": produit.id_produit,
-                "supplement_prix": SUPPLEMENT_PERSONNALISATION,
+                "supplement_prix": produit.supplement_personnalisation,
                 **demandee.personnalisation.model_dump(),
             }
         )
-        return creee.supplement_prix
+        return creee.supplement_prix * demandee.quantite
 
     def _refuser_produit_non_personnalisable(self, produit: Produit) -> None:
         """Lève `ReferenceInvalide` (422) si le produit n'accepte pas de demande.

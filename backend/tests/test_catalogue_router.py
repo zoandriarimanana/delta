@@ -359,3 +359,133 @@ def test_les_lectures_restent_publiques(client_http: TestClient) -> None:
     parcourir le catalogue sans compte."""
     assert client_http.get(CATEGORIES).status_code == 200
     assert client_http.get(PRODUITS).status_code == 200
+
+
+# --- Tarif de personnalisation -------------------------------------------------
+
+
+def _produit(id_categorie: int, **extra: object) -> dict:
+    return {
+        "nom": "Gâteau",
+        "prix_unitaire": "25.00",
+        "unite_mesure": "piece",
+        "id_categorie": id_categorie,
+        **extra,
+    }
+
+
+def test_personnalisable_sans_supplement_refuse_en_422(
+    client_http: TestClient, entete_authentifie: dict[str, str], id_categorie: int
+) -> None:
+    """Sinon la personnalisation serait gratuite sans que personne l'ait décidé."""
+    reponse = client_http.post(
+        PRODUITS,
+        json=_produit(id_categorie, est_personnalisable=True),
+        headers=entete_authentifie,
+    )
+
+    assert reponse.status_code == 422
+
+
+def test_personnalisable_avec_supplement_accepte(
+    client_http: TestClient, entete_authentifie: dict[str, str], id_categorie: int
+) -> None:
+    reponse = client_http.post(
+        PRODUITS,
+        json=_produit(
+            id_categorie, est_personnalisable=True, supplement_personnalisation="4.00"
+        ),
+        headers=entete_authentifie,
+    )
+
+    assert reponse.status_code == 201
+    assert reponse.json()["supplement_personnalisation"] == "4.00"
+
+
+def test_non_personnalisable_sans_supplement_accepte(
+    client_http: TestClient, entete_authentifie: dict[str, str], id_categorie: int
+) -> None:
+    """`NULL` signifie « non personnalisable », c'est le cas courant."""
+    reponse = client_http.post(
+        PRODUITS, json=_produit(id_categorie), headers=entete_authentifie
+    )
+
+    assert reponse.status_code == 201
+    assert reponse.json()["supplement_personnalisation"] is None
+
+
+def test_activer_la_personnalisation_sans_tarif_refuse(
+    client_http: TestClient, entete_authentifie: dict[str, str], id_categorie: int
+) -> None:
+    """Premier des deux chemins vers le trou, en modification partielle."""
+    cree = client_http.post(
+        PRODUITS, json=_produit(id_categorie), headers=entete_authentifie
+    ).json()
+
+    reponse = client_http.put(
+        f"{PRODUITS}/{cree['id_produit']}",
+        json={"est_personnalisable": True},
+        headers=entete_authentifie,
+    )
+
+    assert reponse.status_code == 422
+
+
+def test_effacer_le_tarif_d_un_personnalisable_refuse(
+    client_http: TestClient, entete_authentifie: dict[str, str], id_categorie: int
+) -> None:
+    """Second chemin : le produit reste personnalisable, on lui retire son prix."""
+    cree = client_http.post(
+        PRODUITS,
+        json=_produit(
+            id_categorie, est_personnalisable=True, supplement_personnalisation="4.00"
+        ),
+        headers=entete_authentifie,
+    ).json()
+
+    reponse = client_http.put(
+        f"{PRODUITS}/{cree['id_produit']}",
+        json={"supplement_personnalisation": None},
+        headers=entete_authentifie,
+    )
+
+    assert reponse.status_code == 422
+
+
+def test_activer_la_personnalisation_sur_un_tarif_deja_pose_accepte(
+    client_http: TestClient, entete_authentifie: dict[str, str], id_categorie: int
+) -> None:
+    """Le tarif dormant est légitime : une équivalence l'aurait interdit.
+
+    C'est ce que le schema d'entrée seul ne pouvait pas trancher — il ne voit
+    pas l'état courant.
+    """
+    cree = client_http.post(
+        PRODUITS,
+        json=_produit(id_categorie, supplement_personnalisation="4.00"),
+        headers=entete_authentifie,
+    ).json()
+
+    reponse = client_http.put(
+        f"{PRODUITS}/{cree['id_produit']}",
+        json={"est_personnalisable": True},
+        headers=entete_authentifie,
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["est_personnalisable"] is True
+
+
+def test_le_tarif_n_est_pas_modifiable_par_un_client(
+    client_http: TestClient, entete_client: dict[str, str], id_categorie: int
+) -> None:
+    """Le tarif est une écriture catalogue : réservée aux administrateurs."""
+    reponse = client_http.post(
+        PRODUITS,
+        json=_produit(
+            id_categorie, est_personnalisable=True, supplement_personnalisation="0.00"
+        ),
+        headers=entete_client,
+    )
+
+    assert reponse.status_code == 401

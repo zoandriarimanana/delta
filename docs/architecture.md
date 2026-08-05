@@ -446,6 +446,20 @@ laisserait le client fixer ce qu'il paie. Et `id_produit_base`, déduit du produ
 de la ligne — le laisser saisir ouvrirait une incohérence qu'il faudrait ensuite
 détecter et refuser, alors que la déduire supprime le cas.
 
+Le supplément vient de `PRODUIT.supplement_personnalisation`, tarif fixé au
+catalogue par un administrateur — donc protégé par
+`get_current_personnel_administrateur`, comme le reste des écritures catalogue.
+Il est recopié à la commande puis figé, et multiplié par la quantité : le tarif
+est par unité, comme `prix_unitaire` dont il est le voisin.
+
+La cohérence « personnalisable ⇒ tarif renseigné » est vérifiée à **trois**
+niveaux, et ce n'est pas une redondance gratuite. Le `CHECK` en base est la
+garantie réelle, y compris hors API. `ProduitCreate` la répète pour produire un
+422 lisible. Et `ProduitService.modifier` la reprend parce qu'elle croise la
+charge utile et l'état courant : rendre un produit personnalisable sans fournir
+de tarif est légitime s'il en porte déjà un, ce qu'un schema d'entrée ne peut
+pas savoir.
+
 L'archivage se propage sur **deux** niveaux et non un seul : `COMMANDE` →
 `LIGNE_COMMANDE` → `DEMANDE_PERSONNALISATION`. Les deux `ON DELETE CASCADE` du
 schéma ne se déclenchent pas, un archivage étant un `UPDATE`.
