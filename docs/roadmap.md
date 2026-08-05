@@ -129,6 +129,13 @@ d'origine — voir `docs/mld.md`.
       avec la commande, alors qu'aucune tournée n'est planifiée ; la garder
       obligatoire forçait à inventer une date, donc à écrire une promesse que
       rien ne garantit.
+      — **Synchronisation LIVRAISON → COMMANDE** à sens unique : seul le
+      passage à `Livree` fait avancer `COMMANDE.statut`. `Echouee` ne bascule
+      pas vers `Annulee` — relancer, rembourser ou annuler sont des décisions
+      humaines, et ces actions relèvent d'un futur module de gestion
+      administrative des commandes. Manque **volontaire**, pas une dette : #25
+      se contente de ne pas casser la cohérence en l'attendant. Règle écrite
+      dans `docs/architecture.md`.
 - [x] Suivi de statut livraison côté **backend** — `LivraisonPublique` n'expose
       que le statut et les dates, jamais le livreur ni l'adresse. Le rendu React
       reste à faire en #26.

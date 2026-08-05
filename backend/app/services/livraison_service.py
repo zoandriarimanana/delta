@@ -1,7 +1,11 @@
 """Service métier de LIVRAISON.
 
-Deux invariants portés ici, qu'aucune contrainte de base ne garantit : le
-personnel affecté est un livreur, et une livraison terminée ne bouge plus.
+Trois invariants portés ici, qu'aucune contrainte de base ne garantit : le
+personnel affecté est un livreur, une livraison terminée ne bouge plus, et une
+livraison remise fait avancer sa commande.
+
+Ce dernier traverse deux entités : la règle est écrite une fois dans
+`docs/architecture.md`, section « Synchronisation LIVRAISON → COMMANDE ».
 """
 
 from collections.abc import Sequence
@@ -14,7 +18,7 @@ from app.core.exceptions import (
     ReferenceInvalide,
     RessourceIntrouvable,
 )
-from app.models.commande import Commande
+from app.models.commande import STATUT_TERMINAL, Commande
 from app.models.livraison import STATUTS_TERMINAUX, Livraison, StatutLivraison
 from app.models.personnel import FonctionPersonnel
 from app.repositories.livraison_repository import LivraisonRepository
@@ -148,6 +152,10 @@ class LivraisonService:
         jamais reçue de la requête : c'est l'horloge du serveur qui fait foi,
         même raisonnement que `COMMANDE.date_commande`. Elle reste `NULL` sur un
         échec ou une annulation — il n'y a pas eu de remise.
+
+        Le passage à `Livree` **propage sur la commande**, dans la même
+        transaction. Aucun autre statut ne propage : voir
+        `_propager_sur_la_commande`.
         """
         livraison = self.obtenir(id_livraison)
         self._refuser_si_terminee(livraison, "changer le statut")
@@ -158,8 +166,38 @@ class LivraisonService:
         livraison.statut = statut
         if statut is StatutLivraison.LIVREE:
             livraison.date_heure_reelle = datetime.now(UTC)
+            self._propager_sur_la_commande(livraison)
         self.db.commit()
         return livraison
+
+    def _propager_sur_la_commande(self, livraison: Livraison) -> None:
+        """Fait avancer `COMMANDE.statut` quand la livraison a été remise.
+
+        **Synchronisation à sens unique, et à un seul déclencheur.** Une
+        livraison remise fait avancer sa commande ; rien ne remonte jamais en
+        sens inverse, et aucun autre statut de livraison ne propage.
+
+        `Echouee` en particulier **ne touche pas** la commande. Un échec de
+        tournée n'est pas une annulation : la marchandise a été préparée, le
+        montant reste dû, et ce qu'il convient de faire — relancer, rembourser,
+        annuler — est une décision humaine. Basculer automatiquement vers
+        `Annulee` trancherait à la place de l'administrateur, et effacerait la
+        distinction entre « n'a pas abouti » et « ne se fera pas ».
+
+        Ces trois actions n'existent pas encore : c'est un **manque volontaire**,
+        elles relèvent d'un module de gestion administrative des commandes qui
+        n'est pas au périmètre du sprint 3. Ne rien faire ici, c'est ne pas
+        casser la cohérence en l'attendant — pas la reporter.
+
+        Le statut d'arrivée vient de `STATUT_TERMINAL`, la table posée avec le
+        domaine de `COMMANDE` : `Servie` pour une commande sur place, `Livree`
+        pour les deux autres types. La branche `Sur_place` est **inatteignable
+        ici** — une commande sur place ne peut pas porter d'adresse de livraison,
+        donc pas de livraison — mais on lit la table plutôt que d'écrire
+        `Livree` en dur : la règle a déjà un seul endroit où vivre.
+        """
+        commande = livraison.commande
+        commande.statut = STATUT_TERMINAL[commande.type_commande]
 
     def _refuser_si_terminee(self, livraison: Livraison, action: str) -> None:
         """Lève `ConflitMetier` (409) si la livraison est dans un état terminal.

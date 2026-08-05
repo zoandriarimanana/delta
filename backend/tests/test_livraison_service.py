@@ -25,7 +25,7 @@ from app.core.exceptions import (
 from app.core.security import hacher_mot_de_passe
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
-from app.models.commande import TypeCommande
+from app.models.commande import STATUT_TERMINAL, StatutCommande, TypeCommande
 from app.models.livraison import StatutLivraison
 from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.produit import Produit
@@ -413,3 +413,143 @@ def test_archivage_ne_touche_pas_la_commande(
 
     assert commandes.obtenir(id_commande) is not None
     assert service.livraisons.get_by_commande(id_commande) is None
+
+
+# --- Synchronisation LIVRAISON -> COMMANDE ------------------------------------
+
+
+def _livraison_de(
+    commandes: CommandeService,
+    service: LivraisonService,
+    client: Client,
+    id_produit: int,
+    type_commande: TypeCommande = TypeCommande.EN_LIGNE,
+):
+    commande = commandes.creer(
+        _commande(id_produit, type_commande=type_commande), client
+    )
+    creee = service.livraisons.get_by_commande(commande.id_commande)
+    assert creee is not None
+    return commande, creee
+
+
+@pytest.mark.parametrize(
+    "type_commande", [TypeCommande.EN_LIGNE, TypeCommande.A_EMPORTER]
+)
+def test_livree_propage_sur_la_commande(
+    commandes: CommandeService,
+    service: LivraisonService,
+    client: Client,
+    eclair: Produit,
+    db: Session,
+    type_commande: TypeCommande,
+) -> None:
+    """Les deux seuls types de commande qui peuvent porter une livraison.
+
+    `Sur_place` en est exclu par construction — il ne peut pas porter d'adresse
+    —, ce que `test_sur_place_ne_peut_pas_atteindre_cette_propagation` vérifie.
+    Tous deux mènent à `Livree` d'après `STATUT_TERMINAL`.
+    """
+    commande, livraison = _livraison_de(
+        commandes, service, client, eclair.id_produit, type_commande
+    )
+    livreur = _salarie(db, FonctionPersonnel.LIVREUR)
+    service.affecter_livreur(livraison.id_livraison, livreur.id_personnel)
+
+    service.changer_statut(livraison.id_livraison, StatutLivraison.LIVREE)
+
+    assert commande.statut is STATUT_TERMINAL[type_commande]
+    assert commande.statut is StatutCommande.LIVREE
+
+
+def test_echouee_laisse_la_commande_strictement_inchangee(
+    commandes: CommandeService,
+    service: LivraisonService,
+    client: Client,
+    eclair: Produit,
+) -> None:
+    """Un échec de tournée n'est pas une annulation.
+
+    La marchandise a été préparée, le montant reste dû, et relancer, rembourser
+    ou annuler est une décision humaine. Basculer automatiquement trancherait à
+    la place de l'administrateur.
+    """
+    commande, livraison = _livraison_de(commandes, service, client, eclair.id_produit)
+    statut_avant = commande.statut
+
+    service.changer_statut(livraison.id_livraison, StatutLivraison.ECHOUEE)
+
+    assert commande.statut is statut_avant
+    assert commande.statut is StatutCommande.EN_ATTENTE
+    assert commande.statut is not StatutCommande.ANNULEE
+
+
+@pytest.mark.parametrize(
+    "statut",
+    [
+        StatutLivraison.EN_ATTENTE,
+        StatutLivraison.EN_COURS,
+        StatutLivraison.ECHOUEE,
+        StatutLivraison.ANNULEE,
+    ],
+)
+def test_seul_livree_propage(
+    commandes: CommandeService,
+    service: LivraisonService,
+    client: Client,
+    eclair: Produit,
+    db: Session,
+    statut: StatutLivraison,
+) -> None:
+    """Un seul déclencheur, et les trois autres statuts le prouvent."""
+    commande, livraison = _livraison_de(commandes, service, client, eclair.id_produit)
+    if statut is StatutLivraison.EN_COURS:
+        livreur = _salarie(db, FonctionPersonnel.LIVREUR)
+        service.affecter_livreur(livraison.id_livraison, livreur.id_personnel)
+
+    service.changer_statut(livraison.id_livraison, statut)
+
+    assert commande.statut is StatutCommande.EN_ATTENTE
+
+
+def test_la_synchronisation_ne_remonte_pas(
+    commandes: CommandeService,
+    service: LivraisonService,
+    client: Client,
+    eclair: Produit,
+    db: Session,
+) -> None:
+    """Le sens est unique : une commande ne pilote pas sa tournée."""
+    commande, livraison = _livraison_de(commandes, service, client, eclair.id_produit)
+
+    commande.statut = StatutCommande.ANNULEE
+    db.commit()
+
+    assert livraison.statut is StatutLivraison.EN_ATTENTE
+
+
+def test_sur_place_ne_peut_pas_atteindre_cette_propagation(
+    commandes: CommandeService, client: Client, eclair: Produit
+) -> None:
+    """La branche `Servie` de `STATUT_TERMINAL` est inatteignable par ce chemin.
+
+    Une commande sur place ne peut pas porter d'adresse, donc pas de livraison.
+    La table est lue quand même, pour que la règle garde un seul endroit où
+    vivre.
+    """
+    with pytest.raises(ReferenceInvalide):
+        commandes.creer(
+            _commande(eclair.id_produit, type_commande=TypeCommande.SUR_PLACE), client
+        )
+
+
+def test_le_statut_de_commande_n_est_ecrit_par_aucun_schema_d_entree() -> None:
+    """Verrou de conception : la garantie est structurelle, pas conventionnelle.
+
+    Si quelqu'un expose `statut` en entrée, un second chemin de transition
+    apparaît et ce test tombe.
+    """
+    from app.schemas.commande import CommandeCreate, CommandeInviteCreate
+
+    for schema in (CommandeCreate, CommandeInviteCreate):
+        assert "statut" not in schema.model_fields

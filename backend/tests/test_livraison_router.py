@@ -448,3 +448,74 @@ def test_produit_non_livrable_avec_adresse_retourne_422(
     )
 
     assert reponse.status_code == 422
+
+
+# --- Synchronisation vue du client --------------------------------------------
+
+
+def test_la_commande_passe_a_livree_apres_la_tournee(
+    client_http: TestClient,
+    entete_admin: dict[str, str],
+    entete_client: dict[str, str],
+    commande: dict,
+    id_livraison: int,
+    livreur: Personnel,
+) -> None:
+    """Ce que le client voit : sa commande suit sa livraison."""
+    assert commande["statut"] == "En_attente"
+    client_http.put(
+        f"{LIVRAISONS}/{id_livraison}/livreur",
+        json={"id_personnel": livreur.id_personnel},
+        headers=entete_admin,
+    )
+
+    client_http.put(
+        f"{LIVRAISONS}/{id_livraison}/statut",
+        json={"statut": "Livree"},
+        headers=entete_admin,
+    )
+
+    relue = client_http.get(
+        f"{COMMANDES}/{commande['id_commande']}", headers=entete_client
+    ).json()
+    assert relue["statut"] == "Livree"
+
+
+def test_un_echec_laisse_la_commande_en_l_etat(
+    client_http: TestClient,
+    entete_admin: dict[str, str],
+    entete_client: dict[str, str],
+    commande: dict,
+    id_livraison: int,
+) -> None:
+    """Relancer, rembourser ou annuler reste une décision humaine."""
+    client_http.put(
+        f"{LIVRAISONS}/{id_livraison}/statut",
+        json={"statut": "Echouee"},
+        headers=entete_admin,
+    )
+
+    relue = client_http.get(
+        f"{COMMANDES}/{commande['id_commande']}", headers=entete_client
+    ).json()
+    assert relue["statut"] == "En_attente"
+
+
+def test_aucun_endpoint_ne_change_le_statut_d_une_commande(
+    client_http: TestClient, entete_client: dict[str, str], commande: dict
+) -> None:
+    """La propagation est le seul chemin de transition.
+
+    Ni le client ni le personnel ne disposent d'un endpoint pour l'écrire
+    directement : le module de gestion administrative n'existe pas encore.
+    """
+    identifiant = commande["id_commande"]
+    for methode, chemin in (
+        ("put", f"{COMMANDES}/{identifiant}"),
+        ("patch", f"{COMMANDES}/{identifiant}"),
+        ("put", f"{COMMANDES}/{identifiant}/statut"),
+    ):
+        reponse = getattr(client_http, methode)(
+            chemin, json={"statut": "Livree"}, headers=entete_client
+        )
+        assert reponse.status_code in (404, 405), f"{methode} {chemin}"

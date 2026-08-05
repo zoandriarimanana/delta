@@ -450,6 +450,50 @@ L'adresse est **recopiée** et non partagée : la livraison est un fait
 logistique, la commande un fait commercial. Corriger l'adresse d'une tournée ne
 doit pas réécrire la commande.
 
+### Synchronisation LIVRAISON → COMMANDE
+
+Règle transverse : elle croise deux entités, elle est donc écrite **ici et une
+seule fois**, pas redécouverte par chaque module qui y touche — même esprit que
+la règle sur le soft delete et les clés étrangères dans `docs/roadmap.md`.
+
+**Le sens est unique et le déclencheur unique.**
+
+| Transition de `LIVRAISON.statut` | Effet sur `COMMANDE.statut` |
+|---|---|
+| → `Livree` | passe à `STATUT_TERMINAL[type_commande]`, dans la même transaction |
+| → `Echouee` | **aucun** |
+| → `Annulee`, `En_cours`, `En_attente` | **aucun** |
+| toute transition de `COMMANDE.statut` | **aucun effet sur la livraison** |
+
+Rien ne remonte jamais en sens inverse. Une commande n'a pas à piloter sa
+tournée : c'est la tournée qui constate la remise.
+
+**`Echouee` ne bascule pas la commande vers `Annulee`, et c'est délibéré.** Un
+échec de tournée n'est pas une annulation : la marchandise a été préparée, le
+montant reste dû, et ce qu'il convient de faire — relancer la livraison,
+rembourser, annuler — est une décision humaine. Basculer automatiquement
+trancherait à la place de l'administrateur et effacerait la distinction entre
+« n'a pas abouti » et « ne se fera pas », qui est précisément la raison d'être de
+deux statuts terminaux distincts.
+
+Ces trois actions **n'existent pas encore**, et c'est un manque volontaire, pas
+une dette : elles relèvent d'un module de gestion administrative des commandes,
+hors périmètre du sprint 3. Ne rien faire ici, c'est ne pas casser la cohérence
+en l'attendant.
+
+**Aucun autre chemin ne fait cette transition.** `COMMANDE.statut` n'est écrit
+qu'à deux endroits dans toute l'application : à la création, où il vaut
+`En_attente`, et par cette propagation. Il n'apparaît dans **aucun** schema
+d'entrée — ni `CommandeCreate` ni ailleurs —, donc aucune requête HTTP ne peut
+le fixer. La garantie est structurelle, pas conventionnelle.
+
+Le statut d'arrivée est lu dans `STATUT_TERMINAL`, la table posée avec le domaine
+de `COMMANDE` : `Servie` sur place, `Livree` pour les deux autres types. La
+branche `Sur_place` est **inatteignable** par ce chemin — une commande sur place
+ne peut pas porter d'adresse de livraison, donc pas de livraison — mais on lit la
+table plutôt que d'écrire `Livree` en dur, pour que la règle garde un seul
+endroit où vivre.
+
 ### Deux schemas de sortie pour une même livraison
 
 `LivraisonRead` porte l'identité du livreur ; `LivraisonPublique` ne porte que le
