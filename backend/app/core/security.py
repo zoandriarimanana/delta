@@ -6,6 +6,7 @@ et des dates. Toute la logique d'inscription/connexion vit dans
 """
 
 from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from typing import Any
 
 import bcrypt
@@ -18,6 +19,26 @@ from app.core.config import settings
 # plutôt que de tronquer, sinon deux mots de passe distincts partageant leurs
 # 72 premiers octets ouvriraient le même compte.
 LONGUEUR_MAX_MOT_DE_PASSE_OCTETS = 72
+
+#: Nom de la revendication qui porte la nature du sujet dans le jeton.
+REVENDICATION_TYPE = "type"
+
+
+class TypeSujet(StrEnum):
+    """Nature du compte qu'un jeton désigne.
+
+    `CLIENT` et `PERSONNEL` sont deux tables distinctes, dont les clés primaires
+    se recouvrent : le client n°5 et le salarié n°5 existent tous les deux. Sans
+    cette revendication, leurs jetons seraient **indiscernables** et
+    `get_current_client` chargerait un client à partir du jeton d'un salarié.
+    Ce n'est pas un inconfort de typage, c'est une confusion d'identité.
+
+    La revendication est fixée à l'émission et vérifiée à chaque lecture ; un
+    jeton qui n'en porte pas est rejeté.
+    """
+
+    CLIENT = "client"
+    PERSONNEL = "personnel"
 
 
 class MotDePasseTropLong(ValueError):
@@ -52,16 +73,29 @@ def verifier_mot_de_passe(mot_de_passe: str, hash_attendu: str) -> bool:
         return False
 
 
-def creer_jeton_acces(sujet: str | int, duree: timedelta | None = None) -> str:
-    """Signe un JWT dont le `sub` identifie le client.
+def creer_jeton_acces(
+    sujet: str | int,
+    type_sujet: TypeSujet,
+    duree: timedelta | None = None,
+) -> str:
+    """Signe un JWT dont le `sub` identifie le compte et `type` sa nature.
 
     `sub` est converti en chaîne : la spécification JWT impose une chaîne, et
     python-jose ne le fait pas à notre place.
+
+    `type_sujet` est un paramètre **obligatoire et sans valeur par défaut**.
+    C'est délibéré : un défaut ferait qu'un futur appelant émettrait un jeton
+    client sans s'en rendre compte. Le compilateur pose ici la question à notre
+    place, à chaque nouveau point d'émission.
     """
     expiration = datetime.now(UTC) + (
         duree or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    charge_utile = {"sub": str(sujet), "exp": expiration}
+    charge_utile = {
+        "sub": str(sujet),
+        REVENDICATION_TYPE: TypeSujet(type_sujet).value,
+        "exp": expiration,
+    }
     return jwt.encode(charge_utile, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 

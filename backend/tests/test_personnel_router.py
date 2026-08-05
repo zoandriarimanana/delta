@@ -6,6 +6,9 @@ substituée : c'est elle qui porte la traduction des erreurs métier en codes HT
 Point de vigilance propre à ce module : **les lectures aussi sont protégées**,
 contrairement au catalogue produit. Un annuaire du personnel porte des données
 personnelles de salariés, rien n'y a vocation à être lisible anonymement.
+
+Deux niveaux depuis #23 : lecture par tout salarié authentifié, écriture par les
+seuls administrateurs. Un jeton client n'ouvre plus rien ici.
 """
 
 from collections.abc import Iterator
@@ -16,10 +19,10 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
 from app.main import app
 from app.models.client import Client, TypeClient
-from app.models.personnel import Personnel
+from app.models.personnel import FonctionPersonnel, Personnel
 from tests.conftest import creer_engine_sqlite
 
 PERSONNEL = f"{settings.API_V1_PREFIX}/personnel"
@@ -52,13 +55,39 @@ def client_http(db: Session) -> Iterator[TestClient]:
         app.dependency_overrides.clear()
 
 
+def _jeton_personnel(
+    db: Session, email: str, *, administrateur: bool
+) -> dict[str, str]:
+    """Forge un membre du personnel connectable et retourne son en-tête."""
+    agent = Personnel(
+        nom="Agent",
+        prenom="Test",
+        fonction=FonctionPersonnel.AUTRE,
+        email=email,
+        est_administrateur=administrateur,
+        mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+    )
+    db.add(agent)
+    db.commit()
+    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
+    return {"Authorization": f"Bearer {jeton}"}
+
+
 @pytest.fixture
 def entete(db: Session) -> dict[str, str]:
-    """Jeton d'un client inscrit — aucun rôle particulier.
+    """Jeton d'un administrateur : les écritures de l'annuaire lui sont réservées."""
+    return _jeton_personnel(db, "admin@delta.mg", administrateur=True)
 
-    C'est exactement la faiblesse actée : rien ne distingue ce client d'un
-    administrateur. #23 remplace cette barrière.
-    """
+
+@pytest.fixture
+def entete_agent(db: Session) -> dict[str, str]:
+    """Jeton d'un salarié sans droit d'administration : lecture seule."""
+    return _jeton_personnel(db, "agent@delta.mg", administrateur=False)
+
+
+@pytest.fixture
+def entete_client(db: Session) -> dict[str, str]:
+    """Jeton d'un client : ne doit ouvrir aucun endpoint de l'annuaire."""
     client = Client(
         type_client=TypeClient.PARTICULIER,
         email="client@example.mg",
@@ -66,7 +95,8 @@ def entete(db: Session) -> dict[str, str]:
     )
     db.add(client)
     db.commit()
-    return {"Authorization": f"Bearer {creer_jeton_acces(client.id_client)}"}
+    jeton = creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
+    return {"Authorization": f"Bearer {jeton}"}
 
 
 def _creer(client_http: TestClient, entete: dict[str, str], **extra: object) -> dict:
@@ -168,13 +198,20 @@ def test_email_deja_pris_donne_409(
 
 
 def test_lister(client_http: TestClient, entete: dict[str, str]) -> None:
+    """L'administrateur qui appelle figure lui-même dans l'annuaire.
+
+    Ce n'est pas un artefact de test : la fixture crée un vrai salarié, et
+    l'annuaire n'a aucune raison de masquer l'appelant. On compte donc les deux
+    créations **plus** lui.
+    """
     _creer(client_http, entete)
     _creer(client_http, entete, email="marie@delta.mg", fonction="Cuisinier")
 
     reponse = client_http.get(PERSONNEL, headers=entete)
 
     assert reponse.status_code == 200
-    assert len(reponse.json()) == 2
+    emails = {p["email"] for p in reponse.json()}
+    assert {"jean@delta.mg", "marie@delta.mg", "admin@delta.mg"} == emails
 
 
 def test_filtre_par_fonction(client_http: TestClient, entete: dict[str, str]) -> None:
@@ -201,10 +238,16 @@ def test_filtre_hors_domaine_donne_422(
 def test_filtre_sans_titulaire_donne_une_liste_vide(
     client_http: TestClient, entete: dict[str, str]
 ) -> None:
-    """Critère de recherche, pas ressource désignée : liste vide, pas 404."""
+    """Critère de recherche, pas ressource désignée : liste vide, pas 404.
+
+    Le filtre porte sur `Receptionniste` : ni le livreur créé ici, ni
+    l'administrateur de la fixture — qui exerce `Autre` — n'y répondent.
+    """
     _creer(client_http, entete)
 
-    reponse = client_http.get(PERSONNEL, params={"fonction": "Autre"}, headers=entete)
+    reponse = client_http.get(
+        PERSONNEL, params={"fonction": "Receptionniste"}, headers=entete
+    )
 
     assert reponse.status_code == 200
     assert reponse.json() == []
@@ -371,3 +414,112 @@ def test_les_champs_sensibles_sont_absents_du_schema_ouvert() -> None:
     for schema in (PersonnelCreate, PersonnelUpdate):
         assert "est_administrateur" not in schema.model_fields
         assert "mot_de_passe" not in schema.model_fields
+
+
+# --- Cloisonnement et niveaux d'accès de l'annuaire ----------------------------
+
+
+def test_un_jeton_client_n_ouvre_rien_dans_l_annuaire(
+    client_http: TestClient, entete_client: dict[str, str]
+) -> None:
+    """Lecture comprise : un annuaire de salariés n'a pas à être lisible par la
+    clientèle."""
+    assert client_http.get(PERSONNEL, headers=entete_client).status_code == 401
+    assert (
+        client_http.post(PERSONNEL, json=VALIDE, headers=entete_client).status_code
+        == 401
+    )
+
+
+def test_un_salarie_peut_consulter_l_annuaire(
+    client_http: TestClient, entete: dict[str, str], entete_agent: dict[str, str]
+) -> None:
+    """Savoir qui livre ou qui forme fait partie du travail courant."""
+    _creer(client_http, entete)
+
+    reponse = client_http.get(PERSONNEL, headers=entete_agent)
+
+    assert reponse.status_code == 200
+    assert any(p["email"] == "jean@delta.mg" for p in reponse.json())
+
+
+def test_un_salarie_sans_droit_ne_peut_pas_ecrire(
+    client_http: TestClient, entete: dict[str, str], entete_agent: dict[str, str]
+) -> None:
+    """Gérer le personnel n'est pas le consulter — 403 sur les quatre écritures."""
+    cree = _creer(client_http, entete)
+    cible = f"{PERSONNEL}/{cree['id_personnel']}"
+
+    assert (
+        client_http.post(
+            PERSONNEL, json={**VALIDE, "email": "x@delta.mg"}, headers=entete_agent
+        ).status_code
+        == 403
+    )
+    assert (
+        client_http.put(cible, json={"nom": "Rabe"}, headers=entete_agent).status_code
+        == 403
+    )
+    assert client_http.delete(cible, headers=entete_agent).status_code == 403
+    assert (
+        client_http.post(f"{cible}/restauration", headers=entete_agent).status_code
+        == 403
+    )
+
+
+def test_sans_jeton_aucune_lecture(client_http: TestClient) -> None:
+    assert client_http.get(PERSONNEL).status_code == 401
+
+
+# --- Connexion du personnel ----------------------------------------------------
+
+
+CONNEXION_PERSONNEL = f"{settings.API_V1_PREFIX}/auth/personnel/connexion"
+
+
+def test_connexion_personnel_retourne_un_jeton_utilisable(
+    client_http: TestClient, db: Session
+) -> None:
+    """Bout en bout : connexion, puis usage du jeton obtenu sur l'annuaire."""
+    db.add(
+        Personnel(
+            nom="Chef",
+            prenom="Grand",
+            fonction=FonctionPersonnel.AUTRE,
+            email="chef@delta.mg",
+            est_administrateur=True,
+            mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+        )
+    )
+    db.commit()
+
+    reponse = client_http.post(
+        CONNEXION_PERSONNEL,
+        json={"email": "chef@delta.mg", "mot_de_passe": "motdepasse123"},
+    )
+
+    assert reponse.status_code == 200
+    jeton = reponse.json()["access_token"]
+    entete = {"Authorization": f"Bearer {jeton}"}
+    assert client_http.post(PERSONNEL, json=VALIDE, headers=entete).status_code == 201
+
+
+def test_connexion_personnel_refusee_donne_401(client_http: TestClient) -> None:
+    reponse = client_http.post(
+        CONNEXION_PERSONNEL,
+        json={"email": "inconnu@delta.mg", "mot_de_passe": "motdepasse123"},
+    )
+
+    assert reponse.status_code == 401
+
+
+def test_aucune_inscription_au_personnel_n_est_exposee(client_http: TestClient) -> None:
+    """Un salarié est créé par l'annuaire ou le script d'amorçage, jamais en
+    s'inscrivant lui-même — ce serait laisser n'importe qui entrer dans
+    l'organigramme."""
+    reponse = client_http.post(
+        f"{settings.API_V1_PREFIX}/auth/personnel/inscription",
+        json={"email": "pirate@delta.mg", "mot_de_passe": "motdepasse123"},
+    )
+
+    assert reponse.status_code == 404

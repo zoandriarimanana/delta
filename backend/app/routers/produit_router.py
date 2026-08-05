@@ -1,7 +1,12 @@
 """Endpoints de PRODUIT.
 
-Mêmes règles d'accès que les catégories : lectures publiques, écritures
-réservées aux clients authentifiés (cf. `docs/roadmap.md`, dette « Sprint 1 »).
+Mêmes règles d'accès que les catégories : **lectures publiques** — un
+visiteur doit pouvoir parcourir le catalogue sans compte — et **écritures
+réservées aux administrateurs**.
+
+Ces écritures étaient jusqu'au sprint 3 ouvertes à tout client inscrit, faute
+d'authentification `PERSONNEL` : c'était la dette du Sprint 1, close par
+`get_current_personnel_administrateur`.
 """
 
 from typing import Annotated
@@ -10,7 +15,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import ClientConnecte
+from app.core.deps import PersonnelAdministrateur
 from app.schemas.produit import ProduitCreate, ProduitRead, ProduitUpdate
 from app.services.produit_service import ProduitService
 
@@ -50,16 +55,22 @@ def obtenir(id_produit: int, db: SessionBase) -> ProduitRead:
     summary="Créer un produit",
 )
 def creer(
-    donnees: ProduitCreate, client: ClientConnecte, db: SessionBase
+    donnees: ProduitCreate, admin: PersonnelAdministrateur, db: SessionBase
 ) -> ProduitRead:
-    """422 si `id_categorie` ne désigne aucune catégorie. Authentification requise."""
+    """422 si `id_categorie` ne désigne aucune catégorie.
+
+    Réservé aux administrateurs.
+    """
     produit = ProduitService(db).creer(donnees)
     return ProduitRead.model_validate(produit)
 
 
 @router.put("/{id_produit}", response_model=ProduitRead, summary="Modifier un produit")
 def modifier(
-    id_produit: int, donnees: ProduitUpdate, client: ClientConnecte, db: SessionBase
+    id_produit: int,
+    donnees: ProduitUpdate,
+    admin: PersonnelAdministrateur,
+    db: SessionBase,
 ) -> ProduitRead:
     """Mise à jour partielle, catégorie revalidée si elle change."""
     produit = ProduitService(db).modifier(id_produit, donnees)
@@ -71,6 +82,6 @@ def modifier(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Supprimer un produit",
 )
-def supprimer(id_produit: int, client: ClientConnecte, db: SessionBase) -> None:
-    """Authentification requise."""
+def supprimer(id_produit: int, admin: PersonnelAdministrateur, db: SessionBase) -> None:
+    """Réservé aux administrateurs."""
     ProduitService(db).supprimer(id_produit)

@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import creer_jeton_acces
+from app.core.security import TypeSujet, creer_jeton_acces
 from app.schemas.auth import (
     Connexion,
     InscriptionEntreprise,
@@ -73,4 +73,4 @@ def se_connecter(identifiants: Connexion, db: SessionBase) -> Token:
     cause (`AuthentificationInvalide`, traduite globalement).
     """
     client = AuthService(db).authentifier(identifiants)
-    return Token(access_token=creer_jeton_acces(client.id_client))
+    return Token(access_token=creer_jeton_acces(client.id_client, TypeSujet.CLIENT))

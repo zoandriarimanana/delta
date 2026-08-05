@@ -1,5 +1,6 @@
 """Service métier de PERSONNEL."""
 
+import secrets
 from collections.abc import Sequence
 
 from sqlalchemy.exc import IntegrityError
@@ -7,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflitMetier, RessourceIntrouvable
 from app.core.integrite import viole_contrainte
+from app.core.security import hacher_mot_de_passe
 from app.models.personnel import FonctionPersonnel, Personnel
 from app.repositories.personnel_repository import PersonnelRepository
 from app.schemas.personnel import PersonnelCreate, PersonnelUpdate
@@ -15,6 +17,12 @@ CONTRAINTE_EMAIL_UNIQUE = "uq_personnel_email"
 INDICE_EMAIL = "personnel.email"
 
 MESSAGE_EMAIL_PRIS = "Un membre du personnel actif utilise déjà cette adresse."
+
+# Domaine réservé par la RFC 2606 : jamais routable, et refusé par `EmailStr` en
+# entrée — personne ne peut donc soumettre l'adresse d'une ligne anonymisée pour
+# usurper le compte. Mêmes valeurs que `ClientService`, même raisonnement.
+DOMAINE_ANONYME = "delta.invalid"
+MENTION_ANONYME = "Anonymisé"
 
 
 class PersonnelService:
@@ -147,4 +155,50 @@ class PersonnelService:
                     "restauration impossible."
                 ) from erreur
             raise
+        return personnel
+
+    def anonymiser(self, id_personnel: int) -> Personnel:
+        """Efface les données personnelles d'un salarié, sans supprimer la ligne.
+
+        **Seul chemin de conformité** pour `PERSONNEL`, comme
+        `ClientService.anonymiser` l'est pour `CLIENT` (droit à l'effacement :
+        RGPD, loi malgache n°2014-038). L'archivage seul ne suffit pas : la ligne
+        reste, et avec elle le nom, l'adresse professionnelle et le téléphone.
+
+        `supprimer_definitivement` ne convient pas davantage. Les FK de
+        `LIVRAISON` et `SESSION_FORMATION` le refuseraient, et effacer une
+        livraison honorée ou une session dispensée reviendrait à détruire une
+        trace d'exécution — généralement soumise à une obligation de
+        conservation qui prime sur le droit à l'effacement.
+
+        Ne pas se rabattre non plus sur un détachement des clés étrangères :
+        leur `NULL` signifie déjà « pas encore affecté », et le réutiliser pour
+        « effacé » rendrait les deux états indistinguables.
+
+        Sont réécrits : nom, prénom, e-mail, téléphone, spécialité, zone de
+        livraison, et le mot de passe. Sont conservés : `id_personnel`,
+        `fonction`, `date_embauche` — la fonction et l'ancienneté ne sont pas
+        des données identifiantes, et les livraisons comme les sessions gardent
+        leur `#id_personnel`, désormais anonyme.
+
+        `est_administrateur` est remis à `False` : un compte anonymisé ne doit
+        plus porter de droit. Après l'appel, aucune connexion n'est possible —
+        le mot de passe est remplacé par le haché d'un secret aléatoire que
+        personne ne détient.
+        """
+        personnel = self.personnels.get_by_id(id_personnel, inclure_supprimes=True)
+        if personnel is None:
+            raise RessourceIntrouvable("Membre du personnel introuvable.")
+
+        personnel.nom = MENTION_ANONYME
+        personnel.prenom = MENTION_ANONYME
+        personnel.email = f"supprime+{personnel.id_personnel}@{DOMAINE_ANONYME}"
+        personnel.telephone = None
+        personnel.specialite = None
+        personnel.zone_livraison = None
+        personnel.est_administrateur = False
+        personnel.mot_de_passe = hacher_mot_de_passe(secrets.token_urlsafe(32))
+
+        self.personnels.delete(personnel)
+        self.db.commit()
         return personnel

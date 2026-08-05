@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
 from app.main import app
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
@@ -58,7 +58,8 @@ def _creer_client(db: Session) -> Client:
 
 
 def _entete(compte: Client) -> dict[str, str]:
-    return {"Authorization": f"Bearer {creer_jeton_acces(compte.id_client)}"}
+    jeton = creer_jeton_acces(compte.id_client, TypeSujet.CLIENT)
+    return {"Authorization": f"Bearer {jeton}"}
 
 
 @pytest.fixture

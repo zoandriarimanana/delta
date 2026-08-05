@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.exceptions import (
     AuthentificationInvalide,
+    AutorisationInsuffisante,
     ConflitMetier,
     ErreurMetier,
     ReferenceInvalide,
@@ -24,6 +25,7 @@ from app.routers import (
     auth_router,
     categorie_produit_router,
     commande_router,
+    personnel_auth_router,
     personnel_router,
     produit_router,
 )
@@ -51,6 +53,21 @@ async def _gerer_authentification_invalide(
         status_code=status.HTTP_401_UNAUTHORIZED,
         content={"detail": str(exc)},
         headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+@app.exception_handler(AutorisationInsuffisante)
+async def _gerer_autorisation_insuffisante(
+    request: Request, exc: AutorisationInsuffisante
+) -> JSONResponse:
+    """Droits insuffisants → 403.
+
+    Pas d'en-tête `WWW-Authenticate` ici, contrairement au 401 : il invite à
+    fournir des identifiants, or ceux-ci sont valides. Ce n'est pas
+    l'authentification qui manque, c'est le droit.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN, content={"detail": str(exc)}
     )
 
 
@@ -103,4 +120,5 @@ app.include_router(auth_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(categorie_produit_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(produit_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(commande_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(personnel_auth_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(personnel_router.router, prefix=settings.API_V1_PREFIX)
