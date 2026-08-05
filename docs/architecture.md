@@ -521,6 +521,28 @@ C'est exactement ce que le domaine formel de `PERSONNEL.fonction` rend fiable :
 sur une chaîne libre, la comparaison aurait laissé passer « livreur » et
 « Livreur ».
 
+### Le suivi de livraison n'a pas de page à lui
+
+`features/livraison/` ne porte **aucune page**, seulement des composants. Le
+suivi n'est pas une destination : il s'insère dans l'historique du client et dans
+la page publique d'une commande invitée, à côté du récapitulatif. Lui donner une
+URL obligerait le client à naviguer pour une information qu'il attend là où il
+regarde déjà sa commande.
+
+Les deux insertions partagent le **même** composant de rendu, et ne diffèrent que
+par le hook qui charge — identifiant de commande d'un côté, référence publique de
+l'autre. Une seconde implémentation divergerait tôt ou tard, et c'est précisément
+sur la page sans authentification qu'une divulgation serait la plus grave.
+
+Le module ne déclare **pas** de type pour `LivraisonRead` : aucun endpoint
+consommé par le frontend ne le renvoie, et lui donner un type inviterait à en
+attendre les champs. L'absence d'identité du livreur est portée trois fois — par
+le schema de sortie du serveur, par le type TypeScript, et par un test qui injecte
+délibérément des champs interdits pour vérifier que le composant ne les rend pas.
+
+Un statut inconnu — API en avance sur le frontend — retombe sur un libellé neutre
+plutôt que sur un identifiant technique brut ou une page vide.
+
 ### La personnalisation naît avec sa ligne
 
 `DEMANDE_PERSONNALISATION` n'a **ni router ni service propres**, et ce n'est pas

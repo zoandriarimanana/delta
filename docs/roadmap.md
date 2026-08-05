@@ -136,9 +136,12 @@ d'origine — voir `docs/mld.md`.
       administrative des commandes. Manque **volontaire**, pas une dette : #25
       se contente de ne pas casser la cohérence en l'attendant. Règle écrite
       dans `docs/architecture.md`.
-- [x] Suivi de statut livraison côté **backend** — `LivraisonPublique` n'expose
-      que le statut et les dates, jamais le livreur ni l'adresse. Le rendu React
-      reste à faire en #26.
+- [x] Suivi de statut livraison, backend **et** React — `LivraisonPublique`
+      n'expose que le statut et les dates, jamais le livreur ni l'adresse, et
+      `features/livraison/` ne déclare même pas ces champs. La page publique
+      accessible par `reference_publique` et l'historique connecté partagent le
+      **même** composant : une seconde implémentation divergerait, et c'est sur
+      la page sans authentification qu'une divulgation serait la plus grave.
 
 ## Sprint 4 — Formation
 
