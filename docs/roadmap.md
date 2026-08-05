@@ -136,9 +136,12 @@ d'origine — voir `docs/mld.md`.
       administrative des commandes. Manque **volontaire**, pas une dette : #25
       se contente de ne pas casser la cohérence en l'attendant. Règle écrite
       dans `docs/architecture.md`.
-- [x] Suivi de statut livraison côté **backend** — `LivraisonPublique` n'expose
-      que le statut et les dates, jamais le livreur ni l'adresse. Le rendu React
-      reste à faire en #26.
+- [x] Suivi de statut livraison, backend **et** React — `LivraisonPublique`
+      n'expose que le statut et les dates, jamais le livreur ni l'adresse, et
+      `features/livraison/` ne déclare même pas ces champs. La page publique
+      accessible par `reference_publique` et l'historique connecté partagent le
+      **même** composant : une seconde implémentation divergerait, et c'est sur
+      la page sans authentification qu'une divulgation serait la plus grave.
 
 ## Sprint 4 — Formation
 
@@ -231,6 +234,7 @@ nommer sa tâche d'origine et sa condition de résorption.
 
 | Origine | Dette | Condition de résorption |
 |---|---|---|
+| Sprint 3 (#26) | L'historique émet **une requête de suivi par commande listée** : `HistoriqueCommandesPage` monte un `EncartSuiviCommande` par ligne, et chacun appelle `GET /commandes/{id}/livraison`. Trente commandes affichées font trente requêtes, dont la plupart répondent 404 pour des commandes à retirer. | Inclure le suivi de livraison dans la charge utile de `GET /commandes`, ce qui supprime les appels séparés. À faire **si l'historique devient un point de lenteur réel**, ou lors d'un futur sprint de performance — pas avant : la correction déplace une décision de confidentialité vers un schema qui sert aussi d'autres usages. |
 | Sprint 2 (parcours invité) | Une commande passée en invité ne peut pas être rattachée à un compte créé ensuite : le client la perd de vue dès qu'il s'inscrit, alors qu'elle porte le même `contact_invite`. Écarté volontairement du sprint 2. | Le rattachement suppose de faire confiance à une adresse non vérifiée. À traiter avec un mécanisme de vérification d'e-mail, qui n'existe nulle part dans le projet — donc pas avant qu'il soit décidé. |
 | T0.10 (Sprint 0) | Le jeton d'accès est stocké en `localStorage` (`frontend/src/lib/tokenStorage.ts`) : lisible par tout script de la page, donc exfiltrable en cas de faille XSS. | Basculer sur un cookie `httpOnly` + `SameSite`, ce qui suppose de faire émettre le cookie par l'API et d'ajouter une protection CSRF. **À arbitrer avant mise en prod.** |
 | T0.6 (Sprint 0) | Aucune limitation de tentatives sur `/auth/connexion` : ni rate limiting par IP, ni verrouillage temporaire du compte après N échecs. Le hachage bcrypt ralentit une attaque par force brute sans l'empêcher, et rien ne freine le bourrage d'identifiants (credential stuffing). | Ajouter une limitation de débit et un verrouillage progressif. **À traiter avant mise en prod.** |

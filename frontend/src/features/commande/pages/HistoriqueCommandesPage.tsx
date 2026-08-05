@@ -11,6 +11,8 @@ import { Link } from 'react-router';
 
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import { EncartSuiviCommande } from '@/features/livraison/components/EncartSuivi';
+
 import RecapitulatifCommande from '../components/RecapitulatifCommande';
 import { formaterDate } from '../commande.service';
 import { useHistorique } from '../commande.hooks';
@@ -88,6 +90,8 @@ export default function HistoriqueCommandesPage() {
               {formaterDate(commande.date_commande)}
             </time>
             <RecapitulatifCommande commande={commande} />
+            {/* N'affiche rien pour une commande à retirer. */}
+            <EncartSuiviCommande idCommande={commande.id_commande} />
           </li>
         ))}
       </ul>

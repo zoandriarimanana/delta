@@ -7,6 +7,8 @@
 
 import { Link, useParams } from 'react-router';
 
+import { EncartSuiviInvite } from '@/features/livraison/components/EncartSuivi';
+
 import ReferencePublique from '../components/ReferencePublique';
 import RecapitulatifCommande from '../components/RecapitulatifCommande';
 import { useCommandeInvitee } from '../commande.hooks';
@@ -40,6 +42,11 @@ export default function CommandeInviteePage() {
             <ReferencePublique reference={commande.reference_publique} />
           )}
           <RecapitulatifCommande commande={commande} />
+          {/* Statut seul : cette URL n'a aucune authentification, un UUID
+              suffit à l'ouvrir. Ni l'identité ni le contact du livreur n'y
+              figurent — l'API ne les renvoie pas, et le type ne les porte
+              pas non plus. */}
+          {reference !== undefined && <EncartSuiviInvite reference={reference} />}
         </div>
       )}
 
