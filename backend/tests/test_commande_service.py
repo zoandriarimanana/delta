@@ -32,6 +32,7 @@ from app.models.client import Client, TypeClient
 from app.models.commande import Commande, StatutCommande, TypeCommande
 from app.models.produit import Produit
 from app.schemas.commande import CommandeCreate, CommandeInviteCreate
+from app.schemas.demande_personnalisation import DemandePersonnalisationCreate
 from app.schemas.ligne_commande import LigneCommandeCreate
 from app.services.commande_service import CommandeService
 
@@ -530,4 +531,189 @@ def test_le_check_refuse_client_et_invite_a_la_fois(
                 "nom_invite": "Rakoto",
             }
         )
+    db.rollback()
+
+
+# --- Personnalisation ----------------------------------------------------------
+
+
+@pytest.fixture
+def gateau(db: Session, eclair: Produit) -> Produit:
+    """Produit personnalisable, contrairement à l'éclair."""
+    produit = Produit(
+        nom="Gâteau d'anniversaire",
+        prix_unitaire=Decimal("25.00"),
+        unite_mesure="piece",
+        stock_disponible=10,
+        est_personnalisable=True,
+        id_categorie=eclair.id_categorie,
+    )
+    db.add(produit)
+    db.commit()
+    return produit
+
+
+def _commande_personnalisee(id_produit: int, quantite: int = 1) -> CommandeCreate:
+    return CommandeCreate(
+        type_commande=TypeCommande.EN_LIGNE,
+        lignes=[
+            LigneCommandeCreate(
+                id_produit=id_produit,
+                quantite=quantite,
+                personnalisation=DemandePersonnalisationCreate(
+                    description_demande="Écrire « Joyeux anniversaire »",
+                    ingredients_specifiques="Sans fruits à coque",
+                ),
+            )
+        ],
+    )
+
+
+def test_personnalisation_creee_avec_la_ligne(
+    service: CommandeService, client: Client, gateau: Produit
+) -> None:
+    commande = service.creer(_commande_personnalisee(gateau.id_produit), client)
+
+    ligne = service.lignes.lister_par_commande(commande.id_commande)[0]
+    demande = service.personnalisations.get_by_ligne(ligne.id_ligne)
+    assert demande is not None
+    assert demande.ingredients_specifiques == "Sans fruits à coque"
+
+
+def test_produit_non_personnalisable_refuse(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    """422 : le produit existe, c'est la combinaison envoyée qui est invalide.
+
+    `est_personnalisable` est une propriété du catalogue, pas une préférence du
+    client.
+    """
+    with pytest.raises(ReferenceInvalide):
+        service.creer(_commande_personnalisee(eclair.id_produit), client)
+
+
+def test_refus_n_ecrit_aucune_commande(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """Tout se joue dans une transaction : le refus ne laisse pas de commande
+    orpheline, ni de stock réservé."""
+    stock_initial = eclair.stock_disponible
+
+    with pytest.raises(ReferenceInvalide):
+        service.creer(_commande_personnalisee(eclair.id_produit), client)
+    db.rollback()
+
+    assert service.lister_du_client(client) == []
+    db.refresh(eclair)
+    assert eclair.stock_disponible == stock_initial
+
+
+def test_ligne_sans_personnalisation_n_en_cree_aucune(
+    service: CommandeService, client: Client, gateau: Produit
+) -> None:
+    """Un produit personnalisable n'oblige à rien."""
+    commande = service.creer(_commande(gateau.id_produit), client)
+
+    ligne = service.lignes.lister_par_commande(commande.id_commande)[0]
+    assert service.personnalisations.get_by_ligne(ligne.id_ligne) is None
+
+
+def test_id_produit_base_deduit_de_la_ligne(
+    service: CommandeService, client: Client, gateau: Produit
+) -> None:
+    """Non saisi, donc jamais incohérent avec le produit commandé."""
+    commande = service.creer(_commande_personnalisee(gateau.id_produit), client)
+
+    ligne = service.lignes.lister_par_commande(commande.id_commande)[0]
+    demande = service.personnalisations.get_by_ligne(ligne.id_ligne)
+    assert demande is not None
+    assert demande.id_produit_base == gateau.id_produit
+
+
+def test_supplement_ne_vient_pas_de_la_requete() -> None:
+    """Le schema ne porte pas le champ : l'envoyer n'a aucun effet.
+
+    L'accepter laisserait le client fixer ce qu'il paie — il suffirait
+    d'envoyer `0` pour obtenir une personnalisation gratuite.
+    """
+    charge = DemandePersonnalisationCreate.model_validate(
+        {"description_demande": "Sans sucre", "supplement_prix": "0.00"}
+    )
+
+    assert not hasattr(charge, "supplement_prix")
+
+
+def test_supplement_entre_dans_le_montant_total(
+    service: CommandeService,
+    client: Client,
+    gateau: Produit,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Le supplément vaut 0 faute de tarif au MLD, mais il est bien additionné.
+
+    On substitue une valeur non nulle pour vérifier que le calcul l'intègre :
+    avec 0, l'assertion passerait même si l'addition avait été oubliée. Le jour
+    où un tarif existera, `montant_total` restera juste.
+    """
+    monkeypatch.setattr(
+        "app.services.commande_service.SUPPLEMENT_PERSONNALISATION", Decimal("5.00")
+    )
+
+    commande = service.creer(_commande_personnalisee(gateau.id_produit), client)
+
+    assert commande.montant_total == Decimal("30.00")  # 25.00 + 5.00
+
+
+def test_supplement_nul_par_defaut(
+    service: CommandeService, client: Client, gateau: Produit
+) -> None:
+    """État actuel, à faire évoluer le jour où un tarif entre au MLD."""
+    commande = service.creer(_commande_personnalisee(gateau.id_produit), client)
+
+    assert commande.montant_total == gateau.prix_unitaire
+
+
+def test_archivage_propage_a_la_personnalisation(
+    service: CommandeService, client: Client, gateau: Produit
+) -> None:
+    """Deux niveaux de propagation, pas un seul.
+
+    Le schéma prévoit `ON DELETE CASCADE` de `DEMANDE_PERSONNALISATION` vers
+    `LIGNE_COMMANDE`, mais un archivage est un `UPDATE` : la cascade ne se
+    déclenche pas.
+    """
+    commande = service.creer(_commande_personnalisee(gateau.id_produit), client)
+    ligne = service.lignes.lister_par_commande(commande.id_commande)[0]
+
+    service.supprimer(commande.id_commande)
+
+    assert service.personnalisations.get_by_ligne(ligne.id_ligne) is None
+    archivee = service.personnalisations.get_by_ligne(
+        ligne.id_ligne, inclure_supprimes=True
+    )
+    assert archivee is not None
+    assert archivee.supprime_le is not None
+
+
+def test_une_seule_demande_par_ligne(
+    service: CommandeService, client: Client, gateau: Produit, db: Session
+) -> None:
+    """`UNIQUE (id_ligne)` est une cardinalité (1,1), et elle est **globale**.
+
+    Rendue partielle, la table pourrait porter cinq demandes archivées et une
+    active pour la même ligne.
+    """
+    commande = service.creer(_commande_personnalisee(gateau.id_produit), client)
+    ligne = service.lignes.lister_par_commande(commande.id_commande)[0]
+
+    with pytest.raises(IntegrityError):
+        service.personnalisations.create(
+            {
+                "id_ligne": ligne.id_ligne,
+                "id_produit_base": gateau.id_produit,
+                "description_demande": "Une seconde demande",
+                "supplement_prix": Decimal("0"),
+            }
+        )
+        db.commit()
     db.rollback()

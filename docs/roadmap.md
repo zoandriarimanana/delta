@@ -102,7 +102,20 @@ d'origine — voir `docs/mld.md`.
       — `CLIENT` et `PERSONNEL` ont des clés primaires qui se recouvrent : sans
       la revendication `type`, leurs jetons seraient indiscernables. Chaque
       dépendance rejette le jeton de l'autre.
-- [ ] `DEMANDE_PERSONNALISATION` rattachée à une ligne de commande
+- [x] `DEMANDE_PERSONNALISATION` rattachée à une ligne de commande
+      — **Limite assumée, et non une dette** : une personnalisation se crée
+      **uniquement à la création de la commande**, dans la même transaction que
+      sa ligne, et son supplément entre dans le calcul unique de
+      `montant_total`. Aucun endpoint ne permet d'en ajouter ni d'en modifier
+      une après coup. Autoriser l'ajout a posteriori obligerait soit à laisser
+      le client payer un supplément invisible dans son montant, soit à
+      recalculer `montant_total`, qui est une **donnée d'archive** figée à la
+      création (cf. `docs/mld.md`). Ce n'est pas un report : c'est un arbitrage,
+      il n'appelle aucune résorption.
+      — `supplement_prix` n'est **pas accepté depuis la requête**, pour la même
+      raison que `prix_unitaire_applique` : il suffirait d'envoyer `0` pour
+      obtenir une personnalisation gratuite. Il vaut aujourd'hui `0` faute de
+      tarif au MLD — voir la ligne de dette correspondante.
 - [ ] `LIVRAISON` : création automatique si commande livrable, affectation livreur
       — ⚠️ la cohérence fonction du personnel (Formateur/Livreur) doit être vérifiée
       dans le service au moment de l'affectation, ce n'est pas garanti par la FK.
@@ -201,6 +214,7 @@ nommer sa tâche d'origine et sa condition de résorption.
 
 | Origine | Dette | Condition de résorption |
 |---|---|---|
+| Sprint 3 (#24) | Aucun tarif de personnalisation n'existe au MLD, ni sur `PRODUIT` ni ailleurs. `DEMANDE_PERSONNALISATION.supplement_prix` vaut donc toujours `0` : le supplément est bien additionné à `montant_total`, mais il n'a rien à ajouter. Une personnalisation est de fait gratuite. | Décider où le tarif se porte — colonne sur `PRODUIT`, grille par type de demande, ou saisie par le personnel avant confirmation — puis remplacer la constante `SUPPLEMENT_PERSONNALISATION` du service. **À trancher avant mise en prod**, sous peine de facturer un service à perte. |
 | Sprint 2 (parcours invité) | Une commande passée en invité ne peut pas être rattachée à un compte créé ensuite : le client la perd de vue dès qu'il s'inscrit, alors qu'elle porte le même `contact_invite`. Écarté volontairement du sprint 2. | Le rattachement suppose de faire confiance à une adresse non vérifiée. À traiter avec un mécanisme de vérification d'e-mail, qui n'existe nulle part dans le projet — donc pas avant qu'il soit décidé. |
 | T0.10 (Sprint 0) | Le jeton d'accès est stocké en `localStorage` (`frontend/src/lib/tokenStorage.ts`) : lisible par tout script de la page, donc exfiltrable en cas de faille XSS. | Basculer sur un cookie `httpOnly` + `SameSite`, ce qui suppose de faire émettre le cookie par l'API et d'ajouter une protection CSRF. **À arbitrer avant mise en prod.** |
 | T0.6 (Sprint 0) | Aucune limitation de tentatives sur `/auth/connexion` : ni rate limiting par IP, ni verrouillage temporaire du compte après N échecs. Le hachage bcrypt ralentit une attaque par force brute sans l'empêcher, et rien ne freine le bourrage d'identifiants (credential stuffing). | Ajouter une limitation de débit et un verrouillage progressif. **À traiter avant mise en prod.** |

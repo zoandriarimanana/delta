@@ -344,3 +344,144 @@ def test_un_jeton_expire_ne_bascule_pas_en_mode_invite(
     )
 
     assert reponse.status_code == 401
+
+
+# --- Personnalisation ----------------------------------------------------------
+
+
+@pytest.fixture
+def gateau(db: Session, eclair: Produit) -> Produit:
+    produit = Produit(
+        nom="Gâteau d'anniversaire",
+        prix_unitaire=Decimal("25.00"),
+        unite_mesure="piece",
+        stock_disponible=10,
+        est_personnalisable=True,
+        id_categorie=eclair.id_categorie,
+    )
+    db.add(produit)
+    db.commit()
+    return produit
+
+
+def _corps_personnalise(id_produit: int) -> dict:
+    return {
+        "type_commande": "En_ligne",
+        "lignes": [
+            {
+                "id_produit": id_produit,
+                "quantite": 1,
+                "personnalisation": {
+                    "description_demande": "Écrire « Joyeux anniversaire »",
+                    "ingredients_specifiques": "Sans fruits à coque",
+                },
+            }
+        ],
+    }
+
+
+def test_personnalisation_retournee_dans_la_ligne(
+    client_http: TestClient, entete: dict[str, str], gateau: Produit
+) -> None:
+    """Lisible sans second appel : la demande fait partie de la commande."""
+    reponse = client_http.post(
+        COMMANDES, json=_corps_personnalise(gateau.id_produit), headers=entete
+    )
+
+    assert reponse.status_code == 201
+    demande = reponse.json()["lignes"][0]["personnalisation"]
+    assert demande["description_demande"] == "Écrire « Joyeux anniversaire »"
+    assert demande["id_produit_base"] == gateau.id_produit
+
+
+def test_ligne_ordinaire_porte_une_personnalisation_nulle(
+    client_http: TestClient, entete: dict[str, str], eclair: Produit
+) -> None:
+    reponse = client_http.post(
+        COMMANDES, json=_corps(eclair.id_produit), headers=entete
+    )
+
+    assert reponse.json()["lignes"][0]["personnalisation"] is None
+
+
+def test_produit_non_personnalisable_retourne_422(
+    client_http: TestClient, entete: dict[str, str], eclair: Produit
+) -> None:
+    """422 et non 409 : le produit existe, c'est la combinaison qui est invalide."""
+    reponse = client_http.post(
+        COMMANDES, json=_corps_personnalise(eclair.id_produit), headers=entete
+    )
+
+    assert reponse.status_code == 422
+    assert "personnalisation" in reponse.json()["detail"].lower()
+
+
+def test_supplement_envoye_par_le_client_est_ignore(
+    client_http: TestClient, entete: dict[str, str], gateau: Produit
+) -> None:
+    """Sinon il suffirait d'envoyer `0` pour une personnalisation gratuite."""
+    corps = _corps_personnalise(gateau.id_produit)
+    corps["lignes"][0]["personnalisation"]["supplement_prix"] = "-999.00"
+
+    reponse = client_http.post(COMMANDES, json=corps, headers=entete)
+
+    assert reponse.status_code == 201
+    assert reponse.json()["lignes"][0]["personnalisation"]["supplement_prix"] == "0.00"
+    assert reponse.json()["montant_total"] == "25.00"
+
+
+def test_produit_base_envoye_par_le_client_est_ignore(
+    client_http: TestClient, entete: dict[str, str], gateau: Produit, eclair: Produit
+) -> None:
+    """Déduit de la ligne : aucune incohérence n'est représentable."""
+    corps = _corps_personnalise(gateau.id_produit)
+    corps["lignes"][0]["personnalisation"]["id_produit_base"] = eclair.id_produit
+
+    reponse = client_http.post(COMMANDES, json=corps, headers=entete)
+
+    assert reponse.json()["lignes"][0]["personnalisation"]["id_produit_base"] == (
+        gateau.id_produit
+    )
+
+
+def test_personnalisation_possible_en_mode_invite(
+    client_http: TestClient, gateau: Produit
+) -> None:
+    """Le parcours invité n'est pas un parcours au rabais."""
+    corps = {
+        **_corps_personnalise(gateau.id_produit),
+        "type_commande": "A_emporter",
+        "nom_invite": "Rakoto Jean",
+        "contact_invite": "+261340000000",
+    }
+
+    reponse = client_http.post(f"{COMMANDES}/invite", json=corps)
+
+    assert reponse.status_code == 201
+    assert reponse.json()["lignes"][0]["personnalisation"] is not None
+
+
+def test_aucun_endpoint_de_personnalisation_n_est_expose(
+    client_http: TestClient, entete: dict[str, str], gateau: Produit
+) -> None:
+    """Limite assumée du sprint 3 : pas de modification a posteriori.
+
+    `montant_total` est figé à la création ; permettre d'ajouter un supplément
+    ensuite le rendrait faux, ou obligerait à recalculer une donnée d'archive.
+    """
+    reponse = client_http.post(
+        COMMANDES, json=_corps_personnalise(gateau.id_produit), headers=entete
+    )
+    id_ligne = reponse.json()["lignes"][0]["id_ligne"]
+
+    for methode, chemin in (
+        ("post", f"{settings.API_V1_PREFIX}/personnalisations"),
+        ("put", f"{settings.API_V1_PREFIX}/personnalisations/{id_ligne}"),
+        ("patch", f"{COMMANDES}/lignes/{id_ligne}/personnalisation"),
+    ):
+        assert (
+            getattr(client_http, methode)(
+                chemin, json={"description_demande": "Modifiée"}, headers=entete
+            ).status_code
+            == 404
+        )
