@@ -32,9 +32,28 @@ target_metadata = Base.metadata
 # compare_server_default : détecte un changement de valeur par défaut côté base.
 # Les deux sont désactivés par défaut dans Alembic, ce qui laisse passer ces
 # évolutions sans aucune migration générée.
+#
+# Le comparateur de contraintes CHECK est en revanche **désactivé**. Introduit
+# par Alembic 1.19, il ne sait pas rapprocher une contrainte issue d'un
+# `sa.Enum(create_constraint=True)` de son équivalent en base : côté modèle,
+# l'expression reste un paramètre non rendu (`IN (__[POSTCOMPILE_param_1])`)
+# là où PostgreSQL stocke la liste développée. Il conclut donc à la suppression
+# de huit contraintes qui sont bel et bien présentes des deux côtés, sous le
+# même nom — un faux positif intégral, qui rendait `alembic check` rouge sur
+# toute branche.
+#
+# Ce n'est pas une régression de couverture : Alembic n'a **jamais** comparé les
+# CHECK avant 1.19. C'est précisément pourquoi `ck_commande_client_ou_invite` a
+# dû être écrite à la main dans sa migration, avec un commentaire le disant.
+# Les contraintes CHECK restent donc, comme avant, la responsabilité de qui
+# écrit la migration.
 OPTIONS_COMPARAISON = {
     "compare_type": True,
     "compare_server_default": True,
+    "autogenerate_plugins": [
+        "alembic.autogenerate.*",
+        "~alembic.autogenerate.checkconstraint_byname",
+    ],
 }
 
 
