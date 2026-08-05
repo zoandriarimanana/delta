@@ -428,6 +428,55 @@ une page de connexion, par exemple, appartient à `features/auth/` dès que ce m
 existe — elle n'est en `src/pages/` au Sprint 0 que parce qu'aucun module n'est
 encore créé.
 
+### La livraison naît avec la commande
+
+`LIVRAISON` est créée dans la transaction de `POST /commandes`, comme les lignes
+et les personnalisations. Une livraison ne doit pas survivre à une commande qui a
+échoué.
+
+**Le déclencheur est la présence de `COMMANDE.adresse_livraison`, et lui seul.**
+Ni `type_commande` ni `PRODUIT.est_livrable` ne décident à la place du client :
+ils servent uniquement à refuser une demande incohérente — une commande
+`Sur_place` qu'on voudrait livrer, ou un panier contenant un article non
+livrable. Les deux donnent un 422, la référence étant dans le corps.
+
+La livraison naît **sans livreur et sans date de tournée**. `NULL` y signifie
+« pas encore affectée » et « pas encore planifiée » — pas une donnée manquante.
+C'est ce qui a imposé de rendre `date_heure_prevue` nullable : la garder
+obligatoire forçait à inventer une date au moment de la commande, c'est-à-dire à
+écrire une promesse que rien ne garantit.
+
+L'adresse est **recopiée** et non partagée : la livraison est un fait
+logistique, la commande un fait commercial. Corriger l'adresse d'une tournée ne
+doit pas réécrire la commande.
+
+### Deux schemas de sortie pour une même livraison
+
+`LivraisonRead` porte l'identité du livreur ; `LivraisonPublique` ne porte que le
+statut et les dates. Ce n'est pas un filtrage à l'affichage mais **deux schemas
+distincts**, parce qu'un oubli de condition est invisible alors qu'un mauvais
+schema se voit dans la signature de l'endpoint.
+
+La raison est concrète : l'URL `/commandes/invite/{reference}/livraison` n'a
+**aucune authentification**, un UUID suffit à l'ouvrir. Y exposer le nom ou le
+téléphone du livreur reviendrait à publier la donnée personnelle d'un tiers qui
+n'y a pas consenti. L'adresse n'y figure pas davantage : le client la connaît
+déjà, et l'afficher la rendrait lisible par quiconque détient le lien.
+
+Le même schema restreint sert au client connecté : être identifié ne donne pas
+droit à connaître le nom de son livreur.
+
+### La cohérence de fonction est une affaire de service
+
+`LIVRAISON.#id_personnel` et `SESSION_FORMATION.#id_formateur` pointent vers
+`PERSONNEL` tout entier. **Rien en base n'empêche d'affecter un cuisinier à une
+tournée** — c'est `LivraisonService.affecter_livreur` qui refuse, en 422, et un
+test paramétré sur les quatre fonctions non livreur qui le garantit.
+
+C'est exactement ce que le domaine formel de `PERSONNEL.fonction` rend fiable :
+sur une chaîne libre, la comparaison aurait laissé passer « livreur » et
+« Livreur ».
+
 ### La personnalisation naît avec sa ligne
 
 `DEMANDE_PERSONNALISATION` n'a **ni router ni service propres**, et ce n'est pas

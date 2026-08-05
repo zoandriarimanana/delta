@@ -134,7 +134,7 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 ## Transactions
 
 ```
-COMMANDE(id_commande, date_commande, reference_publique, nom_invite, contact_invite, type_commande, statut, montant_total, #id_client, #id_reservation)
+COMMANDE(id_commande, date_commande, reference_publique, adresse_livraison, nom_invite, contact_invite, type_commande, statut, montant_total, #id_client, #id_reservation)
 LIGNE_COMMANDE(id_ligne, quantite, prix_unitaire_applique, #id_commande, #id_produit)
 DEMANDE_PERSONNALISATION(id_personnalisation, description_demande, ingredients_specifiques, supplement_prix, #id_ligne, #id_produit_base)
 RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_personnes, statut, avec_hebergement, #id_client, #id_session, #id_salle, #id_logement)
@@ -155,6 +155,20 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
 
   Ne pas confondre avec `supprime_le` : l'une date la création du fait, l'autre
   son archivage. Une commande porte toujours la première, rarement la seconde.
+- `COMMANDE.adresse_livraison` est **nullable**, et sa présence est ce qui
+  déclenche la création d'une `LIVRAISON`. `NULL` signifie « pas de livraison
+  demandée » : retrait sur place ou à emporter.
+
+  Elle ne se déduit **pas** de `CLIENT.adresse`. Celle-ci est l'adresse de
+  profil, distincte de l'adresse d'une commande précise — on se fait livrer au
+  bureau, chez un tiers, ailleurs qu'à son domicile. Et une commande invitée n'a
+  aucun `CLIENT` d'où la tirer : c'était le trou relevé à l'ouverture du sprint 3,
+  du même genre que `date_commande` au sprint 2.
+
+  Elle est donc saisie au tunnel, pour **tout** client, invité comme connecté.
+  `LIVRAISON.adresse_livraison` en hérite à la création, puis vit sa vie : la
+  livraison est un fait logistique, la commande un fait commercial.
+
 - `COMMANDE.#id_client` est NULL si commande en mode invité (`nom_invite`/`contact_invite` alors renseignés).
 - `COMMANDE.reference_publique` est un **UUID généré uniquement en mode invité**,
   NULL sinon. C'est le seul moyen pour un invité de revenir sur sa commande : il
@@ -181,7 +195,25 @@ LIVRAISON(id_livraison, adresse_livraison, date_heure_prevue, date_heure_reelle,
 AVIS(id_avis, type_avis, note, commentaire, date_avis, #id_client, #id_ligne, #id_reservation)
 ```
 
-- `#id_personnel` référence `PERSONNEL` (fonction = Livreur).
+- `#id_personnel` référence `PERSONNEL` (fonction = Livreur). **Rien en base ne
+  le garantit** : la clé étrangère pointe vers `PERSONNEL` tout entier, et la
+  vérification revient au service. `NULL` signifie « pas encore affectée ».
+
+- `LIVRAISON.date_heure_prevue` est **nullable**, ce qui corrige le dictionnaire
+  d'origine. La livraison naît avec la commande, alors qu'aucune tournée n'est
+  planifiée : la garder obligatoire forcerait à inventer une date, c'est-à-dire
+  à écrire une promesse que rien ne garantit. `NULL` signifie « pas encore
+  planifiée », exactement comme `#id_personnel` signifie « pas encore affectée ».
+
+- `LIVRAISON.statut` ∈ {En_attente, En_cours, Livree, Echouee, Annulee}.
+  Domaine formel, `CHECK` en base, même traitement que `COMMANDE.statut` et
+  `PERSONNEL.fonction` : le service compare ces valeurs pour décider ce qu'une
+  livraison autorise encore.
+
+  `Echouee` et `Annulee` ne font pas double emploi : l'une dit que la tournée a
+  eu lieu sans aboutir — client absent, adresse introuvable —, l'autre qu'elle
+  n'aura pas lieu. Les confondre effacerait la seule information utile au moment
+  de relancer.
 - `AVIS.type_avis` ∈ {Produit, Service}.
 - `AVIS.note` ∈ [1, 5] — notation sur 5, bornes incluses. Présente au dictionnaire
   de données d'origine, omise ici par erreur de transcription ; rétablie.

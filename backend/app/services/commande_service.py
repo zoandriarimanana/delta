@@ -13,7 +13,7 @@ from app.core.exceptions import (
     RessourceIntrouvable,
 )
 from app.models.client import Client
-from app.models.commande import Commande, StatutCommande
+from app.models.commande import Commande, StatutCommande, TypeCommande
 from app.models.ligne_commande import LigneCommande
 from app.models.produit import Produit
 from app.repositories.commande_repository import CommandeRepository
@@ -24,6 +24,7 @@ from app.repositories.ligne_commande_repository import LigneCommandeRepository
 from app.repositories.produit_repository import ProduitRepository
 from app.schemas.commande import CommandeCreate, CommandeInviteCreate
 from app.schemas.ligne_commande import LigneCommandeCreate
+from app.services.livraison_service import LivraisonService
 
 
 class CommandeService:
@@ -40,6 +41,7 @@ class CommandeService:
         self.lignes = LigneCommandeRepository(db)
         self.produits = ProduitRepository(db)
         self.personnalisations = DemandePersonnalisationRepository(db)
+        self.livraisons = LivraisonService(db)
 
     def obtenir(self, id_commande: int) -> Commande:
         """Retourne une commande, ou lève `RessourceIntrouvable` (404)."""
@@ -63,6 +65,37 @@ class CommandeService:
     def lister_du_client(self, client: Client) -> Sequence[Commande]:
         """Historique d'un client, les plus récentes d'abord."""
         return self.commandes.lister_par_client(client.id_client)
+
+    def _verifier_demande_de_livraison(self, donnees: CommandeCreate) -> None:
+        """Refuse une demande de livraison incohérente, en 422.
+
+        C'est la **présence de l'adresse** qui demande une livraison, et rien
+        d'autre : ni `type_commande`, ni `PRODUIT.est_livrable` ne décident à la
+        place du client. Une commande sans adresse est à retirer.
+
+        Deux incohérences sont refusées. Une commande `Sur_place` avec adresse :
+        on ne livre pas quelqu'un attablé, et la contradiction vient forcément
+        d'une erreur de saisie. Et une adresse sur un panier contenant un produit
+        non livrable — un article encombrant, périssable, ou simplement exclu de
+        la tournée. Accepter reviendrait à promettre une livraison qu'on ne peut
+        pas faire.
+
+        Le contrôle porte sur **toutes** les lignes : une seule suffit à
+        empêcher la tournée. Il n'existe pas de livraison partielle dans le
+        schéma — `UNIQUE (id_commande)` n'en autorise qu'une par commande.
+        """
+        if donnees.adresse_livraison is None:
+            return
+
+        if donnees.type_commande is TypeCommande.SUR_PLACE:
+            raise ReferenceInvalide("Une commande sur place ne peut pas être livrée.")
+
+        for ligne in donnees.lignes:
+            produit = self.produits.get_by_id(ligne.id_produit)
+            if produit is not None and not produit.est_livrable:
+                raise ReferenceInvalide(
+                    f"Le produit « {produit.nom} » n'est pas livrable."
+                )
 
     def _rattacher_personnalisation(
         self,
@@ -207,9 +240,12 @@ class CommandeService:
         troisième ligne annule les deux premières réservations : tout se joue
         dans la même transaction, le `rollback` du service appelant les défait.
         """
+        self._verifier_demande_de_livraison(donnees)
+
         commande = self.commandes.create(
             {
                 "type_commande": donnees.type_commande,
+                "adresse_livraison": donnees.adresse_livraison,
                 "statut": StatutCommande.EN_ATTENTE,
                 "montant_total": Decimal("0"),
                 **identification,
@@ -232,6 +268,9 @@ class CommandeService:
             montant += self._rattacher_personnalisation(ligne, produit, ligne_creee)
 
         commande.montant_total = montant
+        # Après la boucle : la livraison ne doit exister que si toutes les
+        # lignes ont été acceptées et le stock réservé.
+        self.livraisons.creer_pour_commande(commande)
         self.db.commit()
         return commande
 

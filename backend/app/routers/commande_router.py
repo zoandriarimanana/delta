@@ -17,7 +17,9 @@ from app.core.database import get_db
 from app.core.deps import ClientConnecte
 from app.core.exceptions import RessourceIntrouvable
 from app.schemas.commande import CommandeCreate, CommandeInviteCreate, CommandeRead
+from app.schemas.livraison import LivraisonPublique
 from app.services.commande_service import CommandeService
+from app.services.livraison_service import LivraisonService
 
 router = APIRouter(prefix="/commandes", tags=["commande"])
 
@@ -103,3 +105,53 @@ def obtenir(id_commande: int, client: ClientConnecte, db: SessionBase) -> Comman
     if commande.id_client != client.id_client:
         raise RessourceIntrouvable("Commande introuvable.")
     return CommandeRead.model_validate(commande)
+
+
+@router.get(
+    "/invite/{reference_publique}/livraison",
+    response_model=LivraisonPublique,
+    summary="Suivi de livraison d'une commande invitée",
+)
+def suivi_livraison_invitee(
+    reference_publique: UUID, db: SessionBase
+) -> LivraisonPublique:
+    """Statut de la livraison d'une commande invitée. **Public.**
+
+    Répond avec `LivraisonPublique`, qui ne porte **que** le statut et les
+    dates : ni l'identité ni le contact du livreur affecté, ni l'adresse. Cette
+    URL n'a aucune authentification — un UUID suffit à l'ouvrir — et y exposer
+    le nom d'un salarié reviendrait à publier la donnée personnelle d'un tiers
+    qui n'y a pas consenti.
+
+    Le schema de sortie porte cette garantie, pas un filtrage à l'affichage : un
+    oubli de condition serait invisible, un mauvais schema se voit dans la
+    signature.
+
+    404 si la référence est inconnue, ou si la commande n'a pas de livraison.
+    """
+    commande = CommandeService(db).obtenir_par_reference(reference_publique)
+    livraison = LivraisonService(db).obtenir_par_commande(commande.id_commande)
+    return LivraisonPublique.model_validate(livraison)
+
+
+@router.get(
+    "/{id_commande}/livraison",
+    response_model=LivraisonPublique,
+    summary="Suivi de livraison d'une de ses commandes",
+)
+def suivi_livraison(
+    id_commande: int, client: ClientConnecte, db: SessionBase
+) -> LivraisonPublique:
+    """Statut de la livraison d'une commande du client connecté.
+
+    Même schema restreint que pour l'invité : être identifié ne donne pas droit
+    à connaître le nom de son livreur.
+
+    404 — et non 403 — sur la commande d'un autre client : confirmer l'existence
+    de la ressource renseignerait déjà.
+    """
+    commande = CommandeService(db).obtenir(id_commande)
+    if commande.id_client != client.id_client:
+        raise RessourceIntrouvable("Commande introuvable.")
+    livraison = LivraisonService(db).obtenir_par_commande(id_commande)
+    return LivraisonPublique.model_validate(livraison)
