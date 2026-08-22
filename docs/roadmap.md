@@ -4,7 +4,7 @@ Ordre de priorisation : dépendances techniques d'abord, puis cœur transactionn
 puis modules métier du plus généraliste au plus spécifique, paiement en ligne et
 back-office avancé en dernier.
 
-**Sprint courant : Sprint 3.** Mettre à jour cette ligne à chaque changement de sprint.
+**Sprint courant : Sprint 4.** Mettre à jour cette ligne à chaque changement de sprint.
 
 Avant de commencer une tâche : vérifier la Definition of Ready dans `CONTRIBUTING.md`.
 Avant de clore une tâche : vérifier la Definition of Done dans `CONTRIBUTING.md`.
@@ -146,10 +146,15 @@ d'origine — voir `docs/mld.md`.
 ## Sprint 4 — Formation
 
 - [ ] CRUD `DOMAINE_FORMATION`, `FORMATION`, `SESSION_FORMATION` (admin)
-      — ⚠️ la cohérence fonction du personnel (Formateur/Livreur) doit être vérifiée
-      dans le service au moment de l'affectation, ce n'est pas garanti par la FK.
-      `SESSION_FORMATION.#id_formateur` pointe vers `PERSONNEL` tout entier : rien en
-      base n'empêche d'affecter un livreur comme formateur.
+      — ⚠️ la cohérence de fonction doit être vérifiée dans le service au moment
+      de l'affectation, la FK ne la garantissant pas :
+      `SESSION_FORMATION.#id_formateur` pointe vers `PERSONNEL` tout entier,
+      rien en base n'empêche d'affecter un livreur comme formateur.
+      — **Reprendre le mécanisme posé en #25** pour `LIVRAISON`
+      (`LivraisonService.affecter_livreur`) : même refus en 422, même exclusion
+      d'un salarié archivé, même test paramétré sur les fonctions non
+      conformes. Une seconde implémentation divergerait — les deux règles sont
+      la même, à la fonction attendue près.
 - [ ] `RESERVATION` type = Formation, décrément `places_restantes`
 - [ ] Option hébergement liée à une réservation formation
 - [ ] Catalogue et réservation formation (React)
