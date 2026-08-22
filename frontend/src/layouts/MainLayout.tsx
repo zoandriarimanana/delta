@@ -16,6 +16,7 @@ import { useEstConnecte } from '@/lib/useEstConnecte';
 const LIENS = [
   { vers: '/', libelle: 'Accueil', exact: true },
   { vers: '/produits', libelle: 'Catalogue', exact: false },
+  { vers: '/formations', libelle: 'Formations', exact: false },
   { vers: '/connexion', libelle: 'Connexion', exact: false },
 ];
 
@@ -55,6 +56,11 @@ export default function MainLayout() {
             {connecte && (
               <NavLink to="/commandes" className={classeLien}>
                 Mes commandes
+              </NavLink>
+            )}
+            {connecte && (
+              <NavLink to="/reservations" className={classeLien}>
+                Mes réservations
               </NavLink>
             )}
             <NavLink to="/panier" className={classeLien}>
