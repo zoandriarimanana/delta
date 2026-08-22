@@ -463,3 +463,135 @@ def test_historique_isole_les_clients(
 
     assert len(service.lister_du_client(premier)) == 1
     assert len(service.lister_du_client(second)) == 1
+
+
+# --- Option hébergement -------------------------------------------------------
+
+
+def _session_avec_hebergement(db: Session, propose: bool) -> SessionFormation:
+    """Session dont la formation propose — ou non — l'hébergement."""
+    domaine = DomaineFormation(libelle=f"Domaine {uuid4().hex[:8]}")
+    db.add(domaine)
+    db.flush()
+    formation = Formation(
+        titre="CAP Pâtissier",
+        duree_heures=140,
+        prix=Decimal("850000.00"),
+        capacite_max=12,
+        propose_hebergement=propose,
+        id_domaine=domaine.id_domaine,
+    )
+    db.add(formation)
+    db.flush()
+    formateur = Personnel(
+        nom="Rakoto",
+        prenom="Jean",
+        fonction=FonctionPersonnel.FORMATEUR,
+        email=f"formateur_{uuid4().hex[:8]}@delta.mg",
+    )
+    db.add(formateur)
+    db.flush()
+    session = SessionFormation(
+        date_debut=DEBUT.date(),
+        date_fin=FIN.date(),
+        places_restantes=12,
+        statut=StatutSessionFormation.OUVERTE,
+        id_formation=formation.id_formation,
+        id_formateur=formateur.id_personnel,
+    )
+    db.add(session)
+    db.commit()
+    return session
+
+
+def _avec_hebergement(id_session: int) -> ReservationCreate:
+    return ReservationCreate(
+        type_reservation=TypeReservation.FORMATION,
+        date_debut=DEBUT,
+        date_fin=FIN,
+        id_session=id_session,
+        avec_hebergement=True,
+    )
+
+
+def test_hebergement_accepte_si_la_formation_le_propose(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    session = _session_avec_hebergement(db, propose=True)
+
+    reservation = service.creer(_avec_hebergement(session.id_session), client)
+
+    assert reservation.avec_hebergement is True
+
+
+def test_hebergement_refuse_si_la_formation_ne_le_propose_pas(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """422 : propriété du catalogue, pas préférence du client.
+
+    Une formation d'une journée sur place ne loge personne parce qu'on le
+    demande — même raisonnement que `PRODUIT.est_personnalisable`.
+    """
+    session = _session_avec_hebergement(db, propose=False)
+
+    with pytest.raises(ReferenceInvalide) as capture:
+        service.creer(_avec_hebergement(session.id_session), client)
+
+    assert "hébergement" in str(capture.value)
+
+
+def test_le_refus_ne_consomme_aucune_place(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """La vérification précède le décrément : rien n'est immobilisé pour rien."""
+    session = _session_avec_hebergement(db, propose=False)
+
+    with pytest.raises(ReferenceInvalide):
+        service.creer(_avec_hebergement(session.id_session), client)
+
+    db.refresh(session)
+    assert session.places_restantes == 12
+
+
+def test_sans_hebergement_la_formation_qui_ne_le_propose_pas_reste_reservable(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """L'option est facultative : son absence n'empêche rien."""
+    session = _session_avec_hebergement(db, propose=False)
+
+    reservation = service.creer(_donnees(session.id_session), client)
+
+    assert reservation.avec_hebergement is False
+
+
+@pytest.mark.parametrize("type_reservation", [TypeReservation.TABLE])
+def test_hebergement_refuse_hors_formation(
+    type_reservation: TypeReservation,
+) -> None:
+    """Un hébergement lié à une table n'aurait rien pour le valider."""
+    with pytest.raises(ValueError):
+        ReservationCreate(
+            type_reservation=type_reservation,
+            date_debut=DEBUT,
+            date_fin=FIN,
+            avec_hebergement=True,
+        )
+
+
+def test_aucun_logement_n_est_reserve(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Le drapeau dit un souhait, pas une attribution.
+
+    Le couplage réel — seconde `RESERVATION` de type `Logement`, liée, avec
+    contrôle de chevauchement — viendra après le sprint 5. Ce test fige l'état
+    actuel pour que l'écart soit visible le jour où il changera.
+    """
+    session = _session_avec_hebergement(db, propose=True)
+
+    reservation = service.creer(_avec_hebergement(session.id_session), client)
+
+    assert reservation.avec_hebergement is True
+    assert reservation.id_logement is None
+    # Une seule ligne écrite : aucune réservation de logement en regard.
+    assert len(service.lister_du_client(client)) == 1

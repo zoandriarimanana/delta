@@ -361,3 +361,99 @@ def test_historique_ne_montre_que_ses_propres_reservations(
 
     assert len(reponse.json()) == 1
     assert reponse.json()[0]["id_client"] == premier.id_client
+
+
+# --- Option hébergement -------------------------------------------------------
+
+
+def _session_hebergement(db: Session, propose: bool) -> SessionFormation:
+    domaine = DomaineFormation(libelle=f"Domaine {uuid4().hex[:8]}")
+    db.add(domaine)
+    db.flush()
+    formation = Formation(
+        titre="CAP Pâtissier",
+        duree_heures=140,
+        prix=Decimal("850000.00"),
+        capacite_max=12,
+        propose_hebergement=propose,
+        id_domaine=domaine.id_domaine,
+    )
+    db.add(formation)
+    db.flush()
+    formateur = Personnel(
+        nom="Rakoto",
+        prenom="Jean",
+        fonction=FonctionPersonnel.FORMATEUR,
+        email=f"formateur_{uuid4().hex[:8]}@delta.mg",
+    )
+    db.add(formateur)
+    db.flush()
+    session = SessionFormation(
+        date_debut=DEBUT.date(),
+        date_fin=FIN.date(),
+        places_restantes=12,
+        statut=StatutSessionFormation.OUVERTE,
+        id_formation=formation.id_formation,
+        id_formateur=formateur.id_personnel,
+    )
+    db.add(session)
+    db.commit()
+    return session
+
+
+def test_hebergement_accepte(
+    client_http: TestClient, entete: dict[str, str], db: Session
+) -> None:
+    session = _session_hebergement(db, propose=True)
+
+    reponse = client_http.post(
+        RESERVATIONS,
+        json=_corps(session.id_session, avec_hebergement=True),
+        headers=entete,
+    )
+
+    assert reponse.status_code == 201
+    assert reponse.json()["avec_hebergement"] is True
+
+
+def test_hebergement_non_propose_retourne_422(
+    client_http: TestClient, entete: dict[str, str], db: Session
+) -> None:
+    session = _session_hebergement(db, propose=False)
+
+    reponse = client_http.post(
+        RESERVATIONS,
+        json=_corps(session.id_session, avec_hebergement=True),
+        headers=entete,
+    )
+
+    assert reponse.status_code == 422
+    assert "hébergement" in reponse.json()["detail"]
+
+
+def test_hebergement_hors_formation_retourne_422(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    corps = {
+        "type_reservation": "Table",
+        "date_debut": DEBUT.isoformat(),
+        "date_fin": FIN.isoformat(),
+        "avec_hebergement": True,
+    }
+
+    assert client_http.post(RESERVATIONS, json=corps, headers=entete).status_code == 422
+
+
+def test_le_refus_ne_consomme_aucune_place(
+    client_http: TestClient, entete: dict[str, str], db: Session
+) -> None:
+    session = _session_hebergement(db, propose=False)
+
+    client_http.post(
+        RESERVATIONS,
+        json=_corps(session.id_session, avec_hebergement=True),
+        headers=entete,
+    )
+
+    db.refresh(session)
+    assert session.places_restantes == 12
