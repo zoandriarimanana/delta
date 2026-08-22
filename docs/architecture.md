@@ -510,16 +510,59 @@ déjà, et l'afficher la rendrait lisible par quiconque détient le lien.
 Le même schema restreint sert au client connecté : être identifié ne donne pas
 droit à connaître le nom de son livreur.
 
-### La cohérence de fonction est une affaire de service
+### La cohérence de fonction est une affaire de service, et d'un seul endroit
 
 `LIVRAISON.#id_personnel` et `SESSION_FORMATION.#id_formateur` pointent vers
 `PERSONNEL` tout entier. **Rien en base n'empêche d'affecter un cuisinier à une
-tournée** — c'est `LivraisonService.affecter_livreur` qui refuse, en 422, et un
-test paramétré sur les quatre fonctions non livreur qui le garantit.
+tournée, ni un livreur à une session.**
+
+Les deux règles sont **la même**, à la fonction attendue près. Elles vivent donc
+dans **une seule méthode**, `PersonnelService.obtenir_avec_fonction`, que les deux
+services appellent :
+
+```python
+personnel = self.personnels.obtenir_avec_fonction(
+    id_personnel, FonctionPersonnel.LIVREUR, pour="une livraison"
+)
+```
+
+Elle est chez `PERSONNEL` parce qu'elle porte sur lui : c'est une propriété du
+salarié, pas une particularité de l'entité qui l'affecte. Deux implémentations
+parallèles ne divergeraient qu'au jour où l'une serait corrigée sans l'autre —
+c'est-à-dire trop tard pour s'en apercevoir.
+
+Elle refuse en **422** — l'identifiant vient du corps, pas de l'URL —, traite un
+salarié **archivé** comme inexistant, et nomme dans son message **la fonction
+constatée** et **l'affectation visée**. Sans ces deux mentions, l'administrateur
+doit aller lire la fiche du salarié pour comprendre son erreur.
+
+Un test paramétré couvre les quatre fonctions non conformes **pour chacun des
+deux appelants**, et un test de conception vérifie qu'aucun des deux services ne
+compare `fonction` directement — il tomberait si une seconde implémentation
+renaissait.
 
 C'est exactement ce que le domaine formel de `PERSONNEL.fonction` rend fiable :
 sur une chaîne libre, la comparaison aurait laissé passer « livreur » et
 « Livreur ».
+
+### Deux frontières de confidentialité, tracées différemment
+
+`LivraisonPublique` masque **toute** identité de livreur. `FormateurPublic`
+expose au contraire nom, prénom et spécialité. Ce n'est pas une incohérence.
+
+Le livreur apparaîtrait sur une URL ouverte par un simple UUID, sans
+authentification, et son nom n'apporte rien au client. Le formateur, lui, exerce
+publiquement devant ses stagiaires, et son expérience fait partie de ce qui
+décide un client à s'inscrire — le masquer appauvrirait la fiche sans rien
+protéger.
+
+Ce que les deux schemas partagent : **aucune coordonnée professionnelle**. Ni
+e-mail, ni téléphone, dans un cas comme dans l'autre. Les publier exposerait un
+salarié au démarchage direct sans qu'il l'ait choisi.
+
+Dans les deux cas la garantie est portée par un **schema de sortie distinct**, pas
+par un filtrage à l'affichage : un oubli de condition est invisible, un mauvais
+schema se voit dans la signature de l'endpoint.
 
 ### Le suivi de livraison n'a pas de page à lui
 
