@@ -164,7 +164,16 @@ d'origine — voir `docs/mld.md`.
       vers `Annulee` crédite.
       — `RESERVATION.statut` est devenu un **domaine formel**. `Honoree` ne
       restitue pas : un stagiaire venu a consommé sa place.
-- [ ] Option hébergement liée à une réservation formation
+- [x] Option hébergement liée à une réservation formation
+      — **Périmètre volontairement réduit** : `avec_hebergement` est un drapeau
+      informatif, sans réservation réelle de `LOGEMENT` ni vérification de
+      disponibilité. Ce mécanisme n'existe pas encore, il arrive au sprint 5.
+      — Refusé si `FORMATION.propose_hebergement` est faux (propriété du
+      catalogue, pas préférence du client), et sur tout type autre que
+      `Formation`.
+      — Le couplage réel — seconde `RESERVATION` de type `Logement`, liée, avec
+      contrôle de chevauchement — est la **suite naturelle** de cette tâche une
+      fois le sprint 5 livré, pas une dette improvisée. Voir `docs/mld.md`.
 - [ ] Catalogue et réservation formation (React)
 
 ## Sprint 5 — Salle & logement

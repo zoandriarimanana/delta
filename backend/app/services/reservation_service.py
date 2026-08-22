@@ -17,7 +17,7 @@ from app.core.exceptions import (
 )
 from app.models.client import Client
 from app.models.reservation import Reservation, StatutReservation
-from app.models.session_formation import StatutSessionFormation
+from app.models.session_formation import SessionFormation, StatutSessionFormation
 from app.repositories.reservation_repository import ReservationRepository
 from app.repositories.session_formation_repository import SessionFormationRepository
 from app.schemas.reservation import ReservationCreate
@@ -90,6 +90,8 @@ class ReservationService:
                 f"Aucune session ne porte l'identifiant {donnees.id_session}."
             )
 
+        self._verifier_hebergement(donnees, session)
+
         if session.statut is not StatutSessionFormation.OUVERTE:
             raise ConflitMetier(
                 f"Cette session est « {session.statut.value} » : "
@@ -113,6 +115,7 @@ class ReservationService:
                 "statut": StatutReservation.EN_ATTENTE,
                 "id_client": client.id_client,
                 "id_session": donnees.id_session,
+                "avec_hebergement": donnees.avec_hebergement,
             }
         )
         self.db.commit()
@@ -120,6 +123,32 @@ class ReservationService:
         # périmé tant qu'on ne le rafraîchit pas.
         self.db.refresh(session)
         return reservation
+
+    def _verifier_hebergement(
+        self, donnees: ReservationCreate, session: SessionFormation
+    ) -> None:
+        """Refuse en 422 un hébergement que la formation ne propose pas.
+
+        `FORMATION.propose_hebergement` est une **propriété du catalogue**, pas
+        une préférence du client : une formation d'une journée sur place ne loge
+        personne parce qu'on le demande. Même raisonnement que
+        `PRODUIT.est_personnalisable` en #24.
+
+        La vérification est ici et non dans le schema parce qu'elle demande la
+        base : le schema ne voit que la charge utile, pas la formation visée.
+
+        **Portée volontairement limitée.** Ce contrôle dit seulement que
+        l'option est offerte. Il ne réserve aucun `LOGEMENT` et ne vérifie
+        aucune disponibilité — voir la note de `docs/mld.md`.
+        """
+        if not donnees.avec_hebergement:
+            return
+
+        formation = session.formation
+        if not formation.propose_hebergement:
+            raise ReferenceInvalide(
+                f"La formation « {formation.titre} » ne propose pas " "d'hébergement."
+            )
 
     # --- Statut ---------------------------------------------------------------
 

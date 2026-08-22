@@ -26,6 +26,10 @@ class ReservationCreate(BaseModel):
     nombre_personnes: int = Field(default=1, gt=0)
     #: Obligatoire pour une réservation de type `Formation` — voir le validateur.
     id_session: int | None = None
+    #: **Drapeau informatif** : le client dit qu'il souhaite être hébergé.
+    #: Aucune chambre n'est réservée ni même vérifiée disponible — ce mécanisme
+    #: n'existe pas encore, il arrive au sprint 5 avec `LOGEMENT`.
+    avec_hebergement: bool = False
 
     @model_validator(mode="after")
     def _exiger_une_cible_coherente(self) -> "ReservationCreate":
@@ -57,6 +61,26 @@ class ReservationCreate(BaseModel):
             raise ValueError(
                 f"Les réservations de type « {self.type_reservation.value} » "
                 "ne sont pas encore disponibles."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _refuser_un_hebergement_hors_formation(self) -> "ReservationCreate":
+        """Refuse l'hébergement sur une réservation qui n'est pas une formation.
+
+        L'option est adossée à `FORMATION.propose_hebergement` : elle n'a de sens
+        que pour un stage, où l'on loge le stagiaire le temps de la session. Un
+        hébergement lié à une table n'aurait rien pour le valider.
+
+        La vérification que la formation le propose **réellement** ne peut pas
+        se faire ici — elle demande la base. Elle vit dans le service.
+        """
+        if (
+            self.avec_hebergement
+            and self.type_reservation is not TypeReservation.FORMATION
+        ):
+            raise ValueError(
+                "L'hébergement n'est proposé que sur une réservation de formation."
             )
         return self
 

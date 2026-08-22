@@ -236,6 +236,27 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   La restitution est **idempotente** : elle n'a lieu qu'au passage d'un statut
   occupant vers `Annulee`. Rejouer l'opération ne crédite pas deux fois.
 
+- `RESERVATION.avec_hebergement` est un **drapeau informatif**, et rien de plus :
+  il dit que le client **souhaite** être hébergé, pas qu'une chambre lui est
+  attribuée. Aucun `LOGEMENT` n'est réservé, aucune disponibilité n'est vérifiée.
+
+  Écrire la nuance ici est nécessaire, faute de quoi elle disparaîtra à la
+  première relecture : le nom de la colonne suggère un hébergement acquis.
+
+  L'option n'est acceptée que si `FORMATION.propose_hebergement` vaut `true` —
+  propriété du catalogue et non préférence du client, même raisonnement que
+  `PRODUIT.est_personnalisable`. Elle est refusée sur tout type de réservation
+  autre que `Formation`.
+
+  **Le couplage réel viendra après le sprint 5**, une fois `LOGEMENT` livré : il
+  supposera une **seconde** `RESERVATION` de type `Logement`, liée à celle de
+  formation, avec contrôle de chevauchement sur les dates. La contrainte n°2
+  interdit en effet qu'une même ligne porte à la fois `#id_session` et
+  `#id_logement` — le couplage passera donc par deux lignes, jamais par une
+  seule. Ce n'est pas une dette : le mécanisme dont il dépend n'existe pas
+  encore, et l'anticiper reviendrait à inventer une API de disponibilité avant
+  de savoir ce dont `LOGEMENT` a besoin.
+
 - Une réservation de type `Formation` **exige** `#id_session`. Le `CHECK`
   d'exclusivité (contrainte n°2) ne peut pas l'imposer : il autorise zéro colonne
   cible renseignée, ce qu'il faut pour une réservation de table. La règle croise
