@@ -564,6 +564,41 @@ Dans les deux cas la garantie est portée par un **schema de sortie distinct**, 
 par un filtrage à l'affichage : un oubli de condition est invisible, un mauvais
 schema se voit dans la signature de l'endpoint.
 
+### Réserver n'est pas consulter
+
+`features/formation/` porte le catalogue ; `features/reservation/` porte
+l'écriture. Le premier n'appelle **jamais** l'API de réservation, ni l'inverse —
+ce sont deux entités distinctes dans la table « modules ↔ tables ».
+
+Concrètement, `FormationDetailPage` monte `FormulaireReservation`, un composant
+du module `reservation/`, sans rien savoir de son implémentation. C'est la même
+mécanique que le layout consommant `usePanier` : la page insère, elle n'orchestre
+pas.
+
+### Un refus métier n'est pas une panne
+
+Deux erreurs de l'API de réservation portent une information que le client peut
+**utiliser** :
+
+| Code | Message | Ce qu'il permet |
+|---|---|---|
+| **409** | « Il ne reste que 2 place(s)… » | corriger le nombre demandé |
+| **422** | « La formation « … » ne propose pas d'hébergement. » | retirer l'option |
+
+Ils sont repris **tels quels**. Les remplacer par « une erreur est survenue »
+ferait perdre exactement ce qui permet de corriger — même traitement que le
+« stock insuffisant » du tunnel de commande.
+
+La reprise n'est pas aveugle pour autant. FastAPI met une **liste d'objets** dans
+`detail` pour une erreur de validation de schema : la rendre telle quelle
+afficherait du JSON. Le message n'est donc repris que si c'est une **chaîne**,
+sinon on retombe sur un message générique.
+
+Une session complète reste **visible** mais non réservable : le client doit
+pouvoir constater qu'elle existe et attendre la suivante. Et l'option
+d'hébergement n'est proposée que si la formation l'offre — le serveur refuserait
+de toute façon, mais découvrir le refus après coup n'apprend rien.
+
 ### Le suivi de livraison n'a pas de page à lui
 
 `features/livraison/` ne porte **aucune page**, seulement des composants. Le

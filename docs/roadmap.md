@@ -145,7 +145,7 @@ d'origine — voir `docs/mld.md`.
 
 ## Sprint 4 — Formation
 
-- [ ] CRUD `DOMAINE_FORMATION`, `FORMATION`, `SESSION_FORMATION` (admin)
+- [x] CRUD `DOMAINE_FORMATION`, `FORMATION`, `SESSION_FORMATION` (admin)
       — ⚠️ la cohérence de fonction doit être vérifiée dans le service au moment
       de l'affectation, la FK ne la garantissant pas :
       `SESSION_FORMATION.#id_formateur` pointe vers `PERSONNEL` tout entier,
@@ -174,7 +174,17 @@ d'origine — voir `docs/mld.md`.
       — Le couplage réel — seconde `RESERVATION` de type `Logement`, liée, avec
       contrôle de chevauchement — est la **suite naturelle** de cette tâche une
       fois le sprint 5 livré, pas une dette improvisée. Voir `docs/mld.md`.
-- [ ] Catalogue et réservation formation (React)
+- [x] Catalogue et réservation formation (React)
+      — `features/formation/` porte le catalogue, `features/reservation/`
+      l'écriture : deux entités distinctes, deux modules. La page de formation
+      insère le formulaire sans rien savoir de son implémentation.
+      — Le formateur est affiché via `FormateurPublic` (nom, prénom,
+      spécialité) ; ni e-mail ni téléphone, garantis par le schema de sortie,
+      par le type TypeScript et par un test d'injection.
+      — Les refus **409** (session complète) et **422** (hébergement non
+      proposé) sont repris **tels quels** : ils disent au client quoi corriger.
+      Une liste dans `detail` — erreur de validation de schema — retombe en
+      revanche sur un message générique, pour ne pas afficher de JSON.
 
 ## Sprint 5 — Salle & logement
 
