@@ -586,6 +586,40 @@ délibérément des champs interdits pour vérifier que le composant ne les rend
 Un statut inconnu — API en avance sur le frontend — retombe sur un libellé neutre
 plutôt que sur un identifiant technique brut ou une page vide.
 
+### Un compteur ne se lit pas avant de s'écrire
+
+`SESSION_FORMATION.places_restantes` et `PRODUIT.stock_disponible` posent le même
+problème et reçoivent la même réponse : un **`UPDATE` conditionnel atomique**.
+
+```sql
+UPDATE session_formation
+   SET places_restantes = places_restantes - :n
+ WHERE id_session = :id AND places_restantes >= :n
+```
+
+La condition est évaluée par PostgreSQL au moment de l'écriture, sous le verrou
+de ligne. Deux réservations simultanées sur la dernière place ne peuvent pas
+réussir toutes les deux. Une lecture suivie d'une écriture séparée laisserait au
+contraire passer les deux, et le compteur deviendrait négatif — un bogue qui ne
+se reproduit pas en développement et se voit en production un samedi.
+
+Le repository retourne `False` quand aucune ligne n'a été touchée ; le service
+traduit en 409 avec un message qui dit ce qui reste.
+
+**Le symétrique est une obligation, pas une commodité.** Annuler ou archiver une
+réservation rend ses places. Sans cela, chaque annulation en perd une
+définitivement : au bout de quelques cycles la session affiche complet alors que
+la salle est vide, et aucune donnée ne dit pourquoi.
+
+La restitution est **idempotente**, et la garde est portée par le **service** et
+non par le repository : seule la transition d'un statut occupant vers `Annulee`
+crédite. Mettre cette condition dans le repository l'obligerait à connaître le
+statut des réservations, qui ne le regarde pas.
+
+Une réservation `Annulee` ne peut plus changer de statut. Le permettre supposerait
+de re-décrémenter, donc de pouvoir échouer faute de places — une transition de
+statut qui échoue pour cause de capacité serait un piège pour l'appelant.
+
 ### La personnalisation naît avec sa ligne
 
 `DEMANDE_PERSONNALISATION` n'a **ni router ni service propres**, et ce n'est pas

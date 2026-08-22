@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.models.session_formation import SessionFormation, StatutSessionFormation
 from app.repositories.base_repository import BaseRepository
@@ -64,3 +64,54 @@ class SessionFormationRepository(BaseRepository[SessionFormation]):
         if limit is not None:
             requete = requete.limit(limit)
         return self.db.scalars(requete).all()
+
+    def decrementer_places(self, id_session: int, nombre: int) -> bool:
+        """Retire `nombre` places si — et seulement si — il en reste assez.
+
+        **UPDATE conditionnel atomique**, exactement comme
+        `ProduitRepository.decrementer_stock`. La condition
+        `places_restantes >= nombre` est évaluée par PostgreSQL au moment de
+        l'écriture, sous le verrou de ligne : deux réservations simultanées sur
+        la dernière place ne peuvent pas réussir toutes les deux. Une lecture
+        suivie d'une écriture séparée laisserait passer les deux, et le
+        compteur deviendrait négatif.
+
+        Retourne `False` si aucune ligne n'a été touchée : places insuffisantes,
+        ou session inexistante ou archivée. L'appelant distingue les deux cas.
+
+        `synchronize_session=False` : la mise à jour est faite en SQL, sans
+        passer par les objets en session. Ceux déjà chargés portent donc un
+        compteur périmé — l'appelant doit les rafraîchir s'il les relit.
+        """
+        resultat = self.db.execute(
+            update(SessionFormation)
+            .where(
+                SessionFormation.id_session == id_session,
+                SessionFormation.supprime_le.is_(None),
+                SessionFormation.places_restantes >= nombre,
+            )
+            .values(places_restantes=SessionFormation.places_restantes - nombre)
+            .execution_options(synchronize_session=False)
+        )
+        return resultat.rowcount == 1
+
+    def crediter_places(self, id_session: int, nombre: int) -> None:
+        """Rend `nombre` places à la session.
+
+        Le symétrique de `decrementer_places`, et il n'est pas optionnel : sans
+        lui, chaque annulation perdrait une place définitivement. Au bout de
+        quelques cycles, une session afficherait complet alors que la salle est
+        vide, et rien dans les données ne dirait pourquoi.
+
+        **Sans condition, contrairement au décrément.** Il n'y a rien à
+        arbitrer : la place a été prise, elle revient. L'idempotence est portée
+        par le service, qui ne crédite qu'à la transition vers `Annulee` — la
+        garder ici obligerait le repository à connaître le statut des
+        réservations, qui ne le regarde pas.
+        """
+        self.db.execute(
+            update(SessionFormation)
+            .where(SessionFormation.id_session == id_session)
+            .values(places_restantes=SessionFormation.places_restantes + nombre)
+            .execution_options(synchronize_session=False)
+        )
