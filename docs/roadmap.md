@@ -155,7 +155,15 @@ d'origine — voir `docs/mld.md`.
       d'un salarié archivé, même test paramétré sur les fonctions non
       conformes. Une seconde implémentation divergerait — les deux règles sont
       la même, à la fonction attendue près.
-- [ ] `RESERVATION` type = Formation, décrément `places_restantes`
+- [x] `RESERVATION` type = Formation, décrément `places_restantes`
+      — décrément **atomique et immédiat** à la création (`UPDATE` conditionnel,
+      409 si aucune ligne affectée), sur le modèle de `PRODUIT.stock_disponible`.
+      — **La restitution est obligatoire et symétrique** : annulation *et*
+      archivage rendent les places. Sans elle, chaque annulation en perdrait une
+      définitivement. Idempotente : seule la transition d'un statut occupant
+      vers `Annulee` crédite.
+      — `RESERVATION.statut` est devenu un **domaine formel**. `Honoree` ne
+      restitue pas : un stagiaire venu a consommé sa place.
 - [ ] Option hébergement liée à une réservation formation
 - [ ] Catalogue et réservation formation (React)
 

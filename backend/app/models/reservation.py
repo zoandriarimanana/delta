@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,6 +28,29 @@ class TypeReservation(StrEnum):
     SALLE = "Salle"
     LOGEMENT = "Logement"
     TABLE = "Table"
+
+
+class StatutReservation(StrEnum):
+    """Domaine de `RESERVATION.statut` (cf. `docs/mld.md`).
+
+    Domaine formel et non chaîne libre, même traitement que `COMMANDE.statut`,
+    `LIVRAISON.statut` et `SESSION_FORMATION.statut` : le service compare ces
+    valeurs pour décider si une place doit être restituée.
+
+    `HONOREE` et `ANNULEE` sont les deux fins possibles, et elles ne sont pas
+    interchangeables — l'une dit que la prestation a eu lieu, l'autre qu'elle
+    n'aura pas lieu. **Seule `ANNULEE` restitue la place** : un stagiaire venu
+    a bien consommé la sienne. Les confondre ferait réapparaître des places
+    déjà utilisées.
+
+    Le terme « honorée » est celui du MLD, qui parle de « réservation honorée »
+    comme preuve de transaction (section sur la suppression logique).
+    """
+
+    EN_ATTENTE = "En_attente"
+    CONFIRMEE = "Confirmee"
+    HONOREE = "Honoree"
+    ANNULEE = "Annulee"
 
 
 class Reservation(SoftDeleteMixin, Base):
@@ -69,7 +92,16 @@ class Reservation(SoftDeleteMixin, Base):
     )
     date_fin: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     nombre_personnes: Mapped[int] = mapped_column(nullable=False, server_default="1")
-    statut: Mapped[str] = mapped_column(String(30), nullable=False)
+    statut: Mapped[StatutReservation] = mapped_column(
+        SAEnum(
+            StatutReservation,
+            native_enum=False,
+            create_constraint=True,
+            name="statut_reservation",
+            values_callable=lambda enum_cls: [membre.value for membre in enum_cls],
+        ),
+        nullable=False,
+    )
     avec_hebergement: Mapped[bool] = mapped_column(
         nullable=False, server_default="false"
     )

@@ -212,6 +212,35 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
 - `COMMANDE.#id_reservation` est NULL sauf si la commande découle d'une réservation de table honorée sur place.
 - `RESERVATION.type_reservation` ∈ {Formation, Salle, Logement, Table}.
 
+- `RESERVATION.statut` ∈ {En_attente, Confirmee, Honoree, Annulee}. Domaine
+  formel, `CHECK` en base, même traitement que `COMMANDE.statut` et
+  `LIVRAISON.statut` : le service compare ces valeurs pour décider si une place
+  doit être restituée.
+
+  `Honoree` et `Annulee` sont deux fins qui ne sont **pas** interchangeables, et
+  la différence est comptable : **seule `Annulee` restitue la place**. Un
+  stagiaire venu a consommé la sienne ; la lui rendre ferait réapparaître une
+  place déjà utilisée.
+
+- **Le compteur `SESSION_FORMATION.places_restantes` est tenu par
+  `ReservationService`**, et par lui seul. Une réservation le décrémente à la
+  création, par un `UPDATE` conditionnel atomique — c'est PostgreSQL qui arbitre
+  entre deux réservations simultanées sur la dernière place, comme pour
+  `PRODUIT.stock_disponible`.
+
+  Le symétrique n'est pas optionnel : l'annulation **et** l'archivage rendent les
+  places. Sans lui, chaque annulation en perdrait une définitivement, et la
+  session finirait par afficher complet alors que la salle est vide — sans que
+  rien dans les données ne dise pourquoi.
+
+  La restitution est **idempotente** : elle n'a lieu qu'au passage d'un statut
+  occupant vers `Annulee`. Rejouer l'opération ne crédite pas deux fois.
+
+- Une réservation de type `Formation` **exige** `#id_session`. Le `CHECK`
+  d'exclusivité (contrainte n°2) ne peut pas l'imposer : il autorise zéro colonne
+  cible renseignée, ce qu'il faut pour une réservation de table. La règle croise
+  deux colonnes, elle vit donc dans le schema d'entrée.
+
 ## Logistique / Avis
 
 ```
