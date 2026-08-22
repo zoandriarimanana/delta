@@ -286,9 +286,14 @@ def test_affectation_refuse_une_mauvaise_fonction(
 def test_affectation_refuse_un_salarie_archive(
     service: LivraisonService, livraison, db: Session
 ) -> None:
-    """Affecter une tournée à quelqu'un qui a quitté l'entreprise n'a pas de sens."""
+    """Affecter une tournée à quelqu'un qui a quitté l'entreprise n'a pas de sens.
+
+    L'archivage est posé directement sur le modèle plutôt que par le service :
+    ce test porte sur l'affectation, il n'a pas à connaître le chemin par lequel
+    un salarié est archivé.
+    """
     livreur = _salarie(db, FonctionPersonnel.LIVREUR)
-    service.personnels.delete(livreur)
+    livreur.supprime_le = datetime.now(UTC)
     db.commit()
 
     with pytest.raises(ReferenceInvalide):

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ReferenceInvalide, RessourceIntrouvable
 from app.models.domaine_formation import DomaineFormation
 from app.models.formation import Formation
+from app.models.session_formation import SessionFormation
 from app.schemas.domaine_formation import DomaineFormationCreate
 from app.schemas.formation import FormationCreate, FormationUpdate
 from app.services.domaine_formation_service import DomaineFormationService
@@ -22,7 +23,11 @@ from tests.conftest import creer_engine_sqlite, erreur_integrite_postgres
 
 @pytest.fixture
 def db() -> Iterator[Session]:
-    engine = creer_engine_sqlite(DomaineFormation.__table__, Formation.__table__)
+    # `session_formation` est nécessaire depuis #35 : `FormationService`
+    # compte les sessions actives avant d'archiver une formation.
+    engine = creer_engine_sqlite(
+        DomaineFormation.__table__, Formation.__table__, SessionFormation.__table__
+    )
     with Session(engine) as session:
         yield session
 

@@ -5,14 +5,21 @@ from collections.abc import Sequence
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ReferenceInvalide, RessourceIntrouvable
+from app.core.exceptions import (
+    ConflitMetier,
+    ReferenceInvalide,
+    RessourceIntrouvable,
+)
 from app.core.integrite import viole_contrainte
 from app.models.formation import Formation
 from app.repositories.domaine_formation_repository import DomaineFormationRepository
 from app.repositories.formation_repository import FormationRepository
+from app.repositories.session_formation_repository import SessionFormationRepository
 from app.schemas.formation import FormationCreate, FormationUpdate
 
 CONTRAINTE_FORMATION_DOMAINE = "fk_formation_id_domaine_domaine_formation"
+
+MESSAGE_ENCORE_PEUPLEE = "Cette formation porte encore des sessions."
 
 
 class FormationService:
@@ -22,6 +29,7 @@ class FormationService:
         self.db = db
         self.formations = FormationRepository(db)
         self.domaines = DomaineFormationRepository(db)
+        self.sessions = SessionFormationRepository(db)
 
     def lister(self, id_domaine: int | None = None) -> Sequence[Formation]:
         """Retourne les formations, filtrées par domaine si demandé.
@@ -94,18 +102,22 @@ class FormationService:
         return formation
 
     def supprimer(self, id_formation: int) -> None:
-        """Archive une formation.
+        """Archive une formation, sauf si elle porte encore des sessions actives.
 
-        **Aucun garde-fou sur les sessions à ce stade**, et ce n'est pas un
-        oubli : `SESSION_FORMATION` n'a ni service ni router, aucune session ne
-        peut donc exister par l'API. Le refus d'archiver une formation qui porte
-        des sessions actives est inscrit aux critères de #35, avec les couches
-        qui rendent ce comptage possible.
+        Garde-fou reporté depuis #34, où `SESSION_FORMATION` n'avait pas encore
+        de repository : le cas était alors inatteignable, aucune session ne
+        pouvant exister par l'API.
 
-        L'ajouter ici supposerait de créer `SessionFormationRepository` en
-        avance, hors du périmètre de cette issue, pour garder un cas
-        actuellement inatteignable.
+        **Le comptage filtre les sessions archivées**, comme celui des
+        formations d'un domaine : sans ce filtre, une formation dont toutes les
+        sessions sont archivées deviendrait inarchivable à jamais.
+
+        Une session passée n'est pas archivée pour autant — elle reste la trace
+        d'une formation dispensée. C'est à l'administrateur d'archiver les
+        sessions d'abord, décision qu'un archivage en cascade lui retirerait.
         """
         formation = self.obtenir(id_formation)
+        if self.sessions.lister_par_formation(id_formation, limit=1):
+            raise ConflitMetier(MESSAGE_ENCORE_PEUPLEE)
         self.formations.delete(formation)
         self.db.commit()

@@ -94,3 +94,30 @@ class PersonnelRead(BaseModel):
     specialite: str | None = None
     zone_livraison: str | None = None
     est_administrateur: bool
+
+
+class FormateurPublic(BaseModel):
+    """Formateur tel qu'un visiteur le voit sur une fiche de session.
+
+    Schema **distinct** de `PersonnelRead` et non un filtrage à l'affichage :
+    un oubli de condition est invisible, un mauvais schema se voit dans la
+    signature de l'endpoint. Même approche que `LivraisonPublique` en #25.
+
+    La frontière est tracée ailleurs que pour le livreur, et pour une raison
+    métier. Le nom d'un formateur est un **argument commercial** — il exerce
+    publiquement devant ses stagiaires, et son expérience décide un client à
+    s'inscrire. Ses **coordonnées professionnelles** restent en revanche
+    internes : les publier l'exposerait au démarchage direct sans qu'il l'ait
+    choisi.
+
+    Ni `email`, ni `telephone`, ni `est_administrateur`, ni `date_embauche`,
+    ni `zone_livraison` — cette dernière n'ayant de toute façon aucun sens pour
+    un formateur.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    nom: str
+    prenom: str
+    #: Ce qu'il enseigne. `None` si la fiche du salarié ne le précise pas.
+    specialite: str | None = None

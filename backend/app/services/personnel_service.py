@@ -6,7 +6,11 @@ from collections.abc import Sequence
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflitMetier, RessourceIntrouvable
+from app.core.exceptions import (
+    ConflitMetier,
+    ReferenceInvalide,
+    RessourceIntrouvable,
+)
 from app.core.integrite import viole_contrainte
 from app.core.security import hacher_mot_de_passe
 from app.models.personnel import FonctionPersonnel, Personnel
@@ -54,6 +58,49 @@ class PersonnelService:
         personnel = self.personnels.get_by_id(id_personnel)
         if personnel is None:
             raise RessourceIntrouvable("Membre du personnel introuvable.")
+        return personnel
+
+    def obtenir_avec_fonction(
+        self, id_personnel: int, fonction: FonctionPersonnel, *, pour: str
+    ) -> Personnel:
+        """Retourne le salarié **actif** exerçant la fonction attendue, ou 422.
+
+        **Mécanisme partagé de cohérence de fonction.** Deux clés étrangères du
+        schéma posent exactement le même problème : `LIVRAISON.#id_personnel` et
+        `SESSION_FORMATION.#id_formateur` pointent vers `PERSONNEL` tout entier,
+        alors que le métier n'accepte qu'une fonction. Rien en base n'empêche
+        d'affecter un cuisinier à une tournée, ni un livreur à une session.
+
+        La règle vit ici, chez `PERSONNEL`, parce qu'elle porte sur lui : c'est
+        une propriété du salarié, pas un utilitaire ni une particularité de
+        l'entité qui l'affecte. Les deux appelants passent par cette méthode —
+        une seconde implémentation ne divergerait qu'au jour où l'une des deux
+        serait corrigée sans l'autre.
+
+        422 et non 404 : l'identifiant vient du corps de la requête, pas de
+        l'URL (cf. `docs/architecture.md`).
+
+        Un salarié **archivé** est traité comme inexistant, `get_by_id` le
+        filtrant. Affecter une tournée ou une session à quelqu'un qui a quitté
+        l'entreprise n'aurait pas de sens, et le message ne doit pas non plus
+        confirmer qu'il a existé.
+
+        `pour` complète le message d'erreur — « à une livraison », « à une
+        session de formation ». Nommer l'affectation **et** la fonction
+        constatée est ce qui permet à l'administrateur de comprendre son erreur
+        sans aller lire la fiche du salarié.
+        """
+        personnel = self.personnels.get_by_id(id_personnel)
+        if personnel is None:
+            raise ReferenceInvalide(
+                f"Aucun membre du personnel ne porte l'identifiant {id_personnel}."
+            )
+        if personnel.fonction is not fonction:
+            raise ReferenceInvalide(
+                f"{personnel.prenom} {personnel.nom} exerce la fonction "
+                f"« {personnel.fonction.value} » et ne peut pas être affecté "
+                f"à {pour}."
+            )
         return personnel
 
     def _refuser_email_pris(self, email: str) -> None:

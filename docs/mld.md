@@ -76,7 +76,31 @@ FORMATION(id_formation, titre, niveau, duree_heures, prix, capacite_max, propose
 SESSION_FORMATION(id_session, date_debut, date_fin, places_restantes, statut, #id_formation, #id_formateur)
 ```
 
-`#id_formateur` référence `PERSONNEL` (fonction = Formateur).
+- `SESSION_FORMATION.#id_formateur` référence `PERSONNEL` (fonction = Formateur).
+  **Rien en base ne le garantit** : la clé étrangère pointe vers `PERSONNEL` tout
+  entier, et la vérification revient au service — le même que celui de
+  `LIVRAISON.#id_personnel`, dont c'est exactement le même problème. `NULL`
+  signifie « pas encore affecté ».
+
+- `SESSION_FORMATION.statut` ∈ {Planifiee, Ouverte, Terminee, Annulee}.
+  Domaine formel, `CHECK` en base, même traitement que `COMMANDE.statut` et
+  `LIVRAISON.statut` : le service compare ces valeurs pour décider ce qu'une
+  session autorise encore.
+
+  **Pas de statut « Complete », délibérément.** Une session pleine se lit sur
+  `places_restantes = 0` ; l'inscrire aussi dans le statut créerait deux sources
+  pour un même fait, qui divergeraient à la première annulation de réservation.
+
+- `SESSION_FORMATION.places_restantes` est initialisé depuis
+  `FORMATION.capacite_max` à la création, par le serveur et **jamais depuis la
+  requête** — même règle que `COMMANDE.montant_total` et
+  `LIGNE_COMMANDE.prix_unitaire_applique`. L'accepter permettrait d'ouvrir une
+  session à mille places sur une formation qui en compte douze.
+
+  Il **diverge ensuite** de `capacite_max`, et c'est voulu : le premier est un
+  compteur qui vit au rythme des réservations, le second une propriété du
+  catalogue. Modifier la capacité d'une formation ne rétroagit pas sur les
+  sessions déjà ouvertes.
 
 ## Catalogue produits / espace
 

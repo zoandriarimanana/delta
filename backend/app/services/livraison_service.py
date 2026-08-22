@@ -15,14 +15,13 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
     ConflitMetier,
-    ReferenceInvalide,
     RessourceIntrouvable,
 )
 from app.models.commande import STATUT_TERMINAL, Commande
 from app.models.livraison import STATUTS_TERMINAUX, Livraison, StatutLivraison
 from app.models.personnel import FonctionPersonnel
 from app.repositories.livraison_repository import LivraisonRepository
-from app.repositories.personnel_repository import PersonnelRepository
+from app.services.personnel_service import PersonnelService
 
 
 class LivraisonService:
@@ -31,7 +30,7 @@ class LivraisonService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.livraisons = LivraisonRepository(db)
-        self.personnels = PersonnelRepository(db)
+        self.personnels = PersonnelService(db)
 
     # --- Création -------------------------------------------------------------
 
@@ -93,16 +92,12 @@ class LivraisonService:
     def affecter_livreur(self, id_livraison: int, id_personnel: int) -> Livraison:
         """Affecte un livreur à une livraison.
 
-        **C'est ici que se joue la cohérence de fonction.**
-        `LIVRAISON.#id_personnel` pointe vers `PERSONNEL` tout entier : rien en
-        base n'empêche d'y mettre un cuisinier. La vérification ne peut pas être
-        déléguée au schéma, elle est faite ici (cf. `docs/roadmap.md`, règle
-        rappelée depuis le sprint 0).
-
-        422 et non 404 : l'identifiant vient du corps de la requête, pas de
-        l'URL. Un salarié archivé est traité comme inexistant — `get_by_id` le
-        filtre —, sinon on affecterait une tournée à quelqu'un qui a quitté
-        l'entreprise.
+        La cohérence de fonction est déléguée à
+        `PersonnelService.obtenir_avec_fonction` : `LIVRAISON.#id_personnel`
+        pointe vers `PERSONNEL` tout entier, rien en base n'empêche d'y mettre
+        un cuisinier. La même méthode sert à `SESSION_FORMATION`, dont la clé
+        étrangère pose le problème identique — deux implémentations
+        divergeraient le jour où l'une serait corrigée sans l'autre.
 
         Réaffecter est permis tant que la livraison n'est pas terminée : un
         livreur peut tomber malade.
@@ -110,17 +105,9 @@ class LivraisonService:
         livraison = self.obtenir(id_livraison)
         self._refuser_si_terminee(livraison, "affecter un livreur")
 
-        personnel = self.personnels.get_by_id(id_personnel)
-        if personnel is None:
-            raise ReferenceInvalide(
-                f"Aucun membre du personnel ne porte l'identifiant {id_personnel}."
-            )
-        if personnel.fonction is not FonctionPersonnel.LIVREUR:
-            raise ReferenceInvalide(
-                f"{personnel.prenom} {personnel.nom} exerce la fonction "
-                f"« {personnel.fonction.value} » et ne peut pas être affecté "
-                "à une livraison."
-            )
+        personnel = self.personnels.obtenir_avec_fonction(
+            id_personnel, FonctionPersonnel.LIVREUR, pour="une livraison"
+        )
 
         livraison.id_personnel = personnel.id_personnel
         self.db.commit()
