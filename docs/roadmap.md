@@ -207,7 +207,22 @@ d'origine — voir `docs/mld.md`.
       `Disponible` non réservable (409). Toutes deux croisent deux tables,
       aucun `CHECK` ne peut les porter — le service est leur seul point
       d'application. Voir `docs/architecture.md`.
-- [ ] Interface de réservation (React)
+- [x] Interface de réservation (React)
+      — `features/salle/` et `features/logement/` portent les catalogues,
+      `features/reservation/` l'écriture : les fiches montent le formulaire
+      sans rien savoir de son implémentation, comme la fiche de formation.
+      — **Deux formulaires, un seul hook.** `useValidationReservation` est
+      partagé, donc le traitement des refus l'est aussi ; la saisie ne l'est
+      pas. Une session impose ses dates et propose l'hébergement, un bien se
+      réserve sur un créneau choisi — les fondre aurait produit un composant
+      dont la moitié des champs seraient inertes selon le cas.
+      — `ReservationEnvoyee` est une **union discriminée** sur
+      `type_reservation` : cible absente, double cible, cible d'un autre type
+      et `avec_hebergement` hors formation sont refusés **à la compilation**,
+      sans attendre le 422 du serveur. Quatre `@ts-expect-error` et un
+      contrôle positif le verrouillent.
+      — Les refus **409** (créneau déjà pris) et **422** (capacité dépassée)
+      sont repris **tels quels** : ils disent au client quoi corriger.
 
 ## Sprint 6 — Restauration sur place
 
