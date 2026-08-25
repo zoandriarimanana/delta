@@ -189,7 +189,14 @@ d'origine — voir `docs/mld.md`.
 ## Sprint 5 — Salle & logement
 
 - [ ] CRUD `SALLE`, `LOGEMENT` (admin)
-- [ ] `RESERVATION` type = Salle / Logement + vérification de chevauchement de dates
+- [x] `RESERVATION` type = Salle / Logement + vérification de chevauchement de dates
+      — La garantie est une **contrainte d'exclusion PostgreSQL**
+      (`EXCLUDE USING gist`), pas une vérification applicative : il n'y a ici
+      aucun compteur sur lequel poser un verrou de ligne, contrairement à
+      `places_restantes`. Le service fait un pré-contrôle, mais pour produire un
+      409 lisible — la base est le seul arbitre.
+      — Bornes `[)` : deux créneaux adjacents ne se chevauchent pas. Une
+      réservation annulée ou archivée libère son créneau.
 - [ ] Interface de réservation (React)
 
 ## Sprint 6 — Restauration sur place

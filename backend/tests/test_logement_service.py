@@ -238,6 +238,23 @@ def test_le_statut_ne_dit_rien_de_la_disponibilite(
 def _reservation(
     db: Session, id_logement: int, statut: StatutReservation
 ) -> Reservation:
+    """Crée une réservation **sans passer par `ReservationService`**.
+
+    TODO (#47 livrée) — à reconsidérer. Ce contournement datait de #46, où le
+    service refusait encore le type `Logement` : il n'existait alors aucun autre
+    moyen d'écrire cette ligne. Ce n'est plus le cas.
+
+    Passer par le service rendrait ces tests plus proches du réel, au prix d'un
+    montage plus lourd — il faut un logement `Disponible`, un client, et une
+    charge utile valide. Le gain est réel mais pas urgent : ce que ces tests
+    vérifient, c'est le comportement de `LogementService`, pas la création de
+    réservations.
+
+    Point de vigilance en attendant : l'assistant ne crée qu'une réservation par
+    logement. S'il en créait deux qui se chevauchent, la contrainte d'exclusion
+    posée par #47 les refuserait — et le test échouerait pour une raison sans
+    rapport avec ce qu'il teste.
+    """
     client = Client(
         type_client=TypeClient.PARTICULIER,
         email=f"jean_{uuid4().hex[:8]}@example.mg",

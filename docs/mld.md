@@ -282,6 +282,37 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   La restitution est **idempotente** : elle n'a lieu qu'au passage d'un statut
   occupant vers `Annulee`. Rejouer l'opération ne crédite pas deux fois.
 
+- **Aucun bien n'est réservé deux fois sur le même créneau.** Deux contraintes
+  d'exclusion PostgreSQL le garantissent, une par cible :
+
+  ```sql
+  EXCLUDE USING gist (id_salle WITH =, tstzrange(date_debut, date_fin) WITH &&)
+     WHERE (id_salle IS NOT NULL AND supprime_le IS NULL AND statut <> 'Annulee')
+  ```
+
+  `tstzrange` a des bornes `[)` — début inclus, fin exclue. Deux créneaux
+  **adjacents** ne se chevauchent donc pas : une salle libérée à midi est
+  réservable à midi. Le contraire imposerait un trou artificiel entre deux
+  locations.
+
+  Le prédicat écarte les réservations **annulées et archivées** : sans lui, une
+  annulation condamnerait le créneau à jamais — même raisonnement que la
+  restitution des places d'une session.
+
+  C'est une contrainte **en base** et non une vérification applicative, parce
+  qu'il n'y a ici aucun compteur sur lequel poser un verrou de ligne,
+  contrairement à `places_restantes` et `stock_disponible`. Deux requêtes
+  simultanées passeraient toutes deux un contrôle applicatif. Le service en fait
+  un quand même, mais pour produire un 409 lisible, pas pour garantir.
+
+  `USING gist` avec l'opérateur `=` sur un entier exige l'extension
+  `btree_gist`, créée par la migration. Elle est *trusted* depuis PostgreSQL 13 :
+  un rôle disposant du seul privilège `CREATE` sur la base suffit.
+
+  Cette contrainte et le `CHECK` d'exclusivité (n°2) portent sur la même table
+  sans se gêner : l'une interdit deux **lignes** sur le même créneau, l'autre
+  deux **cibles** sur une même ligne.
+
 - `RESERVATION.avec_hebergement` est un **drapeau informatif**, et rien de plus :
   il dit que le client **souhaite** être hébergé, pas qu'une chambre lui est
   attribuée. Aucun `LOGEMENT` n'est réservé, aucune disponibilité n'est vérifiée.

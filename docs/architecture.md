@@ -655,6 +655,34 @@ Une réservation `Annulee` ne peut plus changer de statut. Le permettre supposer
 de re-décrémenter, donc de pouvoir échouer faute de places — une transition de
 statut qui échoue pour cause de capacité serait un piège pour l'appelant.
 
+### Deux compteurs, deux protections
+
+`places_restantes` et un calendrier de salle posent le même problème — deux
+requêtes simultanées ne doivent pas réussir toutes les deux — et reçoivent des
+réponses **différentes**, parce que ce sur quoi elles s'appuient diffère.
+
+| | Ce qui protège | Pourquoi |
+|---|---|---|
+| `SESSION_FORMATION.places_restantes` | `UPDATE` conditionnel atomique | il existe une ligne à verrouiller |
+| `PRODUIT.stock_disponible` | idem | idem |
+| `SALLE` / `LOGEMENT` sur un créneau | contrainte d'exclusion `EXCLUDE USING gist` | **il n'y a aucune ligne à verrouiller** |
+
+Le troisième cas est le plus instructif. Il n'y a pas de compteur : la
+disponibilité se déduit de l'ensemble des réservations existantes. Une
+vérification applicative devrait lire cet ensemble puis écrire — et deux requêtes
+simultanées liraient toutes deux « libre » avant que l'une n'écrive. Seule la
+base peut arbitrer, et elle le fait au moment de l'écriture.
+
+Le service fait quand même un pré-contrôle, mais pour une autre raison : produire
+un **409 lisible** — « cette salle est déjà réservée sur ce créneau » — plutôt
+qu'une erreur d'intégrité brute. Même architecture à deux niveaux que l'unicité
+d'e-mail depuis T0.6. Le pré-contrôle reproduit **exactement** le prédicat de la
+contrainte ; diverger donnerait un contrôle qui laisse passer ce que la base
+refuse, ou l'inverse.
+
+Bornes `[)` sur `tstzrange` : deux créneaux adjacents ne se chevauchent pas. Une
+salle libérée à midi est réservable à midi.
+
 ### La personnalisation naît avec sa ligne
 
 `DEMANDE_PERSONNALISATION` n'a **ni router ni service propres**, et ce n'est pas

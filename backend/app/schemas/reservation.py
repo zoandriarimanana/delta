@@ -1,6 +1,7 @@
 """Schemas Pydantic de l'entité RESERVATION."""
 
 from datetime import datetime
+from typing import ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -26,42 +27,54 @@ class ReservationCreate(BaseModel):
     nombre_personnes: int = Field(default=1, gt=0)
     #: Obligatoire pour une réservation de type `Formation` — voir le validateur.
     id_session: int | None = None
+    #: Obligatoire pour une réservation de type `Salle`.
+    id_salle: int | None = None
+    #: Obligatoire pour une réservation de type `Logement`.
+    id_logement: int | None = None
     #: **Drapeau informatif** : le client dit qu'il souhaite être hébergé.
     #: Aucune chambre n'est réservée ni même vérifiée disponible — ce mécanisme
     #: n'existe pas encore, il arrive au sprint 5 avec `LOGEMENT`.
     avec_hebergement: bool = False
 
+    #: Cible attendue pour chaque type. `Table` n'en a aucune : une réservation
+    #: de table ne désigne rien, c'est le cas que le `CHECK` d'exclusivité
+    #: autorise en laissant les trois colonnes nulles.
+    _CIBLES: ClassVar[dict[TypeReservation, str]] = {
+        TypeReservation.FORMATION: "id_session",
+        TypeReservation.SALLE: "id_salle",
+        TypeReservation.LOGEMENT: "id_logement",
+    }
+
     @model_validator(mode="after")
     def _exiger_une_cible_coherente(self) -> "ReservationCreate":
-        """Refuse une réservation de formation sans session.
+        """Chaque type désigne sa cible, et elle seule.
 
-        Le `CHECK` d'exclusivité du MLD (contrainte n°2) autorise **zéro**
-        colonne cible renseignée — c'est ce qu'il faut pour une réservation de
-        table. Il ne peut donc pas exiger `id_session` pour le type `Formation`,
-        qui croiserait deux colonnes. La règle vit ici.
+        Le `CHECK` d'exclusivité du MLD (contrainte n°2) garantit qu'**au plus
+        une** colonne cible est renseignée. Il ne peut pas garantir la
+        **bonne** : il autorise zéro colonne — ce qu'il faut pour une
+        réservation de table — et ne sait pas laquelle correspond au type.
+        La règle croise deux colonnes, elle vit donc ici.
 
-        Les types `Salle` et `Logement` sont refusés tant que le sprint 5 ne les
-        a pas livrés : accepter une réservation qu'aucun service ne sait honorer
-        laisserait une ligne orpheline en base.
+        Deux erreurs sont refusées : une cible manquante, et une cible qui ne
+        correspond pas au type — réserver une salle en désignant un logement.
         """
-        if self.type_reservation is TypeReservation.FORMATION:
-            if self.id_session is None:
-                raise ValueError(
-                    "Une réservation de formation doit désigner une session."
-                )
-        elif self.id_session is not None:
-            raise ValueError(
-                "Seule une réservation de formation peut désigner une session."
-            )
+        attendue = self._CIBLES.get(self.type_reservation)
 
-        if self.type_reservation in (
-            TypeReservation.SALLE,
-            TypeReservation.LOGEMENT,
-        ):
-            raise ValueError(
-                f"Les réservations de type « {self.type_reservation.value} » "
-                "ne sont pas encore disponibles."
-            )
+        for type_reservation, colonne in self._CIBLES.items():
+            valeur = getattr(self, colonne)
+            if colonne == attendue:
+                if valeur is None:
+                    raise ValueError(
+                        f"Une réservation de type "
+                        f"« {self.type_reservation.value} » doit désigner "
+                        f"un(e) {type_reservation.value.lower()}."
+                    )
+            elif valeur is not None:
+                raise ValueError(
+                    f"Une réservation de type "
+                    f"« {self.type_reservation.value} » ne peut pas désigner "
+                    f"un(e) {type_reservation.value.lower()}."
+                )
         return self
 
     @model_validator(mode="after")
@@ -105,6 +118,8 @@ class ReservationRead(BaseModel):
     avec_hebergement: bool
     id_client: int
     id_session: int | None = None
+    id_salle: int | None = None
+    id_logement: int | None = None
 
 
 class ReservationChangementStatut(BaseModel):
