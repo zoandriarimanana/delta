@@ -188,7 +188,12 @@ d'origine — voir `docs/mld.md`.
 
 ## Sprint 5 — Salle & logement
 
-- [ ] CRUD `SALLE`, `LOGEMENT` (admin)
+- [x] CRUD `SALLE`, `LOGEMENT` (admin)
+      — `SALLE` porte désormais un `CHECK (tarif_horaire IS NOT NULL OR
+      tarif_journee IS NOT NULL)` : règle du dictionnaire d'origine jamais
+      portée en contrainte, rétablie. La gratuité doit s'écrire `0.00`.
+      — `LOGEMENT.statut` est un **domaine formel** décrivant l'état du bien,
+      **jamais son occupation** : celle-ci se déduit des réservations.
 - [x] `RESERVATION` type = Salle / Logement + vérification de chevauchement de dates
       — La garantie est une **contrainte d'exclusion PostgreSQL**
       (`EXCLUDE USING gist`), pas une vérification applicative : il n'y a ici
@@ -197,6 +202,11 @@ d'origine — voir `docs/mld.md`.
       409 lisible — la base est le seul arbitre.
       — Bornes `[)` : deux créneaux adjacents ne se chevauchent pas. Une
       réservation annulée ou archivée libère son créneau.
+      — **Deux règles nouvelles** y ont été décidées, distinctes des corrections
+      d'omissions : capacité du bien non dépassée (422), logement non
+      `Disponible` non réservable (409). Toutes deux croisent deux tables,
+      aucun `CHECK` ne peut les porter — le service est leur seul point
+      d'application. Voir `docs/architecture.md`.
 - [ ] Interface de réservation (React)
 
 ## Sprint 6 — Restauration sur place

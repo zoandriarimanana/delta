@@ -650,6 +650,16 @@ REF_DEBUT = datetime(2026, 9, 1, 9, 0, tzinfo=UTC)
 REF_FIN = datetime(2026, 9, 1, 12, 0, tzinfo=UTC)
 
 
+def _creneau_logement(id_logement: int, nombre: int = 1) -> ReservationCreate:
+    return ReservationCreate(
+        type_reservation=TypeReservation.LOGEMENT,
+        date_debut=REF_DEBUT,
+        date_fin=REF_FIN,
+        nombre_personnes=nombre,
+        id_logement=id_logement,
+    )
+
+
 def test_reservation_de_salle(
     service: ReservationService, client: Client, db: Session
 ) -> None:
@@ -890,20 +900,38 @@ def test_capacite_depassee_refusee(
 def test_logement_non_disponible_refuse(
     service: ReservationService, client: Client, db: Session, statut: StatutLogement
 ) -> None:
-    """`En_maintenance` et `Hors_service` disent qu'il n'est pas louable."""
+    """`En_maintenance` et `Hors_service` disent qu'il n'est pas louable.
+
+    Le test **tente réellement la création** contre un logement dans ce statut,
+    et vérifie trois choses : que le refus a lieu, qu'il porte bien sur le
+    statut — un `ConflitMetier` peut venir d'ailleurs —, et qu'aucune ligne
+    n'est écrite.
+
+    Le contrôle positif est `test_le_meme_logement_disponible_est_reservable` :
+    sans lui, ce test passerait même si toute réservation de logement échouait.
+    """
     logement = _logement(db, statut)
 
-    with pytest.raises(ConflitMetier):
-        service.creer(
-            ReservationCreate(
-                type_reservation=TypeReservation.LOGEMENT,
-                date_debut=REF_DEBUT,
-                date_fin=REF_FIN,
-                nombre_personnes=1,
-                id_logement=logement.id_logement,
-            ),
-            client,
-        )
+    with pytest.raises(ConflitMetier) as capture:
+        service.creer(_creneau_logement(logement.id_logement), client)
+
+    assert statut.value in str(capture.value)
+    assert service.lister_du_client(client) == []
+
+
+def test_le_meme_logement_disponible_est_reservable(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Contrôle positif du test précédent.
+
+    Le refus vient du statut, et de rien d'autre : le même montage avec
+    `Disponible` aboutit.
+    """
+    logement = _logement(db, StatutLogement.DISPONIBLE)
+
+    reservation = service.creer(_creneau_logement(logement.id_logement), client)
+
+    assert reservation.id_logement == logement.id_logement
 
 
 def test_reserver_un_bien_ne_touche_a_aucun_compteur(
