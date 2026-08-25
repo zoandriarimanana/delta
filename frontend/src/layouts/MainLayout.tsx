@@ -17,6 +17,8 @@ const LIENS = [
   { vers: '/', libelle: 'Accueil', exact: true },
   { vers: '/produits', libelle: 'Catalogue', exact: false },
   { vers: '/formations', libelle: 'Formations', exact: false },
+  { vers: '/salles', libelle: 'Salles', exact: false },
+  { vers: '/logements', libelle: 'Hébergements', exact: false },
   { vers: '/connexion', libelle: 'Connexion', exact: false },
 ];
 
