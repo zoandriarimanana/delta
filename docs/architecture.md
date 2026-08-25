@@ -683,6 +683,39 @@ refuse, ou l'inverse.
 Bornes `[)` sur `tstzrange` : deux créneaux adjacents ne se chevauchent pas. Une
 salle libérée à midi est réservable à midi.
 
+### Deux règles nouvelles, décidées en construisant
+
+Elles ne corrigent **aucune omission** du dictionnaire de données d'origine —
+contrairement à l'unicité de `CLIENT.email`, aux bornes d'`AVIS.note` ou au
+`CHECK` des tarifs de `SALLE`, qui rétablissaient des règles écrites puis
+perdues. Celles-ci n'y ont jamais figuré : ce sont des décisions prises au
+sprint 5, en écrivant la réservation de biens.
+
+Elles ont chacune **un seul point d'application**, le service, et il faut savoir
+pourquoi.
+
+**Le nombre de personnes ne dépasse pas la capacité du bien** — 422.
+`RESERVATION.nombre_personnes` et `SALLE.capacite` vivent dans **deux tables
+différentes** : aucun `CHECK` ne peut les comparer, une contrainte de table ne
+voyant que ses propres colonnes. Un trigger le pourrait, au prix d'une logique
+métier écrite en PL/pgSQL, hors de la couche qui la porte partout ailleurs. Le
+service est donc le seul endroit — et il n'y a pas de redondance de défense ici,
+contrairement au `CHECK` des tarifs.
+
+**Un logement qui n'est pas `Disponible` n'est pas réservable** — 409.
+`En_maintenance` et `Hors_service` disent précisément qu'il n'est pas louable.
+La règle croise `RESERVATION` et `LOGEMENT.statut` : même raison, pas de `CHECK`
+possible.
+
+Un point mérite réflexion et n'est pas tranché : cette règle n'empêche pas de
+**mettre en maintenance un logement déjà réservé**. Rien ne l'interdit
+aujourd'hui, et il n'est pas évident que ce soit un défaut — un dégât des eaux ne
+demande pas la permission aux réservations existantes. Mais alors quelqu'un doit
+prévenir les clients concernés, et ce mécanisme n'existe pas. À reprendre si le
+besoin se manifeste.
+
+`SALLE` n'a pas d'équivalent : elle ne porte pas de statut.
+
 ### La personnalisation naît avec sa ligne
 
 `DEMANDE_PERSONNALISATION` n'a **ni router ni service propres**, et ce n'est pas
