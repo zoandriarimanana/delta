@@ -14,6 +14,7 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import text, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
@@ -25,8 +26,10 @@ from app.core.security import hacher_mot_de_passe
 from app.models.client import Client, TypeClient
 from app.models.domaine_formation import DomaineFormation
 from app.models.formation import Formation
+from app.models.logement import Logement, StatutLogement
 from app.models.personnel import FonctionPersonnel, Personnel
-from app.models.reservation import StatutReservation, TypeReservation
+from app.models.reservation import Reservation, StatutReservation, TypeReservation
+from app.models.salle import Salle
 from app.models.session_formation import SessionFormation, StatutSessionFormation
 from app.schemas.reservation import ReservationCreate
 from app.services.reservation_service import ReservationService
@@ -235,9 +238,14 @@ def test_dates_inversees_refusees() -> None:
 @pytest.mark.parametrize(
     "type_reservation", [TypeReservation.SALLE, TypeReservation.LOGEMENT]
 )
-def test_types_non_livres_refuses(type_reservation: TypeReservation) -> None:
-    """Accepter une réservation qu'aucun service ne sait honorer laisserait une
-    ligne orpheline. `SALLE` et `LOGEMENT` arrivent au sprint 5."""
+def test_type_sans_sa_cible_refuse(type_reservation: TypeReservation) -> None:
+    """Le refus a changé de raison en #47, et le test avec.
+
+    Jusqu'à #46, `Salle` et `Logement` étaient refusés parce qu'aucun service ne
+    savait les honorer. Ils sont désormais acceptés — mais chaque type doit
+    désigner **sa** cible, et le `CHECK` d'exclusivité ne peut pas l'imposer :
+    il autorise zéro colonne renseignée.
+    """
     with pytest.raises(ValueError):
         ReservationCreate(
             type_reservation=type_reservation,
@@ -595,3 +603,321 @@ def test_aucun_logement_n_est_reserve(
     assert reservation.id_logement is None
     # Une seule ligne écrite : aucune réservation de logement en regard.
     assert len(service.lister_du_client(client)) == 1
+
+
+# --- Salles et logements : le chevauchement -----------------------------------
+
+
+def _salle(db: Session, capacite: int = 20) -> Salle:
+    salle = Salle(
+        nom=f"Salle {uuid4().hex[:6]}",
+        capacite=capacite,
+        tarif_horaire=Decimal("15000.00"),
+    )
+    db.add(salle)
+    db.commit()
+    return salle
+
+
+def _logement(
+    db: Session, statut: StatutLogement = StatutLogement.DISPONIBLE
+) -> Logement:
+    logement = Logement(
+        type_chambre="Double",
+        capacite=2,
+        tarif_nuitee=Decimal("45000.00"),
+        statut=statut,
+    )
+    db.add(logement)
+    db.commit()
+    return logement
+
+
+def _creneau(
+    id_salle: int, debut: datetime, fin: datetime, nombre: int = 1
+) -> ReservationCreate:
+    return ReservationCreate(
+        type_reservation=TypeReservation.SALLE,
+        date_debut=debut,
+        date_fin=fin,
+        nombre_personnes=nombre,
+        id_salle=id_salle,
+    )
+
+
+# Créneau de référence : 1er septembre, 9 h → 12 h.
+REF_DEBUT = datetime(2026, 9, 1, 9, 0, tzinfo=UTC)
+REF_FIN = datetime(2026, 9, 1, 12, 0, tzinfo=UTC)
+
+
+def test_reservation_de_salle(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    salle = _salle(db)
+
+    reservation = service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+
+    assert reservation.id_salle == salle.id_salle
+    assert reservation.statut is StatutReservation.EN_ATTENTE
+
+
+@pytest.mark.parametrize(
+    ("cas", "debut", "fin"),
+    [
+        (
+            "commence avant, finit dedans",
+            REF_DEBUT - timedelta(hours=2),
+            REF_DEBUT + timedelta(hours=1),
+        ),
+        (
+            "commence dedans, finit apres",
+            REF_DEBUT + timedelta(hours=1),
+            REF_FIN + timedelta(hours=2),
+        ),
+        (
+            "strictement inclus",
+            REF_DEBUT + timedelta(minutes=30),
+            REF_FIN - timedelta(minutes=30),
+        ),
+        (
+            "contient l'existante",
+            REF_DEBUT - timedelta(hours=1),
+            REF_FIN + timedelta(hours=1),
+        ),
+        ("identique", REF_DEBUT, REF_FIN),
+    ],
+)
+def test_les_cinq_formes_de_chevauchement_sont_refusees(
+    service: ReservationService,
+    client: Client,
+    db: Session,
+    cas: str,
+    debut: datetime,
+    fin: datetime,
+) -> None:
+    """Un test d'inclusion seul manquerait quatre cas sur cinq."""
+    salle = _salle(db)
+    service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+
+    with pytest.raises(ConflitMetier):
+        service.creer(_creneau(salle.id_salle, debut, fin), client)
+
+
+@pytest.mark.parametrize(
+    ("cas", "debut", "fin"),
+    [
+        ("adjacent apres", REF_FIN, REF_FIN + timedelta(hours=2)),
+        ("adjacent avant", REF_DEBUT - timedelta(hours=2), REF_DEBUT),
+        ("disjoint", REF_FIN + timedelta(days=1), REF_FIN + timedelta(days=1, hours=2)),
+    ],
+)
+def test_les_creneaux_sans_recouvrement_passent(
+    service: ReservationService,
+    client: Client,
+    db: Session,
+    cas: str,
+    debut: datetime,
+    fin: datetime,
+) -> None:
+    """Bornes `[)` : une salle libérée à midi est réservable à midi.
+
+    Le contraire obligerait à laisser un trou artificiel entre deux locations.
+    """
+    salle = _salle(db)
+    service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+
+    seconde = service.creer(_creneau(salle.id_salle, debut, fin), client)
+
+    assert seconde.id_reservation is not None
+
+
+def test_meme_creneau_sur_deux_salles_differentes(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """La contrainte porte sur le couple (bien, période), pas sur la période."""
+    premiere = _salle(db)
+    seconde = _salle(db)
+    service.creer(_creneau(premiere.id_salle, REF_DEBUT, REF_FIN), client)
+
+    autre = service.creer(_creneau(seconde.id_salle, REF_DEBUT, REF_FIN), client)
+
+    assert autre.id_salle == seconde.id_salle
+
+
+def test_une_reservation_annulee_libere_le_creneau(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Sans ce prédicat, une annulation condamnerait le créneau à jamais.
+
+    Même raisonnement que la restitution des places d'une session en #41.
+    """
+    salle = _salle(db)
+    premiere = service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+
+    with pytest.raises(ConflitMetier):
+        service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+
+    service.changer_statut(premiere.id_reservation, StatutReservation.ANNULEE)
+    seconde = service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+
+    assert seconde.id_reservation != premiere.id_reservation
+
+
+def test_une_reservation_archivee_libere_le_creneau(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    salle = _salle(db)
+    premiere = service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+    service.supprimer(premiere.id_reservation)
+
+    seconde = service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+
+    assert seconde.id_reservation != premiere.id_reservation
+
+
+def test_la_contrainte_tient_hors_service(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """La garantie réelle est en base, pas dans le pré-contrôle.
+
+    On insère directement, en contournant `ReservationService` : c'est ce que
+    ferait une reprise de données, ou deux requêtes simultanées passées toutes
+    deux par le pré-contrôle.
+    """
+    salle = _salle(db)
+    service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+
+    with pytest.raises(IntegrityError) as capture:
+        db.add(
+            Reservation(
+                type_reservation=TypeReservation.SALLE,
+                date_debut=REF_DEBUT,
+                date_fin=REF_FIN,
+                nombre_personnes=1,
+                statut=StatutReservation.CONFIRMEE,
+                id_client=client.id_client,
+                id_salle=salle.id_salle,
+            )
+        )
+        db.commit()
+    db.rollback()
+
+    assert "salle_sans_chevauchement" in str(capture.value)
+
+
+def test_le_check_d_exclusivite_cohabite_avec_l_exclusion(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Les deux contraintes portent sur la même table et ne se gênent pas.
+
+    `ck_reservation_cible_unique` interdit deux cibles sur une même ligne ;
+    `salle_sans_chevauchement` interdit deux lignes sur le même créneau. Elles
+    n'ont ni le même objet ni la même portée.
+    """
+    salle = _salle(db)
+    logement = _logement(db)
+    service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+
+    # La contrainte d'exclusion n'empêche pas la ligne polymorphe valide.
+    reservation = service.creer(
+        ReservationCreate(
+            type_reservation=TypeReservation.LOGEMENT,
+            date_debut=REF_DEBUT,
+            date_fin=REF_FIN,
+            nombre_personnes=1,
+            id_logement=logement.id_logement,
+        ),
+        client,
+    )
+    assert reservation.id_logement == logement.id_logement
+
+    # Et le CHECK d'exclusivité mord toujours, sur une ligne à deux cibles.
+    with pytest.raises(IntegrityError) as capture:
+        db.add(
+            Reservation(
+                type_reservation=TypeReservation.SALLE,
+                date_debut=REF_FIN + timedelta(days=5),
+                date_fin=REF_FIN + timedelta(days=5, hours=2),
+                nombre_personnes=1,
+                statut=StatutReservation.CONFIRMEE,
+                id_client=client.id_client,
+                id_salle=salle.id_salle,
+                id_logement=logement.id_logement,
+            )
+        )
+        db.commit()
+    db.rollback()
+
+    assert "cible_unique" in str(capture.value)
+
+
+# --- Refus propres aux biens ---------------------------------------------------
+
+
+def test_salle_inexistante_leve_reference_invalide(
+    service: ReservationService, client: Client
+) -> None:
+    with pytest.raises(ReferenceInvalide):
+        service.creer(_creneau(99999, REF_DEBUT, REF_FIN), client)
+
+
+def test_salle_archivee_traitee_comme_inexistante(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    salle = _salle(db)
+    salle.supprime_le = datetime.now(UTC)
+    db.commit()
+
+    with pytest.raises(ReferenceInvalide):
+        service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+
+
+def test_capacite_depassee_refusee(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """422 : le bien existe, c'est la demande qui ne lui correspond pas."""
+    salle = _salle(db, capacite=10)
+
+    with pytest.raises(ReferenceInvalide) as capture:
+        service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN, nombre=15), client)
+
+    assert "10" in str(capture.value)
+
+
+@pytest.mark.parametrize(
+    "statut", [StatutLogement.EN_MAINTENANCE, StatutLogement.HORS_SERVICE]
+)
+def test_logement_non_disponible_refuse(
+    service: ReservationService, client: Client, db: Session, statut: StatutLogement
+) -> None:
+    """`En_maintenance` et `Hors_service` disent qu'il n'est pas louable."""
+    logement = _logement(db, statut)
+
+    with pytest.raises(ConflitMetier):
+        service.creer(
+            ReservationCreate(
+                type_reservation=TypeReservation.LOGEMENT,
+                date_debut=REF_DEBUT,
+                date_fin=REF_FIN,
+                nombre_personnes=1,
+                id_logement=logement.id_logement,
+            ),
+            client,
+        )
+
+
+def test_reserver_un_bien_ne_touche_a_aucun_compteur(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Une salle n'a pas de `places_restantes` : rien à décrémenter ni à rendre.
+
+    L'annulation d'une réservation de salle ne doit donc rien créditer — la
+    garde de `_restituer` sur `id_session` s'en charge.
+    """
+    salle = _salle(db)
+    reservation = service.creer(_creneau(salle.id_salle, REF_DEBUT, REF_FIN), client)
+
+    service.changer_statut(reservation.id_reservation, StatutReservation.ANNULEE)
+
+    assert reservation.id_session is None
+    assert reservation.statut is StatutReservation.ANNULEE

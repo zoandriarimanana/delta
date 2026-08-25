@@ -6,8 +6,9 @@ from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, literal_column, text
 from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, SoftDeleteMixin
@@ -53,6 +54,41 @@ class StatutReservation(StrEnum):
     ANNULEE = "Annulee"
 
 
+#: Statuts qui n'immobilisent plus le bien. Une réservation annulée libère son
+#: créneau ; une réservation archivée n'existe plus pour les lectures courantes.
+#: Le prédicat des contraintes d'exclusion les écarte, sans quoi une annulation
+#: bloquerait le créneau à jamais — même raisonnement que la restitution des
+#: places en #41.
+_PREDICAT_OCCUPANT = "supprime_le IS NULL AND statut <> 'Annulee'"
+
+
+def _exclusion(colonne: str, nom: str) -> ExcludeConstraint:
+    """Contrainte d'exclusion interdisant deux réservations qui se recoupent.
+
+    `tstzrange(date_debut, date_fin)` a des bornes `[)` par défaut : le début est
+    inclus, la fin exclue. Deux créneaux **adjacents** — l'un finissant quand
+    l'autre commence — ne se chevauchent donc pas, ce qui est le comportement
+    attendu pour une salle libérée à l'heure pile.
+
+    `USING gist` avec l'opérateur `=` sur un entier exige l'extension
+    `btree_gist` : GiST ne sait pas comparer des entiers pour l'égalité sans
+    elle. La migration la crée.
+
+    C'est **la** garantie contre le double usage d'un bien. Une vérification
+    applicative seule laisserait passer deux requêtes simultanées : il n'y a ici
+    aucun compteur sur lequel poser un verrou de ligne, contrairement à
+    `places_restantes` ou `stock_disponible`. La base est le seul arbitre
+    possible.
+    """
+    return ExcludeConstraint(
+        (colonne, "="),
+        (literal_column("tstzrange(date_debut, date_fin)"), "&&"),
+        name=nom,
+        using="gist",
+        where=text(f"{colonne} IS NOT NULL AND {_PREDICAT_OCCUPANT}"),
+    )
+
+
 class Reservation(SoftDeleteMixin, Base):
     """Réservation d'une session de formation, d'une salle, d'un logement ou
     d'une table.
@@ -74,6 +110,8 @@ class Reservation(SoftDeleteMixin, Base):
             " + (id_logement IS NOT NULL)::int <= 1",
             name="cible_unique",
         ),
+        _exclusion("id_salle", "salle_sans_chevauchement"),
+        _exclusion("id_logement", "logement_sans_chevauchement"),
     )
 
     id_reservation: Mapped[int] = mapped_column(primary_key=True)

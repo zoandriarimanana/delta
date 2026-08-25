@@ -247,6 +247,8 @@ def test_session_non_ouverte_retourne_409(
     "corps_invalide",
     [
         {"type_reservation": "Formation", "id_session": None},
+        # `Salle` et `Logement` sont acceptés depuis #47, mais chacun doit
+        # désigner sa cible — et `id_session` reste réservé à `Formation`.
         {"type_reservation": "Salle"},
         {"type_reservation": "Logement"},
         {"nombre_personnes": 0},
