@@ -57,3 +57,16 @@ class ReservationRepository(BaseRepository[Reservation]):
         if not inclure_supprimes:
             requete = requete.where(Reservation.supprime_le.is_(None))
         return self.db.scalars(requete.order_by(Reservation.id_reservation)).all()
+
+    def lister_par_logement(
+        self, id_logement: int, inclure_supprimes: bool = False
+    ) -> Sequence[Reservation]:
+        """Retourne les réservations **actives** portant sur un logement.
+
+        Sert le pré-contrôle d'archivage, comme `lister_par_salle`. Le filtre sur
+        `supprime_le` n'est pas hérité, cette requête ne passe pas par `list()`.
+        """
+        requete = select(Reservation).where(Reservation.id_logement == id_logement)
+        if not inclure_supprimes:
+            requete = requete.where(Reservation.supprime_le.is_(None))
+        return self.db.scalars(requete.order_by(Reservation.id_reservation)).all()
