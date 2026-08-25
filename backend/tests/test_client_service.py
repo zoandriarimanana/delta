@@ -8,6 +8,7 @@ priver de cette contrainte, donc de ne plus vérifier le schéma de production.
 
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError as PydanticValidationError
@@ -261,7 +262,10 @@ def test_reservation_reste_lisible_apres_anonymisation(
             identite=ClientParticulierCreate(nom="Rakoto", prenom="Jean"),
         )
     )
-    salle = Salle(nom="Salle sonde", capacite=10)
+    # `tarif_horaire` est obligatoire depuis #45 : une salle porte toujours
+    # au moins un tarif. La valeur importe peu ici, ce test porte sur
+    # l'anonymisation.
+    salle = Salle(nom="Salle sonde", capacite=10, tarif_horaire=Decimal("1.00"))
     db.add(salle)
     db.flush()
     reservation = Reservation(

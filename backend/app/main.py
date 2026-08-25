@@ -32,6 +32,7 @@ from app.routers import (
     personnel_router,
     produit_router,
     reservation_router,
+    salle_router,
     session_formation_router,
 )
 
@@ -132,3 +133,4 @@ app.include_router(domaine_formation_router.router, prefix=settings.API_V1_PREFI
 app.include_router(formation_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(session_formation_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(reservation_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(salle_router.router, prefix=settings.API_V1_PREFIX)

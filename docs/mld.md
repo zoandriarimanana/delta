@@ -111,6 +111,32 @@ SALLE(id_salle, nom, capacite, tarif_horaire, tarif_journee, equipements)
 LOGEMENT(id_logement, type_chambre, capacite, tarif_nuitee, statut)
 ```
 
+- `SALLE.tarif_horaire` et `SALLE.tarif_journee` sont nullables
+  **individuellement**, mais **pas ensemble** : une salle en porte toujours au
+  moins un.
+
+  ```sql
+  CHECK (tarif_horaire IS NOT NULL OR tarif_journee IS NOT NULL)
+  ```
+
+  Présente au dictionnaire de données d'origine, jamais portée en contrainte ;
+  rétablie. Même cas que l'unicité de `CLIENT.email` et les bornes d'`AVIS.note`
+  — une omission de transcription, pas une règle nouvelle.
+
+  Une disjonction et non deux `NOT NULL` : une salle louée à l'heure seulement,
+  ou à la journée seulement, est le cas courant. C'est l'absence des **deux** qui
+  pose problème.
+
+  Sans cette contrainte, une salle dépourvue de tarif serait louable
+  **gratuitement** sans que personne l'ait décidé, et rien ne distinguerait
+  « gratuit » d'un « tarif oublié à la saisie ». Avec elle, la gratuité doit
+  s'écrire `0.00` : elle devient une décision, plus une absence.
+
+  La contrainte est en base et pas seulement dans le schema d'entrée : une
+  reprise de données ou une correction manuelle ne doit pas pouvoir créer ce
+  trou. Elle est répétée côté API pour produire un 422 lisible plutôt qu'une
+  erreur d'intégrité.
+
 - `PRODUIT.supplement_personnalisation` est le tarif de la personnalisation,
   **par produit et par unité** — comme `prix_unitaire`, dont il est le voisin
   direct. Il est fixé au catalogue par un administrateur, et **jamais** soumis
