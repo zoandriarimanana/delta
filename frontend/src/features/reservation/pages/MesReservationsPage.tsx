@@ -13,7 +13,7 @@ import { formaterDate } from '@/features/commande/commande.service';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
 import { recupererReservations } from '../reservation.api';
-import { libelleStatut } from '../reservation.service';
+import { libelleCible, libelleStatut } from '../reservation.service';
 import type { Reservation } from '../reservation.types';
 
 export default function MesReservationsPage() {
@@ -78,6 +78,12 @@ export default function MesReservationsPage() {
           <Link to="/formations" className="mt-4 inline-block text-slate-900 underline">
             Parcourir les formations
           </Link>
+          <Link
+            to="/salles"
+            className="mt-4 ml-4 inline-block text-slate-900 underline"
+          >
+            Parcourir les salles
+          </Link>
         </>
       )}
 
@@ -87,9 +93,10 @@ export default function MesReservationsPage() {
             key={reservation.id_reservation}
             className="rounded border border-slate-200 bg-white p-4"
           >
-            <h2 className="font-medium text-slate-900">
+            <h2 className="font-medium text-slate-900">{libelleCible(reservation)}</h2>
+            <p className="mt-1 text-xs text-slate-500">
               Réservation n° {reservation.id_reservation}
-            </h2>
+            </p>
             <p className="mt-1 text-sm text-slate-600">
               <time dateTime={reservation.date_debut}>
                 {formaterDate(reservation.date_debut)}
@@ -98,7 +105,7 @@ export default function MesReservationsPage() {
               {reservation.nombre_personnes} personne(s)
             </p>
             <p className="mt-1 text-sm text-slate-700">
-              {libelleStatut(reservation.statut)}
+              {libelleStatut(reservation.statut, reservation.type_reservation)}
             </p>
             {reservation.avec_hebergement && (
               // Le drapeau dit un souhait, pas une chambre attribuée — la

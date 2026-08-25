@@ -13,9 +13,13 @@ import PanierPage from '@/features/commande/pages/PanierPage';
 import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
 import FormationDetailPage from '@/features/formation/pages/FormationDetailPage';
 import FormationListPage from '@/features/formation/pages/FormationListPage';
+import LogementDetailPage from '@/features/logement/pages/LogementDetailPage';
+import LogementListPage from '@/features/logement/pages/LogementListPage';
 import ProduitDetailPage from '@/features/produit/pages/ProduitDetailPage';
 import ProduitListPage from '@/features/produit/pages/ProduitListPage';
 import MesReservationsPage from '@/features/reservation/pages/MesReservationsPage';
+import SalleDetailPage from '@/features/salle/pages/SalleDetailPage';
+import SalleListPage from '@/features/salle/pages/SalleListPage';
 import MainLayout from '@/layouts/MainLayout';
 import SessionExpiree from '@/lib/SessionExpiree';
 import AccueilPage from '@/pages/AccueilPage';
@@ -33,6 +37,10 @@ export default function App() {
           <Route index element={<AccueilPage />} />
           <Route path="formations" element={<FormationListPage />} />
           <Route path="formations/:idFormation" element={<FormationDetailPage />} />
+          <Route path="salles" element={<SalleListPage />} />
+          <Route path="salles/:idSalle" element={<SalleDetailPage />} />
+          <Route path="logements" element={<LogementListPage />} />
+          <Route path="logements/:idLogement" element={<LogementDetailPage />} />
           <Route path="produits" element={<ProduitListPage />} />
           <Route path="produits/:idProduit" element={<ProduitDetailPage />} />
           <Route path="panier" element={<PanierPage />} />
