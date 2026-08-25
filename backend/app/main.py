@@ -28,6 +28,7 @@ from app.routers import (
     domaine_formation_router,
     formation_router,
     livraison_router,
+    logement_router,
     personnel_auth_router,
     personnel_router,
     produit_router,
@@ -134,3 +135,4 @@ app.include_router(formation_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(session_formation_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(reservation_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(salle_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(logement_router.router, prefix=settings.API_V1_PREFIX)

@@ -111,6 +111,26 @@ SALLE(id_salle, nom, capacite, tarif_horaire, tarif_journee, equipements)
 LOGEMENT(id_logement, type_chambre, capacite, tarif_nuitee, statut)
 ```
 
+- `LOGEMENT.statut` ∈ {Disponible, En_maintenance, Hors_service}. Domaine
+  formel, `CHECK` en base, même traitement que `COMMANDE.statut` et
+  `LIVRAISON.statut`.
+
+  **Il décrit l'état du bien, jamais son occupation.** Aucune valeur
+  « Occupé » : savoir si une chambre est prise à une date donnée se déduit des
+  `RESERVATION` actives couvrant cette période. L'inscrire aussi dans le statut
+  créerait deux sources pour un même fait, qui divergeraient à la première
+  annulation — exactement la raison pour laquelle `SESSION_FORMATION` n'a pas de
+  statut « Complete », et pour laquelle `places_restantes` est un compteur et non
+  un état.
+
+  La distinction est concrète : un logement `Disponible` peut être réservé demain
+  sans cesser d'être disponible ; un logement `En_maintenance` ne peut pas
+  l'être, même si aucune réservation ne le couvre.
+
+  `En_maintenance` et `Hors_service` ne font pas double emploi : l'un dit que le
+  bien revient, l'autre qu'il est retiré de l'offre. Les confondre effacerait la
+  seule information utile au moment de planifier.
+
 - `SALLE.tarif_horaire` et `SALLE.tarif_journee` sont nullables
   **individuellement**, mais **pas ensemble** : une salle en porte toujours au
   moins un.
