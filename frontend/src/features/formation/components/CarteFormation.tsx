@@ -3,7 +3,7 @@
 import { Link } from 'react-router';
 
 import Card from '@/components/Card';
-import { getImageUrl } from '@/lib/images';
+import { getFormationImage } from '@/lib/images';
 import { formaterMontant } from '@/features/commande/commande.service';
 
 import { formaterDuree } from '../formation.service';
@@ -13,7 +13,7 @@ export default function CarteFormation({ formation }: { formation: Formation }) 
   return (
     <Link to={`/formations/${formation.id_formation}`} className="no-underline">
       <Card
-        image={getImageUrl('formation')}
+        image={getFormationImage(formation.titre)}
         title={formation.titre}
         description={`${formaterDuree(formation.duree_heures)}${formation.niveau ? ` • Niveau ${formation.niveau}` : ''}`}
         footer={

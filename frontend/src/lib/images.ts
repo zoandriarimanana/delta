@@ -9,7 +9,7 @@ const UNSPLASH_IMAGES: Record<ImageCategory, string> = {
   formation: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80', // Workshop
   'produit-patisserie': 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&q=80', // Pastry assorted
   'produit-boulangerie': 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&q=80', // Fresh bread
-  salle: 'https://images.unsplash.com/photo-1519671482677-8a6637dd68f1?w=400&q=80', // Conference room
+  salle: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&q=80', // Modern meeting room
   logement: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&q=80', // Bedroom
   default: 'https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=400&q=80', // Workspace
 };
@@ -20,6 +20,13 @@ const PRODUCT_IMAGES: Record<string, string> = {
   'Mille-feuille': 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=400&q=80', // Mille-feuille detail
   'Gâteau d\'anniversaire': 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&q=80', // Decorated pastry
   'Pain de mie maison': 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&q=80', // Artisan bread
+};
+
+// Images distinctes par formation pour variété visuelle
+const FORMATION_IMAGES: Record<string, string> = {
+  'Masterclass pâtisserie': 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80', // Chef teaching
+  'Atelier boulangerie': 'https://images.unsplash.com/photo-1444565541849-ab7f84eaf40f?w=400&q=80', // Bakery workshop
+  'Cuisine créative': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80', // Cooking technique
 };
 
 export function getImageUrl(category: ImageCategory | string): string {
@@ -39,4 +46,21 @@ export function getProductImage(nom: string): string {
   }
   // Par défaut pâtisserie
   return getImageUrl('produit-patisserie');
+}
+
+export function getFormationImage(titre: string): string {
+  // Cherche d'abord une image exacte pour cette formation
+  if (FORMATION_IMAGES[titre]) {
+    return FORMATION_IMAGES[titre]!;
+  }
+  // Sinon, catégorise par mot-clé
+  const lower = titre.toLowerCase();
+  if (lower.includes('boulangerie') || lower.includes('pain')) {
+    return FORMATION_IMAGES['Atelier boulangerie']!;
+  }
+  if (lower.includes('pâtisserie') || lower.includes('pastry')) {
+    return FORMATION_IMAGES['Masterclass pâtisserie']!;
+  }
+  // Par défaut
+  return getImageUrl('formation');
 }
