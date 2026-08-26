@@ -2,6 +2,10 @@
 
 import { Link } from 'react-router';
 
+import Card from '@/components/Card';
+import Button from '@/components/Button';
+import Badge from '@/components/Badge';
+import { getProductImage } from '@/lib/images';
 import { usePanier } from '@/features/commande/commande.hooks';
 
 import { estDisponible, formaterPrix } from '../produit.service';
@@ -16,31 +20,33 @@ export default function ProduitCarte({ produit }: Proprietes) {
   const panier = usePanier();
 
   return (
-    <li className="rounded border border-slate-200 bg-white p-4">
-      <Link
-        to={`/produits/${produit.id_produit}`}
-        className="text-lg font-medium text-slate-900 hover:underline"
-      >
-        {produit.nom}
-      </Link>
-      <p className="mt-1 text-slate-700">{formaterPrix(produit)}</p>
-      <p
-        className={
-          disponible ? 'mt-2 text-sm text-emerald-700' : 'mt-2 text-sm text-slate-500'
+    <Link to={`/produits/${produit.id_produit}`} className="no-underline">
+      <Card
+        image={getProductImage(produit.nom)}
+        title={produit.nom}
+        description={produit.description}
+        footer={
+          <div className="flex items-center justify-between">
+            <span className="text-lg font-semibold text-terracotta">
+              {formaterPrix(produit)}
+            </span>
+            <Badge status={disponible ? 'disponible' : 'epuisee'} />
+          </div>
         }
       >
-        {disponible ? `En stock (${produit.stock_disponible})` : 'Épuisé'}
-      </p>
-      {disponible && (
-        <button
-          type="button"
-          onClick={() => panier.ajouter(produit)}
-          aria-label={`Ajouter ${produit.nom} au panier`}
-          className="mt-3 rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
-        >
-          Ajouter au panier
-        </button>
-      )}
-    </li>
+        {disponible && (
+          <Button
+            variant="primary"
+            onClick={(e) => {
+              e.preventDefault();
+              panier.ajouter(produit);
+            }}
+            className="w-full mt-3"
+          >
+            Ajouter au panier
+          </Button>
+        )}
+      </Card>
+    </Link>
   );
 }

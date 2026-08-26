@@ -6,8 +6,6 @@
 
 import { useState } from 'react';
 
-import EtatRequete from '../components/EtatRequete';
-import FiltreCategories from '../components/FiltreCategories';
 import ProduitCarte from '../components/ProduitCarte';
 import { useCategories, useProduits } from '../produit.hooks';
 import { TOUTES_CATEGORIES, type FiltreCategorie } from '../produit.service';
@@ -19,34 +17,64 @@ export default function ProduitListPage() {
 
   return (
     <section>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-slate-900">Catalogue</h1>
-        {/* Le filtre n'apparaît qu'une fois les catégories chargées : proposer
-            une liste vide laisserait croire qu'il n'y en a aucune. */}
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-serif font-bold text-terracotta mb-2">Catalogue</h1>
+          <p className="text-warm-gray-600">Pâtisserie, boulangerie, confiture et spécialités</p>
+        </div>
         {categories.donnees !== null && (
-          <FiltreCategories
-            categories={categories.donnees}
-            valeur={filtre}
-            onChangement={setFiltre}
-          />
+          <div className="flex items-center gap-3">
+            <label htmlFor="filtre-categorie" className="font-medium text-warm-gray-700">
+              Catégorie:
+            </label>
+            <select
+              id="filtre-categorie"
+              value={filtre === TOUTES_CATEGORIES ? '' : filtre}
+              onChange={(e) => setFiltre(e.target.value === '' ? TOUTES_CATEGORIES : Number(e.target.value) as FiltreCategorie)}
+              className="rounded-lg border-2 border-warm-gray-200 px-3 py-2 bg-white text-warm-gray-700 hover:border-terracotta transition-colors"
+            >
+              <option value="">Tous</option>
+              {categories.donnees.map((cat) => (
+                <option key={cat.id_categorie} value={cat.id_categorie}>
+                  {cat.libelle}
+                </option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
 
-      {/* L'échec du chargement des catégories ne masque pas le catalogue : le
-          filtre disparaît, les produits restent consultables. */}
-      <div className="mt-6">
-        <EtatRequete
-          chargement={produits.chargement}
-          erreur={produits.erreur}
-          estVide={produits.donnees?.length === 0}
-          messageVide="Aucun produit dans cette catégorie."
+      {produits.chargement && (
+        <p role="status" className="text-center py-8 text-warm-gray-500">
+          ⏳ Chargement des produits…
+        </p>
+      )}
+
+      {produits.erreur !== null && (
+        <div
+          role="alert"
+          className="rounded-lg bg-terracotta bg-opacity-10 border-2 border-terracotta p-4 text-terracotta"
         >
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {produits.donnees?.map((produit) => (
-              <ProduitCarte key={produit.id_produit} produit={produit} />
-            ))}
-          </ul>
-        </EtatRequete>
+          ⚠️ {produits.erreur}
+        </div>
+      )}
+
+      {produits.donnees !== null && produits.donnees.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-warm-gray-600 mb-4">Aucun produit dans cette catégorie.</p>
+          <button
+            onClick={() => setFiltre(TOUTES_CATEGORIES)}
+            className="text-terracotta hover:text-burgundy font-medium transition-colors underline"
+          >
+            Voir tous les produits
+          </button>
+        </div>
+      )}
+
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-8">
+        {produits.donnees?.map((produit) => (
+          <ProduitCarte key={produit.id_produit} produit={produit} />
+        ))}
       </div>
     </section>
   );

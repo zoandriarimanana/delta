@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 interface CardProps {
   image?: string;
   title: string;
-  description?: string;
+  description?: string | null;
   children?: ReactNode;
   footer?: ReactNode;
   onClick?: () => void;
