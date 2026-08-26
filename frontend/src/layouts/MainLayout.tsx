@@ -15,36 +15,31 @@ import { useEstConnecte } from '@/lib/useEstConnecte';
 
 const LIENS = [
   { vers: '/', libelle: 'Accueil', exact: true },
-  { vers: '/produits', libelle: 'Catalogue', exact: false },
+  { vers: '/produits', libelle: 'Produits', exact: false },
   { vers: '/formations', libelle: 'Formations', exact: false },
   { vers: '/salles', libelle: 'Salles', exact: false },
   { vers: '/logements', libelle: 'Hébergements', exact: false },
-  { vers: '/connexion', libelle: 'Connexion', exact: false },
 ];
 
 function classeLien({ isActive }: { isActive: boolean }): string {
-  const base = 'rounded px-3 py-2 text-sm font-medium transition-colors';
+  const base = 'px-3 py-2 text-sm font-medium transition-colors rounded-lg';
   return isActive
-    ? `${base} bg-slate-900 text-white`
-    : `${base} text-slate-700 hover:bg-slate-200`;
+    ? `${base} bg-terracotta text-white`
+    : `${base} text-warm-gray-700 hover:bg-warm-gray-100`;
 }
 
 export default function MainLayout() {
-  // La donnée vient d'un hook exposé par `features/commande/` : le layout
-  // l'affiche sans rien savoir de la façon dont le panier est tenu. Aucune
-  // logique métier n'est écrite ici (cf. `docs/architecture.md`).
   const { nombre } = usePanier();
-  // L'état de session vient de `lib/`, pas d'un module métier : il n'appartient
-  // à aucun. Proposer « Mes commandes » à un visiteur non connecté le mènerait
-  // à une page qu'il ne peut pas utiliser.
   const connecte = useEstConnecte();
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <span className="text-xl font-semibold text-slate-900">Delta</span>
-          <nav className="flex gap-2">
+    <div className="flex min-h-screen flex-col bg-cream">
+      <header className="border-b-2 border-warm-gray-200 bg-white shadow-sm">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-6">
+          <NavLink to="/" className="text-2xl font-bold text-terracotta font-serif hover:text-burgundy transition-colors">
+            Delta
+          </NavLink>
+          <nav className="flex gap-1">
             {LIENS.map((lien) => (
               <NavLink
                 key={lien.vers}
@@ -70,24 +65,29 @@ export default function MainLayout() {
               {nombre > 0 && (
                 <span
                   data-testid="compteur-panier"
-                  className="ml-2 rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white"
+                  className="ml-2 inline-block rounded-full bg-terracotta px-2 py-0.5 text-xs font-semibold text-white"
                 >
                   {nombre}
                 </span>
               )}
             </NavLink>
+            {!connecte && (
+              <NavLink to="/connexion" className={classeLien}>
+                Connexion
+              </NavLink>
+            )}
           </nav>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-        {/* Le routeur injecte ici la page correspondant à l'URL. */}
         <Outlet />
       </main>
 
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-5xl px-4 py-4 text-sm text-slate-500">
-          Delta — squelette Sprint 0
+      <footer className="border-t-2 border-warm-gray-200 bg-white mt-12">
+        <div className="mx-auto max-w-5xl px-4 py-8 text-center text-sm text-warm-gray-500">
+          <p className="mb-2">© 2024 Delta — Plateforme de cantine, restauration, formation et hébergement</p>
+          <p className="text-xs">Fait avec passion pour l'artisanat et la qualité</p>
         </div>
       </footer>
     </div>
