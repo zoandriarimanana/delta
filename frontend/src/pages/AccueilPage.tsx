@@ -100,18 +100,17 @@ function ModuleCard({
     }
   };
 
+  const baseClasses = 'p-6 bg-white rounded-xl border-l-4 border-terracotta cursor-pointer transition-all duration-300';
+  const selectedClasses = isSelected ? 'scale-105 shadow-xl' : 'shadow-md hover:shadow-xl hover:-translate-y-1 focus:ring-2 focus:ring-terracotta';
+  const fadeClasses = otherSelected ? 'opacity-60' : '';
+
   return (
     <div
       role="button"
       tabIndex={0}
       onClick={() => onSelect(href)}
       onKeyDown={handleKeyDown}
-      className={`
-        p-6 bg-white rounded-xl border-l-4 border-terracotta cursor-pointer
-        transition-all duration-300 outline-none
-        ${isSelected ? 'scale-105 shadow-xl' : 'shadow-md hover:shadow-xl hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-terracotta focus-visible:ring-offset-2'}
-        ${otherSelected ? 'opacity-60' : ''}
-      `}
+      className={`${baseClasses} ${selectedClasses} ${fadeClasses}`}
     >
       <Icon className="w-8 h-8 text-terracotta mb-3" />
       <h3 className="text-lg font-serif font-bold text-terracotta mb-2">{title}</h3>
