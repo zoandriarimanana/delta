@@ -1,3 +1,5 @@
+import { Croissant, ChefHat, Building2, Bed, ShoppingCart, User } from 'lucide-react';
+
 export default function AccueilPage() {
   return (
     <div className="space-y-12">
@@ -20,51 +22,51 @@ export default function AccueilPage() {
           href="/produits"
           title="Produits"
           description="Pâtisserie, boulangerie, confiture et spécialités"
-          icon="🥐"
+          icon={Croissant}
         />
         <ModuleCard
           href="/formations"
           title="Formations"
           description="Ateliers et sessions de formation culinaire"
-          icon="👨‍🍳"
+          icon={ChefHat}
         />
         <ModuleCard
           href="/salles"
           title="Salles"
           description="Location d'espaces pour vos réunions et événements"
-          icon="🏢"
+          icon={Building2}
         />
         <ModuleCard
           href="/logements"
           title="Hébergement"
           description="Chambres confortables pour vos séjours"
-          icon="🛏️"
+          icon={Bed}
         />
         <ModuleCard
           href="/panier"
           title="Panier"
           description="Passez votre commande en ligne"
-          icon="🛒"
+          icon={ShoppingCart}
         />
         <ModuleCard
           href="/connexion"
           title="Mon compte"
           description="Connectez-vous pour gérer vos réservations"
-          icon="👤"
+          icon={User}
         />
       </section>
 
       {/* CTA section */}
-      <section className="bg-terracotta bg-opacity-10 rounded-xl p-8 text-center">
-        <h2 className="text-2xl font-serif font-bold text-terracotta mb-3">
+      <section className="bg-terracotta rounded-xl p-8 text-center">
+        <h2 className="text-2xl font-serif font-bold text-white mb-3">
           Découvrez notre offre
         </h2>
-        <p className="text-warm-gray-600 mb-6">
+        <p className="text-warm-gray-100 mb-6">
           Explorez notre catalogue de produits, formations et services. Tous les détails vous attendent.
         </p>
         <a
           href="/produits"
-          className="inline-block px-6 py-3 bg-terracotta text-white font-semibold rounded-lg hover:bg-burgundy transition-colors"
+          className="inline-block px-6 py-3 bg-white text-terracotta font-semibold rounded-lg hover:bg-warm-gray-100 transition-colors"
         >
           Commencer à explorer
         </a>
@@ -73,20 +75,22 @@ export default function AccueilPage() {
   );
 }
 
+import type { LucideIcon } from 'lucide-react';
+
 interface ModuleCardProps {
   href: string;
   title: string;
   description: string;
-  icon: string;
+  icon: LucideIcon;
 }
 
-function ModuleCard({ href, title, description, icon }: ModuleCardProps) {
+function ModuleCard({ href, title, description, icon: Icon }: ModuleCardProps) {
   return (
     <a
       href={href}
       className="block p-6 bg-white rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all border-l-4 border-terracotta"
     >
-      <div className="text-3xl mb-3">{icon}</div>
+      <Icon className="w-8 h-8 text-terracotta mb-3" />
       <h3 className="text-lg font-serif font-bold text-terracotta mb-2">{title}</h3>
       <p className="text-sm text-warm-gray-600">{description}</p>
     </a>

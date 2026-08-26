@@ -37,7 +37,7 @@ export default function Badge({ status, children }: BadgeProps) {
   const label = children || statusLabels[normalizedStatus] || status;
 
   return (
-    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${classes.bg} ${classes.text}`}>
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap ${classes.bg} ${classes.text}`}>
       {label}
     </span>
   );

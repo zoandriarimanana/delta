@@ -86,7 +86,7 @@ export default function MainLayout() {
 
       <footer className="border-t-2 border-warm-gray-200 bg-white mt-12">
         <div className="mx-auto max-w-5xl px-4 py-8 text-center text-sm text-warm-gray-500">
-          <p className="mb-2">© 2024 Delta — Plateforme de cantine, restauration, formation et hébergement</p>
+          <p className="mb-2">© {new Date().getFullYear()} Delta — Plateforme de cantine, restauration, formation et hébergement</p>
           <p className="text-xs">Fait avec passion pour l'artisanat et la qualité</p>
         </div>
       </footer>
