@@ -131,11 +131,16 @@ d'origine — voir `docs/mld.md`.
       rien ne garantit.
       — **Synchronisation LIVRAISON → COMMANDE** à sens unique : seul le
       passage à `Livree` fait avancer `COMMANDE.statut`. `Echouee` ne bascule
-      pas vers `Annulee` — relancer, rembourser ou annuler sont des décisions
-      humaines, et ces actions relèvent d'un futur module de gestion
-      administrative des commandes. Manque **volontaire**, pas une dette : #25
-      se contente de ne pas casser la cohérence en l'attendant. Règle écrite
-      dans `docs/architecture.md`.
+      pas vers `Annulee` — **relancer la livraison, rembourser, annuler** sont
+      des décisions humaines. Manque **volontaire**, pas une dette : #25 se
+      contente de ne pas casser la cohérence en l'attendant. Règle écrite dans
+      `docs/architecture.md`.
+      — Ces trois actions sont **nommées au Sprint 10**, sous « Tableau de bord
+      commandes/réservations/abonnements ». Le rattachement était jusqu'ici
+      implicite, ce qui rendait « manque volontaire » et « dette oubliée »
+      indiscernables : une commande dont la livraison a échoué reste figée dans
+      un état que personne ne peut faire évoluer, et c'est le comportement
+      voulu **tant que quelqu'un finit par pouvoir agir**.
 - [x] Suivi de statut livraison, backend **et** React — `LivraisonPublique`
       n'expose que le statut et les dates, jamais le livreur ni l'adresse, et
       `features/livraison/` ne déclare même pas ces champs. La page publique
@@ -224,8 +229,31 @@ d'origine — voir `docs/mld.md`.
       — Les refus **409** (créneau déjà pris) et **422** (capacité dépassée)
       sont repris **tels quels** : ils disent au client quoi corriger.
 
-## Sprint 6 — Restauration sur place
+## Sprint 6 — Couplage hébergement & restauration sur place
 
+Deux sujets sans rapport métier dans un même sprint, et c'est assumé : l'ordre
+du roadmap suit les **dépendances techniques**, pas l'unité thématique. Le
+couplage ne pouvait pas venir plus tôt — il dépend du mécanisme de chevauchement
+livré par #47 — et le titre le nomme plutôt que de le laisser deviner du contenu
+du Milestone.
+
+- [ ] Couplage `RESERVATION` Formation ↔ `LOGEMENT` — **en premier**
+      — Suite planifiée de #37, débloquée par #47. `avec_hebergement` n'est
+      aujourd'hui qu'un **drapeau informatif** : aucune chambre n'est réservée
+      ni même vérifiée disponible.
+      — Passe par **deux `RESERVATION` liées**, jamais par une seule : la
+      contrainte n°2 interdit qu'une même ligne porte `#id_session` et
+      `#id_logement`. Le MLD ne porte **aucune colonne** pour ce lien
+      aujourd'hui — c'est cette tâche qui l'ajoute, donc elle qui introduit la
+      migration. D'où sa place en tête : les deux tâches `RESERVATION`
+      suivantes se rebasent dessus plutôt que l'inverse.
+      — **Direction retenue** (arbitrée au Sprint 5, en commentaire de #47, à
+      reconfirmer en ouvrant la tâche) : quand aucune chambre n'est libre, la
+      réservation de formation est **acceptée quand même**, `avec_hebergement`
+      reste non honoré, un administrateur assure le suivi. Aucun nouvel état,
+      pas de file d'attente. Même raisonnement que `LIVRAISON.Echouee` en #25 :
+      refuser trancherait à la place de l'administrateur, et obligerait en
+      prime à rendre la place tout juste décrémentée.
 - [ ] `RESERVATION` type = Table
 - [ ] Lien `RESERVATION → COMMANDE` (le client réserve, puis commande sur place)
 - [ ] Interface simplifiée côté personnel pour prise de commande sur place
@@ -251,6 +279,15 @@ d'origine — voir `docs/mld.md`.
 - [ ] Interface complète de gestion `PERSONNEL` (tableau de bord — le CRUD de base
       est déjà fait au sprint 3, ne pas le refaire)
 - [ ] Tableau de bord commandes/réservations/abonnements
+      — Porte les **trois actions administratives** laissées en suspens par #25
+      (Sprint 3) sur une livraison `Echouee` : **relancer la livraison**,
+      **rembourser**, **annuler la commande**. Elles n'existent nulle part
+      aujourd'hui, et c'était un manque volontaire adossé à cette case — un
+      tableau de bord n'est pas qu'un outil de lecture, il porte aussi ces
+      écritures.
+      — Rappel de la règle de #25 : la synchronisation reste à **sens unique**.
+      Ces actions écrivent `COMMANDE.statut` depuis une décision humaine, elles
+      ne rétablissent pas une propagation automatique depuis `LIVRAISON`.
 
 ---
 

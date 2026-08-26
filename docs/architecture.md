@@ -477,9 +477,13 @@ trancherait à la place de l'administrateur et effacerait la distinction entre
 deux statuts terminaux distincts.
 
 Ces trois actions **n'existent pas encore**, et c'est un manque volontaire, pas
-une dette : elles relèvent d'un module de gestion administrative des commandes,
-hors périmètre du sprint 3. Ne rien faire ici, c'est ne pas casser la cohérence
-en l'attendant.
+une dette : elles sont nommées au **Sprint 10**, sous « Tableau de bord
+commandes/réservations/abonnements », et sortent du périmètre du sprint 3. Ne
+rien faire ici, c'est ne pas casser la cohérence en l'attendant.
+
+Le rattachement est écrit noir sur blanc parce qu'il était jusqu'ici implicite :
+tant qu'aucune case ne les porte, « manque volontaire » et « dette oubliée » se
+ressemblent trop pour qu'on les distingue six mois plus tard.
 
 **Aucun autre chemin ne fait cette transition.** `COMMANDE.statut` n'est écrit
 qu'à deux endroits dans toute l'application : à la création, où il vaut
