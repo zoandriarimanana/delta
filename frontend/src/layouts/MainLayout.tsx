@@ -8,7 +8,9 @@
  * (cf. `docs/architecture.md`).
  */
 
+import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router';
+import { Menu, X } from 'lucide-react';
 
 import { usePanier } from '@/features/commande/commande.hooks';
 import { useEstConnecte } from '@/lib/useEstConnecte';
@@ -28,9 +30,19 @@ function classeLien({ isActive }: { isActive: boolean }): string {
     : `${base} text-warm-gray-700 hover:bg-warm-gray-100`;
 }
 
+function classeLienMobile({ isActive }: { isActive: boolean }): string {
+  const base = 'block px-3 py-2 text-base font-medium transition-colors rounded-lg w-full text-left';
+  return isActive
+    ? `${base} bg-terracotta text-white`
+    : `${base} text-warm-gray-700 hover:bg-warm-gray-100`;
+}
+
 export default function MainLayout() {
   const { nombre } = usePanier();
   const connecte = useEstConnecte();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const closeMenu = () => setMenuOpen(false);
 
   return (
     <div className="flex min-h-screen flex-col bg-cream">
@@ -39,7 +51,9 @@ export default function MainLayout() {
           <NavLink to="/" className="text-2xl font-bold text-terracotta font-serif hover:text-burgundy transition-colors">
             Delta
           </NavLink>
-          <nav className="flex gap-1">
+
+          {/* Desktop nav */}
+          <nav className="hidden md:flex gap-1">
             {LIENS.map((lien) => (
               <NavLink
                 key={lien.vers}
@@ -77,7 +91,66 @@ export default function MainLayout() {
               </NavLink>
             )}
           </nav>
+
+          {/* Mobile hamburger button */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden p-2 text-warm-gray-700 hover:bg-warm-gray-100 rounded-lg transition-colors"
+            aria-label={menuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={menuOpen}
+          >
+            {menuOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
+          </button>
         </div>
+
+        {/* Mobile menu */}
+        {menuOpen && (
+          <nav className="md:hidden border-t border-warm-gray-200 bg-white px-4 py-4 flex flex-col gap-2">
+            {LIENS.map((lien) => (
+              <NavLink
+                key={lien.vers}
+                to={lien.vers}
+                end={lien.exact}
+                className={classeLienMobile}
+                onClick={closeMenu}
+              >
+                {lien.libelle}
+              </NavLink>
+            ))}
+            {connecte && (
+              <NavLink to="/commandes" className={classeLienMobile} onClick={closeMenu}>
+                Mes commandes
+              </NavLink>
+            )}
+            {connecte && (
+              <NavLink to="/reservations" className={classeLienMobile} onClick={closeMenu}>
+                Mes réservations
+              </NavLink>
+            )}
+            <NavLink to="/panier" className={classeLienMobile} onClick={closeMenu}>
+              <span className="flex items-center justify-between">
+                <span>Panier</span>
+                {nombre > 0 && (
+                  <span
+                    data-testid="compteur-panier"
+                    className="ml-2 inline-block rounded-full bg-terracotta px-2 py-0.5 text-xs font-semibold text-white"
+                  >
+                    {nombre}
+                  </span>
+                )}
+              </span>
+            </NavLink>
+            {!connecte && (
+              <NavLink to="/connexion" className={classeLienMobile} onClick={closeMenu}>
+                Connexion
+              </NavLink>
+            )}
+          </nav>
+        )}
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
