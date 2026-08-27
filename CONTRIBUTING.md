@@ -27,6 +27,37 @@ hotfix/livraison-statut-bloque
 Règle d'or : **une branche = un seul module métier**, sauf pour les tâches du Sprint 0
 (fondations transverses).
 
+### Point de départ obligatoire : `origin/develop`, jamais la `develop` locale
+
+```bash
+git fetch origin && git checkout -b feature/sprintN-module-description origin/develop
+```
+
+Et **non** `git checkout -b <branche> develop`.
+
+La différence n'est pas cosmétique. Une `develop` locale peut diverger
+**silencieusement** — travail exploratoire non poussé, autre outil, autre
+session ouverte sur le même dépôt — et rien ne le signale au moment de brancher.
+La nouvelle branche embarque alors ces commits, la PR les présente comme siens,
+et le mélange n'est attrapé qu'en aval, par la CI, sur des fichiers que l'auteur
+n'a jamais touchés.
+
+C'est arrivé : une PR de documentation d'une ligne s'est retrouvée à porter onze
+commits de refonte visuelle et à échouer sur `prettier --check`, pour du code
+qui n'était pas le sien. La CI a fait son travail — elle a arrêté le mélange
+avant `develop` — mais le diagnostic a coûté plus cher que la règle.
+
+Partir de `origin/develop` rend la divergence **impossible à embarquer par
+accident** : la branche naît exactement de ce que le dépôt distant contient, qui
+est aussi la base contre laquelle la PR sera comparée.
+
+Avant d'ouvrir une PR, vérifier ce qu'elle apporte réellement :
+
+```bash
+git log --oneline origin/develop..HEAD    # doit ne montrer que vos commits
+git diff --stat origin/develop..HEAD      # doit ne montrer que vos fichiers
+```
+
 ---
 
 ## 2. Convention de commits (Conventional Commits)
