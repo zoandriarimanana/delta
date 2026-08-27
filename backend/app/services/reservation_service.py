@@ -157,19 +157,32 @@ class ReservationService:
                 f"session, {donnees.nombre_personnes} demandée(s)."
             )
 
-        reservation = self._creer_ligne(donnees, client)
+        reservation = self._nouvelle_ligne(donnees, client)
+        self._attacher_hebergement(reservation, client)
+        self.db.commit()
         # Le décrément est fait en SQL : l'objet en session porte un compteur
         # périmé tant qu'on ne le rafraîchit pas.
         self.db.refresh(session)
         return reservation
 
     def _creer_ligne(self, donnees: ReservationCreate, client: Client) -> Reservation:
-        """Écrit la ligne et commite. Commun aux trois types.
+        """Écrit la ligne et commite. Chemin des types sans hébergement."""
+        reservation = self._nouvelle_ligne(donnees, client)
+        self.db.commit()
+        return reservation
+
+    def _nouvelle_ligne(
+        self, donnees: ReservationCreate, client: Client
+    ) -> Reservation:
+        """Écrit la ligne **sans commiter**. Commun aux quatre types.
+
+        La frontière transactionnelle appartient à l'appelant : une réservation
+        de formation et son hébergement se valident ensemble ou pas du tout.
 
         `statut` et `id_client` ne viennent jamais de la requête : le premier est
         un cycle de vie, le second est déduit du jeton.
         """
-        reservation = self.reservations.create(
+        return self.reservations.create(
             {
                 "type_reservation": donnees.type_reservation,
                 "date_debut": donnees.date_debut,
@@ -183,8 +196,72 @@ class ReservationService:
                 "avec_hebergement": donnees.avec_hebergement,
             }
         )
-        self.db.commit()
-        return reservation
+
+    # --- Hébergement lié à une formation --------------------------------------
+
+    def _attacher_hebergement(self, formation: Reservation, client: Client) -> None:
+        """Réserve une chambre pour une réservation de formation, si possible.
+
+        **L'échec n'est pas une erreur.** Quand aucune chambre n'est libre, la
+        réservation de formation est acceptée quand même : `avec_hebergement`
+        reste un souhait non honoré, et un administrateur assure le suivi.
+
+        Refuser trancherait à la place de l'administrateur — et obligerait en
+        prime à rendre la place de formation tout juste décrémentée, c'est-à-dire
+        à défaire une écriture réussie pour cause d'échec d'une écriture
+        accessoire. Même raisonnement que `LIVRAISON.Echouee` en #25, qui ne
+        bascule pas la commande vers `Annulee`.
+
+        Aucun état nouveau n'est inventé : pas de file d'attente, pas de statut
+        « hébergement en attente ». Le drapeau dit déjà un souhait, et un
+        souhait non satisfait reste un souhait.
+
+        **Deux lignes et jamais une seule** : le `CHECK` d'exclusivité interdit
+        qu'une même ligne porte `#id_session` et `#id_logement`.
+
+        Les dates sont **celles de la session**. Le décalage d'une nuit — arrivée
+        la veille pour une formation qui commence tôt — est une évolution
+        possible et non une règle que quelqu'un ait énoncée : l'inventer ici
+        reviendrait à décider à la place du métier.
+        """
+        if not formation.avec_hebergement:
+            return
+
+        logement = self.logements.premier_libre(
+            formation.date_debut, formation.date_fin, formation.nombre_personnes
+        )
+        if logement is None:
+            return
+
+        try:
+            # SAVEPOINT : deux formations simultanées peuvent lire la même
+            # chambre libre, et c'est la contrainte d'exclusion qui tranche à
+            # l'écriture. Sans le point de reprise, le `rollback` emporterait
+            # aussi la réservation de formation et le décrément de places —
+            # une écriture réussie défaite par l'échec d'une écriture
+            # accessoire, exactement ce que la règle interdit.
+            with self.db.begin_nested():
+                hebergement = self.reservations.create(
+                    {
+                        "type_reservation": TypeReservation.LOGEMENT,
+                        "date_debut": formation.date_debut,
+                        "date_fin": formation.date_fin,
+                        "nombre_personnes": formation.nombre_personnes,
+                        "statut": StatutReservation.EN_ATTENTE,
+                        "id_client": client.id_client,
+                        "id_logement": logement.id_logement,
+                        "avec_hebergement": False,
+                    }
+                )
+                formation.id_reservation_hebergement = hebergement.id_reservation
+                self.db.flush()
+        except IntegrityError as erreur:
+            if not _viole_exclusion(erreur):
+                raise
+            # La chambre a été prise entre la lecture et l'écriture : le cas se
+            # traite comme « aucune chambre libre », puisque c'est ce qu'il est
+            # devenu. Le lien n'a pas été posé, la formation reste valide.
+            formation.id_reservation_hebergement = None
 
     # --- Salles et logements --------------------------------------------------
 
@@ -345,10 +422,39 @@ class ReservationService:
 
         if statut is StatutReservation.ANNULEE:
             self._restituer(reservation)
+            self._annuler_hebergement(reservation)
 
         reservation.statut = statut
         self.db.commit()
         return reservation
+
+    def _annuler_hebergement(self, formation: Reservation) -> None:
+        """Annule l'hébergement lié, dans la **même transaction**.
+
+        Laisser une chambre retenue pour une formation annulée immobiliserait
+        une ressource **sans raison active** — même principe que la restitution
+        des places, et que le prédicat des contraintes d'exclusion, qui écarte
+        les réservations annulées pour ne pas condamner un créneau à jamais.
+
+        **La propagation est unidirectionnelle.** Annuler l'hébergement seul ne
+        touche pas à la formation : un stagiaire qui se loge ailleurs garde sa
+        place. Même forme que la synchronisation `LIVRAISON → COMMANDE`, où
+        rien ne remonte non plus.
+
+        Idempotente, comme la restitution : un hébergement déjà annulé n'est pas
+        réécrit, et une formation sans hébergement ne fait rien.
+
+        Ne commite pas : l'appelant écrit le statut de la formation dans la même
+        transaction. Annuler la chambre sans annuler la formation laisserait le
+        client sans logement sur une formation toujours valide.
+        """
+        hebergement = formation.hebergement
+        if hebergement is None:
+            return
+        if hebergement.statut is StatutReservation.ANNULEE:
+            return
+        hebergement.statut = StatutReservation.ANNULEE
+        self.db.flush()
 
     def _restituer(self, reservation: Reservation) -> None:
         """Rend les places d'une réservation qui cesse d'en occuper.
@@ -376,8 +482,20 @@ class ReservationService:
 
         `STATUTS_OCCUPANTS` fait que l'archivage d'une réservation déjà annulée
         ne crédite rien : elle avait déjà rendu sa place.
+
+        **L'archivage se propage à l'hébergement lié.** Un archivage est un
+        `UPDATE` : ni le `ON DELETE RESTRICT` de la clé étrangère ni aucun
+        `CASCADE` ne se déclenchent, la propagation revient donc au service —
+        règle transverse de `docs/roadmap.md`. Sans elle, la chambre resterait
+        occupée par une formation qui n'existe plus pour les lectures
+        courantes, et son créneau serait condamné : le prédicat de la contrainte
+        d'exclusion écarte `supprime_le IS NOT NULL`, mais seulement sur la
+        ligne qu'on archive.
         """
         reservation = self.obtenir(id_reservation)
         self._restituer(reservation)
+        hebergement = reservation.hebergement
+        if hebergement is not None and hebergement.supprime_le is None:
+            self.reservations.delete(hebergement)
         self.reservations.delete(reservation)
         self.db.commit()

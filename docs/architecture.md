@@ -625,6 +625,35 @@ délibérément des champs interdits pour vérifier que le composant ne les rend
 Un statut inconnu — API en avance sur le frontend — retombe sur un libellé neutre
 plutôt que sur un identifiant technique brut ou une page vide.
 
+### L'hébergement d'une formation est un second enregistrement
+
+Le `CHECK` d'exclusivité interdit qu'une même `RESERVATION` porte à la fois
+`#id_session` et `#id_logement`. Le couplage passe donc par **deux lignes**,
+reliées par `RESERVATION.#id_reservation_hebergement`, porté par celle de
+formation. Ce n'est pas un choix de confort : c'est la contrainte qui l'impose.
+
+**Le service choisit la chambre, le client ne la choisit pas.** La première
+`Disponible`, libre sur les dates de la session et assez grande. Lui laisser le
+choix supposerait de publier une vue de disponibilité qu'aucun endpoint n'expose
+— une API inventée pour un accessoire.
+
+**Aucune chambre libre n'est pas une erreur.** La réservation de formation est
+acceptée quand même, `avec_hebergement` reste un souhait non honoré, et
+`#id_reservation_hebergement` reste `NULL`. Refuser trancherait à la place de
+l'administrateur, et obligerait à rendre la place tout juste décrémentée : une
+écriture réussie défaite par l'échec d'une écriture accessoire. Même
+raisonnement que `LIVRAISON.Echouee`, qui ne bascule pas la commande vers
+`Annulee`.
+
+C'est aussi pourquoi l'attribution se fait dans un **point de reprise**
+(`SAVEPOINT`) : deux formations simultanées peuvent lire la même chambre libre,
+et c'est la contrainte d'exclusion qui tranche à l'écriture. Sans lui, le
+`rollback` emporterait la réservation de formation et son décrément.
+
+**La propagation d'annulation est unidirectionnelle** : annuler la formation
+annule l'hébergement, jamais l'inverse. Un stagiaire qui se loge ailleurs garde
+sa place. Même forme que la synchronisation `LIVRAISON → COMMANDE`.
+
 ### Un compteur ne se lit pas avant de s'écrire
 
 `SESSION_FORMATION.places_restantes` et `PRODUIT.stock_disponible` posent le même
