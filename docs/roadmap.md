@@ -289,6 +289,20 @@ du Milestone.
       Ces actions écrivent `COMMANDE.statut` depuis une décision humaine, elles
       ne rétablissent pas une propagation automatique depuis `LIVRAISON`.
 
+**Non planifié, à rattacher ici ou ailleurs — voir #58.** L'**administration du
+catalogue produit** n'a aucune interface React : le CRUD API existe et est
+protégé par `get_current_personnel_administrateur` depuis le Sprint 3, mais
+aucun écran ne le consomme, et un administrateur en est réduit à `curl`. Les
+deux cases ci-dessus nomment le tableau de bord `PERSONNEL` et celui des
+commandes — pas le catalogue.
+
+Le morceau réel n'est d'ailleurs pas le formulaire produit mais le **socle
+d'authentification `PERSONNEL` côté frontend**, qui n'existe pas : `lib/
+tokenStorage.ts` ne connaît qu'un seul jeton, sans la revendication `type` qui
+sépare les deux populations depuis #23. Ce socle est la dépendance commune de
+tout écran réservé au personnel, celui du Sprint 10 compris — d'où la note ici
+plutôt qu'une case inventée dans un sprint qui ne l'a pas prévue.
+
 ---
 
 ## Règle transverse — suppression d'une entité référencée
