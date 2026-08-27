@@ -4,7 +4,7 @@ Ordre de priorisation : dépendances techniques d'abord, puis cœur transactionn
 puis modules métier du plus généraliste au plus spécifique, paiement en ligne et
 back-office avancé en dernier.
 
-**Sprint courant : Sprint 5.** Mettre à jour cette ligne à chaque changement de sprint.
+**Sprint courant : Sprint 6.** Mettre à jour cette ligne à chaque changement de sprint.
 
 Avant de commencer une tâche : vérifier la Definition of Ready dans `CONTRIBUTING.md`.
 Avant de clore une tâche : vérifier la Definition of Done dans `CONTRIBUTING.md`.
@@ -247,16 +247,82 @@ du Milestone.
       aujourd'hui — c'est cette tâche qui l'ajoute, donc elle qui introduit la
       migration. D'où sa place en tête : les deux tâches `RESERVATION`
       suivantes se rebasent dessus plutôt que l'inverse.
-      — **Direction retenue** (arbitrée au Sprint 5, en commentaire de #47, à
-      reconfirmer en ouvrant la tâche) : quand aucune chambre n'est libre, la
-      réservation de formation est **acceptée quand même**, `avec_hebergement`
-      reste non honoré, un administrateur assure le suivi. Aucun nouvel état,
-      pas de file d'attente. Même raisonnement que `LIVRAISON.Echouee` en #25 :
-      refuser trancherait à la place de l'administrateur, et obligerait en
-      prime à rendre la place tout juste décrémentée.
+      — **Direction retenue, confirmée en ouvrant #62** : quand aucune chambre
+      n'est libre, la réservation de formation est **acceptée quand même**,
+      `avec_hebergement` reste non honoré, un administrateur assure le suivi.
+      Aucun nouvel état, pas de file d'attente. Même raisonnement que
+      `LIVRAISON.Echouee` en #25 : refuser trancherait à la place de
+      l'administrateur, et obligerait en prime à rendre la place tout juste
+      décrémentée.
+      — Le lien est porté par la **ligne de formation**
+      (`#id_reservation_hebergement`) : la formation est ce que le client
+      réserve, l'hébergement en est l'accessoire. La chambre est choisie
+      **côté serveur, la première libre** — laisser choisir supposerait
+      d'exposer une disponibilité qu'aucun endpoint ne publie. Les dates sont
+      **celles de la session** ; le décalage d'une nuit pour une arrivée la
+      veille est une évolution future, pas une règle que quelqu'un ait énoncée.
+      — **L'annulation de la formation annule l'hébergement**, dans la même
+      transaction : laisser une chambre retenue pour une formation annulée
+      immobiliserait une ressource sans raison active. L'inverse n'est pas vrai
+      — annuler le seul hébergement reste possible, le stagiaire pouvant se
+      loger ailleurs.
+- [ ] Socle d'authentification `PERSONNEL` côté frontend — **en deuxième**
+      — Sujet **transverse**, sa propre PR, isolément revertible : ce n'est pas
+      de la construction sur du vide mais la modification d'un socle en service.
+      — Le backend sait déjà tout faire depuis #23 — revendication `type` dans
+      le jeton, `get_current_personnel`, `/auth/personnel/connexion`. C'est le
+      **frontend** qui ignore la distinction : `lib/tokenStorage.ts` ne connaît
+      qu'un seul jeton, sans notion de population.
+      — `CLIENT` et `PERSONNEL` ont des **clés primaires qui se recouvrent**.
+      Ranger les deux jetons au même endroit sans les distinguer rouvrirait
+      côté navigateur la confusion d'identité que le backend a fermée.
+      — **Décision actée : un seul jeton typé**, et non deux jetons
+      coexistants. Deux jetons obligeraient l'intercepteur HTTP à savoir quelle
+      population une requête vise, donc à porter une notion métier que
+      `docs/architecture.md` lui interdit. C'est le même principe que la
+      revendication `type` côté backend : un mécanisme qui porte le type,
+      plutôt que deux mécanismes parallèles. Un salarié ne peut donc pas être
+      simultanément client sur le même navigateur — confort perdu, contrainte
+      d'architecture préservée.
+      — **Aucun écran métier** dans cette tâche : le socle et une page de
+      connexion, rien d'autre. Et **aucune autorisation** — le frontend
+      n'affiche pas de droits, il affiche ce que le serveur autorise ; masquer
+      un bouton est une commodité, jamais une garantie.
+      — Dépendance de la dernière tâche du sprint, et réutilisée ensuite par
+      tout le back-office du Sprint 10 ainsi que par l'écran d'administration
+      du catalogue relevé en #58.
 - [ ] `RESERVATION` type = Table
+      — Seul type qui ne porte **aucune cible**. La contrainte n°2 l'autorise,
+      puisqu'elle dit « au plus une » et non « exactement une ».
+      — **Aucune contrainte d'exclusion n'est possible**, et c'est assumé :
+      `EXCLUDE USING gist` a besoin d'une colonne désignant le bien, une
+      réservation de table n'en a aucune. Il n'y a littéralement rien à
+      verrouiller. Un test le nomme explicitement, pour que l'absence se lise
+      comme un choix et non comme un oubli.
+      — **Décision actée : aucune table physique n'est modélisée.** Le MLD n'en
+      porte pas ; en inventer une ici la ferait naître d'un besoin supposé. Si
+      le besoin se manifeste, une entité `TABLE` sera une évolution propre — et
+      rendra alors la contrainte d'exclusion possible.
 - [ ] Lien `RESERVATION → COMMANDE` (le client réserve, puis commande sur place)
+      — `COMMANDE.#id_reservation` **existe déjà** au MLD et en base : aucune
+      migration attendue, à confirmer en inspectant la base plutôt qu'en s'y
+      fiant.
+      — **Décision actée : la commande est acceptée si la réservation est
+      `Confirmee` ou `Honoree`**, refusée sur `En_attente` et `Annulee`. Le MLD
+      disait « honorée », mais l'ordre chronologique et l'ordre des statuts ne
+      coïncident pas : on commande **pendant** le service, quand la réservation
+      est encore `Confirmee` — exiger `Honoree` rendrait la règle inapplicable
+      au moment même où elle sert.
+      — Une référence invalide donne **422** et non 404 : elle vient du corps,
+      pas de l'URL.
 - [ ] Interface simplifiée côté personnel pour prise de commande sur place
+      — **Dépend du socle d'authentification** ci-dessus : premier écran du
+      projet réservé au personnel.
+      — Commande `Sur_place`, **sans** `adresse_livraison`, donc **sans
+      `LIVRAISON`** — c'est la présence de l'adresse, et elle seule, qui la
+      déclenche. Statut terminal `Servie`, lu dans `STATUT_TERMINAL`.
+      — Le jeton du salarié **n'identifie pas l'acheteur** : la commande est
+      passée en mode invité, ou rattachée à un client que le salarié nomme.
 
 ## Sprint 7 — Abonnement cantine (B2B)
 
