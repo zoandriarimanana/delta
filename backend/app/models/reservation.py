@@ -112,6 +112,15 @@ class Reservation(SoftDeleteMixin, Base):
         ),
         _exclusion("id_salle", "salle_sans_chevauchement"),
         _exclusion("id_logement", "logement_sans_chevauchement"),
+        CheckConstraint(
+            "id_reservation_hebergement IS NULL" " OR type_reservation = 'Formation'",
+            name="hebergement_lie_a_une_formation",
+        ),
+        CheckConstraint(
+            "id_reservation_hebergement IS NULL"
+            " OR id_reservation_hebergement <> id_reservation",
+            name="hebergement_distinct_de_la_formation",
+        ),
     )
 
     id_reservation: Mapped[int] = mapped_column(primary_key=True)
@@ -151,6 +160,26 @@ class Reservation(SoftDeleteMixin, Base):
     )
     id_salle: Mapped[int | None] = mapped_column(ForeignKey("salle.id_salle"))
     id_logement: Mapped[int | None] = mapped_column(ForeignKey("logement.id_logement"))
+    #: Réservation de type `Logement` attachée à cette réservation de formation.
+    #:
+    #: Le couplage passe par **deux lignes** et jamais par une seule : le
+    #: `CHECK` d'exclusivité (contrainte n°2) interdit qu'une même ligne porte à
+    #: la fois `#id_session` et `#id_logement`.
+    #:
+    #: Le lien est porté par la ligne de **formation**, pas par celle du
+    #: logement : la formation est ce que le client réserve, l'hébergement en
+    #: est l'accessoire. Le porter à l'envers le ferait tenir par la ligne la
+    #: plus susceptible d'être annulée seule.
+    #:
+    #: `UNIQUE` **globale** et non partielle : elle exprime une propriété
+    #: structurelle — une réservation d'hébergement appartient à au plus une
+    #: formation — et non une identité métier. Rendue partielle, la table
+    #: pourrait porter cinq liens archivés et un actif vers la même chambre.
+    #: Même raisonnement que `LIVRAISON.#id_commande` (cf. `docs/mld.md`).
+    id_reservation_hebergement: Mapped[int | None] = mapped_column(
+        ForeignKey("reservation.id_reservation", ondelete="RESTRICT"),
+        unique=True,
+    )
 
     client: Mapped[Client] = relationship(back_populates="reservations")
     session: Mapped[SessionFormation | None] = relationship(
@@ -158,5 +187,16 @@ class Reservation(SoftDeleteMixin, Base):
     )
     salle: Mapped[Salle | None] = relationship(back_populates="reservations")
     logement: Mapped[Logement | None] = relationship(back_populates="reservations")
+    #: Auto-référence : `remote_side` désigne le côté « un » de la relation,
+    #: sans quoi SQLAlchemy ne peut pas savoir lequel des deux bouts porte la
+    #: clé étrangère sur une table qui se référence elle-même.
+    hebergement: Mapped[Reservation | None] = relationship(
+        back_populates="formation_liee",
+        remote_side="Reservation.id_reservation",
+    )
+    formation_liee: Mapped[Reservation | None] = relationship(
+        back_populates="hebergement",
+        uselist=False,
+    )
     commandes: Mapped[list[Commande]] = relationship(back_populates="reservation")
     avis: Mapped[list[Avis]] = relationship(back_populates="reservation")

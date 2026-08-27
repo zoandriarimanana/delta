@@ -586,23 +586,334 @@ def test_hebergement_refuse_hors_formation(
         )
 
 
-def test_aucun_logement_n_est_reserve(
+# --- Couplage formation <-> logement (#62) ------------------------------------
+#
+# Ces tests remplacent `test_aucun_logement_n_est_reserve`, qui figeait l'état
+# antérieur — « le drapeau dit un souhait, pas une attribution » — et portait
+# dans sa docstring l'instruction de le reprendre le jour où le couplage
+# arriverait. Ce jour est celui-ci : le test n'est pas affaibli, il est remplacé
+# par son successeur, qui vérifie le comportement inverse.
+#
+# **Capacité distinctive.** La base de développement porte d'autres logements,
+# et `premier_libre` retient le plus petit identifiant : sans discriminant, les
+# tests dépendraient de données qu'ils ne créent pas. Une capacité que rien
+# d'autre n'atteint isole la chambre de sonde sans toucher au reste.
+
+CAPACITE_SONDE = 97
+
+
+def _chambre(db: Session, capacite: int = CAPACITE_SONDE) -> Logement:
+    """Chambre libre, dotée d'une capacité qu'aucune autre n'atteint."""
+    logement = Logement(
+        type_chambre=f"Sonde {uuid4().hex[:6]}",
+        capacite=capacite,
+        tarif_nuitee=Decimal("80000.00"),
+        statut=StatutLogement.DISPONIBLE,
+    )
+    db.add(logement)
+    db.commit()
+    return logement
+
+
+def _session_logeable(db: Session) -> SessionFormation:
+    """Session dont la formation propose l'hébergement, assez large pour la
+    sonde."""
+    session = _session_avec_hebergement(db, propose=True)
+    db.execute(
+        update(SessionFormation)
+        .where(SessionFormation.id_session == session.id_session)
+        .values(places_restantes=CAPACITE_SONDE + 1)
+    )
+    db.commit()
+    db.refresh(session)
+    return session
+
+
+def _demande_logeable(id_session: int) -> ReservationCreate:
+    return ReservationCreate(
+        type_reservation=TypeReservation.FORMATION,
+        date_debut=DEBUT,
+        date_fin=FIN,
+        nombre_personnes=CAPACITE_SONDE,
+        id_session=id_session,
+        avec_hebergement=True,
+    )
+
+
+def test_une_chambre_libre_cree_une_seconde_reservation_liee(
     service: ReservationService, client: Client, db: Session
 ) -> None:
-    """Le drapeau dit un souhait, pas une attribution.
+    """Le couplage passe par **deux lignes**, jamais par une seule.
 
-    Le couplage réel — seconde `RESERVATION` de type `Logement`, liée, avec
-    contrôle de chevauchement — viendra après le sprint 5. Ce test fige l'état
-    actuel pour que l'écart soit visible le jour où il changera.
+    Le `CHECK` d'exclusivité interdit qu'une même ligne porte `#id_session` et
+    `#id_logement` : c'est ce qui impose la seconde ligne.
     """
-    session = _session_avec_hebergement(db, propose=True)
+    chambre = _chambre(db)
+    session = _session_logeable(db)
 
-    reservation = service.creer(_avec_hebergement(session.id_session), client)
+    formation = service.creer(_demande_logeable(session.id_session), client)
 
-    assert reservation.avec_hebergement is True
-    assert reservation.id_logement is None
-    # Une seule ligne écrite : aucune réservation de logement en regard.
+    assert formation.id_reservation_hebergement is not None
+    hebergement = service.obtenir(formation.id_reservation_hebergement)
+    assert hebergement.type_reservation is TypeReservation.LOGEMENT
+    assert hebergement.id_logement == chambre.id_logement
+    assert hebergement.id_client == client.id_client
+    # Les dates sont celles de la session : le décalage d'une nuit est une
+    # évolution future, pas une règle que quelqu'un ait énoncée.
+    assert hebergement.date_debut == formation.date_debut
+    assert hebergement.date_fin == formation.date_fin
+    # La ligne d'hébergement ne porte pas le drapeau : il dit un souhait exprimé
+    # sur une formation, et se lirait ici comme une récursion.
+    assert hebergement.avec_hebergement is False
+
+
+def test_sans_chambre_libre_la_formation_est_acceptee_quand_meme(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Aucune chambre libre n'est **pas** une erreur.
+
+    Refuser trancherait à la place de l'administrateur, et obligerait à rendre
+    la place tout juste décrémentée — défaire une écriture réussie pour cause
+    d'échec d'une écriture accessoire. Même raisonnement que
+    `LIVRAISON.Echouee` en #25.
+    """
+    session = _session_logeable(db)
+    # Aucune chambre de cette capacité n'existe : `premier_libre` ne peut rien
+    # retenir.
+
+    formation = service.creer(_demande_logeable(session.id_session), client)
+
+    assert formation.id_reservation_hebergement is None
+    # Le souhait reste inscrit : c'est ce qui permet à un administrateur de
+    # savoir qu'il y a un suivi à faire.
+    assert formation.avec_hebergement is True
+    db.refresh(session)
+    assert session.places_restantes == 1
+
+
+def test_une_chambre_deja_prise_sur_le_creneau_n_est_pas_reattribuee(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """La seule chambre assez grande est occupée : le souhait reste non honoré."""
+    chambre = _chambre(db)
+    premier = _client(db, "premier")
+    service.creer(
+        ReservationCreate(
+            type_reservation=TypeReservation.LOGEMENT,
+            date_debut=DEBUT,
+            date_fin=FIN,
+            nombre_personnes=1,
+            id_logement=chambre.id_logement,
+        ),
+        premier,
+    )
+    session = _session_logeable(db)
+
+    formation = service.creer(_demande_logeable(session.id_session), client)
+
+    assert formation.id_reservation_hebergement is None
+
+
+def test_une_chambre_en_maintenance_n_est_jamais_retenue(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """`En_maintenance` dit que le bien n'est pas louable, quelle que soit la
+    date."""
+    chambre = _chambre(db)
+    chambre.statut = StatutLogement.EN_MAINTENANCE
+    db.commit()
+    session = _session_logeable(db)
+
+    formation = service.creer(_demande_logeable(session.id_session), client)
+
+    assert formation.id_reservation_hebergement is None
+
+
+def test_sans_hebergement_aucune_seconde_ligne(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Contrôle positif : sans lui, une implémentation qui n'attache jamais
+    rien passerait les trois tests de refus ci-dessus."""
+    _chambre(db)
+    session = _session_logeable(db)
+
+    formation = service.creer(
+        ReservationCreate(
+            type_reservation=TypeReservation.FORMATION,
+            date_debut=DEBUT,
+            date_fin=FIN,
+            nombre_personnes=CAPACITE_SONDE,
+            id_session=session.id_session,
+        ),
+        client,
+    )
+
+    assert formation.avec_hebergement is False
+    assert formation.id_reservation_hebergement is None
     assert len(service.lister_du_client(client)) == 1
+
+
+def test_annuler_la_formation_annule_l_hebergement(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Laisser une chambre retenue pour une formation annulée immobiliserait
+    une ressource sans raison active."""
+    _chambre(db)
+    session = _session_logeable(db)
+    formation = service.creer(_demande_logeable(session.id_session), client)
+    id_hebergement = formation.id_reservation_hebergement
+    assert id_hebergement is not None
+
+    service.changer_statut(formation.id_reservation, StatutReservation.ANNULEE)
+
+    hebergement = service.obtenir(id_hebergement)
+    assert hebergement.statut is StatutReservation.ANNULEE
+
+
+def test_le_creneau_est_libere_par_l_annulation(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """La chambre redevient attribuable : sans quoi chaque annulation
+    condamnerait un créneau définitivement."""
+    _chambre(db)
+    session = _session_logeable(db)
+    formation = service.creer(_demande_logeable(session.id_session), client)
+    service.changer_statut(formation.id_reservation, StatutReservation.ANNULEE)
+
+    seconde_session = _session_logeable(db)
+    seconde = service.creer(_demande_logeable(seconde_session.id_session), client)
+
+    assert seconde.id_reservation_hebergement is not None
+
+
+def test_annuler_l_hebergement_seul_ne_touche_pas_la_formation(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """La propagation est **unidirectionnelle**.
+
+    Un stagiaire qui se loge ailleurs garde sa formation — même forme que la
+    synchronisation `LIVRAISON -> COMMANDE`, où rien ne remonte non plus.
+    """
+    _chambre(db)
+    session = _session_logeable(db)
+    formation = service.creer(_demande_logeable(session.id_session), client)
+    assert formation.id_reservation_hebergement is not None
+
+    service.changer_statut(
+        formation.id_reservation_hebergement, StatutReservation.ANNULEE
+    )
+
+    db.refresh(formation)
+    assert formation.statut is StatutReservation.EN_ATTENTE
+
+
+def test_annulation_rejouee_ne_produit_aucun_effet_supplementaire(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Idempotence, comme la restitution des places."""
+    _chambre(db)
+    session = _session_logeable(db)
+    formation = service.creer(_demande_logeable(session.id_session), client)
+    id_hebergement = formation.id_reservation_hebergement
+    assert id_hebergement is not None
+    service.changer_statut(formation.id_reservation, StatutReservation.ANNULEE)
+    db.refresh(session)
+    places = session.places_restantes
+
+    service.changer_statut(formation.id_reservation, StatutReservation.ANNULEE)
+
+    db.refresh(session)
+    assert session.places_restantes == places
+    assert service.obtenir(id_hebergement).statut is StatutReservation.ANNULEE
+
+
+def test_archiver_la_formation_archive_l_hebergement(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Un archivage est un `UPDATE` : aucun `CASCADE` ne se déclenche, la
+    propagation revient au service."""
+    _chambre(db)
+    session = _session_logeable(db)
+    formation = service.creer(_demande_logeable(session.id_session), client)
+    id_hebergement = formation.id_reservation_hebergement
+    assert id_hebergement is not None
+
+    service.supprimer(formation.id_reservation)
+
+    archive = service.reservations.get_by_id(id_hebergement, inclure_supprimes=True)
+    assert archive is not None
+    assert archive.supprime_le is not None
+
+
+def test_un_hebergement_ne_peut_pas_etre_partage_par_deux_formations(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """`UNIQUE` globale : une réservation d'hébergement appartient à au plus
+    une formation.
+
+    Elle exprime une propriété structurelle et non une identité métier — d'où
+    une contrainte globale et non un index partiel, même raisonnement que
+    `LIVRAISON.#id_commande`.
+    """
+    _chambre(db)
+    session = _session_logeable(db)
+    formation = service.creer(_demande_logeable(session.id_session), client)
+    seconde_session = _session_logeable(db)
+    seconde = service.creer(
+        ReservationCreate(
+            type_reservation=TypeReservation.FORMATION,
+            date_debut=DEBUT,
+            date_fin=FIN,
+            nombre_personnes=CAPACITE_SONDE,
+            id_session=seconde_session.id_session,
+        ),
+        client,
+    )
+
+    seconde.id_reservation_hebergement = formation.id_reservation_hebergement
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
+
+
+def test_seule_une_formation_porte_un_hebergement_lie(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """`CHECK` en base : un lien sur une réservation de salle n'aurait aucun
+    sens interprétable."""
+    _chambre(db)
+    session = _session_logeable(db)
+    formation = service.creer(_demande_logeable(session.id_session), client)
+    salle = _salle(db)
+    reservation_salle = service.creer(
+        ReservationCreate(
+            type_reservation=TypeReservation.SALLE,
+            date_debut=DEBUT,
+            date_fin=FIN,
+            nombre_personnes=1,
+            id_salle=salle.id_salle,
+        ),
+        client,
+    )
+
+    reservation_salle.id_reservation_hebergement = formation.id_reservation_hebergement
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
+
+
+def test_une_reservation_ne_se_lie_pas_a_elle_meme(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """La boucle n'a aucun sens métier, et toute propagation la suivrait
+    indéfiniment."""
+    session = _session_logeable(db)
+    formation = service.creer(_demande_logeable(session.id_session), client)
+
+    formation.id_reservation_hebergement = formation.id_reservation
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
 
 
 # --- Salles et logements : le chevauchement -----------------------------------

@@ -31,9 +31,14 @@ class ReservationCreate(BaseModel):
     id_salle: int | None = None
     #: Obligatoire pour une réservation de type `Logement`.
     id_logement: int | None = None
-    #: **Drapeau informatif** : le client dit qu'il souhaite être hébergé.
-    #: Aucune chambre n'est réservée ni même vérifiée disponible — ce mécanisme
-    #: n'existe pas encore, il arrive au sprint 5 avec `LOGEMENT`.
+    #: Le client demande à être hébergé pendant la formation. Depuis #62, le
+    #: serveur tente de lui attribuer la **première chambre libre** sur les
+    #: dates de la session et crée une seconde `RESERVATION` liée.
+    #:
+    #: Ce n'est **pas** une garantie : si aucune chambre n'est libre, la
+    #: réservation de formation est acceptée quand même et le souhait reste non
+    #: honoré. `ReservationRead.id_reservation_hebergement` dit lequel des deux
+    #: cas s'est produit.
     avec_hebergement: bool = False
 
     #: Cible attendue pour chaque type. `Table` n'en a aucune : une réservation
@@ -120,6 +125,10 @@ class ReservationRead(BaseModel):
     id_session: int | None = None
     id_salle: int | None = None
     id_logement: int | None = None
+    #: Réservation de logement liée à cette formation, `None` si l'hébergement
+    #: n'a pas été honoré — aucune chambre n'était libre. En **sortie
+    #: seulement** : le lien est posé par le serveur, jamais soumis.
+    id_reservation_hebergement: int | None = None
 
 
 class ReservationChangementStatut(BaseModel):

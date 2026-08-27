@@ -207,7 +207,7 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 COMMANDE(id_commande, date_commande, reference_publique, adresse_livraison, nom_invite, contact_invite, type_commande, statut, montant_total, #id_client, #id_reservation)
 LIGNE_COMMANDE(id_ligne, quantite, prix_unitaire_applique, #id_commande, #id_produit)
 DEMANDE_PERSONNALISATION(id_personnalisation, description_demande, ingredients_specifiques, supplement_prix, #id_ligne, #id_produit_base)
-RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_personnes, statut, avec_hebergement, #id_client, #id_session, #id_salle, #id_logement)
+RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_personnes, statut, avec_hebergement, #id_client, #id_session, #id_salle, #id_logement, #id_reservation_hebergement)
 ```
 
 - `COMMANDE.date_commande` est un `TIMESTAMPTZ NOT NULL DEFAULT now()`, posé par
@@ -313,9 +313,10 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   sans se gêner : l'une interdit deux **lignes** sur le même créneau, l'autre
   deux **cibles** sur une même ligne.
 
-- `RESERVATION.avec_hebergement` est un **drapeau informatif**, et rien de plus :
-  il dit que le client **souhaite** être hébergé, pas qu'une chambre lui est
-  attribuée. Aucun `LOGEMENT` n'est réservé, aucune disponibilité n'est vérifiée.
+- `RESERVATION.avec_hebergement` dit que le client **souhaite** être hébergé.
+  Depuis le sprint 6, le serveur tente d'honorer ce souhait — mais le drapeau
+  reste une **demande**, jamais la preuve qu'une chambre est attribuée. C'est
+  `#id_reservation_hebergement` qui porte cette preuve, et lui seul.
 
   Écrire la nuance ici est nécessaire, faute de quoi elle disparaîtra à la
   première relecture : le nom de la colonne suggère un hébergement acquis.
@@ -325,14 +326,57 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   `PRODUIT.est_personnalisable`. Elle est refusée sur tout type de réservation
   autre que `Formation`.
 
-  **Le couplage réel viendra après le sprint 5**, une fois `LOGEMENT` livré : il
-  supposera une **seconde** `RESERVATION` de type `Logement`, liée à celle de
-  formation, avec contrôle de chevauchement sur les dates. La contrainte n°2
-  interdit en effet qu'une même ligne porte à la fois `#id_session` et
-  `#id_logement` — le couplage passera donc par deux lignes, jamais par une
-  seule. Ce n'est pas une dette : le mécanisme dont il dépend n'existe pas
-  encore, et l'anticiper reviendrait à inventer une API de disponibilité avant
-  de savoir ce dont `LOGEMENT` a besoin.
+- `RESERVATION.#id_reservation_hebergement` est l'**auto-référence** qui lie une
+  réservation de formation à la réservation de logement qui l'accompagne.
+  `NULL` signifie « pas d'hébergement attribué » — soit qu'il n'ait pas été
+  demandé, soit qu'aucune chambre n'ait été libre.
+
+  **Le couplage passe par deux lignes, jamais par une seule.** La contrainte
+  n°2 interdit qu'une même ligne porte à la fois `#id_session` et
+  `#id_logement` ; c'est elle qui impose la seconde ligne, et non un choix de
+  confort.
+
+  **Le lien est porté par la ligne de formation.** La formation est ce que le
+  client réserve, l'hébergement en est l'accessoire. Le porter à l'envers le
+  ferait tenir par la ligne la plus susceptible d'être annulée seule.
+
+  La chambre est choisie **par le serveur** — la première `Disponible`, libre
+  sur les dates de la session et d'une capacité suffisante. Le client ne la
+  choisit pas : aucun endpoint ne publie de vue de disponibilité, et lui en
+  demander une reviendrait à inventer cette API pour un accessoire.
+
+  Les dates sont **celles de la session**. Un décalage d'une nuit — arrivée la
+  veille pour une formation qui commence tôt — serait une règle d'accueil que
+  personne n'a énoncée.
+
+  **Quand aucune chambre n'est libre, la réservation de formation est acceptée
+  quand même**, et `#id_reservation_hebergement` reste `NULL`. Refuser
+  trancherait à la place de l'administrateur, et obligerait à rendre la place de
+  formation tout juste décrémentée — défaire une écriture réussie pour cause
+  d'échec d'une écriture accessoire. Aucun état n'est inventé pour autant : pas
+  de file d'attente, pas de statut « hébergement en attente ». Même raisonnement
+  que `LIVRAISON.Echouee`, qui ne bascule pas la commande vers `Annulee`.
+
+  Deux `CHECK` encadrent la colonne :
+
+  ```sql
+  CHECK (id_reservation_hebergement IS NULL OR type_reservation = 'Formation')
+  CHECK (id_reservation_hebergement IS NULL
+         OR id_reservation_hebergement <> id_reservation)
+  ```
+
+  Le premier parce qu'un lien porté par une réservation de salle n'aurait aucun
+  sens interprétable ; le second parce qu'une ligne liée à elle-même produirait
+  une boucle que toute propagation d'annulation suivrait indéfiniment.
+
+  **L'annulation de la formation annule l'hébergement**, dans la même
+  transaction : laisser une chambre retenue pour une formation annulée
+  immobiliserait une ressource sans raison active. L'archivage se propage de
+  même — un archivage est un `UPDATE`, aucun `CASCADE` ne se déclenche.
+
+  **La propagation est unidirectionnelle.** Annuler le seul hébergement ne
+  touche pas à la formation : un stagiaire qui se loge ailleurs garde sa place.
+  Même forme que la synchronisation `LIVRAISON → COMMANDE`.
 
 - Une réservation de type `Formation` **exige** `#id_session`. Le `CHECK`
   d'exclusivité (contrainte n°2) ne peut pas l'imposer : il autorise zéro colonne
@@ -415,6 +459,7 @@ de règle métier.
 |---|---|---|
 | `LIVRAISON.#id_commande` | une commande donne lieu à au plus une livraison | `UNIQUE (id_commande)` |
 | `DEMANDE_PERSONNALISATION.#id_ligne` | une ligne de commande porte au plus une demande de personnalisation | `UNIQUE (id_ligne)` |
+| `RESERVATION.#id_reservation_hebergement` | une réservation d'hébergement appartient à au plus une formation | `UNIQUE (id_reservation_hebergement)` |
 
 ## Unicités métier explicitées
 
@@ -466,8 +511,9 @@ Les noms sont ceux des anciennes contraintes, délibérément : PostgreSQL remon
 le nom de l'**index** dans `diag.constraint_name`, dont dépend la traduction des
 conflits en HTTP 409.
 
-**Les deux `UNIQUE` de cardinalité restent globales** — `LIVRAISON.#id_commande`
-et `DEMANDE_PERSONNALISATION.#id_ligne`. Elles n'expriment pas une identité mais
+**Les trois `UNIQUE` de cardinalité restent globales** — `LIVRAISON.#id_commande`,
+`DEMANDE_PERSONNALISATION.#id_ligne` et
+`RESERVATION.#id_reservation_hebergement`. Elles n'expriment pas une identité mais
 une propriété structurelle : rendues partielles, la table pourrait contenir cinq
 livraisons archivées et une active pour la même commande, et toute requête
 omettant le filtre produirait des totaux faux.
