@@ -237,10 +237,10 @@ couplage ne pouvait pas venir plus tôt — il dépend du mécanisme de chevauch
 livré par #47 — et le titre le nomme plutôt que de le laisser deviner du contenu
 du Milestone.
 
-- [ ] Couplage `RESERVATION` Formation ↔ `LOGEMENT` — **en premier**
-      — Suite planifiée de #37, débloquée par #47. `avec_hebergement` n'est
-      aujourd'hui qu'un **drapeau informatif** : aucune chambre n'est réservée
-      ni même vérifiée disponible.
+- [x] Couplage `RESERVATION` Formation ↔ `LOGEMENT` — **en premier**
+      — Suite planifiée de #37, débloquée par #47. `avec_hebergement`
+      n'était jusqu'ici qu'un **drapeau informatif** : aucune chambre n'était
+      réservée ni même vérifiée disponible.
       — Passe par **deux `RESERVATION` liées**, jamais par une seule : la
       contrainte n°2 interdit qu'une même ligne porte `#id_session` et
       `#id_logement`. Le MLD ne porte **aucune colonne** pour ce lien
@@ -266,6 +266,19 @@ du Milestone.
       immobiliserait une ressource sans raison active. L'inverse n'est pas vrai
       — annuler le seul hébergement reste possible, le stagiaire pouvant se
       loger ailleurs.
+      — Livré par #69. `#id_reservation_hebergement` porte le lien, avec une
+      `UNIQUE` **globale** — propriété structurelle et non identité métier, même
+      raisonnement que `LIVRAISON.#id_commande`. Deux `CHECK` l'encadrent : seul
+      un type `Formation` porte un lien, et aucune ligne ne se lie à elle-même,
+      une boucle que toute propagation suivrait indéfiniment.
+      — L'attribution se fait sous **`SAVEPOINT`** : deux formations simultanées
+      peuvent lire la même chambre libre, et c'est la contrainte d'exclusion de
+      #47 qui tranche à l'écriture. Sans point de reprise, le `rollback`
+      emporterait la réservation de formation et son décrément de places.
+      — `test_aucun_logement_n_est_reserve`, posé au Sprint 4 pour figer l'état
+      antérieur, portait dans sa docstring l'instruction de le reprendre le jour
+      du couplage. Il est **remplacé** par douze tests vérifiant le comportement
+      inverse, plus onze sur `LogementRepository.premier_libre` — pas affaibli.
 - [ ] Socle d'authentification `PERSONNEL` côté frontend — **en deuxième**
       — Sujet **transverse**, sa propre PR, isolément revertible : ce n'est pas
       de la construction sur du vide mais la modification d'un socle en service.
