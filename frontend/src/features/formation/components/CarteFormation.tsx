@@ -22,7 +22,7 @@ export default function CarteFormation({ formation }: { formation: Formation }) 
               {formaterMontant(formation.prix)}
             </span>
             {formation.propose_hebergement && (
-              <span className="text-xs bg-sage bg-opacity-15 text-sage px-2 py-1 rounded-full">
+              <span className="text-xs bg-sage/15 text-sage px-2 py-1 rounded-full">
                 🏨 Hébergement
               </span>
             )}

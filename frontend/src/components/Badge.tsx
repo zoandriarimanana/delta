@@ -24,17 +24,17 @@ function getStatusClasses(status: Status): { bg: string; text: string } {
     case 'disponible':
     case 'confirmee':
     case 'honoree':
-      return { bg: 'bg-sage bg-opacity-15', text: 'text-sage' };
+      return { bg: 'bg-sage/15', text: 'text-sage' };
     case 'en-attente':
     case 'en-maintenance':
-      return { bg: 'bg-amber bg-opacity-15', text: 'text-amber' };
+      return { bg: 'bg-amber/15', text: 'text-amber' };
     case 'hors-service':
     case 'epuisee':
     case 'echouee':
     case 'annulee':
-      return { bg: 'bg-terracotta bg-opacity-15', text: 'text-terracotta' };
+      return { bg: 'bg-terracotta/15', text: 'text-terracotta' };
     default:
-      return { bg: 'bg-amber bg-opacity-15', text: 'text-amber' };
+      return { bg: 'bg-amber/15', text: 'text-amber' };
   }
 }
 

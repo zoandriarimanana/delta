@@ -55,7 +55,7 @@ export default function LogementListPage() {
       {erreur !== null && (
         <div
           role="alert"
-          className="rounded-lg bg-terracotta bg-opacity-10 border-2 border-terracotta p-4 text-terracotta"
+          className="rounded-lg bg-terracotta/10 border-2 border-terracotta p-4 text-terracotta"
         >
           ⚠️ {erreur}
         </div>
