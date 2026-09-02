@@ -20,6 +20,7 @@ function monter() {
       <Routes>
         <Route path="/prive" element={<p>page privee</p>} />
         <Route path="/connexion" element={<p>page de connexion</p>} />
+        <Route path="/personnel/connexion" element={<p>connexion du personnel</p>} />
       </Routes>
     </MemoryRouter>
   );
@@ -27,9 +28,11 @@ function monter() {
 
 /** Émet l'événement dans un `act` : la navigation part d'un écouteur DOM, donc
  *  hors du cycle React, et le rendu qui suit ne serait pas vidé sans ça. */
-function emettreEvenement() {
+function emettreEvenement(type: 'client' | 'personnel' | null = null) {
   act(() => {
-    window.dispatchEvent(new CustomEvent(EVENEMENT_NON_AUTHENTIFIE));
+    window.dispatchEvent(
+      new CustomEvent(EVENEMENT_NON_AUTHENTIFIE, { detail: { type } })
+    );
   });
 }
 
@@ -47,6 +50,25 @@ describe('SessionExpiree', () => {
     expect(screen.getByText('page privee')).toBeDefined();
 
     emettreEvenement();
+
+    expect(screen.getByText('page de connexion')).toBeDefined();
+  });
+
+  it('renvoie un salarié vers la connexion du personnel', () => {
+    // Le renvoyer vers la connexion client le mènerait à un formulaire qui
+    // n'accepte pas ses identifiants — et qui, s'il aboutissait, ouvrirait une
+    // session de la mauvaise population.
+    monter();
+
+    emettreEvenement('personnel');
+
+    expect(screen.getByText('connexion du personnel')).toBeDefined();
+  });
+
+  it('renvoie un client vers la connexion client', () => {
+    monter();
+
+    emettreEvenement('client');
 
     expect(screen.getByText('page de connexion')).toBeDefined();
   });

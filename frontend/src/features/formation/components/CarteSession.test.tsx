@@ -16,7 +16,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerJeton } from '@/lib/tokenStorage';
+import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
 
 import type { SessionFormation, StatutSessionFormation } from '../formation.types';
 import CarteSession from './CarteSession';
@@ -99,7 +99,7 @@ describe('formateur', () => {
 
 describe('disponibilité', () => {
   it('propose le formulaire sur une session réservable', () => {
-    enregistrerJeton('jeton.de.test');
+    enregistrerSession('jeton.de.test', 'client');
 
     afficher(session());
 
@@ -108,7 +108,7 @@ describe('disponibilité', () => {
 
   it('affiche une session complète sans la rendre réservable', () => {
     // Le client doit pouvoir constater qu'elle existe et attendre la suivante.
-    enregistrerJeton('jeton.de.test');
+    enregistrerSession('jeton.de.test', 'client');
 
     afficher(session({ places_restantes: 0 }));
 
@@ -119,7 +119,7 @@ describe('disponibilité', () => {
   it.each(['Planifiee', 'Terminee', 'Annulee'] as StatutSessionFormation[])(
     'n’offre pas de réservation sur une session %s',
     (statut) => {
-      enregistrerJeton('jeton.de.test');
+      enregistrerSession('jeton.de.test', 'client');
 
       afficher(session({ statut }));
 

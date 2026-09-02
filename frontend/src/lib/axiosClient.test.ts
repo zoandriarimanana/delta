@@ -10,7 +10,7 @@ import { AxiosError, type AxiosAdapter, type AxiosResponse } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EVENEMENT_NON_AUTHENTIFIE, axiosClient } from './axiosClient';
-import { effacerJeton, enregistrerJeton, lireJeton } from './tokenStorage';
+import { effacerJeton, enregistrerSession, lireJeton } from './tokenStorage';
 
 const JETON = 'jeton.de.test';
 
@@ -48,7 +48,7 @@ afterEach(() => {
 
 describe('intercepteur de requête', () => {
   it('injecte le jeton en en-tête Authorization quand il existe', async () => {
-    enregistrerJeton(JETON);
+    enregistrerSession(JETON, 'client');
     axiosClient.defaults.adapter = adaptateurQuiReussit;
 
     const reponse = await axiosClient.get('/salle');
@@ -67,7 +67,7 @@ describe('intercepteur de requête', () => {
 
 describe('intercepteur de réponse — 401', () => {
   it('efface le jeton et émet l’événement sur un chemin protégé', async () => {
-    enregistrerJeton(JETON);
+    enregistrerSession(JETON, 'client');
     axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
     const ecouteur = vi.fn();
     window.addEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
@@ -82,7 +82,7 @@ describe('intercepteur de réponse — 401', () => {
   it('laisse le jeton intact sur /auth/connexion', async () => {
     // Un 401 de connexion signifie « mot de passe faux » : déconnecter
     // l'utilisateur déjà authentifié serait un effet de bord injustifié.
-    enregistrerJeton(JETON);
+    enregistrerSession(JETON, 'client');
     axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
     const ecouteur = vi.fn();
     window.addEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
@@ -96,8 +96,54 @@ describe('intercepteur de réponse — 401', () => {
     window.removeEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
   });
 
+  it('laisse le jeton intact sur /auth/personnel/connexion', async () => {
+    // Même raison que pour la connexion client : un salarié qui se trompe de
+    // mot de passe ne doit pas perdre la session en cours. Sans cette entrée
+    // dans les chemins publics, une faute de frappe se paierait d'une
+    // déconnexion.
+    enregistrerSession(JETON, 'personnel');
+    axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
+    const ecouteur = vi.fn();
+    window.addEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
+
+    await expect(
+      axiosClient.post('/auth/personnel/connexion', {})
+    ).rejects.toBeInstanceOf(AxiosError);
+
+    expect(lireJeton()).toBe(JETON);
+    expect(ecouteur).not.toHaveBeenCalled();
+    window.removeEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
+  });
+
+  it('porte la population déconnectée dans l’événement', async () => {
+    // Le jeton est effacé avant l'émission : sans cette information, l'écouteur
+    // renverrait un salarié vers la connexion client.
+    enregistrerSession(JETON, 'personnel');
+    axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
+    const ecouteur = vi.fn();
+    window.addEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
+
+    await expect(axiosClient.get('/personnel')).rejects.toBeInstanceOf(AxiosError);
+
+    expect(ecouteur.mock.calls[0]?.[0]?.detail).toEqual({ type: 'personnel' });
+    window.removeEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
+  });
+
+  it('porte un type nul quand aucune session n’était ouverte', async () => {
+    // Un 401 sur une requête anonyme : il n'y a personne à renvoyer quelque
+    // part de particulier.
+    axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
+    const ecouteur = vi.fn();
+    window.addEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
+
+    await expect(axiosClient.get('/salle')).rejects.toBeInstanceOf(AxiosError);
+
+    expect(ecouteur.mock.calls[0]?.[0]?.detail).toEqual({ type: null });
+    window.removeEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
+  });
+
   it('laisse le jeton intact sur un statut autre que 401', async () => {
-    enregistrerJeton(JETON);
+    enregistrerSession(JETON, 'client');
     axiosClient.defaults.adapter = adaptateurQuiEchoue(500);
 
     await expect(axiosClient.get('/salle')).rejects.toBeInstanceOf(AxiosError);
@@ -126,7 +172,7 @@ describe("nom de l'événement de déconnexion", () => {
   });
 
   it("est émis sous ce nom exact lors d'un 401", async () => {
-    enregistrerJeton(JETON);
+    enregistrerSession(JETON, 'client');
     axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
     const recus: string[] = [];
     const ecouteur = (evenement: Event) => recus.push(evenement.type);

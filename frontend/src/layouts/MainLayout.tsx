@@ -11,7 +11,8 @@
 import { NavLink, Outlet } from 'react-router';
 
 import { usePanier } from '@/features/commande/commande.hooks';
-import { useEstConnecte } from '@/lib/useEstConnecte';
+import { effacerJeton } from '@/lib/tokenStorage';
+import { useEstConnecte, useEstPersonnelConnecte } from '@/lib/useEstConnecte';
 
 const LIENS = [
   { vers: '/', libelle: 'Accueil', exact: true },
@@ -38,6 +39,10 @@ export default function MainLayout() {
   // à aucun. Proposer « Mes commandes » à un visiteur non connecté le mènerait
   // à une page qu'il ne peut pas utiliser.
   const connecte = useEstConnecte();
+  // Un salarié connecté n'est pas un client : les pages client lui répondraient
+  // 401, ce qui effacerait sa session de travail. Les deux états s'excluent —
+  // il n'y a qu'un jeton, et il porte une seule population.
+  const personnel = useEstPersonnelConnecte();
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -64,6 +69,22 @@ export default function MainLayout() {
               <NavLink to="/reservations" className={classeLien}>
                 Mes réservations
               </NavLink>
+            )}
+            {personnel && (
+              <button
+                type="button"
+                onClick={() => {
+                  effacerJeton();
+                  // Rechargement plutôt qu'une navigation : l'état de session
+                  // est lu au rendu, et rien ne le rediffuse aux composants
+                  // montés. Le remplacer par un magasin réactif est une
+                  // amélioration à part entière, pas un préalable.
+                  window.location.assign('/');
+                }}
+                className="rounded px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200"
+              >
+                Déconnexion
+              </button>
             )}
             <NavLink to="/panier" className={classeLien}>
               Panier

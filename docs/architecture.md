@@ -326,13 +326,16 @@ src/
 ├── vite-env.d.ts             # types Vite
 ├── lib/
 │   ├── axiosClient.ts        # instance axios unique, intercepteurs
-│   └── tokenStorage.ts       # lecture/ecriture du jeton d'acces
+│   ├── tokenStorage.ts       # jeton d'acces **et** population qu'il designe
+│   ├── useEstConnecte.ts     # etat de session, par population
+│   └── RoutePersonnel.tsx    # garde de route reservee au personnel
 ├── layouts/
 │   └── MainLayout.tsx        # structure de page transverse (nav, pied de page)
 ├── pages/                    # pages transverses, hors module metier
 │   ├── AccueilPage.tsx
 │   └── NonTrouveePage.tsx
 ├── features/
+│   ├── auth/                 # connexion, un dossier par population de compte
 │   ├── salle/
 │   │   ├── salle.types.ts    # interfaces TypeScript
 │   │   ├── salle.api.ts      # appels axios purs, rien d'autre
@@ -399,19 +402,64 @@ Deux règles de comportement des intercepteurs :
 - Un **401** efface le jeton et émet l'événement `delta:non-authentifie`, auquel
   le layout réagit par une redirection. L'intercepteur ne connaît pas le routeur :
   la couche HTTP ne doit pas dépendre de la navigation.
-- Un 401 venant de `/auth/connexion` ou `/auth/inscription` est **exclu** de ce
-  traitement : c'est une réponse métier (« mot de passe faux »), pas une session
-  expirée. Sans cette exception, un utilisateur déjà connecté qui se trompe en
-  saisissant un second compte se ferait déconnecter.
+- Un 401 venant de `/auth/connexion`, `/auth/personnel/connexion` ou
+  `/auth/inscription` est **exclu** de ce traitement : c'est une réponse métier
+  (« mot de passe faux »), pas une session expirée. Sans cette exception, un
+  utilisateur déjà connecté qui se trompe en saisissant un second compte se
+  ferait déconnecter.
 
 L'erreur continue de remonter dans tous les cas : l'intercepteur nettoie, il ne
 décide pas du message à afficher à la place du module appelant.
+
+L'événement porte la **population** dont la session vient d'être rejetée, lue
+avant l'effacement du jeton. Sans elle, l'écouteur ne saurait plus qui a été
+déconnecté et renverrait un salarié vers la connexion client. La couche HTTP ne
+décide toujours pas de la navigation : elle rapporte un fait, l'écouteur en tire
+une route.
 
 `lib/tokenStorage.ts` isole le support de stockage — actuellement `localStorage`.
 **Conséquence de sécurité** : le jeton est lisible par tout script exécuté dans la
 page, donc exposé en cas de faille XSS. Un cookie `httpOnly` supprimerait ce
 risque mais impose un travail côté API (émission du cookie, protection CSRF).
 Report inscrit en dette technique dans `docs/roadmap.md`.
+
+#### Un seul jeton, qui porte sa population
+
+`CLIENT` et `PERSONNEL` ont des **clés primaires qui se recouvrent** — c'est ce
+qui a imposé la revendication `type` dans le jeton côté serveur. Ranger les deux
+jetons au même endroit sans les distinguer rouvrirait côté navigateur la
+confusion d'identité que le backend a fermée.
+
+`tokenStorage` range donc le jeton **avec** son type, et les deux ne se séparent
+jamais. Une session dont le type est absent ou inconnu est traitée comme
+inexistante, exactement comme le serveur refuse un jeton sans revendication
+`type` : un tel enregistrement ne peut venir que d'une version antérieure, et le
+lire par défaut comme un jeton client rouvrirait la confusion qu'on ferme.
+
+**Un seul jeton et non deux coexistants.** Deux clés de stockage permettraient à
+un salarié d'être simultanément client, mais obligeraient l'intercepteur à
+savoir quelle population chaque requête vise — une notion métier dans la couche
+HTTP, qui lui est interdite au même titre que la connaissance du routeur. Le
+cumul est un confort, la règle d'architecture une contrainte.
+
+**Le remplacement n'a lieu qu'à la réussite.** Une connexion qui aboutit
+remplace la session en cours, quelle que soit sa population ; une connexion qui
+échoue **ne touche à rien**. La session appartient à quelqu'un de valablement
+connecté, et une tentative ratée sur un autre compte n'est pas une raison de la
+lui retirer — effacer par anticipation ferait payer une faute de frappe par une
+déconnexion. C'est la même règle que l'exception des chemins de connexion dans
+le traitement du 401, appliquée à l'autre bout de la chaîne.
+
+Le type est déduit de l'**endpoint appelé**, jamais lu dans le jeton : décoder un
+JWT côté client pour se fier à son contenu reviendrait à faire confiance à une
+valeur que le porteur peut réécrire. L'endpoint, lui, est un fait local.
+
+`lib/RoutePersonnel.tsx` réserve une route au personnel connecté. **Ce n'est pas
+une protection** : elle évite d'afficher une page inutilisable, tandis que ce qui
+protège réellement reste `get_current_personnel` côté serveur. Un frontend est du
+code exécuté chez l'utilisateur, il ne garantit rien. Elle n'autorise pas
+davantage : `est_administrateur` n'est lisible nulle part côté client, et c'est
+le serveur qui répond 403.
 
 ### `src/pages/` — pages transverses
 
@@ -427,6 +475,11 @@ Ce dossier n'est pas une porte de sortie pour les pages qu'on ne sait pas classe
 une page de connexion, par exemple, appartient à `features/auth/` dès que ce module
 existe — elle n'est en `src/pages/` au Sprint 0 que parce qu'aucun module n'est
 encore créé.
+
+`features/auth/` existe depuis le Sprint 6 et porte la connexion du **personnel**.
+`src/pages/ConnexionPage.tsx`, la connexion client, y est restée : c'est encore
+le gabarit du Sprint 0, aucun formulaire ne l'ayant jamais remplacé. Elle
+rejoindra `features/auth/` le jour où elle sera écrite.
 
 ### La livraison naît avec la commande
 

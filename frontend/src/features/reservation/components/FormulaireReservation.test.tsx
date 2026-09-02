@@ -16,7 +16,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerJeton } from '@/lib/tokenStorage';
+import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
 
 import { creerReservation } from '../reservation.api';
 import type { Reservation } from '../reservation.types';
@@ -80,7 +80,7 @@ describe('visiteur non connecté', () => {
 });
 
 describe('client connecté', () => {
-  beforeEach(() => enregistrerJeton('jeton.de.test'));
+  beforeEach(() => enregistrerSession('jeton.de.test', 'client'));
 
   it('envoie la réservation et confirme', async () => {
     afficher();
@@ -175,7 +175,7 @@ describe('client connecté', () => {
 });
 
 describe('option hébergement', () => {
-  beforeEach(() => enregistrerJeton('jeton.de.test'));
+  beforeEach(() => enregistrerSession('jeton.de.test', 'client'));
 
   it('n’est pas proposée si la formation ne l’offre pas', () => {
     // Le serveur refuserait en 422 de toute façon ; ne pas l'afficher évite au

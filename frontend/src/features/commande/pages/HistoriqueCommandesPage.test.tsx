@@ -11,7 +11,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerJeton } from '@/lib/tokenStorage';
+import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
 
 import { recupererHistorique } from '../commande.api';
 import type { Commande } from '../commande.types';
@@ -83,7 +83,7 @@ describe('visiteur non connecté', () => {
 });
 
 describe('client connecté', () => {
-  beforeEach(() => enregistrerJeton('jeton.de.test'));
+  beforeEach(() => enregistrerSession('jeton.de.test', 'client'));
 
   it('affiche un état de chargement puis les commandes', async () => {
     afficher();
