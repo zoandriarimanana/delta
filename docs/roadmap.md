@@ -237,6 +237,12 @@ couplage ne pouvait pas venir plus tôt — il dépend du mécanisme de chevauch
 livré par #47 — et le titre le nomme plutôt que de le laisser deviner du contenu
 du Milestone.
 
+**Deux tâches s'y sont ajoutées en cours de route**, la connexion et
+l'inscription client. Elles n'étaient pas au plan : le manque a été découvert en
+construisant le socle d'authentification, et il datait du Sprint 0. Elles sont
+inscrites ici plutôt que passées sous silence — un sprint dont le plan ne
+reflète pas ce qui a été fait ne sert plus à retrouver les décisions.
+
 - [x] Couplage `RESERVATION` Formation ↔ `LOGEMENT` — **en premier**
       — Suite planifiée de #37, débloquée par #47. `avec_hebergement`
       n'était jusqu'ici qu'un **drapeau informatif** : aucune chambre n'était
@@ -279,7 +285,7 @@ du Milestone.
       antérieur, portait dans sa docstring l'instruction de le reprendre le jour
       du couplage. Il est **remplacé** par douze tests vérifiant le comportement
       inverse, plus onze sur `LogementRepository.premier_libre` — pas affaibli.
-- [ ] Socle d'authentification `PERSONNEL` côté frontend — **en deuxième**
+- [x] Socle d'authentification `PERSONNEL` côté frontend — **en deuxième**
       — Sujet **transverse**, sa propre PR, isolément revertible : ce n'est pas
       de la construction sur du vide mais la modification d'un socle en service.
       — Le backend sait déjà tout faire depuis #23 — revendication `type` dans
@@ -304,6 +310,45 @@ du Milestone.
       — Dépendance de la dernière tâche du sprint, et réutilisée ensuite par
       tout le back-office du Sprint 10 ainsi que par l'écran d'administration
       du catalogue relevé en #58.
+      — Livré par #73. Deux écarts au plan, décidés en construisant :
+      l'événement `delta:non-authentifie` porte désormais la **population**,
+      lue avant l'effacement du jeton — sans elle, un salarié déconnecté était
+      renvoyé vers la connexion client ; et `/auth/personnel/connexion` rejoint
+      les chemins publics de l'intercepteur, sans quoi une faute de frappe
+      déconnectait.
+      — Une connexion qui **échoue ne touche à rien** : le remplacement de
+      session n'a lieu qu'à la réussite. Cette règle a dû être corrigée en
+      cours de revue — elle avait d'abord été écrite à l'envers, effaçant la
+      session avant de connaître le résultat.
+- [x] Connexion `CLIENT` côté frontend — **rattrapage**
+      — **Ne figurait pas au plan de ce sprint** : le manque a été découvert
+      en ouvrant le socle ci-dessus, en recensant les appelants de la fonction
+      qui ouvre une session. Il n'y en avait aucun.
+      — `src/pages/ConnexionPage.tsx` était resté le **gabarit du Sprint 0**
+      pendant cinq sprints. Un client ne pouvait pas se connecter par
+      l'interface, et tout ce qui avait été construit derrière un compte —
+      historique, réservations, parcours connecté — était inatteignable. Le
+      parcours invité, lui, n'en a jamais dépendu.
+      — **Un seul hook derrière les deux connexions.** Elles ne diffèrent que
+      par l'endpoint et le type ; deux copies auraient divergé au jour où l'une
+      aurait été corrigée sans l'autre — ce qui venait précisément d'arriver
+      sur la règle d'échec. Même raisonnement que
+      `PersonnelService.obtenir_avec_fonction`.
+      — Livré par #75 (issue #72).
+- [x] Inscription `CLIENT`, particulier et entreprise — **rattrapage**
+      — Même origine que la précédente : les deux endpoints existaient depuis
+      le Sprint 0 et le Sprint 1 sans qu'aucun écran ne les consomme. Sans
+      elle, un compte restait impossible à créer par l'interface — le même
+      trou déplacé d'un cran.
+      — **L'inscription n'ouvre aucune session.** L'API ne renvoie pas de
+      jeton ; le frontend redirige vers la connexion avec un message de
+      confirmation plutôt que d'enchaîner. Enchaîner créerait un second point
+      d'émission de jeton, implicite, alors que le serveur n'en expose qu'un.
+      Un test verrouille l'absence d'appel à `/auth/connexion`.
+      — **Une seule page pour les deux sous-types**, alors que la connexion en
+      a deux : le choix client/personnel découle du compte, celui de
+      particulier/entreprise est une déclaration du visiteur.
+      — Livré par #76 (issue #74).
 - [ ] `RESERVATION` type = Table
       — Seul type qui ne porte **aucune cible**. La contrainte n°2 l'autorise,
       puisqu'elle dit « au plus une » et non « exactement une ».
