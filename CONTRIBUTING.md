@@ -159,6 +159,56 @@ Pipeline déclenché à chaque Pull Request vers `develop` :
 
 **Le merge est bloqué si une seule étape échoue.**
 
+### Rejouer la CI en local avant de pousser
+
+Les commandes ci-dessous sont **exactement** celles de
+`.github/workflows/ci.yml`. Les rejouer intégralement avant de pousser, sans en
+retirer un répertoire ni une étape.
+
+Backend, depuis `backend/` (préfixer par `.venv/bin/` selon l'installation) :
+
+```bash
+ruff check app tests alembic
+black --check app tests alembic
+alembic upgrade head        # sur une base VIERGE, pas celle de développement
+alembic check
+pytest -q
+```
+
+Frontend, depuis `frontend/` :
+
+```bash
+npm run lint
+npm run format:check
+npm run typecheck
+npm run test
+npm run build
+```
+
+**Les répertoires font partie de la commande.** `ruff check app tests` passe là
+où `ruff check app tests alembic` échoue : un fichier de migration mal trié
+n'est vu que par la seconde. C'est arrivé — la PR #69 a échoué sur un `I001`
+dans une migration après une vérification locale annoncée verte.
+
+Et comme le lint s'arrête au premier échec, **rien de ce qui suit ne tourne** :
+migration et tests restent inconnus. Vérifier un sous-ensemble puis conclure
+« c'est vert » est pire que ne rien vérifier, cela transforme une incertitude en
+fausse certitude.
+
+**`alembic upgrade head` se joue sur une base vierge**, comme en CI, et jamais
+sur la base de développement : celle-ci peut porter des données de seed qui font
+échouer des tests sans que le code soit en cause (voir #68). Devant un échec
+local, le reproduire sur une base neuve avant de conclure :
+
+```bash
+docker compose exec postgres psql -U delta_user -d postgres -c "CREATE DATABASE delta_ci_local OWNER delta_user;"
+DATABASE_URL="postgresql+psycopg2://delta_user:...@localhost:5433/delta_ci_local" alembic upgrade head
+DATABASE_URL="..." pytest -q
+```
+
+Ne pas composer ces commandes de mémoire : `.github/workflows/ci.yml` en est la
+seule source de vérité, et c'est lui qui décide du merge.
+
 ---
 
 ## 9. Gestion des tâches (GitHub Projects)
