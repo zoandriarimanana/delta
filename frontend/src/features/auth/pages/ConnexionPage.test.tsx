@@ -175,3 +175,29 @@ describe('remplacement de session', () => {
     );
   });
 });
+
+describe('message de confirmation', () => {
+  it('affiche le message porté par l’état de navigation', () => {
+    // Vient de l'inscription, qui redirige ici plutôt que d'ouvrir une session.
+    render(
+      <MemoryRouter
+        initialEntries={[
+          {
+            pathname: '/connexion',
+            state: { message: 'Compte créé, connectez-vous pour continuer.' },
+          },
+        ]}
+      >
+        <ConnexionPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole('status').textContent).toMatch(/compte créé/i);
+  });
+
+  it('n’affiche rien quand on arrive directement', () => {
+    afficher();
+
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+});

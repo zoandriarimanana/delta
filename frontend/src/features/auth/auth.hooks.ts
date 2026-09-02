@@ -4,9 +4,20 @@ import { useCallback, useState } from 'react';
 
 import { enregistrerSession, type TypeSujet } from '@/lib/tokenStorage';
 
-import { connecterClient, connecterPersonnel } from './auth.api';
-import { messageDeRefus } from './auth.service';
-import type { Identifiants, Jeton } from './auth.types';
+import {
+  connecterClient,
+  connecterPersonnel,
+  inscrireEntreprise,
+  inscrireParticulier,
+} from './auth.api';
+import { messageDeRefus, messageDInscription } from './auth.service';
+import type {
+  ClientInscrit,
+  Identifiants,
+  InscriptionEntreprise,
+  InscriptionParticulier,
+  Jeton,
+} from './auth.types';
 
 export interface Connexion {
   connecter: (identifiants: Identifiants) => Promise<boolean>;
@@ -80,4 +91,65 @@ export function useConnexionClient(): Connexion {
 /** Ouvre une session **personnel**. */
 export function useConnexionPersonnel(): Connexion {
   return useConnexion(connecterPersonnel, 'personnel');
+}
+
+export interface Inscription<T> {
+  inscrire: (donnees: T) => Promise<boolean>;
+  envoi: boolean;
+  erreur: string | null;
+}
+
+/**
+ * Crée un compte, sans ouvrir de session.
+ *
+ * **Aucun jeton n'est écrit, ni avant, ni après.** L'API ne renvoie pas de
+ * jeton, et le frontend n'enchaîne pas sur la connexion : cela créerait un
+ * second point d'émission, implicite, déclenché par un écran plutôt que par une
+ * action de l'utilisateur — précisément ce que la séparation des endpoints
+ * cherche à éviter côté serveur. Le frontend ne rouvre pas par commodité ce que
+ * l'API a fermé par conception.
+ *
+ * Une **session en cours n'est pas davantage touchée**, ni en cas de succès ni
+ * en cas d'échec : s'inscrire n'est pas se connecter, et rien ne justifie de
+ * déconnecter quelqu'un parce qu'il crée un second compte. Même règle que celle
+ * corrigée sur la connexion en #63.
+ *
+ * Les deux variantes — particulier et entreprise — ne diffèrent que par
+ * l'endpoint et la charge utile : une seule implémentation, deux habillages,
+ * pour que la règle ci-dessus n'existe qu'à un endroit.
+ */
+function useInscription<T>(
+  appeler: (donnees: T) => Promise<ClientInscrit>
+): Inscription<T> {
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const inscrire = useCallback(
+    async (donnees: T): Promise<boolean> => {
+      setEnvoi(true);
+      setErreur(null);
+      try {
+        await appeler(donnees);
+        return true;
+      } catch (erreurAppel) {
+        setErreur(messageDInscription(erreurAppel));
+        return false;
+      } finally {
+        setEnvoi(false);
+      }
+    },
+    [appeler]
+  );
+
+  return { inscrire, envoi, erreur };
+}
+
+/** Inscrit un client **particulier**. */
+export function useInscriptionParticulier(): Inscription<InscriptionParticulier> {
+  return useInscription(inscrireParticulier);
+}
+
+/** Inscrit un client **entreprise**. */
+export function useInscriptionEntreprise(): Inscription<InscriptionEntreprise> {
+  return useInscription(inscrireEntreprise);
 }
