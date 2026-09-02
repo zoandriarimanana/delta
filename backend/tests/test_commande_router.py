@@ -8,6 +8,7 @@ substituée —, ce qui exerce aussi la traduction globale des erreurs métier.
 """
 
 from collections.abc import Iterator
+from datetime import date
 from decimal import Decimal
 from uuid import uuid4
 
@@ -21,6 +22,7 @@ from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
 from app.main import app
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
+from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.produit import Produit
 
 pytestmark = pytest.mark.postgres
@@ -489,3 +491,123 @@ def test_aucun_endpoint_de_personnalisation_n_est_expose(
             ).status_code
             == 404
         )
+
+
+# --- Prise de commande par le personnel (#80) ---------------------------------
+
+COMMANDES_PERSONNEL = f"{COMMANDES}/personnel"
+
+
+def _salarie_connecte(db: Session, avec_mot_de_passe: bool = True) -> dict[str, str]:
+    agent = Personnel(
+        nom="Rakoto",
+        prenom="Hery",
+        fonction=FonctionPersonnel.RECEPTIONNISTE,
+        email=f"agent_{uuid4().hex[:8]}@delta.mg",
+        date_embauche=date(2024, 1, 1),
+        mot_de_passe=(
+            hacher_mot_de_passe("motdepasse123") if avec_mot_de_passe else None
+        ),
+    )
+    db.add(agent)
+    db.commit()
+    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
+    return {"Authorization": f"Bearer {jeton}"}
+
+
+def _corps_personnel(id_produit: int, **extra: object) -> dict:
+    return {
+        "type_commande": "Sur_place",
+        "lignes": [{"id_produit": id_produit, "quantite": 1}],
+        **extra,
+    }
+
+
+def test_prise_de_commande_sans_jeton_retourne_401(
+    client_http: TestClient, eclair: Produit
+) -> None:
+    reponse = client_http.post(
+        COMMANDES_PERSONNEL,
+        json=_corps_personnel(
+            eclair.id_produit, nom_invite="Jean", contact_invite="03"
+        ),
+    )
+
+    assert reponse.status_code == 401
+
+
+def test_prise_de_commande_avec_jeton_client_retourne_401(
+    client_http: TestClient, entete: dict[str, str], eclair: Produit
+) -> None:
+    """Le cloisonnement des deux populations tient jusqu'ici.
+
+    `CLIENT` et `PERSONNEL` ont des clés primaires qui se recouvrent : sans la
+    revendication `type`, ce jeton passerait pour celui d'un salarié.
+    """
+    reponse = client_http.post(
+        COMMANDES_PERSONNEL,
+        json=_corps_personnel(
+            eclair.id_produit, nom_invite="Jean", contact_invite="03"
+        ),
+        headers=entete,
+    )
+
+    assert reponse.status_code == 401
+
+
+def test_un_salarie_sans_mot_de_passe_est_refuse(
+    client_http: TestClient, db: Session, eclair: Produit
+) -> None:
+    """`mot_de_passe` nul signifie « pas de compte de connexion », pas « mot de
+    passe vide » : la dépendance le refuse."""
+    entete_agent = _salarie_connecte(db, avec_mot_de_passe=False)
+
+    reponse = client_http.post(
+        COMMANDES_PERSONNEL,
+        json=_corps_personnel(
+            eclair.id_produit, nom_invite="Jean", contact_invite="03"
+        ),
+        headers=entete_agent,
+    )
+
+    assert reponse.status_code == 401
+
+
+def test_prise_de_commande_pour_un_invite_retourne_201(
+    client_http: TestClient, db: Session, eclair: Produit
+) -> None:
+    """Contrôle positif : sans lui, une garde refusant tout passerait les trois
+    tests ci-dessus."""
+    entete_agent = _salarie_connecte(db)
+
+    reponse = client_http.post(
+        COMMANDES_PERSONNEL,
+        json=_corps_personnel(
+            eclair.id_produit, nom_invite="Jean", contact_invite="0340000000"
+        ),
+        headers=entete_agent,
+    )
+
+    assert reponse.status_code == 201
+    corps = reponse.json()
+    assert corps["id_client"] is None
+    assert corps["reference_publique"] is not None
+
+
+def test_les_deux_chemins_ensemble_retournent_422(
+    client_http: TestClient, db: Session, eclair: Produit
+) -> None:
+    entete_agent = _salarie_connecte(db)
+
+    reponse = client_http.post(
+        COMMANDES_PERSONNEL,
+        json=_corps_personnel(
+            eclair.id_produit,
+            id_reservation=1,
+            nom_invite="Jean",
+            contact_invite="03",
+        ),
+        headers=entete_agent,
+    )
+
+    assert reponse.status_code == 422

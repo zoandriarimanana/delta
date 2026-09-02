@@ -15,8 +15,9 @@ from app.core.exceptions import (
 from app.models.client import Client
 from app.models.commande import Commande, StatutCommande, TypeCommande
 from app.models.ligne_commande import LigneCommande
+from app.models.personnel import Personnel
 from app.models.produit import Produit
-from app.models.reservation import StatutReservation, TypeReservation
+from app.models.reservation import Reservation, StatutReservation, TypeReservation
 from app.repositories.commande_repository import CommandeRepository
 from app.repositories.demande_personnalisation_repository import (
     DemandePersonnalisationRepository,
@@ -24,7 +25,11 @@ from app.repositories.demande_personnalisation_repository import (
 from app.repositories.ligne_commande_repository import LigneCommandeRepository
 from app.repositories.produit_repository import ProduitRepository
 from app.repositories.reservation_repository import ReservationRepository
-from app.schemas.commande import CommandeCreate, CommandeInviteCreate
+from app.schemas.commande import (
+    CommandeCreate,
+    CommandeInviteCreate,
+    CommandePersonnelCreate,
+)
 from app.schemas.ligne_commande import LigneCommandeCreate
 from app.services.livraison_service import LivraisonService
 
@@ -207,6 +212,47 @@ class CommandeService:
             f"{quantite} demandé(s), {produit.stock_disponible} disponible(s)."
         )
 
+    def _reservation_rattachable(self, id_reservation: int) -> Reservation:
+        """Charge une réservation apte à porter une commande, ou refuse.
+
+        **Une seule implémentation pour deux appelants** : le parcours client,
+        où le rattachement est une option, et la prise de commande par un
+        salarié, où il détermine l'acheteur. Deux copies divergeraient au jour
+        où l'une serait corrigée sans l'autre — même raisonnement que
+        `PersonnelService.obtenir_avec_fonction`.
+
+        Ce qu'elle vérifie, et rien de plus : l'existence, le type et le statut.
+        **La propriété n'est pas de son ressort** — elle n'a de sens que sur le
+        parcours client, où il existe un acheteur authentifié à comparer. Sur le
+        chemin personnel c'est l'inverse : le client est *déduit* de la
+        réservation.
+
+        Existence en **422** et non 404, la référence venant du corps ; une
+        réservation archivée est traitée comme inexistante. Type `Table` en 422,
+        lettre du MLD. Statut `Confirmee` ou `Honoree` en **409**, l'identifiant
+        étant valide et le refus portant sur un état — comme pour une session
+        qui n'est pas `Ouverte`.
+        """
+        reservation = self.reservations.get_by_id(id_reservation)
+        if reservation is None:
+            raise ReferenceInvalide(
+                f"Aucune réservation ne porte l'identifiant {id_reservation}."
+            )
+
+        if reservation.type_reservation is not TypeReservation.TABLE:
+            raise ReferenceInvalide(
+                "Seule une réservation de table peut porter une commande, et "
+                f"celle-ci est de type « {reservation.type_reservation.value} »."
+            )
+
+        if reservation.statut not in STATUTS_RATTACHABLES:
+            raise ConflitMetier(
+                f"Cette réservation est « {reservation.statut.value} » : "
+                "elle ne peut pas porter de commande."
+            )
+
+        return reservation
+
     def _verifier_reservation(self, donnees: CommandeCreate, client: Client) -> None:
         """Refuse un rattachement à une réservation qui ne l'autorise pas.
 
@@ -240,23 +286,19 @@ class CommandeService:
         if donnees.id_reservation is None:
             return
 
-        introuvable = (
-            f"Aucune réservation ne porte l'identifiant {donnees.id_reservation}."
-        )
-        reservation = self.reservations.get_by_id(donnees.id_reservation)
-        if reservation is None or reservation.id_client != client.id_client:
-            raise ReferenceInvalide(introuvable)
+        reservation = self._reservation_rattachable(donnees.id_reservation)
 
-        if reservation.type_reservation is not TypeReservation.TABLE:
+        # La propriété est la **seule** règle propre à ce parcours : elle
+        # suppose un acheteur authentifié à comparer, ce que la prise de
+        # commande par un salarié n'a pas — là, le client est déduit de la
+        # réservation elle-même.
+        #
+        # Le message est **identique** à celui de l'inexistence : un message
+        # distinct confirmerait l'existence de la réservation d'autrui à qui
+        # essaierait des identifiants.
+        if reservation.id_client != client.id_client:
             raise ReferenceInvalide(
-                "Seule une réservation de table peut porter une commande, et "
-                f"celle-ci est de type « {reservation.type_reservation.value} »."
-            )
-
-        if reservation.statut not in STATUTS_RATTACHABLES:
-            raise ConflitMetier(
-                f"Cette réservation est « {reservation.statut.value} » : "
-                "elle ne peut pas porter de commande."
+                f"Aucune réservation ne porte l'identifiant {donnees.id_reservation}."
             )
 
     def creer(self, donnees: CommandeCreate, client: Client) -> Commande:
@@ -270,6 +312,42 @@ class CommandeService:
         """
         self._verifier_reservation(donnees, client)
         return self._creer(donnees, {"id_client": client.id_client})
+
+    def creer_par_personnel(
+        self, donnees: CommandePersonnelCreate, personnel: Personnel
+    ) -> Commande:
+        """Crée une commande saisie par un salarié, au comptoir ou à table.
+
+        **Aucune identité ne vient du corps de la requête.** Le salarié vient du
+        jeton ; l'acheteur est soit déduit de la réservation, soit un invité
+        qu'il nomme. Les accepter permettrait de commander au nom d'autrui, ou
+        d'attribuer une commande à un collègue.
+
+        Sur le chemin **réservation**, `id_client` est lu sur
+        `reservation.id_client` : le client n'est pas un choix du salarié mais
+        un fait déjà en base. La réservation est validée par
+        `_reservation_rattachable`, la **même** méthode que le parcours client —
+        mais sans le contrôle de propriété, qui n'aurait rien à comparer.
+
+        Sur le chemin **invité**, une `reference_publique` est générée comme sur
+        le chemin public : c'est le seul moyen pour l'acheteur de revenir sur sa
+        commande, et il n'a pas de compte.
+
+        `id_personnel` est posé dans les deux cas. `NULL` reste réservé aux
+        commandes passées par le client lui-même.
+        """
+        if donnees.id_reservation is not None:
+            reservation = self._reservation_rattachable(donnees.id_reservation)
+            identification: dict[str, Any] = {"id_client": reservation.id_client}
+        else:
+            identification = {
+                "nom_invite": donnees.nom_invite,
+                "contact_invite": donnees.contact_invite,
+                "reference_publique": uuid4(),
+            }
+
+        identification["id_personnel"] = personnel.id_personnel
+        return self._creer(donnees, identification)
 
     def creer_pour_invite(self, donnees: CommandeInviteCreate) -> Commande:
         """Crée une commande sans compte, et lui attribue une référence publique.

@@ -14,9 +14,14 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import ClientConnecte
+from app.core.deps import ClientConnecte, PersonnelConnecte
 from app.core.exceptions import RessourceIntrouvable
-from app.schemas.commande import CommandeCreate, CommandeInviteCreate, CommandeRead
+from app.schemas.commande import (
+    CommandeCreate,
+    CommandeInviteCreate,
+    CommandePersonnelCreate,
+    CommandeRead,
+)
 from app.schemas.livraison import LivraisonPublique
 from app.services.commande_service import CommandeService
 from app.services.livraison_service import LivraisonService
@@ -79,6 +84,40 @@ def obtenir_par_reference(reference_publique: UUID, db: SessionBase) -> Commande
     """
     commande = CommandeService(db).obtenir_par_reference(reference_publique)
     return CommandeRead.model_validate(commande)
+
+
+@router.post(
+    "/personnel",
+    response_model=CommandeRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Saisir une commande pour un client, au comptoir ou à table",
+)
+def creer_par_personnel(
+    donnees: CommandePersonnelCreate,
+    personnel: PersonnelConnecte,
+    db: SessionBase,
+) -> CommandeRead:
+    """Crée une commande saisie par un membre du personnel.
+
+    **Aucune restriction de fonction.** Prendre une commande n'est pas réservé à
+    une spécialité, et `PERSONNEL.fonction` porte un métier, pas un droit.
+    `get_current_personnel` écarte déjà les comptes archivés et ceux dont
+    `mot_de_passe` est nul. Exiger un administrateur serait un contresens :
+    administrer le catalogue et encaisser une commande ne sont pas le même
+    privilège, et cela empêcherait un réceptionniste de faire son travail.
+
+    Deux chemins, arbitrés par le schema : rattachée à une réservation de table,
+    l'acheteur étant alors **déduit** de celle-ci, ou passée au nom d'un invité.
+
+    **Le jeton n'identifie jamais l'acheteur** : il identifie le salarié, qui est
+    enregistré dans `id_personnel`. C'est la confusion à ne pas commettre.
+
+    422 si la réservation n'existe pas, n'est pas de type `Table`, ou si les deux
+    chemins sont fournis ensemble. 409 si son statut ne le permet pas.
+    """
+    return CommandeRead.model_validate(
+        CommandeService(db).creer_par_personnel(donnees, personnel)
+    )
 
 
 @router.get("", response_model=list[CommandeRead], summary="Historique du client")
