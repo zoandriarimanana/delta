@@ -1,9 +1,12 @@
 /**
  * Tests de la connexion du personnel.
  *
- * Deux garanties portent l'essentiel : la session ouverte est de population
+ * Trois garanties portent l'essentiel : la session ouverte est de population
  * `personnel` — et non `client`, ce qui donnerait accès aux pages client tout en
- * recevant des 401 —, et un refus n'ouvre aucune session.
+ * recevant des 401 —, un refus n'ouvre aucune session, et **un refus ne touche
+ * pas à la session déjà en cours**. Cette dernière règle est la plus facile à
+ * casser : effacer par anticipation « pour repartir propre » se défend en
+ * apparence, et déconnecte en pratique quelqu'un qui n'a rien demandé.
  */
 
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
@@ -88,9 +91,12 @@ describe('refus', () => {
     expect(lireSession()).toBeNull();
   });
 
-  it('ferme la session existante plutôt que de la laisser en place', async () => {
-    // Rester connecté comme client après avoir tenté d'ouvrir une session
-    // personnel laisserait l'utilisateur sur un état qu'il n'a pas demandé.
+  it('laisse intacte une session client déjà valide', async () => {
+    // **La session n'est remplacée qu'au moment où une connexion réussit.** Un
+    // échec n'a pas à toucher une session qui appartient à quelqu'un de
+    // valablement connecté : effacer par anticipation ferait payer une faute de
+    // frappe par une déconnexion — la même erreur que l'intercepteur HTTP évite
+    // en excluant les chemins de connexion de son traitement du 401.
     enregistrerSession('jeton.client', 'client');
     vi.mocked(connecterPersonnel).mockRejectedValue({
       response: { status: 401, data: { detail: 'Identifiants invalides.' } },
@@ -100,7 +106,38 @@ describe('refus', () => {
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toBeNull();
+    expect(lireSession()).toEqual({ jeton: 'jeton.client', type: 'client' });
+  });
+
+  it('laisse intacte une session personnel déjà valide', async () => {
+    // Même règle quand les deux populations coïncident : un salarié qui se
+    // trompe en ressaisissant ses identifiants ne perd pas sa session.
+    enregistrerSession('jeton.personnel.valide', 'personnel');
+    vi.mocked(connecterPersonnel).mockRejectedValue({
+      response: { status: 401, data: { detail: 'Identifiants invalides.' } },
+    });
+    afficher();
+
+    await soumettre();
+
+    await screen.findByRole('alert');
+    expect(lireSession()).toEqual({
+      jeton: 'jeton.personnel.valide',
+      type: 'personnel',
+    });
+  });
+
+  it('remplace la session client au moment où la connexion réussit', async () => {
+    // Contrôle positif du remplacement : sans lui, un hook qui n'écrirait
+    // jamais rien passerait les deux tests ci-dessus.
+    enregistrerSession('jeton.client', 'client');
+    afficher();
+
+    await soumettre();
+
+    await waitFor(() =>
+      expect(lireSession()).toEqual({ jeton: 'jeton.personnel', type: 'personnel' })
+    );
   });
 
   it('reprend le message uniforme du serveur', async () => {

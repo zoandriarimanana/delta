@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 
-import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
+import { enregistrerSession } from '@/lib/tokenStorage';
 
 import { connecterPersonnel } from './auth.api';
 import { messageDeRefus } from './auth.service';
@@ -21,9 +21,16 @@ export interface ConnexionPersonnel {
  * JWT côté client pour se fier à son contenu reviendrait à faire confiance à
  * une valeur que le porteur peut réécrire. L'endpoint, lui, est un fait local.
  *
- * Ouvrir une session **remplace** celle qui existait, quelle que soit sa
- * population — conséquence assumée du jeton unique typé
+ * Une connexion **réussie** remplace la session qui existait, quelle que soit
+ * sa population — conséquence assumée du jeton unique typé
  * (cf. `lib/tokenStorage.ts`).
+ *
+ * Un **échec ne touche à rien.** La session en cours n'est ni effacée, ni
+ * remplacée : elle appartient à quelqu'un qui est valablement connecté, et une
+ * tentative ratée sur un autre compte n'est pas une raison de la lui retirer.
+ * Effacer par anticipation, avant de connaître le résultat, ferait payer une
+ * faute de frappe par une déconnexion — exactement ce que l'exception des
+ * chemins publics évite déjà côté intercepteur HTTP.
  */
 export function useConnexionPersonnel(): ConnexionPersonnel {
   const [envoi, setEnvoi] = useState(false);
@@ -38,10 +45,8 @@ export function useConnexionPersonnel(): ConnexionPersonnel {
         enregistrerSession(access_token, 'personnel');
         return true;
       } catch (erreurAppel) {
-        // La session éventuellement ouverte est effacée : rester connecté comme
-        // client après avoir tenté d'ouvrir une session personnel laisserait
-        // l'utilisateur sur un état qu'il n'a pas demandé.
-        effacerJeton();
+        // Rien n'est écrit ni effacé : la session éventuellement en cours reste
+        // intacte. Le seul effet d'un refus est le message affiché.
         setErreur(messageDeRefus(erreurAppel));
         return false;
       } finally {

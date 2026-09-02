@@ -439,9 +439,16 @@ lire par défaut comme un jeton client rouvrirait la confusion qu'on ferme.
 **Un seul jeton et non deux coexistants.** Deux clés de stockage permettraient à
 un salarié d'être simultanément client, mais obligeraient l'intercepteur à
 savoir quelle population chaque requête vise — une notion métier dans la couche
-HTTP, qui lui est interdite au même titre que la connaissance du routeur. Se
-connecter dans une population **remplace** donc la session de l'autre. Le cumul
-est un confort, la règle d'architecture une contrainte.
+HTTP, qui lui est interdite au même titre que la connaissance du routeur. Le
+cumul est un confort, la règle d'architecture une contrainte.
+
+**Le remplacement n'a lieu qu'à la réussite.** Une connexion qui aboutit
+remplace la session en cours, quelle que soit sa population ; une connexion qui
+échoue **ne touche à rien**. La session appartient à quelqu'un de valablement
+connecté, et une tentative ratée sur un autre compte n'est pas une raison de la
+lui retirer — effacer par anticipation ferait payer une faute de frappe par une
+déconnexion. C'est la même règle que l'exception des chemins de connexion dans
+le traitement du 401, appliquée à l'autre bout de la chaîne.
 
 Le type est déduit de l'**endpoint appelé**, jamais lu dans le jeton : décoder un
 JWT côté client pour se fier à son contenu reviendrait à faire confiance à une
