@@ -2,27 +2,37 @@
 
 import { useCallback, useState } from 'react';
 
-import { enregistrerSession } from '@/lib/tokenStorage';
+import { enregistrerSession, type TypeSujet } from '@/lib/tokenStorage';
 
-import { connecterPersonnel } from './auth.api';
+import { connecterClient, connecterPersonnel } from './auth.api';
 import { messageDeRefus } from './auth.service';
-import type { Identifiants } from './auth.types';
+import type { Identifiants, Jeton } from './auth.types';
 
-export interface ConnexionPersonnel {
+export interface Connexion {
   connecter: (identifiants: Identifiants) => Promise<boolean>;
   envoi: boolean;
   erreur: string | null;
 }
 
 /**
- * Ouvre une session **personnel**.
+ * Ouvre une session, quelle que soit la population.
  *
- * Le type est déduit de l'endpoint appelé, jamais lu dans le jeton : décoder un
- * JWT côté client pour se fier à son contenu reviendrait à faire confiance à
- * une valeur que le porteur peut réécrire. L'endpoint, lui, est un fait local.
+ * Les deux connexions sont **la même**, à l'endpoint et au type près. Elles
+ * vivent donc dans une seule implémentation, que `useConnexionClient` et
+ * `useConnexionPersonnel` habillent — même raisonnement que
+ * `PersonnelService.obtenir_avec_fonction` côté serveur, où deux copies de la
+ * règle auraient divergé au jour où l'une aurait été corrigée sans l'autre.
  *
- * Une connexion **réussie** remplace la session qui existait, quelle que soit
- * sa population — conséquence assumée du jeton unique typé
+ * Ce n'est pas une précaution théorique : la règle d'échec ci-dessous a
+ * justement dû être corrigée après coup (#63), et une seconde copie serait
+ * restée fausse.
+ *
+ * **Le type vient de l'endpoint appelé, jamais du jeton.** Décoder un JWT côté
+ * client pour se fier à son contenu reviendrait à faire confiance à une valeur
+ * que son porteur peut réécrire ; l'endpoint, lui, est un fait local.
+ *
+ * Une connexion **réussie** remplace la session qui existait, quelle que soit sa
+ * population — conséquence assumée du jeton unique typé
  * (cf. `lib/tokenStorage.ts`).
  *
  * Un **échec ne touche à rien.** La session en cours n'est ni effacée, ni
@@ -32,7 +42,10 @@ export interface ConnexionPersonnel {
  * faute de frappe par une déconnexion — exactement ce que l'exception des
  * chemins publics évite déjà côté intercepteur HTTP.
  */
-export function useConnexionPersonnel(): ConnexionPersonnel {
+function useConnexion(
+  appeler: (identifiants: Identifiants) => Promise<Jeton>,
+  type: TypeSujet
+): Connexion {
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -41,8 +54,8 @@ export function useConnexionPersonnel(): ConnexionPersonnel {
       setEnvoi(true);
       setErreur(null);
       try {
-        const { access_token } = await connecterPersonnel(identifiants);
-        enregistrerSession(access_token, 'personnel');
+        const { access_token } = await appeler(identifiants);
+        enregistrerSession(access_token, type);
         return true;
       } catch (erreurAppel) {
         // Rien n'est écrit ni effacé : la session éventuellement en cours reste
@@ -53,8 +66,18 @@ export function useConnexionPersonnel(): ConnexionPersonnel {
         setEnvoi(false);
       }
     },
-    []
+    [appeler, type]
   );
 
   return { connecter, envoi, erreur };
+}
+
+/** Ouvre une session **client**. */
+export function useConnexionClient(): Connexion {
+  return useConnexion(connecterClient, 'client');
+}
+
+/** Ouvre une session **personnel**. */
+export function useConnexionPersonnel(): Connexion {
+  return useConnexion(connecterPersonnel, 'personnel');
 }

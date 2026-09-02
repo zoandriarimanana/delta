@@ -20,7 +20,6 @@ const LIENS = [
   { vers: '/formations', libelle: 'Formations', exact: false },
   { vers: '/salles', libelle: 'Salles', exact: false },
   { vers: '/logements', libelle: 'Hébergements', exact: false },
-  { vers: '/connexion', libelle: 'Connexion', exact: false },
 ];
 
 function classeLien({ isActive }: { isActive: boolean }): string {
@@ -43,6 +42,10 @@ export default function MainLayout() {
   // 401, ce qui effacerait sa session de travail. Les deux états s'excluent —
   // il n'y a qu'un jeton, et il porte une seule population.
   const personnel = useEstPersonnelConnecte();
+  // Une session est ouverte, sans préjuger de laquelle : c'est ce qui décide
+  // d'offrir « Connexion » ou « Déconnexion », les deux n'ayant jamais de sens
+  // en même temps.
+  const session = connecte || personnel;
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -70,7 +73,12 @@ export default function MainLayout() {
                 Mes réservations
               </NavLink>
             )}
-            {personnel && (
+            {!session && (
+              <NavLink to="/connexion" className={classeLien}>
+                Connexion
+              </NavLink>
+            )}
+            {session && (
               <button
                 type="button"
                 onClick={() => {
