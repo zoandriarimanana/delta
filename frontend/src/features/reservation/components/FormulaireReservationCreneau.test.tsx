@@ -16,7 +16,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerJeton } from '@/lib/tokenStorage';
+import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
 
 import { creerReservation } from '../reservation.api';
 import type { Reservation } from '../reservation.types';
@@ -88,7 +88,7 @@ describe('visiteur non connecté', () => {
 });
 
 describe('logement non réservable', () => {
-  beforeEach(() => enregistrerJeton('jeton.de.test'));
+  beforeEach(() => enregistrerSession('jeton.de.test', 'client'));
 
   it('n’affiche aucun formulaire', () => {
     // Le serveur refuse en 409 un logement en maintenance ; ne pas afficher le
@@ -101,7 +101,7 @@ describe('logement non réservable', () => {
 });
 
 describe('client connecté', () => {
-  beforeEach(() => enregistrerJeton('jeton.de.test'));
+  beforeEach(() => enregistrerSession('jeton.de.test', 'client'));
 
   it('envoie la réservation de salle et confirme', async () => {
     afficher();

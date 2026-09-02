@@ -11,7 +11,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerJeton } from '@/lib/tokenStorage';
+import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
 
 import {
   creerCommande,
@@ -148,7 +148,7 @@ describe('parcours invité', () => {
 
 describe('parcours connecté', () => {
   it('ne demande pas d’identité', () => {
-    enregistrerJeton('jeton.de.test');
+    enregistrerSession('jeton.de.test', 'client');
     act(remplirLePanier);
 
     afficher();
@@ -157,7 +157,7 @@ describe('parcours connecté', () => {
   });
 
   it('confirme sans référence publique', async () => {
-    enregistrerJeton('jeton.de.test');
+    enregistrerSession('jeton.de.test', 'client');
     act(remplirLePanier);
     afficher();
 

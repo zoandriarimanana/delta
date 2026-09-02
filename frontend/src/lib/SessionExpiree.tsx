@@ -17,17 +17,23 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 
-import { EVENEMENT_NON_AUTHENTIFIE } from './axiosClient';
+import { EVENEMENT_NON_AUTHENTIFIE, type DetailNonAuthentifie } from './axiosClient';
 
 export default function SessionExpiree() {
   const naviguer = useNavigate();
 
   useEffect(() => {
-    const rediriger = () => {
+    const rediriger = (evenement: Event) => {
+      // Chaque population retrouve **sa** page de connexion : renvoyer un
+      // salarié vers la connexion client le mènerait à un formulaire qui
+      // n'accepte pas ses identifiants.
+      const detail = (evenement as CustomEvent<DetailNonAuthentifie>).detail;
+      const destination =
+        detail?.type === 'personnel' ? '/personnel/connexion' : '/connexion';
       // `replace` : la page dont on a été éjecté ne doit pas rester dans
       // l'historique, sinon le bouton « précédent » y ramène pour rejouer le
       // même 401.
-      naviguer('/connexion', { replace: true });
+      naviguer(destination, { replace: true });
     };
 
     window.addEventListener(EVENEMENT_NON_AUTHENTIFIE, rediriger);

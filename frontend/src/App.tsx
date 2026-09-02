@@ -7,6 +7,7 @@
 
 import { BrowserRouter, Route, Routes } from 'react-router';
 
+import ConnexionPersonnelPage from '@/features/auth/pages/ConnexionPersonnelPage';
 import CommandeInviteePage from '@/features/commande/pages/CommandeInviteePage';
 import HistoriqueCommandesPage from '@/features/commande/pages/HistoriqueCommandesPage';
 import PanierPage from '@/features/commande/pages/PanierPage';
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="commandes" element={<HistoriqueCommandesPage />} />
           <Route path="reservations" element={<MesReservationsPage />} />
           <Route path="connexion" element={<ConnexionPage />} />
+          <Route path="personnel/connexion" element={<ConnexionPersonnelPage />} />
           <Route path="*" element={<NonTrouveePage />} />
         </Route>
       </Routes>
