@@ -496,6 +496,25 @@ pas à la session en cours » a dû être corrigée après coup, et une seconde 
 serait restée fausse. Même raisonnement que
 `PersonnelService.obtenir_avec_fonction` côté serveur.
 
+**L'inscription n'ouvre aucune session.** L'API ne renvoie pas de jeton — elle
+répond le client créé — et le frontend **n'enchaîne pas** sur la connexion : il
+redirige vers l'écran de connexion avec un message de confirmation. Enchaîner
+créerait un second point d'émission de jeton, implicite, déclenché par un écran
+plutôt que par une action de l'utilisateur. Le frontend ne rouvre pas par
+commodité ce que l'API a fermé par conception.
+
+**Une seule page d'inscription pour les deux sous-types**, alors que la
+connexion en a deux. Ce n'est pas une inconséquence : le choix
+client/personnel découle du compte et ne doit pas être laissé à l'utilisateur,
+tandis que le choix particulier/entreprise **est** une déclaration qui lui
+appartient. La page reflète l'API, où seul `identite` change — les champs de
+compte vivent sur `CLIENT`, communs aux deux.
+
+**Les refus d'inscription sont repris tels quels**, contrairement au message
+uniforme de la connexion. Il n'y a ici rien à protéger : dire qu'une adresse est
+déjà prise est la raison même du refus. Et le 409 sur `numero_id_fiscal` est
+distinct de celui sur l'e-mail — les deux ne se corrigent pas de la même façon.
+
 ### La livraison naît avec la commande
 
 `LIVRAISON` est créée dans la transaction de `POST /commandes`, comme les lignes

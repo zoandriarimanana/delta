@@ -12,12 +12,17 @@
  */
 
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 
 import { useConnexionClient } from '../auth.hooks';
 
 export default function ConnexionPage() {
   const naviguer = useNavigate();
+  // Message porté par l'état de navigation, et non par un paramètre d'URL :
+  // il ne survit pas à un rechargement ni à un lien partagé, ce qui est le
+  // comportement voulu — c'est une confirmation ponctuelle, pas un contenu de
+  // la page.
+  const confirmation = (useLocation().state as { message?: string } | null)?.message;
   const { connecter, envoi, erreur } = useConnexionClient();
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
@@ -28,6 +33,15 @@ export default function ConnexionPage() {
       <p className="mt-2 text-sm text-slate-600">
         Retrouvez vos commandes et vos réservations.
       </p>
+
+      {confirmation !== undefined && (
+        <p
+          role="status"
+          className="mt-4 rounded border border-green-200 bg-green-50 p-3 text-sm text-green-800"
+        >
+          {confirmation}
+        </p>
+      )}
 
       <form
         className="mt-6 space-y-4"
@@ -86,6 +100,13 @@ export default function ConnexionPage() {
       </form>
 
       <p className="mt-6 text-sm text-slate-600">
+        Pas encore de compte ?{' '}
+        <Link to="/inscription" className="text-slate-900 underline">
+          Créer un compte
+        </Link>
+      </p>
+
+      <p className="mt-2 text-sm text-slate-600">
         Vous êtes membre de l’équipe Delta ?{' '}
         <Link to="/personnel/connexion" className="text-slate-900 underline">
           Espace personnel
