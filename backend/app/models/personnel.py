@@ -13,6 +13,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
+    from app.models.commande import Commande
     from app.models.livraison import Livraison
     from app.models.session_formation import SessionFormation
 
@@ -107,4 +108,6 @@ class Personnel(SoftDeleteMixin, Base):
     sessions_formation: Mapped[list[SessionFormation]] = relationship(
         back_populates="formateur"
     )
+    #: Commandes saisies par ce salarié au comptoir ou à table.
+    commandes: Mapped[list[Commande]] = relationship(back_populates="personnel")
     livraisons: Mapped[list[Livraison]] = relationship(back_populates="livreur")

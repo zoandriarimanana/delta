@@ -13,7 +13,8 @@ Chaque test s'exécute dans une transaction annulée à la sortie : rien n'est
 laissé en base.
 """
 
-from datetime import UTC, datetime, timedelta
+import inspect
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -31,9 +32,14 @@ from app.core.security import hacher_mot_de_passe
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
 from app.models.commande import Commande, StatutCommande, TypeCommande
+from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.produit import Produit
 from app.models.reservation import Reservation, StatutReservation, TypeReservation
-from app.schemas.commande import CommandeCreate, CommandeInviteCreate
+from app.schemas.commande import (
+    CommandeCreate,
+    CommandeInviteCreate,
+    CommandePersonnelCreate,
+)
 from app.schemas.demande_personnalisation import DemandePersonnalisationCreate
 from app.schemas.ligne_commande import LigneCommandeCreate
 from app.services.commande_service import CommandeService
@@ -984,3 +990,258 @@ def test_un_invite_ne_peut_pas_rattacher_une_reservation() -> None:
             id_reservation=1,
             lignes=[LigneCommandeCreate(id_produit=1, quantite=1)],
         )
+
+
+# --- Prise de commande par le personnel (#80) ---------------------------------
+#
+# Le point central : **aucune identité ne vient de la requête.** Le salarié vient
+# du jeton, l'acheteur est soit déduit de la réservation, soit un invité qu'il
+# nomme. C'est le principe tenu depuis le Sprint 2, étendu au personnel.
+
+
+def _salarie(db: Session, prefixe: str = "salarie") -> Personnel:
+    personnel = Personnel(
+        nom="Rakoto",
+        prenom="Hery",
+        fonction=FonctionPersonnel.RECEPTIONNISTE,
+        email=_email(prefixe),
+        date_embauche=date(2024, 1, 1),
+        mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+    )
+    db.add(personnel)
+    db.commit()
+    return personnel
+
+
+def _sur_reservation(id_produit: int, id_reservation: int) -> CommandePersonnelCreate:
+    return CommandePersonnelCreate(
+        type_commande=TypeCommande.SUR_PLACE,
+        id_reservation=id_reservation,
+        lignes=[LigneCommandeCreate(id_produit=id_produit, quantite=1)],
+    )
+
+
+def _pour_invite(id_produit: int) -> CommandePersonnelCreate:
+    return CommandePersonnelCreate(
+        type_commande=TypeCommande.SUR_PLACE,
+        nom_invite="Client au comptoir",
+        contact_invite="0340000000",
+        lignes=[LigneCommandeCreate(id_produit=id_produit, quantite=1)],
+    )
+
+
+def test_le_client_est_derive_de_la_reservation(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """**L'acheteur n'est jamais un choix du salarié.**
+
+    Il est déduit d'un fait déjà en base — `reservation.id_client` —, et non
+    d'un identifiant saisi. Accepter `id_client` depuis le corps rouvrirait ce
+    que `CommandeCreate` ferme depuis le Sprint 2.
+    """
+    salarie = _salarie(db)
+    reservation = _reservation(db, client)
+
+    commande = service.creer_par_personnel(
+        _sur_reservation(eclair.id_produit, reservation.id_reservation), salarie
+    )
+
+    assert commande.id_client == client.id_client
+    assert commande.id_reservation == reservation.id_reservation
+    assert commande.nom_invite is None
+
+
+def test_le_salarie_est_enregistre(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """`id_personnel` vient du jeton, jamais du corps.
+
+    Sans lui, rien ne dirait *qui* a pris la commande — ce qui compte pour une
+    caisse.
+    """
+    salarie = _salarie(db)
+    reservation = _reservation(db, client)
+
+    commande = service.creer_par_personnel(
+        _sur_reservation(eclair.id_produit, reservation.id_reservation), salarie
+    )
+
+    assert commande.id_personnel == salarie.id_personnel
+
+
+def test_le_chemin_invite_genere_une_reference(
+    service: CommandeService, eclair: Produit, db: Session
+) -> None:
+    """C'est le seul moyen pour l'acheteur de revenir sur sa commande."""
+    salarie = _salarie(db)
+
+    commande = service.creer_par_personnel(_pour_invite(eclair.id_produit), salarie)
+
+    assert commande.id_client is None
+    assert commande.nom_invite == "Client au comptoir"
+    assert isinstance(commande.reference_publique, UUID)
+    assert commande.id_personnel == salarie.id_personnel
+
+
+def test_le_parcours_client_ne_pose_aucun_personnel(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    """`NULL` a un sens unique : la commande vient du parcours client.
+
+    Contrôle positif de la colonne : sans lui, une implémentation qui la
+    peuplerait toujours passerait les tests ci-dessus.
+    """
+    commande = service.creer(_commande(eclair.id_produit), client)
+
+    assert commande.id_personnel is None
+
+
+def test_le_parcours_invite_ne_pose_aucun_personnel(
+    service: CommandeService, eclair: Produit
+) -> None:
+    commande = service.creer_pour_invite(
+        CommandeInviteCreate(
+            type_commande=TypeCommande.A_EMPORTER,
+            nom_invite="Jean",
+            contact_invite="0340000000",
+            lignes=[LigneCommandeCreate(id_produit=eclair.id_produit, quantite=1)],
+        )
+    )
+
+    assert commande.id_personnel is None
+
+
+def test_id_client_dans_le_corps_est_ignore(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """Le schema ne le porte pas : Pydantic l'ignore silencieusement.
+
+    Le vérifier explicitement vaut mieux que de s'y fier — un champ ajouté par
+    inadvertance au schema le rendrait soudain honoré.
+    """
+    salarie = _salarie(db)
+    reservation = _reservation(db, client)
+    autre = Client(
+        type_client=TypeClient.PARTICULIER,
+        email=_email("usurpe"),
+        mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+    )
+    db.add(autre)
+    db.commit()
+
+    donnees = CommandePersonnelCreate.model_validate(
+        {
+            "type_commande": "Sur_place",
+            "id_reservation": reservation.id_reservation,
+            "id_client": autre.id_client,
+            "id_personnel": 999999,
+            "lignes": [{"id_produit": eclair.id_produit, "quantite": 1}],
+        }
+    )
+    commande = service.creer_par_personnel(donnees, salarie)
+
+    assert commande.id_client == client.id_client
+    assert commande.id_personnel == salarie.id_personnel
+
+
+def test_les_deux_chemins_ensemble_sont_refuses(eclair: Produit) -> None:
+    with pytest.raises(ValueError):
+        CommandePersonnelCreate(
+            type_commande=TypeCommande.SUR_PLACE,
+            id_reservation=1,
+            nom_invite="Jean",
+            contact_invite="0340000000",
+            lignes=[LigneCommandeCreate(id_produit=eclair.id_produit, quantite=1)],
+        )
+
+
+def test_aucun_chemin_est_refuse(eclair: Produit) -> None:
+    with pytest.raises(ValueError):
+        CommandePersonnelCreate(
+            type_commande=TypeCommande.SUR_PLACE,
+            lignes=[LigneCommandeCreate(id_produit=eclair.id_produit, quantite=1)],
+        )
+
+
+def test_un_invite_sans_contact_est_refuse(eclair: Produit) -> None:
+    """Une commande sans moyen de recontacter l'acheteur n'a pas de sens, et le
+    `CHECK` de la base ne porte que sur `nom_invite`."""
+    with pytest.raises(ValueError):
+        CommandePersonnelCreate(
+            type_commande=TypeCommande.SUR_PLACE,
+            nom_invite="Jean",
+            lignes=[LigneCommandeCreate(id_produit=eclair.id_produit, quantite=1)],
+        )
+
+
+@pytest.mark.parametrize(
+    "statut", [StatutReservation.EN_ATTENTE, StatutReservation.ANNULEE]
+)
+def test_les_refus_de_reservation_sont_les_memes(
+    service: CommandeService,
+    client: Client,
+    eclair: Produit,
+    db: Session,
+    statut: StatutReservation,
+) -> None:
+    """Même validation que le parcours client, par la **même** méthode."""
+    salarie = _salarie(db)
+    reservation = _reservation(db, client, statut=statut)
+
+    with pytest.raises(ConflitMetier):
+        service.creer_par_personnel(
+            _sur_reservation(eclair.id_produit, reservation.id_reservation), salarie
+        )
+
+
+def test_une_reservation_hors_table_est_refusee(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    salarie = _salarie(db)
+    reservation = _reservation(db, client, type_reservation=TypeReservation.SALLE)
+
+    with pytest.raises(ReferenceInvalide):
+        service.creer_par_personnel(
+            _sur_reservation(eclair.id_produit, reservation.id_reservation), salarie
+        )
+
+
+def test_la_reservation_d_autrui_est_acceptee_par_le_personnel(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """**La propriété n'est pas vérifiée ici, et c'est voulu.**
+
+    Sur le parcours client, elle empêche de commander sur la réservation d'un
+    autre. Ici il n'y a pas d'acheteur authentifié à comparer : le salarié sert
+    précisément un client qui n'est pas lui. La comparer reviendrait à exiger
+    que le salarié soit le titulaire de la réservation — c'est-à-dire à rendre
+    l'endpoint inutilisable.
+    """
+    salarie = _salarie(db)
+    reservation = _reservation(db, client)
+
+    commande = service.creer_par_personnel(
+        _sur_reservation(eclair.id_produit, reservation.id_reservation), salarie
+    )
+
+    assert commande.id_client == client.id_client
+
+
+def test_la_validation_de_reservation_n_a_qu_une_implementation() -> None:
+    """Test de **conception** : les deux parcours partagent la même méthode.
+
+    Deux copies divergeraient au jour où l'une serait corrigée sans l'autre —
+    c'est arrivé sur la règle d'échec de connexion en #63, et c'est ce que ce
+    test rend impossible à ignorer.
+
+    Il tombe si un appelant se met à comparer `type_reservation` ou
+    `statut` lui-même, plutôt que de passer par `_reservation_rattachable`.
+    """
+    source = inspect.getsource(CommandeService)
+    corps_valideur = inspect.getsource(CommandeService._reservation_rattachable)
+    hors_valideur = source.replace(corps_valideur, "")
+
+    assert "TypeReservation.TABLE" not in hors_valideur
+    assert "STATUTS_RATTACHABLES" not in hors_valideur
+    # Les deux appelants passent bien par la méthode partagée.
+    assert hors_valideur.count("_reservation_rattachable(") == 2

@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from app.models.client import Client
     from app.models.ligne_commande import LigneCommande
     from app.models.livraison import Livraison
+    from app.models.personnel import Personnel
     from app.models.reservation import Reservation
 
 
@@ -147,9 +148,27 @@ class Commande(SoftDeleteMixin, Base):
     id_reservation: Mapped[int | None] = mapped_column(
         ForeignKey("reservation.id_reservation")
     )
+    #: Salarié qui a saisi la commande, `NULL` si le client l'a passée lui-même.
+    #:
+    #: `NULL` a un sens précis et unique : **la commande vient du parcours
+    #: client**. C'est le cas de toutes les commandes antérieures, et il reste le
+    #: cas courant. Une valeur ne peut venir que de `POST /commandes/personnel`.
+    #:
+    #: L'identifiant est **dérivé du jeton**, jamais transmis dans le corps —
+    #: même règle que `id_client`, et pour la même raison : une identité qui
+    #: vient de la requête est une identité qu'on peut usurper. Le laisser saisir
+    #: permettrait d'attribuer une commande à un collègue.
+    #:
+    #: `ON DELETE RESTRICT` : un salarié ne s'efface pas, il s'anonymise — la
+    #: commande garde alors un identifiant devenu anonyme, comme les livraisons
+    #: et les sessions de formation.
+    id_personnel: Mapped[int | None] = mapped_column(
+        ForeignKey("personnel.id_personnel", ondelete="RESTRICT")
+    )
 
     client: Mapped[Client | None] = relationship(back_populates="commandes")
     reservation: Mapped[Reservation | None] = relationship(back_populates="commandes")
+    personnel: Mapped[Personnel | None] = relationship(back_populates="commandes")
     lignes: Mapped[list[LigneCommande]] = relationship(
         back_populates="commande", cascade="all, delete-orphan"
     )

@@ -98,3 +98,59 @@ class CommandeRead(BaseModel):
     #: Réservation dont la commande découle, `None` dans le cas courant.
     id_reservation: int | None = None
     lignes: list[LigneCommandeRead] = []
+
+
+class CommandePersonnelCreate(CommandeCreate):
+    """Charge utile d'une commande saisie par un membre du personnel.
+
+    **Deux chemins, mutuellement exclusifs**, et aucune identité acceptée depuis
+    la requête.
+
+    1. `id_reservation` fourni — la commande est rattachée à une réservation de
+       table, et `id_client` en est **dérivé** par le service. Le salarié ne
+       désigne donc jamais l'acheteur : il est déduit d'un fait déjà en base.
+    2. `nom_invite` et `contact_invite` fournis — commande invitée classique,
+       simplement saisie par un salarié plutôt que par le client.
+
+    Ni `id_client` ni `id_personnel` ne figurent ici, et c'est le cœur du
+    montage : **aucune identité ne vient de la requête**. Le premier est déduit
+    de la réservation, le second du jeton du salarié. Les accepter permettrait
+    de commander au nom d'autrui, ou d'attribuer une commande à un collègue.
+
+    C'est le principe tenu depuis le Sprint 2, que cette classe étend au
+    personnel plutôt qu'elle ne l'entame.
+    """
+
+    nom_invite: str | None = Field(default=None, min_length=1, max_length=150)
+    contact_invite: str | None = Field(default=None, min_length=1, max_length=150)
+
+    @model_validator(mode="after")
+    def _exiger_un_seul_chemin(self) -> "CommandePersonnelCreate":
+        """Une réservation **ou** une identité invitée, jamais les deux ni aucune.
+
+        Le `CHECK` de la base — `(id_client IS NOT NULL) <> (nom_invite IS NOT
+        NULL)` — garantit déjà l'exclusivité côté données. La refuser ici produit
+        un message lisible plutôt qu'une erreur d'intégrité, et avant toute
+        écriture : même architecture à deux niveaux que l'unicité d'e-mail.
+
+        `contact_invite` sans `nom_invite` est refusé aussi : une commande sans
+        moyen de recontacter l'acheteur n'a pas de sens, et le `CHECK` ne porte
+        que sur `nom_invite`.
+        """
+        invite = self.nom_invite is not None
+        reservation = self.id_reservation is not None
+
+        if invite and reservation:
+            raise ValueError(
+                "Une commande rattachée à une réservation ne peut pas être "
+                "passée au nom d'un invité : le client est déduit de la "
+                "réservation."
+            )
+        if not invite and not reservation:
+            raise ValueError(
+                "Indiquer soit une réservation de table, soit le nom et le "
+                "contact de l'acheteur."
+            )
+        if invite and self.contact_invite is None:
+            raise ValueError("Un moyen de recontacter l'acheteur est obligatoire.")
+        return self

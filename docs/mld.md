@@ -204,7 +204,7 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 ## Transactions
 
 ```
-COMMANDE(id_commande, date_commande, reference_publique, adresse_livraison, nom_invite, contact_invite, type_commande, statut, montant_total, #id_client, #id_reservation)
+COMMANDE(id_commande, date_commande, reference_publique, adresse_livraison, nom_invite, contact_invite, type_commande, statut, montant_total, #id_client, #id_reservation, #id_personnel)
 LIGNE_COMMANDE(id_ligne, quantite, prix_unitaire_applique, #id_commande, #id_produit)
 DEMANDE_PERSONNALISATION(id_personnalisation, description_demande, ingredients_specifiques, supplement_prix, #id_ligne, #id_produit_base)
 RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_personnes, statut, avec_hebergement, #id_client, #id_session, #id_salle, #id_logement, #id_reservation_hebergement)
@@ -246,6 +246,27 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   qui serait énumérable. Contrainte `UNIQUE (reference_publique)` **globale** et
   non partielle : un UUID n'est jamais réattribué, il n'y a donc aucune valeur à
   libérer à l'archivage.
+- `COMMANDE.#id_personnel` est le salarié qui a **saisi** la commande, `NULL`
+  si le client l'a passée lui-même.
+
+  `NULL` a un sens précis et unique : la commande vient du **parcours client**.
+  C'est le cas de toutes les commandes antérieures au sprint 6, et il reste le
+  cas courant. Une valeur ne peut venir que de `POST /commandes/personnel`.
+
+  **L'identifiant est dérivé du jeton, jamais transmis dans le corps** — même
+  règle que `#id_client`, et pour la même raison : une identité qui vient de la
+  requête est une identité qu'on peut usurper. Le laisser saisir permettrait
+  d'attribuer une commande à un collègue.
+
+  `ON DELETE RESTRICT` : un salarié ne s'efface pas, il s'anonymise. La commande
+  garde alors un identifiant devenu anonyme, comme `LIVRAISON.#id_personnel` et
+  `SESSION_FORMATION.#id_formateur`. Un `CASCADE` effacerait des commandes —
+  donc des preuves de transaction — pour le départ d'un salarié.
+
+  Absent du dictionnaire de données d'origine, comme `COMMANDE.date_commande` :
+  celui-ci ne prévoyait pas qu'une commande puisse être saisie par un tiers.
+  Rien ne disait donc *qui* l'avait prise, ce qui compte pour une caisse.
+
 - `COMMANDE.type_commande` ∈ {En_ligne, Sur_place, A_emporter}
 - `COMMANDE.statut` ∈ {En_attente, Confirmee, En_preparation, Livree, Servie, Annulee}
   Règle de service, **non exprimable en `CHECK`** puisqu'elle croise deux
