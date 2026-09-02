@@ -476,10 +476,25 @@ une page de connexion, par exemple, appartient à `features/auth/` dès que ce m
 existe — elle n'est en `src/pages/` au Sprint 0 que parce qu'aucun module n'est
 encore créé.
 
-`features/auth/` existe depuis le Sprint 6 et porte la connexion du **personnel**.
-`src/pages/ConnexionPage.tsx`, la connexion client, y est restée : c'est encore
-le gabarit du Sprint 0, aucun formulaire ne l'ayant jamais remplacé. Elle
-rejoindra `features/auth/` le jour où elle sera écrite.
+`features/auth/` existe depuis le Sprint 6 et porte **les deux connexions**,
+client et personnel. `src/pages/ConnexionPage.tsx`, resté le gabarit du Sprint 0
+pendant cinq sprints, a été supprimé au profit de
+`features/auth/pages/ConnexionPage.tsx` : la règle énoncée ici dès l'origine est
+donc appliquée.
+
+**Deux pages et non une, parce que les endpoints sont deux.** C'est l'endpoint
+appelé qui détermine la population du jeton émis. Une page unique avec une case
+« je suis salarié » laisserait ce choix à l'utilisateur, alors qu'il découle de
+son compte — et rendrait possible d'ouvrir une session de la mauvaise population
+en cochant la mauvaise case.
+
+**Un seul hook derrière les deux.** `useConnexionClient` et
+`useConnexionPersonnel` habillent la même implémentation, qui ne diffère que par
+l'endpoint et le type. Deux copies divergeraient au jour où l'une serait
+corrigée sans l'autre — ce n'est pas théorique : la règle « un échec ne touche
+pas à la session en cours » a dû être corrigée après coup, et une seconde copie
+serait restée fausse. Même raisonnement que
+`PersonnelService.obtenir_avec_fonction` côté serveur.
 
 ### La livraison naît avec la commande
 

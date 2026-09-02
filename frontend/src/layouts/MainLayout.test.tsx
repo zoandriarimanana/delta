@@ -14,6 +14,8 @@ import {
   ecrirePanier,
   resynchroniserPanier,
 } from '@/features/commande/commande.panier';
+import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
+
 import MainLayout from './MainLayout';
 
 function afficher() {
@@ -43,6 +45,7 @@ function remplir(quantite: number) {
 
 beforeEach(() => {
   localStorage.clear();
+  effacerJeton();
   resynchroniserPanier();
 });
 
@@ -82,4 +85,41 @@ it('porte la navigation transverse', () => {
   for (const libelle of ['Accueil', 'Catalogue', 'Panier', 'Connexion']) {
     expect(screen.getByRole('link', { name: new RegExp(libelle) })).toBeDefined();
   }
+});
+
+it('offre « Connexion » au visiteur, jamais « Déconnexion »', () => {
+  afficher();
+
+  expect(screen.getByRole('link', { name: /connexion/i })).toBeDefined();
+  expect(screen.queryByRole('button', { name: /déconnexion/i })).toBeNull();
+});
+
+it('offre la déconnexion au client connecté', () => {
+  // Sans elle, un client ne pourrait pas fermer sa session autrement qu'en
+  // vidant le stockage du navigateur.
+  enregistrerSession('jeton', 'client');
+
+  afficher();
+
+  expect(screen.getByRole('button', { name: /déconnexion/i })).toBeDefined();
+  expect(screen.queryByRole('link', { name: /^connexion$/i })).toBeNull();
+});
+
+it('offre la déconnexion au personnel connecté', () => {
+  enregistrerSession('jeton', 'personnel');
+
+  afficher();
+
+  expect(screen.getByRole('button', { name: /déconnexion/i })).toBeDefined();
+});
+
+it('ne propose les pages client qu’au client', () => {
+  // Un salarié qui ouvrirait « Mes commandes » recevrait un 401, ce qui
+  // effacerait sa session de travail.
+  enregistrerSession('jeton', 'personnel');
+
+  afficher();
+
+  expect(screen.queryByRole('link', { name: /mes commandes/i })).toBeNull();
+  expect(screen.queryByRole('link', { name: /mes réservations/i })).toBeNull();
 });

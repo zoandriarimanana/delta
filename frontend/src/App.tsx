@@ -7,6 +7,7 @@
 
 import { BrowserRouter, Route, Routes } from 'react-router';
 
+import ConnexionPage from '@/features/auth/pages/ConnexionPage';
 import ConnexionPersonnelPage from '@/features/auth/pages/ConnexionPersonnelPage';
 import CommandeInviteePage from '@/features/commande/pages/CommandeInviteePage';
 import HistoriqueCommandesPage from '@/features/commande/pages/HistoriqueCommandesPage';
@@ -24,7 +25,6 @@ import SalleListPage from '@/features/salle/pages/SalleListPage';
 import MainLayout from '@/layouts/MainLayout';
 import SessionExpiree from '@/lib/SessionExpiree';
 import AccueilPage from '@/pages/AccueilPage';
-import ConnexionPage from '@/pages/ConnexionPage';
 import NonTrouveePage from '@/pages/NonTrouveePage';
 
 export default function App() {
