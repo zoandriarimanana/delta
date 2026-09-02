@@ -11,6 +11,7 @@ import {
   retirerDuPanier,
   totalPanier,
   versLignesEnvoyees,
+  versCibleAcheteur,
 } from './commande.service';
 import type { LignePanier } from './commande.types';
 import type { Produit } from '@/features/produit/produit.types';
@@ -169,5 +170,40 @@ describe('formaterDate', () => {
   it('rend la valeur brute plutôt qu’« Invalid Date »', () => {
     // Une donnée illisible vaut mieux qu'un message qui ressemble à un bogue.
     expect(formaterDate('pas une date')).toBe('pas une date');
+  });
+});
+
+describe('versCibleAcheteur', () => {
+  it('construit la cible réservation', () => {
+    expect(versCibleAcheteur('reservation', '42', '', '')).toEqual({
+      id_reservation: 42,
+    });
+  });
+
+  it('construit la cible invitée, espaces retirés', () => {
+    expect(versCibleAcheteur('invite', '', '  Jean  ', ' 0340000000 ')).toEqual({
+      nom_invite: 'Jean',
+      contact_invite: '0340000000',
+    });
+  });
+
+  it('ne mélange jamais les deux formes', () => {
+    // Le serveur refuse les deux ensemble en 422 : la fonction ne peut pas les
+    // produire, ce qui rend le refus inatteignable depuis l'écran.
+    const surReservation = versCibleAcheteur('reservation', '42', 'Jean', '0340');
+    const surInvite = versCibleAcheteur('invite', '42', 'Jean', '0340');
+
+    expect(surReservation).not.toHaveProperty('nom_invite');
+    expect(surInvite).not.toHaveProperty('id_reservation');
+  });
+
+  it('rend null sur une saisie incomplète', () => {
+    // L'écran le traduit en bouton désactivé, plutôt qu'en appel voué au refus.
+    expect(versCibleAcheteur('reservation', '', '', '')).toBeNull();
+    expect(versCibleAcheteur('reservation', 'abc', '', '')).toBeNull();
+    expect(versCibleAcheteur('reservation', '0', '', '')).toBeNull();
+    expect(versCibleAcheteur('invite', '', 'Jean', '')).toBeNull();
+    expect(versCibleAcheteur('invite', '', '', '0340')).toBeNull();
+    expect(versCibleAcheteur('invite', '', '   ', '   ')).toBeNull();
   });
 });

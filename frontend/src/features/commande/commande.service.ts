@@ -6,7 +6,12 @@
  * Ce découpage rend ces règles testables sans rendu ni stockage.
  */
 
-import type { LignePanier, LigneCommandeEnvoyee } from './commande.types';
+import type {
+  CheminAcheteur,
+  CibleAcheteur,
+  LignePanier,
+  LigneCommandeEnvoyee,
+} from './commande.types';
 import type { Produit } from '@/features/produit/produit.types';
 
 export const DEVISE = 'Ar';
@@ -139,4 +144,31 @@ export function formaterDate(valeur: string): string {
     dateStyle: 'long',
     timeStyle: 'short',
   }).format(date);
+}
+
+/**
+ * Construit la cible d'acheteur envoyée, ou `null` si la saisie est incomplète.
+ *
+ * Fonction **pure**, et non un bout de composant : c'est elle qui garantit
+ * qu'une seule des deux formes part sur le réseau — le serveur refuse les deux
+ * ensemble en 422 —, et elle se teste sans monter d'interface.
+ *
+ * `null` signifie « saisie incomplète », ce que l'écran traduit en bouton
+ * désactivé plutôt qu'en appel voué au refus.
+ */
+export function versCibleAcheteur(
+  chemin: CheminAcheteur,
+  reservation: string,
+  nom: string,
+  contact: string
+): CibleAcheteur | null {
+  if (chemin === 'reservation') {
+    const identifiant = Number(reservation);
+    return Number.isInteger(identifiant) && identifiant > 0
+      ? { id_reservation: identifiant }
+      : null;
+  }
+  return nom.trim() !== '' && contact.trim() !== ''
+    ? { nom_invite: nom.trim(), contact_invite: contact.trim() }
+    : null;
 }

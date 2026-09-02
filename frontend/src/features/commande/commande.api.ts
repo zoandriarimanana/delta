@@ -8,6 +8,7 @@
 import { axiosClient } from '@/lib/axiosClient';
 
 import type {
+  CommandePersonnelEnvoyee,
   Commande,
   CommandeEnvoyee,
   CommandeInviteEnvoyee,
@@ -51,5 +52,19 @@ export async function recupererCommandeInvitee(reference: string): Promise<Comma
  */
 export async function recupererHistorique(): Promise<Commande[]> {
   const reponse = await axiosClient.get<Commande[]>(CHEMIN);
+  return reponse.data;
+}
+
+/**
+ * Saisit une commande pour un client, au comptoir ou à table.
+ *
+ * Réservé au personnel : l'API refuse un jeton client en 401. Le jeton
+ * **n'identifie jamais l'acheteur** — il identifie le salarié, que le serveur
+ * enregistre dans `id_personnel`.
+ */
+export async function creerCommandePersonnel(
+  donnees: CommandePersonnelEnvoyee
+): Promise<Commande> {
+  const reponse = await axiosClient.post<Commande>('/commandes/personnel', donnees);
   return reponse.data;
 }

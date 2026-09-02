@@ -54,6 +54,30 @@ export interface CommandeInviteEnvoyee extends CommandeEnvoyee {
 }
 
 /**
+ * Commande saisie par un membre du personnel, au comptoir ou à table.
+ *
+ * **Union discriminée par le chemin d'identification**, miroir du schema
+ * serveur : soit une réservation de table, soit une identité invitée, jamais
+ * les deux. Le compilateur refuse le mélange, sans attendre le 422.
+ *
+ * **Aucune identité n'y figure** — ni `id_client`, ni `id_personnel`. Le
+ * premier est déduit de la réservation par le serveur, le second du jeton du
+ * salarié. Les porter ici inviterait à les envoyer, et permettrait de commander
+ * au nom d'autrui ou d'attribuer une commande à un collègue.
+ */
+export interface CommandePersonnelSurReservation extends CommandeEnvoyee {
+  id_reservation: number;
+}
+
+export interface CommandePersonnelPourInvite extends CommandeEnvoyee {
+  nom_invite: string;
+  contact_invite: string;
+}
+
+export type CommandePersonnelEnvoyee =
+  CommandePersonnelSurReservation | CommandePersonnelPourInvite;
+
+/**
  * Ligne du panier, côté client uniquement.
  *
  * Le MLD ne comporte **aucune entité panier** : il n'existe que dans le
@@ -72,3 +96,13 @@ export interface LignePanier {
   /** Stock connu au moment de l'ajout — sert à borner la quantité saisie. */
   stock_disponible: number;
 }
+
+/**
+ * Acheteur d'une commande saisie par un salarié : l'un ou l'autre, jamais les
+ * deux. Miroir des deux chemins du schema serveur.
+ */
+export type CibleAcheteur =
+  { id_reservation: number } | { nom_invite: string; contact_invite: string };
+
+/** Chemin d'identification choisi dans l'écran de prise de commande. */
+export type CheminAcheteur = 'reservation' | 'invite';

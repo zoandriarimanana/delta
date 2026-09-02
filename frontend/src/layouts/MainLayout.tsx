@@ -78,6 +78,11 @@ export default function MainLayout() {
                 Connexion
               </NavLink>
             )}
+            {personnel && (
+              <NavLink to="/personnel/commandes" className={classeLien}>
+                Prise de commande
+              </NavLink>
+            )}
             {session && (
               <button
                 type="button"

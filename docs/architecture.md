@@ -872,6 +872,33 @@ L'archivage se propage sur **deux** niveaux et non un seul : `COMMANDE` →
 `LIGNE_COMMANDE` → `DEMANDE_PERSONNALISATION`. Les deux `ON DELETE CASCADE` du
 schéma ne se déclenchent pas, un archivage étant un `UPDATE`.
 
+### Le panier du salarié n'est pas celui du client
+
+`features/commande/` porte **deux** paniers, et cette dualité est voulue.
+
+Celui du client vit dans `commande.panier.ts`, un magasin externe **persistant**
+qui survit au rechargement : c'est ce qui permet de composer une commande sur
+plusieurs visites. Celui du salarié vit dans un `useState` local à l'écran de
+prise de commande, et disparaît avec lui.
+
+**Un salarié qui enchaîne les commandes ne veut rien retrouver de la
+précédente** — un panier qui survit serait un défaut, pas un service. Et sur un
+poste partagé, écrire dans le magasin persistant écraserait le panier du client.
+
+Ce qui est partagé, ce sont les **fonctions pures** de `commande.service.ts` :
+elles opèrent sur un tableau, sans rien savoir d'où il est rangé. C'est
+exactement ce qui permet de partager le calcul sans partager la persistance, et
+de n'avoir qu'une implémentation du total.
+
+L'écran n'envoie **aucune adresse de livraison** : c'est sa présence, et elle
+seule, qui déclenche une `LIVRAISON`. Ne pas l'envoyer est donc la garantie
+qu'aucune n'est créée, et non un effet de bord du type `Sur_place`.
+
+**Le jeton du salarié n'identifie jamais l'acheteur.** Il identifie le salarié,
+que le serveur enregistre dans `COMMANDE.#id_personnel`. L'acheteur est déduit
+d'une réservation de table, ou nommé comme invité — et l'écran ne porte
+**aucun champ « identifiant client »**, ce qui rend la confusion inexprimable.
+
 ### Le panier n'a pas d'entité serveur
 
 `docs/mld.md` ne comporte **aucune table panier** : il vit dans le navigateur
