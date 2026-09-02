@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.commande import StatutCommande, TypeCommande
 from app.schemas.ligne_commande import LigneCommandeCreate, LigneCommandeRead
@@ -28,6 +28,13 @@ class CommandeCreate(BaseModel):
     #: signifie retrait. C'est le seul déclencheur : ni le type de commande ni
     #: `PRODUIT.est_livrable` ne décident à la place du client.
     adresse_livraison: str | None = Field(default=None, min_length=1, max_length=500)
+    #: Réservation de table dont la commande découle, `None` sinon — ce qui
+    #: reste le cas courant : on commande le plus souvent sans avoir réservé.
+    #:
+    #: Le service vérifie qu'elle existe, qu'elle appartient bien à l'acheteur
+    #: et qu'elle est dans un statut qui l'autorise. Ces trois règles croisent
+    #: la base et ne peuvent pas vivre ici.
+    id_reservation: int | None = None
     lignes: list[LigneCommandeCreate] = Field(min_length=1)
 
 
@@ -47,6 +54,26 @@ class CommandeInviteCreate(CommandeCreate):
 
     nom_invite: str = Field(min_length=1, max_length=150)
     contact_invite: str = Field(min_length=1, max_length=150)
+
+    @model_validator(mode="after")
+    def _refuser_une_reservation(self) -> "CommandeInviteCreate":
+        """Un invité ne peut pas rattacher sa commande à une réservation.
+
+        `RESERVATION.#id_client` est **NOT NULL** : réserver exige un compte,
+        contrairement à commander. Une réservation appartient donc toujours à
+        quelqu'un, et un invité n'est personne au sens de la base — il ne peut
+        pas en être le titulaire.
+
+        Le refus vit ici et non dans le service : la règle ne regarde que la
+        charge utile, et la trancher avant la base évite une vérification de
+        propriété qui n'aurait aucun propriétaire à comparer.
+        """
+        if self.id_reservation is not None:
+            raise ValueError(
+                "Une commande passée sans compte ne peut pas être rattachée "
+                "à une réservation."
+            )
+        return self
 
 
 class CommandeRead(BaseModel):
@@ -68,4 +95,6 @@ class CommandeRead(BaseModel):
     adresse_livraison: str | None = None
     nom_invite: str | None = None
     contact_invite: str | None = None
+    #: Réservation dont la commande découle, `None` dans le cas courant.
+    id_reservation: int | None = None
     lignes: list[LigneCommandeRead] = []

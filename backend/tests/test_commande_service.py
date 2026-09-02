@@ -13,6 +13,7 @@ Chaque test s'exécute dans une transaction annulée à la sortie : rien n'est
 laissé en base.
 """
 
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -31,6 +32,7 @@ from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
 from app.models.commande import Commande, StatutCommande, TypeCommande
 from app.models.produit import Produit
+from app.models.reservation import Reservation, StatutReservation, TypeReservation
 from app.schemas.commande import CommandeCreate, CommandeInviteCreate
 from app.schemas.demande_personnalisation import DemandePersonnalisationCreate
 from app.schemas.ligne_commande import LigneCommandeCreate
@@ -763,3 +765,222 @@ def test_une_seule_demande_par_ligne(
         )
         db.commit()
     db.rollback()
+
+
+# --- Lien vers une réservation (#65) ------------------------------------------
+#
+# `COMMANDE.#id_reservation` existait au MLD depuis l'origine et en base depuis
+# la migration initiale — vérifié en inspectant `information_schema` plutôt
+# qu'en s'y fiant. Aucune migration n'était donc nécessaire : ce qui manquait
+# était le chemin qui la renseigne.
+
+DEBUT_TABLE = datetime(2027, 6, 1, 19, 0, tzinfo=UTC)
+FIN_TABLE = DEBUT_TABLE + timedelta(hours=2)
+
+
+def _reservation(
+    db: Session,
+    proprietaire: Client,
+    statut: StatutReservation = StatutReservation.CONFIRMEE,
+    type_reservation: TypeReservation = TypeReservation.TABLE,
+    **cibles: object,
+) -> Reservation:
+    reservation = Reservation(
+        type_reservation=type_reservation,
+        date_debut=DEBUT_TABLE,
+        date_fin=FIN_TABLE,
+        nombre_personnes=2,
+        statut=statut,
+        id_client=proprietaire.id_client,
+        **cibles,
+    )
+    db.add(reservation)
+    db.commit()
+    return reservation
+
+
+def _commande_liee(id_produit: int, id_reservation: int) -> CommandeCreate:
+    return CommandeCreate(
+        type_commande=TypeCommande.SUR_PLACE,
+        id_reservation=id_reservation,
+        lignes=[LigneCommandeCreate(id_produit=id_produit, quantite=1)],
+    )
+
+
+@pytest.mark.parametrize(
+    "statut", [StatutReservation.CONFIRMEE, StatutReservation.HONOREE]
+)
+def test_une_reservation_confirmee_ou_honoree_porte_une_commande(
+    service: CommandeService,
+    client: Client,
+    eclair: Produit,
+    db: Session,
+    statut: StatutReservation,
+) -> None:
+    """Les deux statuts sont acceptés, et pas seulement `Honoree`.
+
+    Le MLD disait « honorée », mais on commande **pendant** le service, quand la
+    réservation est encore `Confirmee` : exiger `Honoree` rendrait la règle
+    inapplicable au moment même où elle sert.
+    """
+    reservation = _reservation(db, client, statut=statut)
+
+    commande = service.creer(
+        _commande_liee(eclair.id_produit, reservation.id_reservation), client
+    )
+
+    assert commande.id_reservation == reservation.id_reservation
+
+
+@pytest.mark.parametrize(
+    "statut", [StatutReservation.EN_ATTENTE, StatutReservation.ANNULEE]
+)
+def test_les_autres_statuts_sont_refuses(
+    service: CommandeService,
+    client: Client,
+    eclair: Produit,
+    db: Session,
+    statut: StatutReservation,
+) -> None:
+    """409 : l'identifiant est valide, c'est l'état qui refuse.
+
+    `En_attente` parce que la réservation n'est pas acquise — l'accepter la
+    confirmerait par un chemin détourné ; `Annulee` parce qu'elle n'existe plus
+    fonctionnellement.
+    """
+    reservation = _reservation(db, client, statut=statut)
+
+    with pytest.raises(ConflitMetier):
+        service.creer(
+            _commande_liee(eclair.id_produit, reservation.id_reservation), client
+        )
+
+
+def test_le_refus_n_ecrit_aucune_commande(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """La vérification précède l'écriture : rien ne subsiste d'un refus."""
+    reservation = _reservation(db, client, statut=StatutReservation.ANNULEE)
+    avant = len(service.lister_du_client(client))
+
+    with pytest.raises(ConflitMetier):
+        service.creer(
+            _commande_liee(eclair.id_produit, reservation.id_reservation), client
+        )
+
+    assert len(service.lister_du_client(client)) == avant
+
+
+def test_une_reservation_inexistante_donne_422(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    """422 et non 404 : la référence vient du corps, pas de l'URL."""
+    with pytest.raises(ReferenceInvalide):
+        service.creer(_commande_liee(eclair.id_produit, 10**8), client)
+
+
+def test_une_reservation_archivee_est_traitee_comme_inexistante(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    reservation = _reservation(db, client)
+    reservation.supprime_le = datetime.now(UTC)
+    db.commit()
+
+    with pytest.raises(ReferenceInvalide):
+        service.creer(
+            _commande_liee(eclair.id_produit, reservation.id_reservation), client
+        )
+
+
+def test_la_reservation_d_un_autre_client_est_refusee(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """Et le message ne dit pas qu'elle existe.
+
+    Un message distinct de celui de l'inexistence confirmerait l'existence de
+    la réservation d'autrui à qui essaierait des identifiants — même
+    raisonnement que le 404 sur la réservation d'un autre client.
+    """
+    autre = Client(
+        type_client=TypeClient.PARTICULIER,
+        email=_email("autre"),
+        mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+    )
+    db.add(autre)
+    db.commit()
+    reservation = _reservation(db, autre)
+
+    with pytest.raises(ReferenceInvalide) as refus:
+        service.creer(
+            _commande_liee(eclair.id_produit, reservation.id_reservation), client
+        )
+
+    assert str(refus.value) == (
+        f"Aucune réservation ne porte l'identifiant {reservation.id_reservation}."
+    )
+
+
+def test_seule_une_reservation_de_table_porte_une_commande(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """Lettre du MLD : « la commande découle d'une réservation de table ».
+
+    Une réservation de salle ou de formation n'a pas le même sens : rattacher
+    une commande à un stage produirait un lien que personne ne saurait
+    interpréter.
+    """
+    reservation = _reservation(db, client, type_reservation=TypeReservation.SALLE)
+
+    with pytest.raises(ReferenceInvalide):
+        service.creer(
+            _commande_liee(eclair.id_produit, reservation.id_reservation), client
+        )
+
+
+def test_une_commande_sans_reservation_reste_le_cas_courant(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    """Contrôle positif : sans lui, une implémentation refusant toute commande
+    passerait les tests de refus ci-dessus."""
+    commande = service.creer(_commande(eclair.id_produit), client)
+
+    assert commande.id_reservation is None
+
+
+def test_le_lien_ne_change_pas_le_montant(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """Le rattachement est une information, pas une remise.
+
+    Deux commandes au même panier, l'une liée et l'autre non, doivent porter le
+    même montant : le calcul ne regarde que les lignes et le catalogue.
+    """
+    reservation = _reservation(db, client)
+
+    liee = service.creer(
+        CommandeCreate(
+            type_commande=TypeCommande.SUR_PLACE,
+            id_reservation=reservation.id_reservation,
+            lignes=[LigneCommandeCreate(id_produit=eclair.id_produit, quantite=2)],
+        ),
+        client,
+    )
+    libre = service.creer(_commande(eclair.id_produit, quantite=2), client)
+
+    assert liee.montant_total == libre.montant_total
+
+
+def test_un_invite_ne_peut_pas_rattacher_une_reservation() -> None:
+    """`RESERVATION.#id_client` est NOT NULL : réserver exige un compte.
+
+    Le refus est porté par le schema d'entrée, avant la base — il n'y aurait
+    aucun propriétaire à comparer.
+    """
+    with pytest.raises(ValueError):
+        CommandeInviteCreate(
+            type_commande=TypeCommande.SUR_PLACE,
+            nom_invite="Jean",
+            contact_invite="0340000000",
+            id_reservation=1,
+            lignes=[LigneCommandeCreate(id_produit=1, quantite=1)],
+        )
