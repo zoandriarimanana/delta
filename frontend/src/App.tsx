@@ -13,6 +13,7 @@ import InscriptionPage from '@/features/auth/pages/InscriptionPage';
 import CommandeInviteePage from '@/features/commande/pages/CommandeInviteePage';
 import HistoriqueCommandesPage from '@/features/commande/pages/HistoriqueCommandesPage';
 import PanierPage from '@/features/commande/pages/PanierPage';
+import PriseDeCommandePage from '@/features/commande/pages/PriseDeCommandePage';
 import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
 import FormationDetailPage from '@/features/formation/pages/FormationDetailPage';
 import FormationListPage from '@/features/formation/pages/FormationListPage';
@@ -24,6 +25,7 @@ import MesReservationsPage from '@/features/reservation/pages/MesReservationsPag
 import SalleDetailPage from '@/features/salle/pages/SalleDetailPage';
 import SalleListPage from '@/features/salle/pages/SalleListPage';
 import MainLayout from '@/layouts/MainLayout';
+import RoutePersonnel from '@/lib/RoutePersonnel';
 import SessionExpiree from '@/lib/SessionExpiree';
 import AccueilPage from '@/pages/AccueilPage';
 import NonTrouveePage from '@/pages/NonTrouveePage';
@@ -56,6 +58,16 @@ export default function App() {
           <Route path="connexion" element={<ConnexionPage />} />
           <Route path="inscription" element={<InscriptionPage />} />
           <Route path="personnel/connexion" element={<ConnexionPersonnelPage />} />
+          {/* Garde d'affichage seulement : la protection réelle est
+              `get_current_personnel` côté serveur. */}
+          <Route
+            path="personnel/commandes"
+            element={
+              <RoutePersonnel>
+                <PriseDeCommandePage />
+              </RoutePersonnel>
+            }
+          />
           <Route path="*" element={<NonTrouveePage />} />
         </Route>
       </Routes>

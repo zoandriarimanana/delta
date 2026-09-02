@@ -9,6 +9,7 @@ import {
   creerCommandeInvite,
   recupererCommandeInvitee,
   recupererHistorique,
+  creerCommandePersonnel,
 } from './commande.api';
 import {
   abonnerAuPanier,
@@ -25,7 +26,13 @@ import {
   totalPanier,
   versLignesEnvoyees,
 } from './commande.service';
-import type { Commande, LignePanier, TypeCommande } from './commande.types';
+import type {
+  CibleAcheteur,
+  Commande,
+  CommandePersonnelEnvoyee,
+  LignePanier,
+  TypeCommande,
+} from './commande.types';
 import type { Produit } from '@/features/produit/produit.types';
 
 const MESSAGE_ERREUR_PAR_DEFAUT =
@@ -246,4 +253,87 @@ export function useHistorique(actif: boolean): EtatHistorique {
   }, [actif]);
 
   return etat;
+}
+
+export interface PriseDeCommande {
+  lignes: LignePanier[];
+  total: number;
+  ajouter: (produit: Produit) => void;
+  modifier: (idProduit: number, quantite: number) => void;
+  retirer: (idProduit: number) => void;
+  valider: (cible: CibleAcheteur) => Promise<Commande | null>;
+  envoi: boolean;
+  erreur: string | null;
+}
+
+/**
+ * Panier **local** d'un salarié qui saisit une commande.
+ *
+ * Volontairement tenu dans un `useState` et **non** dans `commande.panier.ts` :
+ * ce magasin persiste dans le navigateur pour qu'un client retrouve sa
+ * sélection d'une visite à l'autre. Un salarié qui enchaîne les commandes ne
+ * veut rien retrouver de la précédente — un panier qui survit serait un défaut,
+ * pas un service. Et il écraserait le panier du client sur un poste partagé.
+ *
+ * Les **fonctions pures** de `commande.service.ts` sont réutilisées telles
+ * quelles : elles opèrent sur un tableau, sans rien savoir d'où il est rangé.
+ * C'est ce qui permet de partager le calcul sans partager la persistance.
+ *
+ * Le panier est vidé après une commande réussie, et lui seul : rien ne survit
+ * d'une commande à la suivante.
+ *
+ * `type_commande` vaut toujours `Sur_place`, et **aucune adresse n'est
+ * envoyée** — c'est la présence de l'adresse, et elle seule, qui déclencherait
+ * une `LIVRAISON`.
+ */
+export function usePriseDeCommande(): PriseDeCommande {
+  const [lignes, setLignes] = useState<LignePanier[]>([]);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const ajouter = useCallback((produit: Produit) => {
+    setLignes((actuelles) => ajouterAuPanier(actuelles, produit));
+  }, []);
+
+  const modifier = useCallback((idProduit: number, quantite: number) => {
+    setLignes((actuelles) => modifierQuantite(actuelles, idProduit, quantite));
+  }, []);
+
+  const retirer = useCallback((idProduit: number) => {
+    setLignes((actuelles) => retirerDuPanier(actuelles, idProduit));
+  }, []);
+
+  const valider = useCallback(
+    async (cible: CibleAcheteur): Promise<Commande | null> => {
+      setEnvoi(true);
+      setErreur(null);
+      try {
+        const donnees = {
+          type_commande: 'Sur_place',
+          lignes: versLignesEnvoyees(lignes),
+          ...cible,
+        } as CommandePersonnelEnvoyee;
+        const commande = await creerCommandePersonnel(donnees);
+        setLignes([]);
+        return commande;
+      } catch (erreurAppel) {
+        setErreur(messageDErreur(erreurAppel));
+        return null;
+      } finally {
+        setEnvoi(false);
+      }
+    },
+    [lignes]
+  );
+
+  return {
+    lignes,
+    total: totalPanier(lignes),
+    ajouter,
+    modifier,
+    retirer,
+    valider,
+    envoi,
+    erreur,
+  };
 }
