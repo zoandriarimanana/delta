@@ -1260,3 +1260,152 @@ def test_reserver_un_bien_ne_touche_a_aucun_compteur(
 
     assert reservation.id_session is None
     assert reservation.statut is StatutReservation.ANNULEE
+
+
+# --- Réservation de table (#64) -----------------------------------------------
+#
+# Seul type qui ne désigne **aucune cible**. Le `CHECK` d'exclusivité l'autorise
+# explicitement, puisqu'il dit « au plus une » et non « exactement une » — c'est
+# d'ailleurs pour cette raison qu'il ne peut pas imposer sa cible à une
+# réservation de formation, règle qui vit donc dans le schema d'entrée.
+#
+# Ces tests ne construisent rien : ils **verrouillent** un comportement acquis
+# par construction. Le type fonctionnait déjà, sans qu'aucune ligne n'ait été
+# écrite pour lui — l'aiguillage le traite par le cas restant, et le validateur
+# refuse ses cibles parce qu'il n'en attend aucune. Sans ces tests, rien ne
+# distinguerait ce fonctionnement d'un accident.
+
+
+def _table(nombre: int = 4) -> ReservationCreate:
+    """Réservation de table : un créneau, un nombre de personnes, rien d'autre."""
+    return ReservationCreate(
+        type_reservation=TypeReservation.TABLE,
+        date_debut=DEBUT,
+        date_fin=FIN,
+        nombre_personnes=nombre,
+    )
+
+
+def test_une_table_se_reserve_sans_aucune_cible(
+    service: ReservationService, client: Client
+) -> None:
+    """Contrôle positif : sans lui, une implémentation qui refuserait toute
+    réservation de table passerait les tests de refus ci-dessous."""
+    reservation = service.creer(_table(), client)
+
+    assert reservation.type_reservation is TypeReservation.TABLE
+    assert reservation.id_session is None
+    assert reservation.id_salle is None
+    assert reservation.id_logement is None
+    assert reservation.statut is StatutReservation.EN_ATTENTE
+
+
+@pytest.mark.parametrize("colonne", ["id_session", "id_salle", "id_logement"])
+def test_une_table_ne_designe_aucun_bien(colonne: str) -> None:
+    """Les trois cibles sont refusées, et par le schema — donc avant la base.
+
+    Le `CHECK` d'exclusivité, lui, les laisserait passer une par une : il
+    n'interdit que d'en renseigner deux. C'est le type qui rend la cible
+    incohérente, et cette règle croise deux colonnes.
+    """
+    with pytest.raises(ValueError):
+        ReservationCreate(
+            type_reservation=TypeReservation.TABLE,
+            date_debut=DEBUT,
+            date_fin=FIN,
+            **{colonne: 1},
+        )
+
+
+def test_une_table_n_immobilise_aucune_place(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Aucun compteur n'est touché : il n'y a pas de session en regard.
+
+    Une réservation de table est sans effet sur `places_restantes`, quelle que
+    soit la session ouverte au même moment — le lien n'existe pas.
+    """
+    session = _session_ouverte(db)
+    places_avant = session.places_restantes
+
+    service.creer(_table(), client)
+
+    db.refresh(session)
+    assert session.places_restantes == places_avant
+
+
+def test_annuler_une_table_ne_restitue_rien(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """La garde de `_restituer` sur `id_session` suffit : rien à créditer.
+
+    Sans elle, l'annulation chercherait une session inexistante — le compteur
+    d'une autre session ne doit surtout pas bouger.
+    """
+    session = _session_ouverte(db)
+    places_avant = session.places_restantes
+    reservation = service.creer(_table(), client)
+
+    service.changer_statut(reservation.id_reservation, StatutReservation.ANNULEE)
+
+    db.refresh(session)
+    assert session.places_restantes == places_avant
+    assert reservation.statut is StatutReservation.ANNULEE
+
+
+def test_archiver_une_table_ne_restitue_rien(
+    service: ReservationService, client: Client, db: Session
+) -> None:
+    """Même symétrie que l'annulation : l'archivage passe par `_restituer`."""
+    session = _session_ouverte(db)
+    places_avant = session.places_restantes
+    reservation = service.creer(_table(), client)
+
+    service.supprimer(reservation.id_reservation)
+
+    db.refresh(session)
+    assert session.places_restantes == places_avant
+    archive = service.reservations.get_by_id(
+        reservation.id_reservation, inclure_supprimes=True
+    )
+    assert archive is not None and archive.supprime_le is not None
+
+
+def test_deux_tables_peuvent_se_chevaucher_sur_le_meme_creneau(
+    service: ReservationService, client: Client
+) -> None:
+    """**Aucune contrainte d'exclusion ne protège ce type, et c'est assumé.**
+
+    Ce test nomme une absence. Sans lui, un relecteur chercherait la contrainte
+    manquante et croirait à un oubli — le même souci qui avait imposé de
+    renommer un test au sprint 5 quand il a cessé de passer pour la raison
+    qu'annonçait son nom.
+
+    `EXCLUDE USING gist` exige une colonne désignant le bien : une réservation
+    de table n'en a aucune, il n'y a littéralement rien à verrouiller. La
+    conséquence est que deux réservations de table sur le même créneau sont
+    acceptées, ce qui est cohérent tant qu'aucune entité `TABLE` n'est
+    modélisée au MLD — décision actée en ouvrant #64.
+
+    Si le besoin se manifeste, une entité `TABLE` sera une évolution propre, et
+    rendra alors la contrainte possible. Ce test tombera ce jour-là, et ce sera
+    le bon signal.
+    """
+    premiere = service.creer(_table(), client)
+    seconde = service.creer(_table(), client)
+
+    assert premiere.id_reservation != seconde.id_reservation
+    assert premiere.date_debut == seconde.date_debut
+    assert premiere.date_fin == seconde.date_fin
+
+
+def test_une_table_refuse_l_hebergement() -> None:
+    """L'option est adossée à `FORMATION.propose_hebergement` : un hébergement
+    lié à une table n'aurait rien pour le valider."""
+    with pytest.raises(ValueError):
+        ReservationCreate(
+            type_reservation=TypeReservation.TABLE,
+            date_debut=DEBUT,
+            date_fin=FIN,
+            avec_hebergement=True,
+        )

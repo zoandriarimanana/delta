@@ -99,14 +99,27 @@ class ReservationService:
     def creer(self, donnees: ReservationCreate, client: Client) -> Reservation:
         """Crée une réservation, quel que soit son type.
 
-        Les trois types ne se ressemblent pas : une session a un **compteur de
-        places**, une salle et un logement ont un **calendrier**. Le premier se
-        protège par un `UPDATE` conditionnel atomique, les seconds par une
-        contrainte d'exclusion en base — il n'y a pas de compteur sur lequel
-        poser un verrou de ligne.
+        Les quatre types ne se ressemblent pas, et ce qui les protège de la
+        concurrence diffère à chaque fois :
 
-        L'aiguillage est explicite plutôt que polymorphe : trois cas nommés se
-        lisent, une hiérarchie de classes pour trois branches se devine.
+        - une **session** a un compteur de places, protégé par un `UPDATE`
+          conditionnel atomique — il existe une ligne à verrouiller ;
+        - une **salle** et un **logement** ont un calendrier, protégé par une
+          contrainte d'exclusion en base — il n'y a aucun compteur, et deux
+          requêtes simultanées passeraient toutes deux un contrôle applicatif ;
+        - une **table** n'a **rien à protéger**, et c'est délibéré. Aucune
+          entité `TABLE` n'est modélisée au MLD : la réservation ne désigne
+          donc aucun bien, et il n'existe littéralement rien à verrouiller.
+          `EXCLUDE USING gist` exige une colonne identifiant le bien ; sans
+          elle, la contrainte n'est pas exprimable. Voir
+          `tests/test_reservation_service.py`, section « Réservation de table »,
+          où un test nomme cette absence pour qu'elle se lise comme un choix.
+
+        L'aiguillage est explicite plutôt que polymorphe : quatre cas nommés se
+        lisent, une hiérarchie de classes pour quatre branches se devine.
+
+        `Table` est le cas restant, et non un oubli : il ne demande aucun
+        traitement particulier, la ligne suffit.
         """
         if donnees.type_reservation is TypeReservation.FORMATION:
             return self._creer_sur_session(donnees, client)

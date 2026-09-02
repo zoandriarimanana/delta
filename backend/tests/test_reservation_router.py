@@ -459,3 +459,46 @@ def test_le_refus_ne_consomme_aucune_place(
 
     db.refresh(session)
     assert session.places_restantes == 12
+
+
+# --- Réservation de table (#64) -----------------------------------------------
+
+
+def _corps_table(**extra: object) -> dict:
+    return {
+        "type_reservation": "Table",
+        "date_debut": DEBUT.isoformat(),
+        "date_fin": FIN.isoformat(),
+        "nombre_personnes": 4,
+        **extra,
+    }
+
+
+def test_reservation_de_table_retourne_201(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    """Contrôle positif du contrat HTTP : aucune cible n'est requise.
+
+    Le `CHECK` d'exclusivité autorise zéro colonne renseignée — c'est
+    exactement ce cas qu'il prévoit.
+    """
+    reponse = client_http.post(RESERVATIONS, json=_corps_table(), headers=entete)
+
+    assert reponse.status_code == 201
+    corps = reponse.json()
+    assert corps["type_reservation"] == "Table"
+    assert corps["id_session"] is None
+    assert corps["id_salle"] is None
+    assert corps["id_logement"] is None
+
+
+@pytest.mark.parametrize("colonne", ["id_session", "id_salle", "id_logement"])
+def test_une_table_avec_une_cible_retourne_422(
+    client_http: TestClient, entete: dict[str, str], colonne: str
+) -> None:
+    """422 et non 404 : la référence vient du corps, pas de l'URL."""
+    reponse = client_http.post(
+        RESERVATIONS, json=_corps_table(**{colonne: 1}), headers=entete
+    )
+
+    assert reponse.status_code == 422
