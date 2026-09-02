@@ -255,7 +255,30 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   lignes au moment où la commande est passée, et n'est jamais recalculé. Une
   ligne archivée ensuite ne le modifie pas — c'est une donnée d'archive, pas une
   vue dérivée de `LIGNE_COMMANDE`.
-- `COMMANDE.#id_reservation` est NULL sauf si la commande découle d'une réservation de table honorée sur place.
+- `COMMANDE.#id_reservation` est NULL sauf si la commande découle d'une
+  réservation de table. La colonne existait dès l'origine ; le chemin qui la
+  renseigne date du sprint 6.
+
+  **La réservation doit être `Confirmee` ou `Honoree`.** La formulation d'origine
+  disait « honorée », mais l'ordre chronologique et l'ordre des statuts ne
+  coïncident pas : on commande **pendant** le service, quand la réservation est
+  encore `Confirmee`, et elle ne passera `Honoree` qu'après. Exiger `Honoree`
+  rendrait la règle inapplicable au moment même où elle sert. Ce n'est pas une
+  omission rétablie comme l'unicité de `CLIENT.email` : le dictionnaire d'origine
+  décrivait le cas d'usage, pas un contrôle de statut.
+
+  `En_attente` est refusé — la réservation n'est pas acquise, et l'accepter la
+  confirmerait par un chemin détourné ; `Annulee` aussi, elle n'existe plus
+  fonctionnellement.
+
+  **Seule une réservation de type `Table` peut porter une commande**, et elle
+  doit appartenir à l'acheteur. Une réservation inexistante, archivée, ou
+  appartenant à un autre client reçoivent le **même** message : un message
+  distinct confirmerait l'existence de la réservation d'autrui.
+
+  Une commande **invitée** ne peut pas en porter : `RESERVATION.#id_client` est
+  NOT NULL, réserver exige un compte, et un invité n'a pas de propriétaire à
+  comparer.
 - `RESERVATION.type_reservation` ∈ {Formation, Salle, Logement, Table}.
 
 - `RESERVATION.statut` ∈ {En_attente, Confirmee, Honoree, Annulee}. Domaine

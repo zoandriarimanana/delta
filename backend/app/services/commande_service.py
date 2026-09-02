@@ -16,15 +16,32 @@ from app.models.client import Client
 from app.models.commande import Commande, StatutCommande, TypeCommande
 from app.models.ligne_commande import LigneCommande
 from app.models.produit import Produit
+from app.models.reservation import StatutReservation, TypeReservation
 from app.repositories.commande_repository import CommandeRepository
 from app.repositories.demande_personnalisation_repository import (
     DemandePersonnalisationRepository,
 )
 from app.repositories.ligne_commande_repository import LigneCommandeRepository
 from app.repositories.produit_repository import ProduitRepository
+from app.repositories.reservation_repository import ReservationRepository
 from app.schemas.commande import CommandeCreate, CommandeInviteCreate
 from app.schemas.ligne_commande import LigneCommandeCreate
 from app.services.livraison_service import LivraisonService
+
+#: Statuts d'une réservation qui autorisent une commande à s'y rattacher.
+#:
+#: `Confirmee` **et** `Honoree`, alors que le MLD ne parlait que de réservation
+#: « honorée ». L'ordre chronologique et l'ordre des statuts ne coïncident pas :
+#: on commande **pendant** le service, quand la réservation est encore
+#: `Confirmee`, et elle ne passera `Honoree` qu'après. Exiger `Honoree` rendrait
+#: la règle inapplicable au moment même où elle sert.
+#:
+#: `En_attente` est exclu — la réservation n'est pas acquise, et l'accepter la
+#: confirmerait par un chemin détourné. `Annulee` aussi : elle n'existe plus
+#: fonctionnellement.
+STATUTS_RATTACHABLES: frozenset[StatutReservation] = frozenset(
+    {StatutReservation.CONFIRMEE, StatutReservation.HONOREE}
+)
 
 
 class CommandeService:
@@ -41,6 +58,7 @@ class CommandeService:
         self.lignes = LigneCommandeRepository(db)
         self.produits = ProduitRepository(db)
         self.personnalisations = DemandePersonnalisationRepository(db)
+        self.reservations = ReservationRepository(db)
         self.livraisons = LivraisonService(db)
 
     def obtenir(self, id_commande: int) -> Commande:
@@ -189,12 +207,68 @@ class CommandeService:
             f"{quantite} demandé(s), {produit.stock_disponible} disponible(s)."
         )
 
+    def _verifier_reservation(self, donnees: CommandeCreate, client: Client) -> None:
+        """Refuse un rattachement à une réservation qui ne l'autorise pas.
+
+        Trois règles, qui croisent toutes la base et ne peuvent donc pas vivre
+        dans le schema d'entrée.
+
+        **La réservation doit exister** — 422 et non 404 : la référence vient du
+        corps, pas de l'URL (cf. `docs/architecture.md`).
+
+        **Elle doit appartenir à l'acheteur.** Le message est **identique** à
+        celui de l'inexistence, délibérément : un message distinct confirmerait
+        l'existence de la réservation d'autrui à qui essaierait des
+        identifiants. Même raisonnement que le 404 sur la réservation d'un
+        autre client.
+
+        **Elle doit être `Confirmee` ou `Honoree`** — 409, l'identifiant étant
+        valide et le refus portant sur un état, comme pour une session qui
+        n'est pas `Ouverte` ou un logement qui n'est pas `Disponible`.
+
+        Le MLD disait « honorée », mais l'ordre chronologique et l'ordre des
+        statuts ne coïncident pas : **on commande pendant le service**, quand la
+        réservation est encore `Confirmee`. Exiger `Honoree` rendrait la règle
+        inapplicable au moment même où elle sert. `En_attente` est refusé parce
+        que la réservation n'est pas acquise, et l'accepter la confirmerait par
+        un chemin détourné ; `Annulee` parce qu'elle n'existe plus
+        fonctionnellement.
+
+        Une réservation **archivée** est traitée comme inexistante : `get_by_id`
+        la filtre.
+        """
+        if donnees.id_reservation is None:
+            return
+
+        introuvable = (
+            f"Aucune réservation ne porte l'identifiant {donnees.id_reservation}."
+        )
+        reservation = self.reservations.get_by_id(donnees.id_reservation)
+        if reservation is None or reservation.id_client != client.id_client:
+            raise ReferenceInvalide(introuvable)
+
+        if reservation.type_reservation is not TypeReservation.TABLE:
+            raise ReferenceInvalide(
+                "Seule une réservation de table peut porter une commande, et "
+                f"celle-ci est de type « {reservation.type_reservation.value} »."
+            )
+
+        if reservation.statut not in STATUTS_RATTACHABLES:
+            raise ConflitMetier(
+                f"Cette réservation est « {reservation.statut.value} » : "
+                "elle ne peut pas porter de commande."
+            )
+
     def creer(self, donnees: CommandeCreate, client: Client) -> Commande:
         """Crée une commande au nom du client authentifié.
 
         `id_client` vient du jeton, jamais du corps de la requête : l'accepter
         laisserait commander au nom d'autrui.
+
+        C'est aussi ce jeton qui sert à vérifier qu'une réservation rattachée
+        appartient bien à l'acheteur.
         """
+        self._verifier_reservation(donnees, client)
         return self._creer(donnees, {"id_client": client.id_client})
 
     def creer_pour_invite(self, donnees: CommandeInviteCreate) -> Commande:
@@ -248,6 +322,9 @@ class CommandeService:
                 "adresse_livraison": donnees.adresse_livraison,
                 "statut": StatutCommande.EN_ATTENTE,
                 "montant_total": Decimal("0"),
+                # `None` dans le cas courant : on commande le plus souvent sans
+                # avoir réservé. La validité du lien a été vérifiée en amont.
+                "id_reservation": donnees.id_reservation,
                 **identification,
             }
         )
