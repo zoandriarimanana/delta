@@ -2,3 +2,39 @@
    Le thème se personnalise ici via `@theme { ... }`, et le scan des classes est
    automatique — plus de tableau `content` à tenir à jour. */
 @import 'tailwindcss';
+
+@theme {
+  --color-cream: #faf6f0;
+  --color-terracotta: #9c4a3c;
+  --color-burgundy: #6b2737;
+  --color-sage: #6b9e7f;
+  --color-amber: #d4a574;
+  --color-warm-gray-100: #f5f3f0;
+  --color-warm-gray-200: #e8e4df;
+  --color-warm-gray-300: #d4cfc7;
+  --color-warm-gray-400: #a89d93;
+  --color-warm-gray-500: #7d7470;
+  --color-warm-gray-600: #5c544b;
+  --color-warm-gray-700: #3d3531;
+
+  --font-serif: 'Fraunces', serif;
+  --font-sans: 'Inter', sans-serif;
+}
+
+html {
+  font-family: theme('fontFamily.sans');
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: theme('fontFamily.serif');
+  font-weight: 600;
+}
+
+body {
+  @apply bg-cream text-warm-gray-700;
+}

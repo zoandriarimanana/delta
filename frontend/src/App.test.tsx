@@ -23,7 +23,7 @@ describe('routage', () => {
   it("affiche la page d'accueil à la racine", () => {
     afficherA('/');
 
-    expect(screen.getByRole('heading', { name: 'Accueil' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: /Bienvenue chez Delta/ })).toBeDefined();
   });
 
   it('affiche la page de connexion sur /connexion', () => {

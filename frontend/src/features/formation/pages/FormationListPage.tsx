@@ -17,55 +17,74 @@ export default function FormationListPage() {
 
   return (
     <section>
-      <h1 className="text-2xl font-semibold text-slate-900">Nos formations</h1>
+      <div className="mb-8">
+        <h1 className="text-4xl font-serif font-bold text-terracotta mb-2">
+          Nos formations
+        </h1>
+        <p className="text-warm-gray-600">
+          Découvrez nos ateliers et sessions de formation culinaire
+        </p>
+      </div>
 
-      <label className="mt-4 flex items-center gap-2 text-sm text-slate-700">
-        Domaine
+      <div className="mb-8 flex items-center gap-3">
+        <label htmlFor="filtre-domaine" className="font-medium text-warm-gray-700">
+          Filtrer par domaine:
+        </label>
         <select
+          id="filtre-domaine"
           value={idDomaine ?? ''}
           onChange={(evenement) =>
             setIdDomaine(
               evenement.target.value === '' ? null : Number(evenement.target.value)
             )
           }
-          className="rounded border border-slate-300 px-2 py-1"
+          className="rounded-lg border-2 border-warm-gray-200 px-3 py-2 bg-white text-warm-gray-700 hover:border-terracotta transition-colors"
         >
-          {/* La valeur vide signifie « tous les domaines », pas « aucun ». */}
-          <option value="">Tous</option>
+          <option value="">Tous les domaines</option>
           {(domaines.donnees ?? []).map((domaine) => (
             <option key={domaine.id_domaine} value={domaine.id_domaine}>
               {domaine.libelle}
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
       {formations.chargement && (
-        <p role="status" className="mt-4 text-slate-500">
-          Chargement…
+        <p role="status" className="text-center py-8 text-warm-gray-500">
+          ⏳ Chargement des formations…
         </p>
       )}
 
       {formations.erreur !== null && (
-        <p
+        <div
           role="alert"
-          className="mt-4 rounded border border-red-200 bg-red-50 p-4 text-red-800"
+          className="rounded-lg bg-terracotta/10 border-2 border-terracotta p-4 text-terracotta"
         >
-          {formations.erreur}
-        </p>
+          ⚠️ {formations.erreur}
+        </div>
       )}
 
       {formations.donnees !== null && formations.donnees.length === 0 && (
-        <p className="mt-4 text-slate-600">
-          Aucune formation ne correspond à ce filtre.
-        </p>
+        <div className="text-center py-12">
+          <p className="text-warm-gray-600 mb-4">
+            Aucune formation ne correspond à votre recherche.
+          </p>
+          <button
+            onClick={() => setIdDomaine(null)}
+            className="text-terracotta hover:text-burgundy font-medium transition-colors underline"
+          >
+            Voir toutes les formations
+          </button>
+        </div>
       )}
 
-      <ul className="mt-6 space-y-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {(formations.donnees ?? []).map((formation) => (
-          <CarteFormation key={formation.id_formation} formation={formation} />
+          <div key={formation.id_formation}>
+            <CarteFormation formation={formation} />
+          </div>
         ))}
-      </ul>
+      </div>
     </section>
   );
 }

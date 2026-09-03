@@ -10,6 +10,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 
+import Carte from '@/components/ui/Carte';
+import Badge from '@/components/ui/Badge';
+import { imagePour } from '@/lib/images';
+
+import { libelleStatut, varianteStatut } from '../logement.service';
 import { formaterMontant } from '@/features/commande/commande.service';
 
 import { useLogements } from '../logement.hooks';
@@ -20,14 +25,24 @@ export default function LogementListPage() {
 
   return (
     <section>
-      <h1 className="text-2xl font-semibold text-slate-900">Nos hébergements</h1>
-      <p className="mt-2 text-slate-600">
-        Chambres disponibles à la nuitée, sur place.
-      </p>
+      <div className="mb-8">
+        <h1 className="text-4xl font-serif font-bold text-terracotta mb-2">
+          Nos hébergements
+        </h1>
+        <p className="text-warm-gray-600">
+          Chambres disponibles à la nuitée, sur place
+        </p>
+      </div>
 
-      <label className="mt-6 flex items-center gap-2 text-sm text-slate-700">
-        Capacité minimale
+      <div className="mb-8">
+        <label
+          htmlFor="filtre-capacite"
+          className="block mb-2 font-medium text-warm-gray-700"
+        >
+          Capacité minimale
+        </label>
         <input
+          id="filtre-capacite"
           type="number"
           min={1}
           value={capacite ?? ''}
@@ -35,46 +50,67 @@ export default function LogementListPage() {
             const saisie = Number(evenement.target.value);
             setCapacite(Number.isInteger(saisie) && saisie > 0 ? saisie : null);
           }}
-          className="w-24 rounded border border-slate-300 px-2 py-1"
+          className="w-32 rounded-lg border-2 border-warm-gray-200 px-3 py-2 bg-white text-warm-gray-700 hover:border-terracotta transition-colors"
+          placeholder="Personnes"
         />
-      </label>
+      </div>
 
       {chargement && (
-        <p role="status" className="mt-6 text-slate-500">
-          Chargement…
+        <p role="status" className="text-center py-8 text-warm-gray-500">
+          ⏳ Chargement des hébergements…
         </p>
       )}
 
       {erreur !== null && (
-        <p role="alert" className="mt-6 text-red-800">
-          {erreur}
-        </p>
+        <div
+          role="alert"
+          className="rounded-lg bg-terracotta/10 border-2 border-terracotta p-4 text-terracotta"
+        >
+          ⚠️ {erreur}
+        </div>
       )}
 
       {donnees !== null && donnees.length === 0 && (
-        <p className="mt-6 text-slate-600">
-          Aucun hébergement ne correspond à cette capacité.
-        </p>
+        <div className="text-center py-12">
+          <p className="text-warm-gray-600 mb-4">
+            Aucun hébergement ne correspond à cette capacité.
+          </p>
+          <button
+            onClick={() => setCapacite(null)}
+            className="text-terracotta hover:text-burgundy font-medium transition-colors underline"
+          >
+            Voir tous les hébergements
+          </button>
+        </div>
       )}
 
-      <ul className="mt-6 space-y-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {(donnees ?? []).map((logement) => (
-          <li
+          <Link
             key={logement.id_logement}
-            className="rounded border border-slate-200 bg-white p-4"
+            to={`/logements/${logement.id_logement}`}
+            className="no-underline"
           >
-            <h2 className="font-medium text-slate-900">
-              <Link to={`/logements/${logement.id_logement}`} className="underline">
-                {logement.type_chambre}
-              </Link>
-            </h2>
-            <p className="mt-1 text-sm text-slate-600">
-              {logement.capacite} personne(s) — {formaterMontant(logement.tarif_nuitee)}{' '}
-              / nuit
-            </p>
-          </li>
+            <Carte
+              image={imagePour('logement', logement.id_logement)}
+              titre={`Chambre ${logement.type_chambre}`}
+              description={`${logement.capacite} personne(s)`}
+              pied={
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-semibold text-terracotta">
+                    {formaterMontant(logement.tarif_nuitee)} / nuit
+                  </span>
+                  {/* Le libellé et la variante viennent du module : la
+                      pastille ne sait rien des logements. */}
+                  <Badge variante={varianteStatut(logement.statut)}>
+                    {libelleStatut(logement.statut)}
+                  </Badge>
+                </div>
+              }
+            />
+          </Link>
         ))}
-      </ul>
+      </div>
     </section>
   );
 }
