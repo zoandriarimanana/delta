@@ -58,6 +58,40 @@ git log --oneline origin/develop..HEAD    # doit ne montrer que vos commits
 git diff --stat origin/develop..HEAD      # doit ne montrer que vos fichiers
 ```
 
+### Jamais de commit direct sur `develop`, même pour de la documentation
+
+**Règle absolue** : créer une branche dédiée **en premier geste**, avant le premier
+commit, jamais après coup. S'applique même aux corrections mineures, aux ajustements
+de doc, aux changements qui semblent triviaux.
+
+La tentation est forte sur une correction « cinq minutes » — ajouter une règle au
+roadmap, fixer une typo dans le MLD, clarifier une note. Les pousser directement sur
+`develop` contourne le circuit branche → PR → CI → review, qui existe précisément pour
+attraper ces cas en aval.
+
+**Cet incident est arrivé** : trois commits de documentation (retrait d'une référence
+fantôme #58, clarification d'une dette, ajout d'une documentation de contrainte) ont
+été faits directement sur `develop` locale avant d'être découverts en avance de
+`origin/develop`. Aucun d'eux n'aurait échoué la CI, mais le contournement du circuit
+reste un risque structurel. Deux étapes, point final :
+
+```bash
+git fetch origin
+git checkout -b docs/mon-ajustement origin/develop    # AVANT tout commit
+# ... faire les commits localement ...
+git push -u origin docs/mon-ajustement
+# Ouvrir une PR depuis GitHub
+```
+
+Si vous vous retrouvez avec des commits sur `develop` local : les extraire vers une
+vraie branche avec `git checkout -b`, `git push`, puis reset `develop` :
+
+```bash
+git checkout -b docs/extracted origin/develop  # avant le premier commit
+git push -u origin docs/extracted
+git checkout develop && git reset --hard origin/develop
+```
+
 ---
 
 ## 2. Convention de commits (Conventional Commits)
