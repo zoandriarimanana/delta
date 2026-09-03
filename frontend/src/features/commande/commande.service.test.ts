@@ -25,6 +25,7 @@ function produit(surcharge: Partial<Produit> = {}): Produit {
     unite_mesure: 'piece',
     stock_disponible: 10,
     est_personnalisable: false,
+    supplement_personnalisation: null,
     est_livrable: true,
     id_categorie: 1,
     ...surcharge,

@@ -80,7 +80,10 @@ export default function MainLayout() {
         ]
       : []),
     ...(personnel
-      ? [{ vers: '/personnel/commandes', libelle: 'Prise de commande' }]
+      ? [
+          { vers: '/personnel/commandes', libelle: 'Prise de commande' },
+          { vers: '/personnel/catalogue', libelle: 'Catalogue' },
+        ]
       : []),
     { vers: '/panier', libelle: 'Panier', compteur: nombre },
     ...(session ? [] : [{ vers: '/connexion', libelle: 'Connexion' }]),

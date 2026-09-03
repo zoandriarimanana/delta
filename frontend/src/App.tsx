@@ -19,6 +19,8 @@ import FormationDetailPage from '@/features/formation/pages/FormationDetailPage'
 import FormationListPage from '@/features/formation/pages/FormationListPage';
 import LogementDetailPage from '@/features/logement/pages/LogementDetailPage';
 import LogementListPage from '@/features/logement/pages/LogementListPage';
+import AdministrationCategoriesPage from '@/features/produit/pages/AdministrationCategoriesPage';
+import AdministrationProduitsPage from '@/features/produit/pages/AdministrationProduitsPage';
 import ProduitDetailPage from '@/features/produit/pages/ProduitDetailPage';
 import ProduitListPage from '@/features/produit/pages/ProduitListPage';
 import MesReservationsPage from '@/features/reservation/pages/MesReservationsPage';
@@ -65,6 +67,22 @@ export default function App() {
             element={
               <RoutePersonnel>
                 <PriseDeCommandePage />
+              </RoutePersonnel>
+            }
+          />
+          <Route
+            path="personnel/catalogue"
+            element={
+              <RoutePersonnel>
+                <AdministrationProduitsPage />
+              </RoutePersonnel>
+            }
+          />
+          <Route
+            path="personnel/categories"
+            element={
+              <RoutePersonnel>
+                <AdministrationCategoriesPage />
               </RoutePersonnel>
             }
           />
