@@ -314,7 +314,7 @@ Huit tâches livrées là où cinq étaient prévues.
       un bouton est une commodité, jamais une garantie.
       — Dépendance de la dernière tâche du sprint, et réutilisée ensuite par
       tout le back-office du Sprint 10 ainsi que par l'écran d'administration
-      du catalogue relevé en #58.
+      du catalogue livré après le sprint (PRs #88, #90, #91).
       — Livré par #73. Deux écarts au plan, décidés en construisant :
       l'événement `delta:non-authentifie` porte désormais la **population**,
       lue avant l'effacement du jeton — sans elle, un salarié déconnecté était
@@ -459,19 +459,18 @@ Huit tâches livrées là où cinq étaient prévues.
       Ces actions écrivent `COMMANDE.statut` depuis une décision humaine, elles
       ne rétablissent pas une propagation automatique depuis `LIVRAISON`.
 
-**Non planifié, à rattacher ici ou ailleurs — voir #58.** L'**administration du
-catalogue produit** n'a aucune interface React : le CRUD API existe et est
-protégé par `get_current_personnel_administrateur` depuis le Sprint 3, mais
-aucun écran ne le consomme, et un administrateur en est réduit à `curl`. Les
-deux cases ci-dessus nomment le tableau de bord `PERSONNEL` et celui des
-commandes — pas le catalogue.
+**Travaux hors sprint : administration du catalogue produit.** L'**administration du
+catalogue produit** a reçu son interface après le Sprint 6 (PRs #88, #90, #91 le 3 sept).
+Le CRUD API était protégé par `get_current_personnel_administrateur` depuis le Sprint 3, mais
+aucun écran ne le consommait. Un administrateur en était réduit à `curl`.
 
-Le morceau réel n'est d'ailleurs pas le formulaire produit mais le **socle
-d'authentification `PERSONNEL` côté frontend**, qui n'existe pas : `lib/
-tokenStorage.ts` ne connaît qu'un seul jeton, sans la revendication `type` qui
-sépare les deux populations depuis #23. Ce socle est la dépendance commune de
-tout écran réservé au personnel, celui du Sprint 10 compris — d'où la note ici
-plutôt qu'une case inventée dans un sprint qui ne l'a pas prévue.
+Le travail n'était pas planifié au Sprint 7, mais c'était une continuité logique du
+Sprint 3 : trois PRs successives ont ajouté la restauration (#88), les listes
+d'administration (#90), et l'interface (#91). Le **socle d'authentification
+`PERSONNEL` côté frontend (#73)** était la véritable dépendance commune — sans lui,
+aucun écran réservé au personnel n'était accessible, y compris celui du catalogue.
+C'est pourquoi ce travail a pu démarrer une fois #73 livré, sans attendre un
+découpage formel de sprint.
 
 ---
 
