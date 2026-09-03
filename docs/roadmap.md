@@ -4,7 +4,7 @@ Ordre de priorisation : dépendances techniques d'abord, puis cœur transactionn
 puis modules métier du plus généraliste au plus spécifique, paiement en ligne et
 back-office avancé en dernier.
 
-**Sprint courant : Sprint 6.** Mettre à jour cette ligne à chaque changement de sprint.
+**Sprint courant : Sprint 7.** Mettre à jour cette ligne à chaque changement de sprint.
 
 Avant de commencer une tâche : vérifier la Definition of Ready dans `CONTRIBUTING.md`.
 Avant de clore une tâche : vérifier la Definition of Done dans `CONTRIBUTING.md`.
@@ -237,11 +237,16 @@ couplage ne pouvait pas venir plus tôt — il dépend du mécanisme de chevauch
 livré par #47 — et le titre le nomme plutôt que de le laisser deviner du contenu
 du Milestone.
 
-**Deux tâches s'y sont ajoutées en cours de route**, la connexion et
-l'inscription client. Elles n'étaient pas au plan : le manque a été découvert en
-construisant le socle d'authentification, et il datait du Sprint 0. Elles sont
-inscrites ici plutôt que passées sous silence — un sprint dont le plan ne
-reflète pas ce qui a été fait ne sert plus à retrouver les décisions.
+**Trois tâches s'y sont ajoutées en cours de route** : la connexion et
+l'inscription client, puis l'endpoint de prise de commande par le personnel.
+Aucune n'était au plan, et aucune n'est une dérive de périmètre — chacune
+comblait un trou qui rendait **inatteignable ce que le sprint composait**. Les
+deux premières datent du Sprint 0, la troisième est apparue en préparant le
+dernier écran.
+
+Elles sont inscrites ici plutôt que passées sous silence : un sprint dont le
+plan ne reflète pas ce qui a été fait ne sert plus à retrouver les décisions.
+Huit tâches livrées là où cinq étaient prévues.
 
 - [x] Couplage `RESERVATION` Formation ↔ `LOGEMENT` — **en premier**
       — Suite planifiée de #37, débloquée par #47. `avec_hebergement`
@@ -349,7 +354,7 @@ reflète pas ce qui a été fait ne sert plus à retrouver les décisions.
       a deux : le choix client/personnel découle du compte, celui de
       particulier/entreprise est une déclaration du visiteur.
       — Livré par #76 (issue #74).
-- [ ] `RESERVATION` type = Table
+- [x] `RESERVATION` type = Table
       — Seul type qui ne porte **aucune cible**. La contrainte n°2 l'autorise,
       puisqu'elle dit « au plus une » et non « exactement une ».
       — **Aucune contrainte d'exclusion n'est possible**, et c'est assumé :
@@ -361,7 +366,12 @@ reflète pas ce qui a été fait ne sert plus à retrouver les décisions.
       porte pas ; en inventer une ici la ferait naître d'un besoin supposé. Si
       le besoin se manifeste, une entité `TABLE` sera une évolution propre — et
       rendra alors la contrainte d'exclusion possible.
-- [ ] Lien `RESERVATION → COMMANDE` (le client réserve, puis commande sur place)
+      — Livré par #78. Le type **fonctionnait déjà par construction** : rien n'a
+      été écrit pour lui, l'aiguillage le traitant par le cas restant. Treize
+      tests verrouillent ce qui n'était jusqu'ici qu'un accident heureux, dont
+      un qui **nomme** l'absence de contrainte d'exclusion. Ce test tombera le
+      jour où une entité `TABLE` sera introduite, et ce sera le bon signal.
+- [x] Lien `RESERVATION → COMMANDE` (le client réserve, puis commande sur place)
       — `COMMANDE.#id_reservation` **existe déjà** au MLD et en base : aucune
       migration attendue, à confirmer en inspectant la base plutôt qu'en s'y
       fiant.
@@ -372,15 +382,51 @@ reflète pas ce qui a été fait ne sert plus à retrouver les décisions.
       est encore `Confirmee` — exiger `Honoree` rendrait la règle inapplicable
       au moment même où elle sert.
       — Une référence invalide donne **422** et non 404 : elle vient du corps,
-      pas de l'URL.
-- [ ] Interface simplifiée côté personnel pour prise de commande sur place
+      pas de l'URL. Un **statut** qui refuse donne en revanche **409** :
+      l'identifiant est valide, c'est l'état qui s'y oppose — même traitement
+      qu'une session non `Ouverte` ou un logement non `Disponible`.
+      — Livré par #79. Aucune migration : la colonne existait, vérifié dans
+      `information_schema` et `pg_constraint` plutôt que supposé depuis le MLD.
+      Seule une réservation de type `Table` peut porter une commande, et une
+      commande **invitée** ne le peut pas — `RESERVATION.#id_client` est NOT
+      NULL, réserver exige un compte.
+- [x] Endpoint de prise de commande par le personnel — **rattrapage**
+      — **Ne figurait pas au plan.** Le manque a été découvert en préparant
+      l'écran ci-dessous : `POST /commandes` rejette un jeton personnel, et
+      `POST /commandes/invite` refuse `id_reservation`. Un salarié ne pouvait
+      donc créer qu'une commande invitée sans réservation — **le parcours que
+      ce sprint compose n'était pas atteignable**, alors que ses deux moitiés
+      existaient.
+      — Contrairement au couplage hébergement, aucun mécanisme sous-jacent ne
+      manquait : il s'agissait uniquement de câblage.
+      — **Aucune identité ne vient de la requête.** Le salarié vient du jeton,
+      l'acheteur est déduit de `reservation.id_client` ou nommé comme invité.
+      Deux chemins mutuellement exclusifs, refusés ensemble en 422.
+      — `COMMANDE` gagne `#id_personnel` — nullable, `ON DELETE RESTRICT`.
+      `NULL` signifie « la commande vient du parcours client ». Rien ne disait
+      jusqu'ici *qui* avait pris une commande, ce qui compte pour une caisse.
+      — Une **seule implémentation** de la validation de réservation, partagée
+      avec le parcours client ; seul le contrôle de propriété reste propre à ce
+      dernier, faute d'acheteur authentifié à comparer côté personnel. Un test
+      de conception le verrouille.
+      — Livré par #81 (issue #80).
+- [x] Interface simplifiée côté personnel pour prise de commande sur place
       — **Dépend du socle d'authentification** ci-dessus : premier écran du
       projet réservé au personnel.
       — Commande `Sur_place`, **sans** `adresse_livraison`, donc **sans
       `LIVRAISON`** — c'est la présence de l'adresse, et elle seule, qui la
       déclenche. Statut terminal `Servie`, lu dans `STATUT_TERMINAL`.
-      — Le jeton du salarié **n'identifie pas l'acheteur** : la commande est
-      passée en mode invité, ou rattachée à un client que le salarié nomme.
+      — Le jeton du salarié **n'identifie pas l'acheteur** : il identifie le
+      salarié, enregistré dans `#id_personnel`. L'écran ne porte **aucun champ
+      « identifiant client »**, ce qui rend la confusion inexprimable.
+      — **Deux paniers, et c'est voulu.** Celui du client persiste dans le
+      navigateur ; celui du salarié vit dans un `useState` local. Un salarié
+      qui enchaîne les commandes ne veut rien retrouver de la précédente, et
+      sur un poste partagé le magasin persistant écraserait le panier du
+      client. Seules les **fonctions pures** sont partagées — elles opèrent sur
+      un tableau, sans rien savoir d'où il est rangé. Règle écrite dans
+      `docs/architecture.md`.
+      — Livré par #82.
 
 ## Sprint 7 — Abonnement cantine (B2B)
 
