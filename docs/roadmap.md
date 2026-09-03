@@ -472,6 +472,28 @@ aucun écran réservé au personnel n'était accessible, y compris celui du cata
 C'est pourquoi ce travail a pu démarrer une fois #73 livré, sans attendre un
 découpage formel de sprint.
 
+## Durcissement pré-production — Dettes critiques
+
+Quatre éléments de la dette technique sont **bloquants avant mise en production** et
+n'ont pas d'atterrissage explicite dans les sprints 7-10. Ils doivent être traités
+**avant livraison** — le plus tard : en parallèle du Sprint 10, le dernier sprint
+présenté dans ce roadmap. Les tailler ici, c'est garantir qu'on ne les oublie pas.
+
+- [ ] **T0.10 — Jeton en `httpOnly` + CSRF** (`localStorage` → cookie sécurisé)
+      Durée estimée : 2-3 jours. Affecte CLIENT et PERSONNEL. Dépend d'une
+      modification API pour émettre le cookie.
+
+- [ ] **T0.6 — Rate limiting & verrouillage de compte** (`/auth/connexion`, `/auth/personnel/connexion`)
+      Durée estimée : 1-2 jours. Prévient le credential stuffing et la force brute.
+
+- [ ] **T0.7 — Trigger PostgreSQL d'exclusivité `CLIENT`** (sécurité de base de données)
+      Durée estimée : 0.5 jour. Migration Alembic + tests.
+      
+- [ ] **T0.5 — Séparation des identifiants dans `docker-compose.yml`** (réduction de surface d'exposition)
+      Durée estimée : 0.5 jour. Créer un `.env` dédié au compose.
+
+Total estimé : 4-6 jours de travail d'équipe. À commencer après validation du Sprint 7.
+
 ---
 
 ## Règle transverse — suppression d'une entité référencée
@@ -520,7 +542,7 @@ nommer sa tâche d'origine et sa condition de résorption.
 |---|---|---|
 | Sprint 3 (#26) | L'historique émet **une requête de suivi par commande listée** : `HistoriqueCommandesPage` monte un `EncartSuiviCommande` par ligne, et chacun appelle `GET /commandes/{id}/livraison`. Trente commandes affichées font trente requêtes, dont la plupart répondent 404 pour des commandes à retirer. | Inclure le suivi de livraison dans la charge utile de `GET /commandes`, ce qui supprime les appels séparés. À faire **si l'historique devient un point de lenteur réel**, ou lors d'un futur sprint de performance — pas avant : la correction déplace une décision de confidentialité vers un schema qui sert aussi d'autres usages. |
 | Sprint 2 (parcours invité) | Une commande passée en invité ne peut pas être rattachée à un compte créé ensuite : le client la perd de vue dès qu'il s'inscrit, alors qu'elle porte le même `contact_invite`. Écarté volontairement du sprint 2. | Le rattachement suppose de faire confiance à une adresse non vérifiée. À traiter avec un mécanisme de vérification d'e-mail, qui n'existe nulle part dans le projet — donc pas avant qu'il soit décidé. |
-| T0.10 (Sprint 0) | Le jeton d'accès est stocké en `localStorage` (`frontend/src/lib/tokenStorage.ts`) : lisible par tout script de la page, donc exfiltrable en cas de faille XSS. | Basculer sur un cookie `httpOnly` + `SameSite`, ce qui suppose de faire émettre le cookie par l'API et d'ajouter une protection CSRF. **À arbitrer avant mise en prod.** |
+| T0.10 (Sprint 0) | Les jetons d'accès **CLIENT et PERSONNEL** sont stockés ensemble en `localStorage` (`frontend/src/lib/tokenStorage.ts`) : lisibles par tout script de la page, donc exfiltrables en cas de faille XSS. La dette s'applique aux deux populations depuis l'ajout de PERSONNEL en #73. | Basculer sur un cookie `httpOnly` + `SameSite`, ce qui suppose de faire émettre le cookie par l'API et d'ajouter une protection CSRF. **À arbitrer avant mise en prod.** |
 | T0.6 (Sprint 0) | Aucune limitation de tentatives sur `/auth/connexion` : ni rate limiting par IP, ni verrouillage temporaire du compte après N échecs. Le hachage bcrypt ralentit une attaque par force brute sans l'empêcher, et rien ne freine le bourrage d'identifiants (credential stuffing). | Ajouter une limitation de débit et un verrouillage progressif. **À traiter avant mise en prod.** |
 | T0.5 (Sprint 0) | `docker-compose.yml` lit `backend/.env` via `env_file` : le conteneur postgres reçoit donc aussi `SECRET_KEY` et `DATABASE_URL`, dont il n'a aucun usage. Surface d'exposition inutile. | Séparer les identifiants du compose dans un `.env` dédié, dès qu'un second service rejoint l'infrastructure — et **au plus tard avant mise en prod**. |
 | T0.7 (Sprint 0) | Exclusivité `CLIENT` (`CLIENT_PARTICULIER` xor `CLIENT_ENTREPRISE`) garantie uniquement au niveau applicatif, dans `auth_service`. L'invariant est contournable par tout écrivain qui ne passe pas par l'API : import SQL, script de seed, correction manuelle en base. | Ajouter le trigger PL/pgSQL prévu par `docs/mld.md` (contrainte n°1) dans une migration Alembic dédiée. **À durcir avant mise en prod.** |
