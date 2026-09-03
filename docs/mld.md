@@ -201,6 +201,16 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 - `type_facturation` ∈ {Forfait, Consommation_reelle}
 - `mode_suivi` ∈ {Individuel, Global} — si Global, `#id_beneficiaire` est NULL.
 
+- **Cohérence `#id_beneficiaire` / `mode_suivi`** : si l'abonnement est en mode
+  `Individuel`, chaque consommation doit nommer un bénéficiaire ; en mode
+  `Global`, aucun. Cette règle croise deux tables (`CONSOMMATION_REPAS.#id_beneficiaire`
+  et `ABONNEMENT.mode_suivi`) : aucun `CHECK` ne peut la comparer, et un trigger
+  au prix d'une logique métier en PL/pgSQL serait hors de sa couche. Le service
+  (`ConsommationRepasService.enregistrer_consommation()`) est donc le seul point
+  d'application — et il n'y a pas de redondance de défense ici, à l'identique du
+  contrôle de capacité SALLE en #47. La base ne garantit rien ; la vérification
+  revient au service.
+
 ## Transactions
 
 ```
