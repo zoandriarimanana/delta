@@ -3,6 +3,10 @@
 import { Link } from 'react-router';
 
 import { usePanier } from '@/features/commande/commande.hooks';
+import Badge from '@/components/ui/Badge';
+import Bouton from '@/components/ui/Bouton';
+import Carte from '@/components/ui/Carte';
+import { imageProduit } from '@/lib/images';
 
 import { estDisponible, formaterPrix } from '../produit.service';
 import type { Produit } from '../produit.types';
@@ -16,31 +20,38 @@ export default function ProduitCarte({ produit }: Proprietes) {
   const panier = usePanier();
 
   return (
-    <li className="rounded border border-slate-200 bg-white p-4">
-      <Link
-        to={`/produits/${produit.id_produit}`}
-        className="text-lg font-medium text-slate-900 hover:underline"
-      >
-        {produit.nom}
-      </Link>
-      <p className="mt-1 text-slate-700">{formaterPrix(produit)}</p>
-      <p
-        className={
-          disponible ? 'mt-2 text-sm text-emerald-700' : 'mt-2 text-sm text-slate-500'
+    <Link to={`/produits/${produit.id_produit}`} className="no-underline">
+      <Carte
+        image={imageProduit(produit.id_produit, produit.nom)}
+        titre={produit.nom}
+        description={produit.description}
+        pied={
+          <div className="flex items-center justify-between">
+            <span className="text-lg font-semibold text-terracotta">
+              {formaterPrix(produit)}
+            </span>
+            {/* Le module choisit **son** libellé et **sa** variante : la
+                pastille ne connaît ni le stock ni le produit. */}
+            <Badge variante={disponible ? 'positif' : 'negatif'}>
+              {disponible ? 'Disponible' : 'Épuisé'}
+            </Badge>
+          </div>
         }
       >
-        {disponible ? `En stock (${produit.stock_disponible})` : 'Épuisé'}
-      </p>
-      {disponible && (
-        <button
-          type="button"
-          onClick={() => panier.ajouter(produit)}
-          aria-label={`Ajouter ${produit.nom} au panier`}
-          className="mt-3 rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
-        >
-          Ajouter au panier
-        </button>
-      )}
-    </li>
+        {disponible && (
+          <Bouton
+            onClick={(evenement) => {
+              // La vignette entière est un lien : sans cette interception, le
+              // clic ajouterait au panier **et** naviguerait vers la fiche.
+              evenement.preventDefault();
+              panier.ajouter(produit);
+            }}
+            className="mt-3 w-full"
+          >
+            Ajouter au panier
+          </Bouton>
+        )}
+      </Carte>
+    </Link>
   );
 }

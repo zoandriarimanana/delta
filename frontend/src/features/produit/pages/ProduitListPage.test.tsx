@@ -67,7 +67,10 @@ it('affiche les produits une fois chargés', async () => {
 it('relie chaque produit à sa fiche', async () => {
   afficher();
 
-  const lien = await screen.findByRole('link', { name: 'Éclair au chocolat' });
+  // Le nom accessible du lien porte tout le contenu de la vignette — titre,
+  // description, prix, pastille. L'assertion vise le produit et sa cible,
+  // pas la mise en forme de la carte.
+  const lien = await screen.findByRole('link', { name: /Éclair au chocolat/ });
   expect(lien.getAttribute('href')).toBe('/produits/1');
 });
 

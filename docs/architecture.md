@@ -324,6 +324,11 @@ src/
 ├── main.tsx                  # point d'entree Vite/React
 ├── index.css                 # entree Tailwind (@import "tailwindcss")
 ├── vite-env.d.ts             # types Vite
+├── components/
+│   └── ui/                   # primitives strictement visuelles (voir plus bas)
+│       ├── Badge.tsx
+│       ├── Bouton.tsx
+│       └── Carte.tsx
 ├── lib/
 │   ├── axiosClient.ts        # instance axios unique, intercepteurs
 │   ├── tokenStorage.ts       # jeton d'acces **et** population qu'il designe
@@ -389,6 +394,40 @@ consomme sans rien savoir de son implémentation.
 `src/layouts/` est au même niveau que `src/features/`, pas dedans : un layout
 n'appartient à aucun module. Ce n'est pas non plus un `src/components/`
 fourre-tout — seule la structure de page y a sa place.
+
+### `src/components/ui/` — l'exception, et son critère
+
+Cette phrase interdisait un `src/components/` fourre-tout, et l'interdiction
+tient. **`src/components/ui/` en est l'exception explicite**, ouverte pour des
+primitives **strictement visuelles** : `Badge`, `Bouton`, `Carte`.
+
+Le critère d'admission tient en une question :
+
+> **Ce composant resterait-il identique si on retirait toutes les entités du
+> MLD ?**
+
+Si oui, il a sa place ici. Sinon, il appartient à un module.
+
+`Badge` passe le test : il reçoit une variante et un libellé, et ne sait pas
+s'il peint un logement, une livraison ou une réservation. Une `CarteSession`
+échouerait — elle connaît `SESSION_FORMATION` —, et elle vit d'ailleurs dans
+`features/formation/components/`.
+
+**Ce que l'exception refuse.** La première version de `Badge` portait une table
+de statuts couvrant `LOGEMENT`, `RESERVATION`, `LIVRAISON` et la rupture produit
+**à la fois**, alors que trois `*.service.ts` portaient déjà chacun son
+`libelleStatut`. C'était une duplication croisant quatre entités, exactement ce
+que la SRP interdit — et le genre de fichier qui devient le fourre-tout que la
+règle voulait éviter.
+
+Chaque module traduit donc son propre statut **et choisit sa variante** :
+`logement.service.ts` porte `libelleStatut` et `varianteStatut`, la primitive ne
+fait que peindre. Un test de conception vérifie que `Badge.tsx` ne contient
+aucune valeur de statut — il tombe si quelqu'un ramène une table métier dans la
+primitive.
+
+L'exception est écrite ici plutôt que laissée implicite : une règle contournée
+sans être réécrite est une règle qu'on ne peut plus opposer à personne.
 
 ### Client HTTP et stockage du jeton
 

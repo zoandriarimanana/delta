@@ -82,7 +82,7 @@ it('suit les changements du panier sans être remonté', () => {
 it('porte la navigation transverse', () => {
   afficher();
 
-  for (const libelle of ['Accueil', 'Catalogue', 'Panier', 'Connexion']) {
+  for (const libelle of ['Accueil', 'Produits', 'Panier', 'Connexion']) {
     expect(screen.getByRole('link', { name: new RegExp(libelle) })).toBeDefined();
   }
 });

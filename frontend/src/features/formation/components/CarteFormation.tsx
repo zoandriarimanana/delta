@@ -2,6 +2,8 @@
 
 import { Link } from 'react-router';
 
+import Carte from '@/components/ui/Carte';
+import { imageFormation } from '@/lib/images';
 import { formaterMontant } from '@/features/commande/commande.service';
 
 import { formaterDuree } from '../formation.service';
@@ -9,20 +11,24 @@ import type { Formation } from '../formation.types';
 
 export default function CarteFormation({ formation }: { formation: Formation }) {
   return (
-    <li className="rounded border border-slate-200 bg-white p-4">
-      <h2 className="font-medium text-slate-900">
-        <Link to={`/formations/${formation.id_formation}`} className="underline">
-          {formation.titre}
-        </Link>
-      </h2>
-      <p className="mt-1 text-sm text-slate-600">
-        {formaterDuree(formation.duree_heures)}
-        {formation.niveau !== null && <> — niveau {formation.niveau}</>}
-      </p>
-      <p className="mt-1 text-sm text-slate-700">{formaterMontant(formation.prix)}</p>
-      {formation.propose_hebergement && (
-        <p className="mt-1 text-sm text-slate-500">Hébergement possible</p>
-      )}
-    </li>
+    <Link to={`/formations/${formation.id_formation}`} className="no-underline">
+      <Carte
+        image={imageFormation(formation.id_formation)}
+        titre={formation.titre}
+        description={`${formaterDuree(formation.duree_heures)}${formation.niveau ? ` • Niveau ${formation.niveau}` : ''}`}
+        pied={
+          <div className="flex items-center justify-between">
+            <span className="text-lg font-semibold text-terracotta">
+              {formaterMontant(formation.prix)}
+            </span>
+            {formation.propose_hebergement && (
+              <span className="text-xs bg-sage/15 text-sage px-2 py-1 rounded-full">
+                🏨 Hébergement
+              </span>
+            )}
+          </div>
+        }
+      />
+    </Link>
   );
 }

@@ -1,5 +1,7 @@
 /** Règles d'affichage des logements — fonctions pures. */
 
+import type { VarianteBadge } from '@/components/ui/Badge';
+
 import type { Logement, StatutLogement } from './logement.types';
 
 const LIBELLES: Record<StatutLogement, string> = {
@@ -29,4 +31,29 @@ export function libelleStatut(statut: StatutLogement): string {
  */
 export function estReservable(logement: Logement): boolean {
   return logement.statut === 'Disponible';
+}
+
+const VARIANTES: Record<StatutLogement, VarianteBadge> = {
+  Disponible: 'positif',
+  En_maintenance: 'attente',
+  Hors_service: 'negatif',
+};
+
+/**
+ * Variante visuelle correspondant à l'état du bien.
+ *
+ * **C'est le module qui choisit**, pas la pastille. `Badge` ne connaît aucune
+ * entité : lui faire porter cette table reviendrait à y rassembler les statuts
+ * de quatre entités, ce que la SRP interdit — et ce que la version d'origine
+ * faisait.
+ *
+ * `En_maintenance` est en attente et non en négatif : le bien revient. C'est
+ * exactement la distinction que `Hors_service` ne porte pas, et l'afficher
+ * autrement effacerait la seule information utile au moment de planifier.
+ *
+ * Un statut inconnu retombe sur `neutre`, comme `libelleStatut` retombe sur un
+ * libellé neutre.
+ */
+export function varianteStatut(statut: StatutLogement): VarianteBadge {
+  return VARIANTES[statut] ?? 'neutre';
 }
