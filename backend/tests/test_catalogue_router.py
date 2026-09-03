@@ -136,6 +136,8 @@ def id_categorie(client_http: TestClient, entete_authentifie: dict[str, str]) ->
         ("post", PRODUITS, {**PRODUIT_VALIDE, "id_categorie": 1}),
         ("put", f"{PRODUITS}/1", {"nom": "Autre"}),
         ("delete", f"{PRODUITS}/1", None),
+        ("post", f"{PRODUITS}/1/restauration", None),
+        ("post", f"{CATEGORIES}/1/restauration", None),
     ],
 )
 def test_ecritures_refusees_sans_jeton(
@@ -318,6 +320,8 @@ def test_cycle_complet_sur_un_produit(
     [
         ("post", CATEGORIES, {"libelle": "Boulangerie"}),
         ("post", PRODUITS, {"nom": "X", "prix_unitaire": "1.00", "unite_mesure": "u"}),
+        ("post", f"{CATEGORIES}/1/restauration", None),
+        ("post", f"{PRODUITS}/1/restauration", None),
     ],
 )
 def test_un_jeton_client_n_ouvre_plus_les_ecritures(
@@ -352,6 +356,23 @@ def test_un_salarie_sans_droit_recoit_403(
     )
 
     assert reponse.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "chemin",
+    [f"{CATEGORIES}/1/restauration", f"{PRODUITS}/1/restauration"],
+)
+def test_un_salarie_sans_droit_ne_restaure_pas(
+    client_http: TestClient, entete_agent: dict[str, str], chemin: str
+) -> None:
+    """La restauration est une écriture du catalogue : même garde que les
+    autres.
+
+    403 et non 401 : le salarié est identifié, il lui manque un droit — et le
+    403 est rendu **avant** que l'identifiant soit cherché, donc sans révéler si
+    la ressource existe.
+    """
+    assert client_http.post(chemin, headers=entete_agent).status_code == 403
 
 
 def test_les_lectures_restent_publiques(client_http: TestClient) -> None:

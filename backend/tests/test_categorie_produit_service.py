@@ -230,3 +230,72 @@ def test_libelle_reutilisable_apres_archivage(
     seconde = service.creer(CategorieProduitCreate(libelle="Confiture"))
 
     assert seconde.id_categorie != premiere.id_categorie
+
+
+# --- Restauration (#87) -------------------------------------------------------
+
+
+def test_restaurer_reactive_une_categorie_archivee(
+    service: CategorieProduitService,
+) -> None:
+    categorie = service.creer(CategorieProduitCreate(libelle="Pâtisserie"))
+    service.supprimer(categorie.id_categorie)
+
+    restauree = service.restaurer(categorie.id_categorie)
+
+    assert restauree.supprime_le is None
+    assert [c.id_categorie for c in service.lister()] == [categorie.id_categorie]
+
+
+def test_restaurer_une_categorie_est_idempotent(
+    service: CategorieProduitService,
+) -> None:
+    categorie = service.creer(CategorieProduitCreate(libelle="Pâtisserie"))
+    service.supprimer(categorie.id_categorie)
+    service.restaurer(categorie.id_categorie)
+
+    assert service.restaurer(categorie.id_categorie).supprime_le is None
+
+
+def test_restaurer_une_categorie_active_ne_change_rien(
+    service: CategorieProduitService,
+) -> None:
+    categorie = service.creer(CategorieProduitCreate(libelle="Pâtisserie"))
+
+    assert service.restaurer(categorie.id_categorie).supprime_le is None
+
+
+def test_restaurer_une_categorie_inconnue_leve_404(
+    service: CategorieProduitService,
+) -> None:
+    with pytest.raises(RessourceIntrouvable):
+        service.restaurer(10**8)
+
+
+def test_la_collision_de_libelle_est_traduite(
+    service: CategorieProduitService, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """La branche de traduction, exercée sur l'erreur telle que PostgreSQL la
+    remonte.
+
+    SQLite ne nomme pas la contrainte violée : sans erreur fabriquée, cette
+    branche — celle qui protège en production — ne serait jamais parcourue. Le
+    conflit réel est vérifié contre PostgreSQL par
+    `test_categorie_produit_restauration_postgres.py`.
+    """
+    categorie = service.creer(CategorieProduitCreate(libelle="Pâtisserie"))
+    service.supprimer(categorie.id_categorie)
+
+    def refuser(_: object) -> None:
+        raise erreur_integrite_postgres(CONTRAINTE_LIBELLE_UNIQUE)
+
+    monkeypatch.setattr(service.categories, "restaurer", refuser)
+
+    with pytest.raises(ConflitMetier) as capture:
+        service.restaurer(categorie.id_categorie)
+
+    message = str(capture.value)
+    assert "restauration impossible" in message
+    # Jamais de trace SQL : ni le nom de l'index, ni le mot-clé de la contrainte.
+    assert "UNIQUE" not in message
+    assert CONTRAINTE_LIBELLE_UNIQUE not in message

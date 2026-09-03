@@ -85,3 +85,21 @@ def modifier(
 def supprimer(id_produit: int, admin: PersonnelAdministrateur, db: SessionBase) -> None:
     """Réservé aux administrateurs."""
     ProduitService(db).supprimer(id_produit)
+
+
+@router.post(
+    "/{id_produit}/restauration",
+    response_model=ProduitRead,
+    summary="Restaurer un produit archivé",
+)
+def restaurer(
+    id_produit: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> ProduitRead:
+    """Réactive une ligne archivée. Idempotent.
+
+    404 si l'identifiant est inconnu : la ressource est désignée par l'URL.
+
+    Ne peut pas échouer sur une collision — `PRODUIT` ne porte aucune unicité,
+    contrairement à `CATEGORIE_PRODUIT.libelle`.
+    """
+    return ProduitRead.model_validate(ProduitService(db).restaurer(id_produit))

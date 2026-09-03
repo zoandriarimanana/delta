@@ -42,6 +42,8 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/categories-produit/{{id_categorie}}",
         f"{prefixe}/produits",
         f"{prefixe}/produits/{{id_produit}}",
+        f"{prefixe}/produits/{{id_produit}}/restauration",
+        f"{prefixe}/categories-produit/{{id_categorie}}/restauration",
         f"{prefixe}/commandes",
         f"{prefixe}/commandes/{{id_commande}}",
         f"{prefixe}/commandes/invite",

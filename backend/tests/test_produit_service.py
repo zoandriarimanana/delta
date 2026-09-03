@@ -185,3 +185,80 @@ def test_le_filtre_par_categorie_masque_les_archives(
     filtre = [p.nom for p in service.lister(patisserie.id_categorie)]
 
     assert complet == filtre == [actif.nom]
+
+
+# --- Restauration (#87) -------------------------------------------------------
+
+
+def test_restaurer_reactive_un_produit_archive(
+    service: ProduitService, patisserie: CategorieProduit
+) -> None:
+    """`DELETE` archive, il n'efface pas : la ligne est toujours là.
+
+    Sans cet endpoint, un produit archivé par erreur restait irrécupérable par
+    l'API, alors que le repository savait le réactiver depuis le Sprint 0.
+    """
+    produit = service.creer(_charge_utile(patisserie.id_categorie))
+    service.supprimer(produit.id_produit)
+
+    restaure = service.restaurer(produit.id_produit)
+
+    assert restaure.supprime_le is None
+    # Il redevient visible dans les lectures par défaut, qui filtrent les
+    # archives.
+    assert [p.id_produit for p in service.lister()] == [produit.id_produit]
+
+
+def test_restaurer_est_idempotent(
+    service: ProduitService, patisserie: CategorieProduit
+) -> None:
+    """Rejouer ne doit pas devenir une erreur : l'appelant n'a aucun moyen
+    fiable de savoir si son premier appel a abouti."""
+    produit = service.creer(_charge_utile(patisserie.id_categorie))
+    service.supprimer(produit.id_produit)
+    service.restaurer(produit.id_produit)
+
+    encore = service.restaurer(produit.id_produit)
+
+    assert encore.supprime_le is None
+
+
+def test_restaurer_un_produit_deja_actif_ne_change_rien(
+    service: ProduitService, patisserie: CategorieProduit
+) -> None:
+    """Contrôle positif du cas trivial : il ne lève pas."""
+    produit = service.creer(_charge_utile(patisserie.id_categorie))
+
+    assert service.restaurer(produit.id_produit).supprime_le is None
+
+
+def test_restaurer_un_identifiant_inconnu_leve_404(service: ProduitService) -> None:
+    """404 et non 422 : la ressource est désignée par l'URL."""
+    with pytest.raises(RessourceIntrouvable):
+        service.restaurer(10**8)
+
+
+def test_deux_produits_homonymes_se_restaurent_sans_conflit(
+    service: ProduitService, patisserie: CategorieProduit
+) -> None:
+    """**C'est ce qui distingue `PRODUIT` de `CATEGORIE_PRODUIT`.**
+
+    Aucune unicité ne porte sur le produit : deux produits peuvent
+    légitimement s'appeler pareil — le même gâteau en deux tailles, ou vendu
+    sous deux conditionnements. La restauration ne peut donc pas échouer sur une
+    collision, et ce service n'a aucun conflit à traduire.
+
+    Le cas est **construit**, pas supposé : deux produits de même nom, l'un
+    archivé puis restauré pendant que l'autre reste actif.
+    """
+    premier = service.creer(_charge_utile(patisserie.id_categorie, nom="Éclair"))
+    second = service.creer(_charge_utile(patisserie.id_categorie, nom="Éclair"))
+    service.supprimer(premier.id_produit)
+
+    restaure = service.restaurer(premier.id_produit)
+
+    assert restaure.supprime_le is None
+    assert {p.id_produit for p in service.lister()} == {
+        premier.id_produit,
+        second.id_produit,
+    }
