@@ -1,5 +1,6 @@
 """Schemas Pydantic de l'entité PRODUIT."""
 
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -93,3 +94,21 @@ class ProduitRead(BaseModel):
     supplement_personnalisation: Decimal | None = None
     est_livrable: bool
     id_categorie: int
+
+
+class ProduitAdministrationRead(ProduitRead):
+    """Produit en sortie des listes d'**administration**, archives comprises.
+
+    Schema **distinct** de `ProduitRead`, et non un champ optionnel ajouté à
+    celui-ci : rien n'oblige à publier la date d'archivage d'un produit à un
+    visiteur anonyme, et un oubli de condition serait invisible alors qu'un
+    mauvais schema se voit dans la signature de l'endpoint. Même raisonnement
+    que `LivraisonRead` face à `LivraisonPublique`.
+
+    `supprime_le` est ce qui permet à l'écran de distinguer les deux états —
+    `None` pour actif, une date pour archivé — et donc de proposer « archiver »
+    ou « restaurer ». Sans lui, la liste mêlerait les deux sans les séparer.
+    """
+
+    #: `None` si le produit est actif, horodatage de l'archivage sinon.
+    supprime_le: datetime | None = None

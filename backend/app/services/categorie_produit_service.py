@@ -136,3 +136,11 @@ class CategorieProduitService:
                 ) from erreur
             raise
         return categorie
+
+    def lister_pour_administration(self) -> Sequence[CategorieProduit]:
+        """Retourne **toutes** les catégories, actives et archivées.
+
+        Même raison que `ProduitService.lister_pour_administration` : rendre
+        les archives visibles, donc restaurables.
+        """
+        return self.categories.list(inclure_supprimes=True)
