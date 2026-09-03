@@ -510,3 +510,138 @@ def test_le_tarif_n_est_pas_modifiable_par_un_client(
     )
 
     assert reponse.status_code == 401
+
+
+# --- Listes d'administration (#89) --------------------------------------------
+
+ADMIN_PRODUITS = f"{PRODUITS}/administration"
+ADMIN_CATEGORIES = f"{CATEGORIES}/administration"
+
+
+@pytest.mark.parametrize("chemin", [ADMIN_PRODUITS, ADMIN_CATEGORIES])
+def test_les_listes_d_administration_refusent_l_anonyme(
+    client_http: TestClient, chemin: str
+) -> None:
+    reponse = client_http.get(chemin)
+
+    assert reponse.status_code == 401
+    assert reponse.headers["WWW-Authenticate"] == "Bearer"
+
+
+@pytest.mark.parametrize("chemin", [ADMIN_PRODUITS, ADMIN_CATEGORIES])
+def test_les_listes_d_administration_refusent_un_jeton_client(
+    client_http: TestClient, entete_client: dict[str, str], chemin: str
+) -> None:
+    """401 et non 403 : la revendication `type` ne correspond pas, on ne sait
+    donc pas qui appelle."""
+    assert client_http.get(chemin, headers=entete_client).status_code == 401
+
+
+@pytest.mark.parametrize("chemin", [ADMIN_PRODUITS, ADMIN_CATEGORIES])
+def test_les_listes_d_administration_refusent_un_salarie_sans_droit(
+    client_http: TestClient, entete_agent: dict[str, str], chemin: str
+) -> None:
+    """403 : le salarié est identifié, il lui manque un droit."""
+    assert client_http.get(chemin, headers=entete_agent).status_code == 403
+
+
+def test_la_route_litterale_n_est_pas_captee_par_la_route_parametree(
+    client_http: TestClient, entete_authentifie: dict[str, str]
+) -> None:
+    """**L'ordre de déclaration, verrouillé.**
+
+    `/produits/administration` et `/produits/{id_produit}` ont la même forme.
+    Si la route paramétrée était déclarée en premier, `administration` serait
+    interprété comme un identifiant et l'appel donnerait un **422** — sur une
+    route qui existe pourtant.
+
+    Ce test tombe si quelqu'un réordonne les déclarations. Sans lui, la casse
+    serait silencieuse : la route disparaîtrait sans que rien ne la signale.
+    """
+    reponse = client_http.get(ADMIN_PRODUITS, headers=entete_authentifie)
+
+    assert reponse.status_code == 200
+    assert reponse.status_code != 422
+
+
+def test_l_administration_montre_les_archives(
+    client_http: TestClient, entete_authentifie: dict[str, str]
+) -> None:
+    """C'est ce qui rend la restauration atteignable : sans cette lecture, un
+    produit archivé est invisible et on ne peut pas le désigner."""
+    categorie = client_http.post(
+        CATEGORIES, json={"libelle": "Archivable"}, headers=entete_authentifie
+    ).json()
+    produit = client_http.post(
+        PRODUITS,
+        json={**PRODUIT_VALIDE, "id_categorie": categorie["id_categorie"]},
+        headers=entete_authentifie,
+    ).json()
+    client_http.delete(
+        f"{PRODUITS}/{produit['id_produit']}", headers=entete_authentifie
+    )
+
+    corps = client_http.get(ADMIN_PRODUITS, headers=entete_authentifie).json()
+
+    archive = next(p for p in corps if p["id_produit"] == produit["id_produit"])
+    assert archive["supprime_le"] is not None
+
+
+def test_l_administration_montre_aussi_les_actifs(
+    client_http: TestClient, entete_authentifie: dict[str, str]
+) -> None:
+    """Tout dans un seul tableau : deux appels séparés obligeraient l'écran à
+    recoller les listes et à inventer un ordre entre elles."""
+    categorie = client_http.post(
+        CATEGORIES, json={"libelle": "Active"}, headers=entete_authentifie
+    ).json()
+    produit = client_http.post(
+        PRODUITS,
+        json={**PRODUIT_VALIDE, "id_categorie": categorie["id_categorie"]},
+        headers=entete_authentifie,
+    ).json()
+
+    corps = client_http.get(ADMIN_PRODUITS, headers=entete_authentifie).json()
+
+    actif = next(p for p in corps if p["id_produit"] == produit["id_produit"])
+    assert actif["supprime_le"] is None
+
+
+def test_la_liste_publique_ne_remonte_aucune_archive(
+    client_http: TestClient, entete_authentifie: dict[str, str]
+) -> None:
+    """**Contrôle positif du non-débordement.** Les lectures publiques ne
+    changent pas : l'administration s'ajoute, elle ne remplace rien."""
+    categorie = client_http.post(
+        CATEGORIES, json={"libelle": "Publique"}, headers=entete_authentifie
+    ).json()
+    produit = client_http.post(
+        PRODUITS,
+        json={**PRODUIT_VALIDE, "id_categorie": categorie["id_categorie"]},
+        headers=entete_authentifie,
+    ).json()
+    client_http.delete(
+        f"{PRODUITS}/{produit['id_produit']}", headers=entete_authentifie
+    )
+
+    publique = client_http.get(PRODUITS).json()
+
+    assert produit["id_produit"] not in [p["id_produit"] for p in publique]
+    # Et le schema public ne porte toujours pas la date d'archivage.
+    assert all("supprime_le" not in p for p in publique)
+
+
+def test_les_categories_archivees_sont_visibles_en_administration(
+    client_http: TestClient, entete_authentifie: dict[str, str]
+) -> None:
+    categorie = client_http.post(
+        CATEGORIES, json={"libelle": "Éphémère"}, headers=entete_authentifie
+    ).json()
+    client_http.delete(
+        f"{CATEGORIES}/{categorie['id_categorie']}", headers=entete_authentifie
+    )
+
+    corps = client_http.get(ADMIN_CATEGORIES, headers=entete_authentifie).json()
+
+    archivee = next(c for c in corps if c["id_categorie"] == categorie["id_categorie"])
+    assert archivee["supprime_le"] is not None

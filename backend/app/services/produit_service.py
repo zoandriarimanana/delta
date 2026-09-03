@@ -156,3 +156,20 @@ class ProduitService:
         self.produits.restaurer(produit)
         self.db.commit()
         return produit
+
+    def lister_pour_administration(self) -> Sequence[Produit]:
+        """Retourne **tout** le catalogue, actifs et archivés.
+
+        Réservé à l'administration : les lectures publiques continuent de
+        filtrer les archives, et ce service ne les remplace pas.
+
+        Tout plutôt que les seules archives : un administrateur regarde son
+        catalogue entier dans un seul tableau. Deux appels séparés
+        l'obligeraient à recoller les listes côté écran, et à inventer un ordre
+        d'affichage entre elles.
+
+        C'est ce qui rend la restauration atteignable : sans cette lecture, un
+        produit archivé est invisible, et l'endpoint de restauration ne peut
+        pas être appelé faute de savoir sur quoi.
+        """
+        return self.produits.list(inclure_supprimes=True)

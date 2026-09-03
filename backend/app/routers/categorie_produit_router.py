@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import PersonnelAdministrateur
 from app.schemas.categorie_produit import (
+    CategorieProduitAdministrationRead,
     CategorieProduitCreate,
     CategorieProduitRead,
     CategorieProduitUpdate,
@@ -35,6 +36,26 @@ def lister(db: SessionBase) -> list[CategorieProduitRead]:
     """Catalogue des catégories. Public."""
     categories = CategorieProduitService(db).lister()
     return [CategorieProduitRead.model_validate(c) for c in categories]
+
+
+@router.get(
+    "/administration",
+    response_model=list[CategorieProduitAdministrationRead],
+    summary="Lister les catégories pour l'administration, archives comprises",
+)
+def lister_pour_administration(
+    admin: PersonnelAdministrateur, db: SessionBase
+) -> list[CategorieProduitAdministrationRead]:
+    """Toutes les catégories, actives **et** archivées. Réservé aux
+    administrateurs.
+
+    Même montage que `GET /produits/administration` : route distincte plutôt
+    qu'un paramètre sur la liste publique, et **déclarée avant
+    `/{id_categorie}`** — sans quoi la route paramétrée capterait
+    `administration` et l'interpréterait comme un identifiant.
+    """
+    categories = CategorieProduitService(db).lister_pour_administration()
+    return [CategorieProduitAdministrationRead.model_validate(c) for c in categories]
 
 
 @router.get(

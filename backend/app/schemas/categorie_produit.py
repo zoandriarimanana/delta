@@ -1,5 +1,7 @@
 """Schemas Pydantic de l'entité CATEGORIE_PRODUIT."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 LONGUEUR_MAX_LIBELLE = 100
@@ -30,3 +32,14 @@ class CategorieProduitRead(BaseModel):
 
     id_categorie: int
     libelle: str
+
+
+class CategorieProduitAdministrationRead(CategorieProduitRead):
+    """Catégorie en sortie des listes d'**administration**, archives comprises.
+
+    Schema distinct de `CategorieProduitRead`, pour la même raison que
+    `ProduitAdministrationRead` : la date d'archivage n'a pas à être publique.
+    """
+
+    #: `None` si la catégorie est active, horodatage de l'archivage sinon.
+    supprime_le: datetime | None = None
