@@ -97,3 +97,42 @@ class CategorieProduitService:
                     "Cette catégorie contient encore des produits."
                 ) from erreur
             raise
+
+    def restaurer(self, id_categorie: int) -> CategorieProduit:
+        """Réactive une catégorie archivée.
+
+        Idempotente : sans effet si la catégorie est déjà active.
+
+        **Peut échouer légitimement**, et c'est ce qui la distingue de
+        `ProduitService.restaurer`. `uq_categorie_produit_libelle` est un index
+        **partiel** (`WHERE supprime_le IS NULL`) : c'est précisément ce qui
+        permet de recréer une catégorie portant le libellé d'une archivée. Le
+        libellé a donc pu être réattribué entre-temps, et restaurer créerait deux
+        catégories actives homonymes — la base le refuse.
+
+        Ce refus est traduit en message métier, jamais en trace SQL : c'est le
+        cas que `docs/architecture.md` annonce sous « `restaurer()` peut échouer
+        légitimement ».
+
+        L'`IntegrityError` est le **seul** arbitre possible : vérifier le
+        libellé avant l'écriture laisserait passer deux restaurations
+        simultanées, comme pour toute unicité.
+        """
+        categorie = self.categories.get_by_id(id_categorie, inclure_supprimes=True)
+        if categorie is None:
+            raise RessourceIntrouvable("Catégorie introuvable.")
+        if categorie.supprime_le is None:
+            return categorie
+
+        try:
+            self.categories.restaurer(categorie)
+            self.db.commit()
+        except IntegrityError as erreur:
+            self.db.rollback()
+            if viole_contrainte(erreur, CONTRAINTE_LIBELLE_UNIQUE, INDICE_LIBELLE):
+                raise ConflitMetier(
+                    "Une catégorie active porte déjà ce libellé, "
+                    "restauration impossible."
+                ) from erreur
+            raise
+        return categorie

@@ -128,3 +128,31 @@ class ProduitService:
         produit = self.obtenir(id_produit)
         self.produits.delete(produit)
         self.db.commit()
+
+    def restaurer(self, id_produit: int) -> Produit:
+        """Réactive un produit archivé.
+
+        Sans effet s'il est déjà actif : l'opération est idempotente. Rejouer
+        une restauration ne doit pas devenir une erreur — l'appelant n'a aucun
+        moyen fiable de savoir si son premier appel a abouti.
+
+        **Aucune unicité ne peut la faire échouer.** `PRODUIT` n'en porte
+        aucune, contrairement à `CATEGORIE_PRODUIT.libelle` : deux produits
+        peuvent légitimement s'appeler pareil — le même gâteau décliné en deux
+        tailles, ou vendu sous deux conditionnements. C'est ce qui distingue ce
+        service de `CategorieProduitService.restaurer`, qui doit traduire un
+        conflit de libellé.
+
+        `get_by_id` filtre les lignes archivées par défaut : `inclure_supprimes`
+        est indispensable ici, sans quoi on ne retrouverait jamais ce qu'on
+        cherche à restaurer.
+        """
+        produit = self.produits.get_by_id(id_produit, inclure_supprimes=True)
+        if produit is None:
+            raise RessourceIntrouvable("Produit introuvable.")
+        if produit.supprime_le is None:
+            return produit
+
+        self.produits.restaurer(produit)
+        self.db.commit()
+        return produit

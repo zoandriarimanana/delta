@@ -91,3 +91,22 @@ def supprimer(
     Réservé aux administrateurs.
     """
     CategorieProduitService(db).supprimer(id_categorie)
+
+
+@router.post(
+    "/{id_categorie}/restauration",
+    response_model=CategorieProduitRead,
+    summary="Restaurer une catégorie archivée",
+)
+def restaurer(
+    id_categorie: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> CategorieProduitRead:
+    """Réactive une ligne archivée. Idempotent.
+
+    404 si l'identifiant est inconnu. **409** si une catégorie active porte déjà
+    ce libellé : l'index unique est partiel, il a donc pu être réattribué
+    pendant l'archivage.
+    """
+    return CategorieProduitRead.model_validate(
+        CategorieProduitService(db).restaurer(id_categorie)
+    )
