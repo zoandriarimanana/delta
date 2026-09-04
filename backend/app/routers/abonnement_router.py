@@ -2,10 +2,14 @@
 
 Deux populations, deux portées : un client entreprise gère son propre
 abonnement (`/abonnements`), un administrateur gère tous les abonnements
-(`/abonnements/administration`). Le préfixe `administration` est un segment
-littéral, jamais interprété comme un identifiant — il doit rester déclaré
-avant toute route paramétrée qui pourrait le capter (aucune ici, les deux
-groupes ont des préfixes disjoints).
+(`/abonnements/administration`).
+
+**L'ordre de déclaration est significatif.** `/administration` et
+`/administration/{id_abonnement}` sont déclarées avant `/{id_abonnement}` :
+sinon, la route paramétrée du client capterait `administration` comme un
+identifiant — FastAPI y répondrait 422 (« administration n'est pas un entier
+valide ») au lieu d'atteindre la route d'administration. Même piège que
+documenté pour `/produits/administration` (PR #90).
 """
 
 from typing import Annotated
@@ -28,7 +32,7 @@ router = APIRouter(prefix="/abonnements", tags=["abonnement"])
 SessionBase = Annotated[Session, Depends(get_db)]
 
 
-# --- Client entreprise ------------------------------------------------------
+# --- Client entreprise (routes sans cible, avant toute route paramétrée) ---
 
 
 @router.post(
@@ -51,21 +55,7 @@ def lister(client: ClientConnecte, db: SessionBase) -> list[AbonnementRead]:
     return [AbonnementRead.model_validate(a) for a in abonnements]
 
 
-@router.get(
-    "/{id_abonnement}",
-    response_model=AbonnementRead,
-    summary="Obtenir un de ses abonnements",
-)
-def obtenir(
-    id_abonnement: int, client: ClientConnecte, db: SessionBase
-) -> AbonnementRead:
-    """**404 — et non 403** — sur l'abonnement d'une autre entreprise."""
-    return AbonnementRead.model_validate(
-        AbonnementService(db).obtenir_du_client_entreprise(id_abonnement, client)
-    )
-
-
-# --- Administration -----------------------------------------------------
+# --- Administration (segments littéraux : doivent précéder /{id_abonnement}) ---
 
 
 @router.post(
@@ -133,3 +123,20 @@ def supprimer(
 ) -> None:
     """Archive la ligne. Aucun `DELETE` SQL n'est émis."""
     AbonnementService(db).supprimer(id_abonnement)
+
+
+# --- Client entreprise (route paramétrée, déclarée en dernier) -------------
+
+
+@router.get(
+    "/{id_abonnement}",
+    response_model=AbonnementRead,
+    summary="Obtenir un de ses abonnements",
+)
+def obtenir(
+    id_abonnement: int, client: ClientConnecte, db: SessionBase
+) -> AbonnementRead:
+    """**404 — et non 403** — sur l'abonnement d'une autre entreprise."""
+    return AbonnementRead.model_validate(
+        AbonnementService(db).obtenir_du_client_entreprise(id_abonnement, client)
+    )
