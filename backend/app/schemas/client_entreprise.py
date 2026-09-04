@@ -26,3 +26,19 @@ class ClientEntrepriseCreate(BaseModel):
     numero_id_fiscal: str = Field(min_length=1, max_length=50)
     secteur_activite: str | None = Field(default=None, max_length=100)
     nom_contact_referent: str | None = Field(default=None, max_length=150)
+
+
+class ClientEntrepriseAdministration(BaseModel):
+    """Entrée minimale pour peupler un sélecteur d'entreprise, côté admin.
+
+    Volontairement réduit à ce qu'un `<select>` exige : l'identifiant à
+    soumettre (`id_client`, la même valeur que `ABONNEMENT.#id_client_entreprise`)
+    et le libellé à afficher. Ni recherche ni pagination — le trou comblé ici
+    est « aucun moyen de désigner une entreprise », pas un futur écran
+    d'annuaire clients.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id_client: int
+    raison_sociale: str
