@@ -22,6 +22,7 @@ from app.core.exceptions import (
     RessourceIntrouvable,
 )
 from app.routers import (
+    abonnement_router,
     auth_router,
     categorie_produit_router,
     commande_router,
@@ -136,3 +137,4 @@ app.include_router(session_formation_router.router, prefix=settings.API_V1_PREFI
 app.include_router(reservation_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(salle_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(logement_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(abonnement_router.router, prefix=settings.API_V1_PREFIX)
