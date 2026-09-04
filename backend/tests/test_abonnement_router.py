@@ -163,3 +163,48 @@ def test_administration_voit_tous_les_abonnements(
 
     assert reponse.status_code == 200
     assert len(reponse.json()) >= 1
+
+
+def test_suppression_refusee_si_un_beneficiaire_actif_couvre_l_abonnement(
+    client_http: TestClient,
+    entete_entreprise: dict[str, str],
+    entete_admin: dict[str, str],
+) -> None:
+    """Bout en bout : POST /abonnements → POST /beneficiaires → DELETE
+    /abonnements/administration/{id} doit répondre 409, pas seulement au
+    niveau service."""
+    abonnement = client_http.post(
+        ABONNEMENTS, json=CHARGE_UTILE, headers=entete_entreprise
+    ).json()
+    client_http.post(
+        f"{settings.API_V1_PREFIX}/beneficiaires",
+        json={
+            "id_abonnement": abonnement["id_abonnement"],
+            "nom": "Rakoto",
+            "prenom": "Jean",
+            "identifiant_badge": "B001",
+        },
+        headers=entete_entreprise,
+    )
+
+    reponse = client_http.delete(
+        f"{ADMIN_ABONNEMENTS}/{abonnement['id_abonnement']}", headers=entete_admin
+    )
+
+    assert reponse.status_code == 409
+
+
+def test_suppression_acceptee_sans_beneficiaire(
+    client_http: TestClient,
+    entete_entreprise: dict[str, str],
+    entete_admin: dict[str, str],
+) -> None:
+    abonnement = client_http.post(
+        ABONNEMENTS, json=CHARGE_UTILE, headers=entete_entreprise
+    ).json()
+
+    reponse = client_http.delete(
+        f"{ADMIN_ABONNEMENTS}/{abonnement['id_abonnement']}", headers=entete_admin
+    )
+
+    assert reponse.status_code == 204

@@ -26,6 +26,7 @@ from app.models.abonnement import (
 )
 from app.models.client import Client, TypeClient
 from app.repositories.abonnement_repository import AbonnementRepository
+from app.repositories.beneficiaire_repository import BeneficiaireRepository
 from app.repositories.client_entreprise_repository import ClientEntrepriseRepository
 from app.schemas.abonnement import (
     AbonnementCreate,
@@ -57,6 +58,7 @@ class AbonnementService:
         self.db = db
         self.abonnements = AbonnementRepository(db)
         self.clients_entreprise = ClientEntrepriseRepository(db)
+        self.beneficiaires = BeneficiaireRepository(db)
 
     # --- Lecture --------------------------------------------------------------
 
@@ -260,14 +262,23 @@ class AbonnementService:
     def supprimer(self, id_abonnement: int) -> Abonnement:
         """Archive un abonnement.
 
-        **Pas encore de contrôle des bénéficiaires/consommations actifs** :
-        `BeneficiaireRepository` et `ConsommationRepasRepository` n'existent
-        pas à ce stade du sprint (7.1.2 et 7.1.3). Tant qu'ils ne sont pas
-        livrés, archiver un abonnement encore couvert ne les archive pas et ne
-        le refuse pas non plus — à corriger dès 7.1.2, sur le modèle de la
-        règle transverse de `docs/roadmap.md` (refuser puis propager).
+        **409** si l'abonnement couvre encore au moins un bénéficiaire
+        `Actif` — règle transverse de `docs/roadmap.md` : refuser l'archivage
+        d'un parent tant que des enfants actifs le référencent. Un
+        bénéficiaire `Inactif` ou `Suspendu` n'empêche pas la clôture : lui
+        seul n'est plus vraiment couvert, contrairement à un `Actif`.
+
+        Pas de contrôle des consommations : `CONSOMMATION_REPAS` est un
+        historique, pas une couverture en cours — une consommation passée ne
+        s'oppose pas à la clôture d'un abonnement, contrairement à un
+        bénéficiaire encore actif aujourd'hui.
         """
         abonnement = self.obtenir(id_abonnement)
+        if self.beneficiaires.existe_actif_pour_abonnement(id_abonnement):
+            raise ConflitMetier(
+                "Cet abonnement couvre encore au moins un bénéficiaire actif : "
+                "il ne peut pas être archivé."
+            )
         self.abonnements.delete(abonnement)
         self.db.commit()
         return abonnement

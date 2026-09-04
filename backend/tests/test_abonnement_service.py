@@ -5,7 +5,7 @@ d'exclusion `EXCLUDE USING gist`, que SQLite ne sait pas créer. Même
 raisonnement que `test_reservation_service.py` pour `SALLE`/`LOGEMENT`.
 """
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 import pytest
 from sqlalchemy.orm import Session
@@ -18,6 +18,7 @@ from app.core.exceptions import (
 )
 from app.core.security import hacher_mot_de_passe
 from app.models.abonnement import ModeSuivi, TypeFacturation
+from app.models.beneficiaire import Beneficiaire, StatutBeneficiaire
 from app.models.client import Client, TypeClient
 from app.models.client_entreprise import ClientEntreprise
 from app.models.client_particulier import ClientParticulier
@@ -302,6 +303,79 @@ def test_modifier_refuse_fin_anterieure_au_debut(
 def test_supprimer_archive(db: Session, service: AbonnementService) -> None:
     entreprise = _entreprise(db)
     abonnement = service.creer(_charge_utile(), entreprise)
+
+    service.supprimer(abonnement.id_abonnement)
+
+    with pytest.raises(RessourceIntrouvable):
+        service.obtenir(abonnement.id_abonnement)
+
+
+def _beneficiaire(
+    db: Session, id_abonnement: int, badge: str, statut: StatutBeneficiaire
+) -> Beneficiaire:
+    beneficiaire = Beneficiaire(
+        nom="Rakoto",
+        prenom="Jean",
+        identifiant_badge=badge,
+        statut=statut,
+        id_abonnement=id_abonnement,
+    )
+    db.add(beneficiaire)
+    db.flush()
+    return beneficiaire
+
+
+def test_supprimer_refuse_avec_un_beneficiaire_actif(
+    db: Session, service: AbonnementService
+) -> None:
+    entreprise = _entreprise(db)
+    abonnement = service.creer(_charge_utile(), entreprise)
+    _beneficiaire(db, abonnement.id_abonnement, "B001", StatutBeneficiaire.ACTIF)
+
+    with pytest.raises(ConflitMetier):
+        service.supprimer(abonnement.id_abonnement)
+
+
+def test_supprimer_accepte_sans_beneficiaire(
+    db: Session, service: AbonnementService
+) -> None:
+    entreprise = _entreprise(db)
+    abonnement = service.creer(_charge_utile(), entreprise)
+
+    service.supprimer(abonnement.id_abonnement)
+
+    with pytest.raises(RessourceIntrouvable):
+        service.obtenir(abonnement.id_abonnement)
+
+
+@pytest.mark.parametrize(
+    "statut", [StatutBeneficiaire.INACTIF, StatutBeneficiaire.SUSPENDU]
+)
+def test_supprimer_accepte_avec_seulement_des_beneficiaires_non_actifs(
+    db: Session, service: AbonnementService, statut: StatutBeneficiaire
+) -> None:
+    entreprise = _entreprise(db)
+    abonnement = service.creer(_charge_utile(), entreprise)
+    _beneficiaire(db, abonnement.id_abonnement, "B001", statut)
+
+    service.supprimer(abonnement.id_abonnement)
+
+    with pytest.raises(RessourceIntrouvable):
+        service.obtenir(abonnement.id_abonnement)
+
+
+def test_supprimer_accepte_avec_un_beneficiaire_actif_deja_archive(
+    db: Session, service: AbonnementService
+) -> None:
+    """Un bénéficiaire archivé n'est plus couvert, quel qu'ait été son
+    dernier statut avant l'archivage."""
+    entreprise = _entreprise(db)
+    abonnement = service.creer(_charge_utile(), entreprise)
+    beneficiaire = _beneficiaire(
+        db, abonnement.id_abonnement, "B001", StatutBeneficiaire.ACTIF
+    )
+    beneficiaire.supprime_le = datetime.now(UTC)
+    db.flush()
 
     service.supprimer(abonnement.id_abonnement)
 
