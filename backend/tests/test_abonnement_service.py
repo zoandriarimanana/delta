@@ -1,6 +1,10 @@
-"""Tests du service ABONNEMENT."""
+"""Tests du service ABONNEMENT.
 
-from collections.abc import Iterator
+Sur `session_postgres` et non SQLite : `ABONNEMENT` porte une contrainte
+d'exclusion `EXCLUDE USING gist`, que SQLite ne sait pas créer. Même
+raisonnement que `test_reservation_service.py` pour `SALLE`/`LOGEMENT`.
+"""
+
 from datetime import date
 
 import pytest
@@ -8,11 +12,12 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
     AutorisationInsuffisante,
+    ConflitMetier,
     ReferenceInvalide,
     RessourceIntrouvable,
 )
 from app.core.security import hacher_mot_de_passe
-from app.models.abonnement import Abonnement, ModeSuivi, TypeFacturation
+from app.models.abonnement import ModeSuivi, TypeFacturation
 from app.models.client import Client, TypeClient
 from app.models.client_entreprise import ClientEntreprise
 from app.models.client_particulier import ClientParticulier
@@ -22,21 +27,13 @@ from app.schemas.abonnement import (
     AbonnementUpdate,
 )
 from app.services.abonnement_service import AbonnementService
-from tests.conftest import creer_engine_sqlite
 
 MOT_DE_PASSE = hacher_mot_de_passe("mot-de-passe")
 
 
 @pytest.fixture
-def db() -> Iterator[Session]:
-    engine = creer_engine_sqlite(
-        Client.__table__,
-        ClientEntreprise.__table__,
-        ClientParticulier.__table__,
-        Abonnement.__table__,
-    )
-    with Session(engine) as session:
-        yield session
+def db(session_postgres: Session) -> Session:
+    return session_postgres
 
 
 @pytest.fixture
@@ -165,6 +162,81 @@ def test_lister_du_client_entreprise_ne_retourne_que_les_siens(
 
     assert len(resultat) == 1
     assert resultat[0].id_client_entreprise == entreprise_a.id_client
+
+
+# --- Chevauchement -----------------------------------------------------------
+
+
+def test_creer_refuse_un_chevauchement_pour_la_meme_entreprise(
+    db: Session, service: AbonnementService
+) -> None:
+    entreprise = _entreprise(db)
+    service.creer(
+        _charge_utile(date_debut=date(2026, 1, 1), date_fin=date(2026, 12, 31)),
+        entreprise,
+    )
+
+    with pytest.raises(ConflitMetier):
+        service.creer(
+            _charge_utile(date_debut=date(2026, 6, 1), date_fin=date(2027, 6, 1)),
+            entreprise,
+        )
+
+
+def test_creer_accepte_un_renouvellement_adjacent(
+    db: Session, service: AbonnementService
+) -> None:
+    """Bornes `[)` : le nouveau commence le jour où l'ancien se termine."""
+    entreprise = _entreprise(db)
+    service.creer(
+        _charge_utile(date_debut=date(2026, 1, 1), date_fin=date(2026, 12, 31)),
+        entreprise,
+    )
+
+    renouvellement = service.creer(
+        _charge_utile(date_debut=date(2026, 12, 31), date_fin=date(2027, 12, 31)),
+        entreprise,
+    )
+
+    assert renouvellement.id_abonnement is not None
+
+
+def test_creer_accepte_un_chevauchement_entre_deux_entreprises_differentes(
+    db: Session, service: AbonnementService
+) -> None:
+    entreprise_a = _entreprise(db, "1111111111")
+    entreprise_b = _entreprise(db, "2222222222")
+    service.creer(
+        _charge_utile(date_debut=date(2026, 1, 1), date_fin=date(2026, 12, 31)),
+        entreprise_a,
+    )
+
+    abonnement_b = service.creer(
+        _charge_utile(date_debut=date(2026, 6, 1), date_fin=date(2027, 6, 1)),
+        entreprise_b,
+    )
+
+    assert abonnement_b.id_client_entreprise == entreprise_b.id_client
+
+
+def test_modifier_refuse_un_chevauchement_introduit_par_un_deplacement_de_dates(
+    db: Session, service: AbonnementService
+) -> None:
+    entreprise = _entreprise(db)
+    service.creer(
+        _charge_utile(date_debut=date(2026, 1, 1), date_fin=date(2026, 6, 30)),
+        entreprise,
+    )
+    second = service.creer(
+        _charge_utile(date_debut=date(2027, 1, 1), date_fin=date(2027, 12, 31)),
+        entreprise,
+    )
+
+    with pytest.raises(ConflitMetier):
+        service.modifier(
+            second.id_abonnement,
+            AbonnementUpdate(date_debut=date(2026, 3, 1)),
+        )
 
 
 # --- Modification -----------------------------------------------------------

@@ -7,15 +7,23 @@ même règle que `COMMANDE.#id_client`.
 """
 
 from collections.abc import Sequence
+from datetime import date
 
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
     AutorisationInsuffisante,
+    ConflitMetier,
     ReferenceInvalide,
     RessourceIntrouvable,
 )
-from app.models.abonnement import Abonnement, TypeFacturation
+from app.models.abonnement import (
+    CONTRAINTE_SANS_CHEVAUCHEMENT,
+    Abonnement,
+    TypeFacturation,
+)
 from app.models.client import Client, TypeClient
 from app.repositories.abonnement_repository import AbonnementRepository
 from app.repositories.client_entreprise_repository import ClientEntrepriseRepository
@@ -28,6 +36,18 @@ from app.schemas.abonnement import (
 MESSAGE_RESERVE_ENTREPRISE = (
     "Seul un compte entreprise peut souscrire un abonnement cantine."
 )
+MESSAGE_CHEVAUCHEMENT = "Cette entreprise a déjà un abonnement actif sur cette période."
+
+
+def _viole_exclusion(erreur: IntegrityError) -> bool:
+    """Distingue une violation de chevauchement d'une autre violation.
+
+    Même raisonnement que `ReservationService._viole_exclusion` : sans ce
+    test, le service traduirait n'importe quelle `IntegrityError` en « déjà
+    souscrit », y compris une clé étrangère cassée.
+    """
+    nom = getattr(getattr(erreur.orig, "diag", None), "constraint_name", None)
+    return nom == CONTRAINTE_SANS_CHEVAUCHEMENT
 
 
 class AbonnementService:
@@ -80,16 +100,15 @@ class AbonnementService:
         `id_client_entreprise` est dérivé du jeton, jamais accepté depuis le
         corps — un client ne doit pas pouvoir souscrire au nom d'une autre
         entreprise. Refuse en 403 un client particulier : la cantine B2B n'a
-        pas de sens pour un compte individuel.
+        pas de sens pour un compte individuel. **409** si l'entreprise a déjà
+        un abonnement actif sur une période qui recoupe celle-ci.
         """
         if client.type_client != TypeClient.ENTREPRISE:
             raise AutorisationInsuffisante(MESSAGE_RESERVE_ENTREPRISE)
 
-        abonnement = self.abonnements.create(
+        return self._creer(
             {**donnees.model_dump(), "id_client_entreprise": client.id_client}
         )
-        self.db.commit()
-        return abonnement
 
     def creer_pour_entreprise(self, donnees: AbonnementCreateAdmin) -> Abonnement:
         """Souscrit un abonnement pour l'entreprise cliente désignée.
@@ -103,9 +122,58 @@ class AbonnementService:
         if self.clients_entreprise.get_by_id(donnees.id_client_entreprise) is None:
             raise ReferenceInvalide("L'entreprise cliente désignée n'existe pas.")
 
-        abonnement = self.abonnements.create(donnees.model_dump())
-        self.db.commit()
+        return self._creer(donnees.model_dump())
+
+    def _creer(self, donnees: dict) -> Abonnement:
+        """Création commune aux deux chemins, avec garantie anti-chevauchement.
+
+        Le pré-contrôle produit un 409 lisible dans le cas courant ; la
+        contrainte d'exclusion en base reste le seul arbitre en cas de course
+        entre deux créations simultanées — même architecture à deux niveaux
+        que `ReservationService.creer` sur `SALLE`/`LOGEMENT`.
+        """
+        if self._chevauche(
+            donnees["id_client_entreprise"], donnees["date_debut"], donnees["date_fin"]
+        ):
+            raise ConflitMetier(MESSAGE_CHEVAUCHEMENT)
+
+        try:
+            abonnement = self.abonnements.create(donnees)
+            self.db.commit()
+        except IntegrityError as erreur:
+            self.db.rollback()
+            if _viole_exclusion(erreur):
+                raise ConflitMetier(MESSAGE_CHEVAUCHEMENT) from erreur
+            raise
         return abonnement
+
+    def _chevauche(
+        self,
+        id_client_entreprise: int,
+        date_debut: date,
+        date_fin: date,
+        exclure_id: int | None = None,
+    ) -> bool:
+        """Indique si un abonnement actif de cette entreprise recoupe déjà la période.
+
+        Reproduit **exactement** le prédicat de la contrainte d'exclusion :
+        bornes `[)` — `debut < fin_existante AND fin > debut_existante` —,
+        abonnements archivés exclus. Diverger donnerait un pré-contrôle qui
+        laisse passer ce que la base refuse, ou l'inverse.
+        """
+        requete = (
+            select(Abonnement.id_abonnement)
+            .where(
+                Abonnement.id_client_entreprise == id_client_entreprise,
+                Abonnement.supprime_le.is_(None),
+                Abonnement.date_debut < date_fin,
+                Abonnement.date_fin > date_debut,
+            )
+            .limit(1)
+        )
+        if exclure_id is not None:
+            requete = requete.where(Abonnement.id_abonnement != exclure_id)
+        return self.db.scalars(requete).first() is not None
 
     # --- Modification -------------------------------------------------------
 
@@ -113,7 +181,10 @@ class AbonnementService:
         """Met à jour un abonnement, en revalidant la cohérence tarif/facturation.
 
         Réservé à l'administrateur : `id_client_entreprise` n'est de toute
-        façon jamais réassignable, la charge utile ne le porte pas.
+        façon jamais réassignable, la charge utile ne le porte pas. **409** si
+        le nouveau créneau recoupe un autre abonnement actif de la même
+        entreprise — un déplacement de dates peut réintroduire un
+        chevauchement tout comme une création.
         """
         abonnement = self.obtenir(id_abonnement)
         modifications = donnees.model_dump(exclude_unset=True)
@@ -121,8 +192,25 @@ class AbonnementService:
         self._verifier_coherence_tarif(abonnement, modifications)
         self._verifier_coherence_dates(abonnement, modifications)
 
-        self.abonnements.update(abonnement, modifications)
-        self.db.commit()
+        if "date_debut" in modifications or "date_fin" in modifications:
+            date_debut = modifications.get("date_debut", abonnement.date_debut)
+            date_fin = modifications.get("date_fin", abonnement.date_fin)
+            if self._chevauche(
+                abonnement.id_client_entreprise,
+                date_debut,
+                date_fin,
+                exclure_id=abonnement.id_abonnement,
+            ):
+                raise ConflitMetier(MESSAGE_CHEVAUCHEMENT)
+
+        try:
+            self.abonnements.update(abonnement, modifications)
+            self.db.commit()
+        except IntegrityError as erreur:
+            self.db.rollback()
+            if _viole_exclusion(erreur):
+                raise ConflitMetier(MESSAGE_CHEVAUCHEMENT) from erreur
+            raise
         return abonnement
 
     def _verifier_coherence_tarif(

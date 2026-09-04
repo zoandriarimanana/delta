@@ -1,28 +1,27 @@
-"""Tests du repository ABONNEMENT."""
+"""Tests du repository ABONNEMENT.
 
-from collections.abc import Iterator
+Sur `session_postgres` et non SQLite : `ABONNEMENT` porte une contrainte
+d'exclusion `EXCLUDE USING gist`, que SQLite ne sait pas créer. Même
+raisonnement que `test_reservation_service.py` pour `SALLE`/`LOGEMENT`.
+"""
+
 from datetime import date
 
 import pytest
 from sqlalchemy.orm import Session
 
 from app.core.security import hacher_mot_de_passe
-from app.models.abonnement import Abonnement, ModeSuivi, TypeFacturation
+from app.models.abonnement import ModeSuivi, TypeFacturation
 from app.models.client import Client, TypeClient
 from app.models.client_entreprise import ClientEntreprise
 from app.repositories.abonnement_repository import AbonnementRepository
-from tests.conftest import creer_engine_sqlite
 
 MOT_DE_PASSE = hacher_mot_de_passe("mot-de-passe")
 
 
 @pytest.fixture
-def db() -> Iterator[Session]:
-    engine = creer_engine_sqlite(
-        Client.__table__, ClientEntreprise.__table__, Abonnement.__table__
-    )
-    with Session(engine) as session:
-        yield session
+def db(session_postgres: Session) -> Session:
+    return session_postgres
 
 
 @pytest.fixture
