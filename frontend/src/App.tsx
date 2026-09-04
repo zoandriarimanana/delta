@@ -7,6 +7,8 @@
 
 import { BrowserRouter, Route, Routes } from 'react-router';
 
+import AbonnementDetailAdministrationPage from '@/features/abonnement/pages/AbonnementDetailAdministrationPage';
+import AdministrationAbonnementsPage from '@/features/abonnement/pages/AdministrationAbonnementsPage';
 import ConnexionPage from '@/features/auth/pages/ConnexionPage';
 import ConnexionPersonnelPage from '@/features/auth/pages/ConnexionPersonnelPage';
 import InscriptionPage from '@/features/auth/pages/InscriptionPage';
@@ -83,6 +85,26 @@ export default function App() {
             element={
               <RoutePersonnel>
                 <AdministrationCategoriesPage />
+              </RoutePersonnel>
+            }
+          />
+          {/* Déclarée avant la route paramétrée : même précaution que
+              `commandes/invite/:reference` avant `commandes` — ici les deux
+              chemins n'ont de toute façon pas la même forme, mais la
+              convention reste de lister du plus spécifique au plus général. */}
+          <Route
+            path="personnel/abonnements"
+            element={
+              <RoutePersonnel>
+                <AdministrationAbonnementsPage />
+              </RoutePersonnel>
+            }
+          />
+          <Route
+            path="personnel/abonnements/:idAbonnement"
+            element={
+              <RoutePersonnel>
+                <AbonnementDetailAdministrationPage />
               </RoutePersonnel>
             }
           />
