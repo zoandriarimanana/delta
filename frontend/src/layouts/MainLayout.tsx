@@ -83,6 +83,7 @@ export default function MainLayout() {
       ? [
           { vers: '/personnel/commandes', libelle: 'Prise de commande' },
           { vers: '/personnel/catalogue', libelle: 'Catalogue' },
+          { vers: '/personnel/abonnements', libelle: 'Abonnements' },
         ]
       : []),
     { vers: '/panier', libelle: 'Panier', compteur: nombre },
