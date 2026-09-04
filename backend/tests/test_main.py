@@ -83,6 +83,10 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/abonnements/{{id_abonnement}}",
         f"{prefixe}/abonnements/administration",
         f"{prefixe}/abonnements/administration/{{id_abonnement}}",
+        f"{prefixe}/beneficiaires",
+        f"{prefixe}/beneficiaires/{{id_beneficiaire}}",
+        f"{prefixe}/beneficiaires/administration",
+        f"{prefixe}/beneficiaires/administration/{{id_beneficiaire}}",
     }
 
 

@@ -24,6 +24,7 @@ from app.core.exceptions import (
 from app.routers import (
     abonnement_router,
     auth_router,
+    beneficiaire_router,
     categorie_produit_router,
     commande_router,
     domaine_formation_router,
@@ -138,3 +139,4 @@ app.include_router(reservation_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(salle_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(logement_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(abonnement_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(beneficiaire_router.router, prefix=settings.API_V1_PREFIX)
