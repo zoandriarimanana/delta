@@ -84,9 +84,14 @@ def creer_administration(
     summary="Lister tous les bénéficiaires",
 )
 def lister_administration(
-    admin: PersonnelAdministrateur, db: SessionBase
+    admin: PersonnelAdministrateur,
+    db: SessionBase,
+    id_abonnement: int | None = None,
 ) -> list[BeneficiaireRead]:
-    beneficiaires = BeneficiaireService(db).lister()
+    """Sans `id_abonnement` : tous les bénéficiaires. Avec : ceux du seul
+    abonnement désigné — évite à une fiche abonnement de télécharger
+    l'intégralité du fichier client pour n'en garder qu'une poignée."""
+    beneficiaires = BeneficiaireService(db).lister(id_abonnement)
     return [BeneficiaireRead.model_validate(b) for b in beneficiaires]
 
 

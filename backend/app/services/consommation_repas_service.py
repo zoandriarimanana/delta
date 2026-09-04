@@ -69,8 +69,18 @@ class ConsommationRepasService:
             raise RessourceIntrouvable("Consommation introuvable.")
         return consommation
 
-    def lister(self) -> Sequence[ConsommationRepas]:
-        """Toutes les consommations actives. Réservé à l'administrateur."""
+    def lister(self, id_abonnement: int | None = None) -> Sequence[ConsommationRepas]:
+        """Consommations actives, filtrées par abonnement si fourni. Réservé
+        à l'administrateur.
+
+        `id_abonnement` optionnel : sans lui, comportement inchangé (liste
+        complète). Avec lui, délègue à `par_abonnement()` — déjà écrite en
+        7.1.3 pour le repository, jamais câblée jusqu'ici à un endpoint
+        atteignable par l'administrateur. Même raisonnement que
+        `BeneficiaireService.lister()`.
+        """
+        if id_abonnement is not None:
+            return self.consommations.par_abonnement(id_abonnement)
         return self.consommations.list()
 
     def lister_du_client_entreprise(
