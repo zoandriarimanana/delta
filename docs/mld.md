@@ -201,6 +201,84 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 - `type_facturation` ∈ {Forfait, Consommation_reelle}
 - `mode_suivi` ∈ {Individuel, Global} — si Global, `#id_beneficiaire` est NULL.
 
+- `ABONNEMENT.date_fin` est **`NOT NULL`**. Un abonnement B2B a une échéance
+  contractuelle — contrairement à `RESERVATION`, dont certains types n'ont pas
+  de borne fixée a priori.
+
+  ```sql
+  CHECK (date_fin > date_debut)
+  ```
+
+  Décidé en construisant le Sprint 7 : le modèle du Sprint 0 la portait
+  `nullable`, faute d'avoir encore un service pour l'exploiter. Ce n'est pas une
+  omission de transcription comme l'unicité de `CLIENT.email` — c'est une
+  décision prise en connaissance de cause, une fois le cas d'usage écrit.
+
+- `ABONNEMENT.tarif_forfait` et `ABONNEMENT.tarif_unitaire_repas` sont nullables
+  **individuellement**, mais le tarif correspondant au `type_facturation`
+  choisi doit être renseigné.
+
+  ```sql
+  CHECK (
+    (type_facturation = 'Forfait' AND tarif_forfait IS NOT NULL)
+    OR (type_facturation = 'Consommation_reelle' AND tarif_unitaire_repas IS NOT NULL)
+  )
+  ```
+
+  Une implication par branche du domaine, pas une contrainte symétrique :
+  contrairement à `SALLE` (« au moins un des deux »), les deux types de
+  facturation sont mutuellement exclusifs, donc chaque branche exige son propre
+  tarif. Même pattern que `PRODUIT.supplement_personnalisation` — le tarif
+  inutilisé peut rester dormant, c'est l'absence du tarif actif qui est
+  dangereuse : elle rendrait la facturation gratuite sans que personne l'ait
+  décidé.
+
+  Contrairement à la cohérence `CONSOMMATION_REPAS.#id_beneficiaire` /
+  `ABONNEMENT.mode_suivi` ci-dessous, cette règle ne croise **pas** de table :
+  `type_facturation` et les deux tarifs vivent tous trois sur `ABONNEMENT`. Rien
+  n'empêche donc de la poser en `CHECK`, et c'est ce qui est fait — la garantie
+  structurelle est préférée à la seule validation de service dès qu'elle est
+  techniquement possible.
+
+- `BENEFICIAIRE.statut` ∈ {Actif, Inactif, Suspendu}. Domaine formel, `CHECK`
+  en base, même traitement que `PERSONNEL.fonction` et `RESERVATION.statut`.
+
+  Décidé en construisant le Sprint 7 : le modèle du Sprint 0 le portait en
+  chaîne libre, faute d'avoir encore un service pour comparer ses valeurs. Ce
+  n'est pas un désaccord avec le commentaire d'origine (« le MLD n'en fixe pas
+  le domaine ») — c'était une précision qui n'avait pas encore été tranchée, pas
+  une décision contraire.
+
+- **Aucun chevauchement entre deux abonnements actifs d'une même entreprise.**
+  Contrainte d'exclusion PostgreSQL, même mécanique que `RESERVATION` sur
+  `SALLE`/`LOGEMENT` (#47) :
+
+  ```sql
+  EXCLUDE USING gist (id_client_entreprise WITH =,
+     daterange(date_debut, date_fin) WITH &&)
+     WHERE (supprime_le IS NULL)
+  ```
+
+  Décidé en construisant le Sprint 7 : `ABONNEMENT` n'a qu'un lien vers
+  `CLIENT_ENTREPRISE`, aucune notion de site ou de département qui
+  justifierait deux abonnements actifs simultanés. Sans cette garantie,
+  `CONSOMMATION_REPAS.#id_abonnement` n'aurait aucun moyen de départager quel
+  abonnement décompte un repas un jour couvert par deux contrats à la fois.
+
+  `daterange` a des bornes `[)` — début inclus, fin exclue — comme
+  `tstzrange` pour `RESERVATION` : un renouvellement qui commence le jour où
+  l'ancien abonnement se termine n'est **pas** un chevauchement, c'est le cas
+  courant d'un contrat qui en remplace un autre.
+
+  La règle ne croise **aucune** autre table : `date_debut`, `date_fin` et
+  `id_client_entreprise` vivent tous sur `ABONNEMENT`. Rien n'empêche donc de
+  la poser en base, et c'est ce qui est fait — la garantie structurelle est
+  préférée à la seule validation de service dès qu'elle est techniquement
+  possible, même raisonnement que `tarif_selon_facturation` ci-dessus. Le
+  service fait tout de même un pré-contrôle, mais pour produire un 409
+  lisible, pas pour garantir — la base reste le seul arbitre en cas de course
+  entre deux créations simultanées.
+
 - **Cohérence `#id_beneficiaire` / `mode_suivi`** : si l'abonnement est en mode
   `Individuel`, chaque consommation doit nommer un bénéficiaire ; en mode
   `Global`, aucun. Cette règle croise deux tables (`CONSOMMATION_REPAS.#id_beneficiaire`

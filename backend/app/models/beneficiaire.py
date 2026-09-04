@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy import ForeignKey, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,11 +16,18 @@ if TYPE_CHECKING:
     from app.models.consommation_repas import ConsommationRepas
 
 
+class StatutBeneficiaire(StrEnum):
+    """Domaine de `BENEFICIAIRE.statut` (cf. `docs/mld.md`)."""
+
+    ACTIF = "Actif"
+    INACTIF = "Inactif"
+    SUSPENDU = "Suspendu"
+
+
 class Beneficiaire(SoftDeleteMixin, Base):
     """Personne couverte par un abonnement cantine d'entreprise.
 
     N'est renseigné que pour un abonnement en `mode_suivi = Individuel`.
-    `statut` reste une chaîne libre : le MLD n'en fixe pas le domaine.
     """
 
     __tablename__ = "beneficiaire"
@@ -44,7 +53,16 @@ class Beneficiaire(SoftDeleteMixin, Base):
     nom: Mapped[str] = mapped_column(String(100), nullable=False)
     prenom: Mapped[str] = mapped_column(String(100), nullable=False)
     identifiant_badge: Mapped[str] = mapped_column(String(50), nullable=False)
-    statut: Mapped[str] = mapped_column(String(30), nullable=False)
+    statut: Mapped[StatutBeneficiaire] = mapped_column(
+        SAEnum(
+            StatutBeneficiaire,
+            native_enum=False,
+            create_constraint=True,
+            name="statut_beneficiaire",
+            values_callable=lambda enum_cls: [membre.value for membre in enum_cls],
+        ),
+        nullable=False,
+    )
     id_abonnement: Mapped[int] = mapped_column(
         ForeignKey("abonnement.id_abonnement", ondelete="RESTRICT"), nullable=False
     )
