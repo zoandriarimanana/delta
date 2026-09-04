@@ -265,3 +265,137 @@ def test_supprimer_archive(db: Session, service: ConsommationRepasService) -> No
 
     with pytest.raises(RessourceIntrouvable):
         service.obtenir(consommation.id_consommation)
+
+
+# --- Solde ------------------------------------------------------------------
+
+
+def test_solde_consommation_reelle_facture_le_tarif_unitaire_fois_la_quantite(
+    db: Session, service: ConsommationRepasService
+) -> None:
+    entreprise = _entreprise(db)
+    abonnement = _abonnement(
+        db,
+        entreprise.id_client,
+        type_facturation=TypeFacturation.CONSOMMATION_REELLE,
+        tarif_unitaire_repas=2500,
+    )
+    service.enregistrer(
+        ConsommationRepasCreate(
+            date_consommation=date(2026, 3, 1),
+            id_abonnement=abonnement.id_abonnement,
+            quantite=4,
+        )
+    )
+
+    solde = service.calculer_solde(abonnement.id_abonnement)
+
+    assert solde.repas_consommes == 4
+    assert solde.repas_inclus is None
+    assert solde.repas_restants is None
+    assert solde.montant_facture == 10000
+
+
+def test_solde_forfait_facture_le_tarif_fixe_quelle_que_soit_la_consommation(
+    db: Session, service: ConsommationRepasService
+) -> None:
+    entreprise = _entreprise(db)
+    abonnement = _abonnement(
+        db,
+        entreprise.id_client,
+        type_facturation=TypeFacturation.FORFAIT,
+        tarif_forfait=500000,
+        tarif_unitaire_repas=None,
+        nombre_repas_inclus=100,
+    )
+    service.enregistrer(
+        ConsommationRepasCreate(
+            date_consommation=date(2026, 3, 1),
+            id_abonnement=abonnement.id_abonnement,
+            quantite=30,
+        )
+    )
+
+    solde = service.calculer_solde(abonnement.id_abonnement)
+
+    assert solde.repas_consommes == 30
+    assert solde.repas_inclus == 100
+    assert solde.repas_restants == 70
+    assert solde.montant_facture == 500000
+
+
+def test_solde_forfait_depasse_est_negatif_sans_etre_plafonne(
+    db: Session, service: ConsommationRepasService
+) -> None:
+    entreprise = _entreprise(db)
+    abonnement = _abonnement(
+        db,
+        entreprise.id_client,
+        type_facturation=TypeFacturation.FORFAIT,
+        tarif_forfait=500000,
+        tarif_unitaire_repas=None,
+        nombre_repas_inclus=10,
+    )
+    service.enregistrer(
+        ConsommationRepasCreate(
+            date_consommation=date(2026, 3, 1),
+            id_abonnement=abonnement.id_abonnement,
+            quantite=15,
+        )
+    )
+
+    solde = service.calculer_solde(abonnement.id_abonnement)
+
+    assert solde.repas_restants == -5
+    assert solde.montant_facture == 500000
+
+
+def test_solde_forfait_sans_nombre_repas_inclus_ne_calcule_pas_de_restants(
+    db: Session, service: ConsommationRepasService
+) -> None:
+    entreprise = _entreprise(db)
+    abonnement = _abonnement(
+        db,
+        entreprise.id_client,
+        type_facturation=TypeFacturation.FORFAIT,
+        tarif_forfait=500000,
+        tarif_unitaire_repas=None,
+        nombre_repas_inclus=None,
+    )
+
+    solde = service.calculer_solde(abonnement.id_abonnement)
+
+    assert solde.repas_inclus is None
+    assert solde.repas_restants is None
+
+
+def test_solde_sans_consommation_est_a_zero(
+    db: Session, service: ConsommationRepasService
+) -> None:
+    entreprise = _entreprise(db)
+    abonnement = _abonnement(db, entreprise.id_client)
+
+    solde = service.calculer_solde(abonnement.id_abonnement)
+
+    assert solde.repas_consommes == 0
+    assert solde.montant_facture == 0
+
+
+def test_calculer_solde_du_client_entreprise_refuse_celui_d_une_autre(
+    db: Session, service: ConsommationRepasService
+) -> None:
+    entreprise_a = _entreprise(db, "1111111111")
+    entreprise_b = _entreprise(db, "2222222222")
+    abonnement_a = _abonnement(db, entreprise_a.id_client)
+
+    with pytest.raises(RessourceIntrouvable):
+        service.calculer_solde_du_client_entreprise(
+            abonnement_a.id_abonnement, entreprise_b
+        )
+
+
+def test_calculer_solde_sur_abonnement_inexistant_donne_ressource_introuvable(
+    service: ConsommationRepasService,
+) -> None:
+    with pytest.raises(RessourceIntrouvable):
+        service.calculer_solde(999)

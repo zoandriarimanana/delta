@@ -1,8 +1,11 @@
 """Schemas Pydantic de l'entité CONSOMMATION_REPAS."""
 
 from datetime import date
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.models.abonnement import TypeFacturation
 
 
 class ConsommationRepasCreate(BaseModel):
@@ -40,3 +43,25 @@ class ConsommationRepasRead(BaseModel):
     quantite: int
     id_abonnement: int
     id_beneficiaire: int | None = None
+
+
+class SoldeAbonnement(BaseModel):
+    """Solde calculé à la demande — jamais stocké (cf. `docs/roadmap.md`, 7.2 :
+    « pas d'entité FACTURE, calcul à la demande »).
+
+    `repas_restants` n'a de sens que pour un abonnement au forfait : la
+    consommation réelle n'a pas de quota à décompter, elle facture ce qui est
+    consommé. `None` sur `Consommation_reelle`, jamais `0` — un zéro
+    suggérerait un quota épuisé qui n'existe pas dans ce mode.
+
+    `repas_restants` peut être **négatif** sur un forfait dépassé : c'est une
+    information, pas une erreur — le service ne plafonne pas à zéro, sous
+    peine de masquer un dépassement à l'administrateur.
+    """
+
+    id_abonnement: int
+    type_facturation: TypeFacturation
+    repas_consommes: int
+    repas_inclus: int | None = None
+    repas_restants: int | None = None
+    montant_facture: Decimal
