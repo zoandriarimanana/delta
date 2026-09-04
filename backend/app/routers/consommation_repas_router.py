@@ -95,9 +95,14 @@ def solde(
     summary="Lister toutes les consommations",
 )
 def lister_administration(
-    admin: PersonnelAdministrateur, db: SessionBase
+    admin: PersonnelAdministrateur,
+    db: SessionBase,
+    id_abonnement: int | None = None,
 ) -> list[ConsommationRepasRead]:
-    consommations = ConsommationRepasService(db).lister()
+    """Sans `id_abonnement` : toutes les consommations. Avec : celles du seul
+    abonnement désigné — évite à une fiche abonnement de télécharger
+    l'historique complet de toutes les entreprises."""
+    consommations = ConsommationRepasService(db).lister(id_abonnement)
     return [ConsommationRepasRead.model_validate(c) for c in consommations]
 
 

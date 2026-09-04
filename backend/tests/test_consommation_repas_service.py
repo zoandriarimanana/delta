@@ -399,3 +399,64 @@ def test_calculer_solde_sur_abonnement_inexistant_donne_ressource_introuvable(
 ) -> None:
     with pytest.raises(RessourceIntrouvable):
         service.calculer_solde(999)
+
+
+# --- lister() : filtre optionnel par abonnement -----------------------------
+
+
+def test_lister_sans_filtre_retourne_toutes_les_consommations(
+    db: Session, service: ConsommationRepasService
+) -> None:
+    """Sans `id_abonnement` : comportement inchangé, aucune régression."""
+    entreprise_a = _entreprise(db, "1111111111")
+    entreprise_b = _entreprise(db, "2222222222")
+    abonnement_a = _abonnement(db, entreprise_a.id_client)
+    abonnement_b = _abonnement(
+        db,
+        entreprise_b.id_client,
+        date_debut=date(2027, 1, 1),
+        date_fin=date(2027, 12, 31),
+    )
+    service.enregistrer(
+        ConsommationRepasCreate(
+            date_consommation=date(2026, 3, 1), id_abonnement=abonnement_a.id_abonnement
+        )
+    )
+    service.enregistrer(
+        ConsommationRepasCreate(
+            date_consommation=date(2027, 3, 1), id_abonnement=abonnement_b.id_abonnement
+        )
+    )
+
+    resultat = service.lister()
+
+    assert len(resultat) == 2
+
+
+def test_lister_avec_filtre_ne_retourne_que_l_abonnement_designe(
+    db: Session, service: ConsommationRepasService
+) -> None:
+    entreprise_a = _entreprise(db, "1111111111")
+    entreprise_b = _entreprise(db, "2222222222")
+    abonnement_a = _abonnement(db, entreprise_a.id_client)
+    abonnement_b = _abonnement(
+        db,
+        entreprise_b.id_client,
+        date_debut=date(2027, 1, 1),
+        date_fin=date(2027, 12, 31),
+    )
+    service.enregistrer(
+        ConsommationRepasCreate(
+            date_consommation=date(2026, 3, 1), id_abonnement=abonnement_a.id_abonnement
+        )
+    )
+    service.enregistrer(
+        ConsommationRepasCreate(
+            date_consommation=date(2027, 3, 1), id_abonnement=abonnement_b.id_abonnement
+        )
+    )
+
+    resultat = service.lister(id_abonnement=abonnement_a.id_abonnement)
+
+    assert len(resultat) == 1
+    assert resultat[0].id_abonnement == abonnement_a.id_abonnement

@@ -278,3 +278,74 @@ def test_administration_obtient_le_solde_de_n_importe_quel_abonnement(
     )
 
     assert reponse.status_code == 200
+
+
+def test_administration_sans_filtre_voit_toutes_les_consommations(
+    client_http: TestClient,
+    entete_personnel: dict[str, str],
+    entete_admin: dict[str, str],
+    abonnement: Abonnement,
+    db: Session,
+) -> None:
+    """Sans `id_abonnement` : comportement inchangé, aucune régression."""
+    autre = _entreprise(db, "2222222222")
+    abonnement_autre = _abonnement(db, autre.id_client)
+    client_http.post(
+        CONSOMMATIONS,
+        json={
+            "date_consommation": "2026-03-01",
+            "id_abonnement": abonnement.id_abonnement,
+        },
+        headers=entete_personnel,
+    )
+    client_http.post(
+        CONSOMMATIONS,
+        json={
+            "date_consommation": "2026-03-01",
+            "id_abonnement": abonnement_autre.id_abonnement,
+        },
+        headers=entete_personnel,
+    )
+
+    reponse = client_http.get(ADMIN_CONSOMMATIONS, headers=entete_admin)
+
+    assert reponse.status_code == 200
+    assert len(reponse.json()) == 2
+
+
+def test_administration_avec_filtre_ne_voit_que_l_abonnement_designe(
+    client_http: TestClient,
+    entete_personnel: dict[str, str],
+    entete_admin: dict[str, str],
+    abonnement: Abonnement,
+    db: Session,
+) -> None:
+    autre = _entreprise(db, "2222222222")
+    abonnement_autre = _abonnement(db, autre.id_client)
+    client_http.post(
+        CONSOMMATIONS,
+        json={
+            "date_consommation": "2026-03-01",
+            "id_abonnement": abonnement.id_abonnement,
+        },
+        headers=entete_personnel,
+    )
+    client_http.post(
+        CONSOMMATIONS,
+        json={
+            "date_consommation": "2026-03-01",
+            "id_abonnement": abonnement_autre.id_abonnement,
+        },
+        headers=entete_personnel,
+    )
+
+    reponse = client_http.get(
+        ADMIN_CONSOMMATIONS,
+        params={"id_abonnement": abonnement.id_abonnement},
+        headers=entete_admin,
+    )
+
+    assert reponse.status_code == 200
+    corps = reponse.json()
+    assert len(corps) == 1
+    assert corps[0]["id_abonnement"] == abonnement.id_abonnement

@@ -211,3 +211,48 @@ def test_supprimer_archive(db: Session, service: BeneficiaireService) -> None:
 
     with pytest.raises(RessourceIntrouvable):
         service.obtenir(beneficiaire.id_beneficiaire)
+
+
+# --- lister() : filtre optionnel par abonnement -----------------------------
+
+
+def test_lister_sans_filtre_retourne_tous_les_beneficiaires(
+    db: Session, service: BeneficiaireService
+) -> None:
+    """Sans `id_abonnement` : comportement inchangé, aucune régression."""
+    entreprise_a = _entreprise(db, "1111111111")
+    entreprise_b = _entreprise(db, "2222222222")
+    abonnement_a = _abonnement(db, entreprise_a.id_client)
+    abonnement_b = _abonnement(
+        db,
+        entreprise_b.id_client,
+        date_debut=date(2027, 1, 1),
+        date_fin=date(2027, 12, 31),
+    )
+    service.creer(_charge_utile(abonnement_a.id_abonnement, "B001"), entreprise_a)
+    service.creer(_charge_utile(abonnement_b.id_abonnement, "B002"), entreprise_b)
+
+    resultat = service.lister()
+
+    assert len(resultat) == 2
+
+
+def test_lister_avec_filtre_ne_retourne_que_l_abonnement_designe(
+    db: Session, service: BeneficiaireService
+) -> None:
+    entreprise_a = _entreprise(db, "1111111111")
+    entreprise_b = _entreprise(db, "2222222222")
+    abonnement_a = _abonnement(db, entreprise_a.id_client)
+    abonnement_b = _abonnement(
+        db,
+        entreprise_b.id_client,
+        date_debut=date(2027, 1, 1),
+        date_fin=date(2027, 12, 31),
+    )
+    service.creer(_charge_utile(abonnement_a.id_abonnement, "B001"), entreprise_a)
+    service.creer(_charge_utile(abonnement_b.id_abonnement, "B002"), entreprise_b)
+
+    resultat = service.lister(id_abonnement=abonnement_a.id_abonnement)
+
+    assert len(resultat) == 1
+    assert resultat[0].identifiant_badge == "B001"

@@ -179,3 +179,62 @@ def test_administration_voit_tous_les_beneficiaires(
 
     assert reponse.status_code == 200
     assert len(reponse.json()) == 1
+
+
+def test_administration_sans_filtre_voit_tous_les_abonnements(
+    client_http: TestClient,
+    entete_entreprise: dict[str, str],
+    entete_admin: dict[str, str],
+    abonnement: Abonnement,
+    db: Session,
+) -> None:
+    """Sans `id_abonnement` : comportement inchangé, aucune régression."""
+    autre = _entreprise(db, "2222222222")
+    abonnement_autre = _abonnement(db, autre.id_client)
+    client_http.post(
+        BENEFICIAIRES,
+        json=_charge_utile(abonnement.id_abonnement, "B001"),
+        headers=entete_entreprise,
+    )
+    client_http.post(
+        BENEFICIAIRES,
+        json=_charge_utile(abonnement_autre.id_abonnement, "B002"),
+        headers=_entete(autre),
+    )
+
+    reponse = client_http.get(ADMIN_BENEFICIAIRES, headers=entete_admin)
+
+    assert reponse.status_code == 200
+    assert len(reponse.json()) == 2
+
+
+def test_administration_avec_filtre_ne_voit_que_l_abonnement_designe(
+    client_http: TestClient,
+    entete_entreprise: dict[str, str],
+    entete_admin: dict[str, str],
+    abonnement: Abonnement,
+    db: Session,
+) -> None:
+    autre = _entreprise(db, "2222222222")
+    abonnement_autre = _abonnement(db, autre.id_client)
+    client_http.post(
+        BENEFICIAIRES,
+        json=_charge_utile(abonnement.id_abonnement, "B001"),
+        headers=entete_entreprise,
+    )
+    client_http.post(
+        BENEFICIAIRES,
+        json=_charge_utile(abonnement_autre.id_abonnement, "B002"),
+        headers=_entete(autre),
+    )
+
+    reponse = client_http.get(
+        ADMIN_BENEFICIAIRES,
+        params={"id_abonnement": abonnement.id_abonnement},
+        headers=entete_admin,
+    )
+
+    assert reponse.status_code == 200
+    corps = reponse.json()
+    assert len(corps) == 1
+    assert corps[0]["identifiant_badge"] == "B001"

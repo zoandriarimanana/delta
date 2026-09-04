@@ -59,8 +59,19 @@ class BeneficiaireService:
             raise RessourceIntrouvable("Bénéficiaire introuvable.")
         return beneficiaire
 
-    def lister(self) -> Sequence[Beneficiaire]:
-        """Tous les bénéficiaires actifs. Réservé à l'administrateur."""
+    def lister(self, id_abonnement: int | None = None) -> Sequence[Beneficiaire]:
+        """Bénéficiaires actifs, filtrés par abonnement si fourni. Réservé à
+        l'administrateur.
+
+        `id_abonnement` optionnel : sans lui, comportement inchangé (liste
+        complète). Avec lui, délègue à `par_abonnement()` — déjà écrite en
+        7.1.2 pour le repository, jamais câblée jusqu'ici à un endpoint
+        atteignable par l'administrateur. Sans ce filtre, une fiche
+        abonnement devrait télécharger tous les bénéficiaires de toutes les
+        entreprises pour n'en garder qu'une poignée.
+        """
+        if id_abonnement is not None:
+            return self.beneficiaires.par_abonnement(id_abonnement)
         return self.beneficiaires.list()
 
     def lister_du_client_entreprise(self, client: Client) -> Sequence[Beneficiaire]:
