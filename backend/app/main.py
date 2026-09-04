@@ -26,6 +26,7 @@ from app.routers import (
     auth_router,
     beneficiaire_router,
     categorie_produit_router,
+    client_entreprise_router,
     commande_router,
     consommation_repas_router,
     domaine_formation_router,
@@ -141,4 +142,5 @@ app.include_router(salle_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(logement_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(abonnement_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(beneficiaire_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(client_entreprise_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(consommation_repas_router.router, prefix=settings.API_V1_PREFIX)
