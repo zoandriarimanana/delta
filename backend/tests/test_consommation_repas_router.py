@@ -224,3 +224,57 @@ def test_administration_voit_toutes_les_consommations(
 
     assert reponse.status_code == 200
     assert len(reponse.json()) == 1
+
+
+def test_le_client_obtient_le_solde_de_son_abonnement(
+    client_http: TestClient,
+    entete_entreprise: dict[str, str],
+    entete_personnel: dict[str, str],
+    abonnement: Abonnement,
+) -> None:
+    client_http.post(
+        CONSOMMATIONS,
+        json={
+            "date_consommation": "2026-03-01",
+            "id_abonnement": abonnement.id_abonnement,
+            "quantite": 4,
+        },
+        headers=entete_personnel,
+    )
+
+    reponse = client_http.get(
+        f"{CONSOMMATIONS}/solde/{abonnement.id_abonnement}", headers=entete_entreprise
+    )
+
+    assert reponse.status_code == 200
+    corps = reponse.json()
+    assert corps["repas_consommes"] == 4
+    assert corps["montant_facture"] == "10000.00"
+
+
+def test_le_solde_d_une_autre_entreprise_retourne_404(
+    client_http: TestClient,
+    entete_entreprise: dict[str, str],
+    db: Session,
+) -> None:
+    autre = _entreprise(db, "2222222222")
+    abonnement_autre = _abonnement(db, autre.id_client)
+
+    reponse = client_http.get(
+        f"{CONSOMMATIONS}/solde/{abonnement_autre.id_abonnement}",
+        headers=entete_entreprise,
+    )
+
+    assert reponse.status_code == 404
+
+
+def test_administration_obtient_le_solde_de_n_importe_quel_abonnement(
+    client_http: TestClient,
+    entete_admin: dict[str, str],
+    abonnement: Abonnement,
+) -> None:
+    reponse = client_http.get(
+        f"{ADMIN_CONSOMMATIONS}/solde/{abonnement.id_abonnement}", headers=entete_admin
+    )
+
+    assert reponse.status_code == 200

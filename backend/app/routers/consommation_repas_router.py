@@ -28,6 +28,7 @@ from app.schemas.consommation_repas import (
     ConsommationRepasCreate,
     ConsommationRepasRead,
     ConsommationRepasUpdate,
+    SoldeAbonnement,
 )
 from app.services.consommation_repas_service import ConsommationRepasService
 
@@ -68,6 +69,21 @@ def lister(client: ClientConnecte, db: SessionBase) -> list[ConsommationRepasRea
     """Consommations de tous les abonnements de l'entreprise cliente connectée."""
     consommations = ConsommationRepasService(db).lister_du_client_entreprise(client)
     return [ConsommationRepasRead.model_validate(c) for c in consommations]
+
+
+@router.get(
+    "/solde/{id_abonnement}",
+    response_model=SoldeAbonnement,
+    summary="Solde d'un de ses abonnements",
+)
+def solde(
+    id_abonnement: int, client: ClientConnecte, db: SessionBase
+) -> SoldeAbonnement:
+    """Calculé à la demande, jamais stocké. **404** sur l'abonnement d'une
+    autre entreprise."""
+    return ConsommationRepasService(db).calculer_solde_du_client_entreprise(
+        id_abonnement, client
+    )
 
 
 # --- Administration (segments littéraux : avant /{id_consommation}) --------
@@ -123,6 +139,17 @@ def supprimer(
     id_consommation: int, admin: PersonnelAdministrateur, db: SessionBase
 ) -> None:
     ConsommationRepasService(db).supprimer(id_consommation)
+
+
+@router.get(
+    "/administration/solde/{id_abonnement}",
+    response_model=SoldeAbonnement,
+    summary="Solde d'un abonnement (administration)",
+)
+def solde_administration(
+    id_abonnement: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> SoldeAbonnement:
+    return ConsommationRepasService(db).calculer_solde(id_abonnement)
 
 
 # --- Client entreprise (route paramétrée, déclarée en dernier) -------------
