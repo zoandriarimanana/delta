@@ -545,6 +545,52 @@ AVIS(id_avis, type_avis, note, commentaire, date_avis, #id_client, #id_ligne, #i
 - `AVIS.note` ∈ [1, 5] — notation sur 5, bornes incluses. Présente au dictionnaire
   de données d'origine, omise ici par erreur de transcription ; rétablie.
 
+- `AVIS.type_avis` est cohérent avec la cible renseignée — `Produit` implique
+  `#id_ligne`, `Service` implique `#id_reservation`, et réciproquement. Décidé en
+  construisant le Sprint 8 : le modèle initial portait la contrainte n°3
+  (exactement une cible, XOR) sans jamais dire laquelle des deux `type_avis`
+  doit l'accompagner — ce n'est pas une omission de transcription, c'est une
+  précision qui n'avait pas encore été tranchée.
+
+  ```sql
+  CHECK ((type_avis = 'Produit') = (id_ligne IS NOT NULL))
+  ```
+
+  Une équivalence et non deux implications séparées : combinée à la contrainte
+  n°3 (`cible_xor`, qui garantit qu'une seule des deux colonnes est renseignée),
+  elle suffit à couvrir les deux sens à la fois — `Produit` sans `#id_ligne` est
+  refusé, tout comme `Service` avec `#id_ligne`.
+
+  Cette règle **ne croise aucune autre table** : `type_avis`, `#id_ligne` et
+  `#id_reservation` vivent tous les trois sur `AVIS`. Contrairement à la
+  cohérence `CONSOMMATION_REPAS.#id_beneficiaire` / `ABONNEMENT.mode_suivi`, qui
+  traverse deux tables et n'est vérifiable qu'en service, celle-ci tient sur une
+  seule ligne : rien n'empêche de la poser en `CHECK`, et c'est ce qui est fait
+  — même raisonnement que `ABONNEMENT.tarif_selon_facturation`.
+
+- **Un seul avis actif par client et par cible.** Deux index uniques
+  **partiels** `WHERE supprime_le IS NULL`, et non des contraintes `UNIQUE`
+  globales — même traitement que `uq_beneficiaire_identifiant_badge` :
+
+  ```sql
+  CREATE UNIQUE INDEX uq_avis_client_ligne
+    ON avis (id_client, id_ligne)
+    WHERE supprime_le IS NULL AND id_ligne IS NOT NULL;
+
+  CREATE UNIQUE INDEX uq_avis_client_reservation
+    ON avis (id_client, id_reservation)
+    WHERE supprime_le IS NULL AND id_reservation IS NOT NULL;
+  ```
+
+  Partiels et non globaux parce qu'un avis retiré pour **modération** — le seul
+  cas d'usage qui archive un `AVIS` — doit pouvoir être remplacé par un nouveau :
+  un badge est réattribué, un avis modéré doit de même pouvoir être réécrit.
+  Une contrainte globale bloquerait cette réécriture à vie, exactement comme
+  elle bloquerait à vie la réinscription d'un `CLIENT` archivé. Ce n'est pas le
+  cas des trois `UNIQUE` de cardinalité restées globales (`LIVRAISON.#id_commande`
+  et les deux autres) : celles-ci expriment une propriété structurelle jamais
+  réattribuée, pas une identité métier susceptible d'être reprise.
+
 ## Contraintes d'exclusivité à implémenter en `CHECK` / trigger (pas de l'algèbre relationnelle pure)
 
 1. **CLIENT** : exactement une ligne fille (`CLIENT_PARTICULIER` xor `CLIENT_ENTREPRISE`).
@@ -638,6 +684,8 @@ Six unicités d'identité métier sont des **index uniques partiels**
 | `uq_beneficiaire_identifiant_badge` | `BENEFICIAIRE.identifiant_badge` | un badge est réattribué |
 | `uq_categorie_produit_libelle` | `CATEGORIE_PRODUIT.libelle` | une catégorie archivée puis recréée |
 | `uq_domaine_formation_libelle` | `DOMAINE_FORMATION.libelle` | idem |
+| `uq_avis_client_ligne` | `AVIS.(#id_client, #id_ligne)` | un avis retiré pour modération doit pouvoir être remplacé |
+| `uq_avis_client_reservation` | `AVIS.(#id_client, #id_reservation)` | idem |
 
 Les noms sont ceux des anciennes contraintes, délibérément : PostgreSQL remonte
 le nom de l'**index** dans `diag.constraint_name`, dont dépend la traduction des
