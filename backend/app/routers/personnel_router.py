@@ -125,3 +125,27 @@ def restaurer(
     """
     personnel = PersonnelService(db).restaurer(id_personnel)
     return PersonnelRead.model_validate(personnel)
+
+
+@router.post(
+    "/{id_personnel}/anonymisation",
+    response_model=PersonnelRead,
+    summary="Anonymiser un membre du personnel",
+)
+def anonymiser(
+    id_personnel: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> PersonnelRead:
+    """Efface les données personnelles d'un salarié — **seul chemin de
+    conformité** pour `PERSONNEL` (droit à l'effacement : RGPD, loi malgache
+    n°2014-038), voir `PersonnelService.anonymiser`.
+
+    404 si l'identifiant ne désigne personne — y compris une ligne déjà
+    archivée : `PersonnelService.anonymiser` accepte volontairement les
+    lignes archivées, l'archivage seul n'ayant jamais suffi à effacer les
+    données personnelles qu'il laisse en place.
+
+    Idempotent : anonymiser une ligne déjà anonymisée n'a aucun effet
+    observable supplémentaire.
+    """
+    personnel = PersonnelService(db).anonymiser(id_personnel)
+    return PersonnelRead.model_validate(personnel)

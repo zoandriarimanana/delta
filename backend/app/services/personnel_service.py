@@ -161,10 +161,9 @@ class PersonnelService:
         détruire la trace de qui a effectué une livraison — une preuve de
         transaction.
 
-        Conséquence à connaître, et qui sera levée par #23 : les données
-        personnelles du salarié restent lisibles en base après archivage.
-        `PersonnelService.anonymiser()` n'existe pas encore (dette inscrite dans
-        `docs/roadmap.md` depuis le Sprint 1).
+        Conséquence à connaître : les données personnelles du salarié restent
+        lisibles en base après ce seul archivage. `anonymiser()`, ci-dessous,
+        est le chemin de conformité — un archivage n'y suffit pas à lui seul.
 
         L'archivage ne se propage à rien : ni `LIVRAISON` ni `SESSION_FORMATION`
         ne disparaissent avec leur titulaire. C'est voulu — une livraison passée

@@ -19,7 +19,12 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import (
+    TypeSujet,
+    creer_jeton_acces,
+    hacher_mot_de_passe,
+    verifier_mot_de_passe,
+)
 from app.main import app
 from app.models.client import Client, TypeClient
 from app.models.personnel import FonctionPersonnel, Personnel
@@ -117,6 +122,7 @@ def _creer(client_http: TestClient, entete: dict[str, str], **extra: object) -> 
         ("put", "/1"),
         ("delete", "/1"),
         ("post", "/1/restauration"),
+        ("post", "/1/anonymisation"),
     ],
 )
 def test_tout_endpoint_exige_un_jeton(
@@ -339,6 +345,122 @@ def test_restauration_refusee_si_adresse_reprise(
     assert reponse.status_code == 409
 
 
+# --- Anonymisation --------------------------------------------------------------
+
+
+def test_anonymisation(client_http: TestClient, entete: dict[str, str]) -> None:
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.post(
+        f"{PERSONNEL}/{cree['id_personnel']}/anonymisation", headers=entete
+    )
+
+    assert reponse.status_code == 200
+    corps = reponse.json()
+    assert corps["nom"] == "Anonymisé"
+    assert corps["prenom"] == "Anonymisé"
+    assert corps["email"].endswith("@delta.invalid")
+    assert corps["est_administrateur"] is False
+
+
+def test_anonymisation_efface_les_donnees_en_base(
+    client_http: TestClient, entete: dict[str, str], db: Session
+) -> None:
+    """Vérifie l'état réellement persisté, pas seulement la réponse HTTP.
+
+    `db.get()` lit par clé primaire, sans le filtre d'archivage que
+    `PersonnelRepository.get_by_id` applique par défaut — c'est la même
+    preuve que celle obtenue manuellement via `psql` lors de la vérification
+    empirique, rejouée ici automatiquement. `db.expire_all()` force une
+    relecture réelle plutôt que de faire confiance à l'objet Python déjà en
+    mémoire, identique à celui que le service vient de muter.
+    """
+    cree = _creer(client_http, entete, telephone="+261340000000")
+    cible = db.get(Personnel, cree["id_personnel"])
+    assert cible is not None
+    cible.mot_de_passe = hacher_mot_de_passe("motdepasse123")
+    cible.specialite = "Pâtisserie"
+    db.commit()
+    ancienne_empreinte = cible.mot_de_passe
+
+    reponse = client_http.post(
+        f"{PERSONNEL}/{cree['id_personnel']}/anonymisation", headers=entete
+    )
+    assert reponse.status_code == 200
+
+    db.expire_all()
+    en_base = db.get(Personnel, cree["id_personnel"])
+    assert en_base is not None
+    assert en_base.nom == "Anonymisé"
+    assert en_base.prenom == "Anonymisé"
+    assert en_base.telephone is None
+    assert en_base.specialite is None
+    assert en_base.zone_livraison is None
+    assert en_base.email.endswith("@delta.invalid")
+    assert en_base.est_administrateur is False
+    assert en_base.supprime_le is not None
+    # Le mot de passe n'est pas seulement changé : l'ancien ne fonctionne
+    # plus, ce qui rend toute connexion future impossible.
+    assert en_base.mot_de_passe != ancienne_empreinte
+    assert not verifier_mot_de_passe("motdepasse123", en_base.mot_de_passe)
+
+
+def test_anonymisation_archive_aussi(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    """L'annuaire ne montre plus la ligne, même si elle est lisible en base."""
+    cree = _creer(client_http, entete)
+
+    client_http.post(
+        f"{PERSONNEL}/{cree['id_personnel']}/anonymisation", headers=entete
+    )
+
+    assert (
+        client_http.get(
+            f"{PERSONNEL}/{cree['id_personnel']}", headers=entete
+        ).status_code
+        == 404
+    )
+
+
+def test_anonymisation_d_un_inconnu_donne_404(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    reponse = client_http.post(f"{PERSONNEL}/999999/anonymisation", headers=entete)
+
+    assert reponse.status_code == 404
+
+
+def test_anonymisation_reste_possible_sur_une_ligne_deja_archivee(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    """L'archivage seul ne suffit pas à effacer les données : anonymiser une
+    ligne déjà archivée doit rester possible, pas répondre 404."""
+    cree = _creer(client_http, entete)
+    client_http.delete(f"{PERSONNEL}/{cree['id_personnel']}", headers=entete)
+
+    reponse = client_http.post(
+        f"{PERSONNEL}/{cree['id_personnel']}/anonymisation", headers=entete
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["nom"] == "Anonymisé"
+
+
+def test_anonymisation_est_idempotente(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    cree = _creer(client_http, entete)
+    cible = f"{PERSONNEL}/{cree['id_personnel']}/anonymisation"
+
+    premiere = client_http.post(cible, headers=entete)
+    seconde = client_http.post(cible, headers=entete)
+
+    assert premiere.status_code == 200
+    assert seconde.status_code == 200
+    assert premiere.json()["email"] == seconde.json()["email"]
+
+
 # --- Élévation de privilège ---------------------------------------------------
 
 
@@ -446,7 +568,7 @@ def test_un_salarie_peut_consulter_l_annuaire(
 def test_un_salarie_sans_droit_ne_peut_pas_ecrire(
     client_http: TestClient, entete: dict[str, str], entete_agent: dict[str, str]
 ) -> None:
-    """Gérer le personnel n'est pas le consulter — 403 sur les quatre écritures."""
+    """Gérer le personnel n'est pas le consulter — 403 sur les cinq écritures."""
     cree = _creer(client_http, entete)
     cible = f"{PERSONNEL}/{cree['id_personnel']}"
 
@@ -463,6 +585,10 @@ def test_un_salarie_sans_droit_ne_peut_pas_ecrire(
     assert client_http.delete(cible, headers=entete_agent).status_code == 403
     assert (
         client_http.post(f"{cible}/restauration", headers=entete_agent).status_code
+        == 403
+    )
+    assert (
+        client_http.post(f"{cible}/anonymisation", headers=entete_agent).status_code
         == 403
     )
 
