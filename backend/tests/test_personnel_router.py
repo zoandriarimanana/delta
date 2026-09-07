@@ -19,7 +19,12 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import (
+    TypeSujet,
+    creer_jeton_acces,
+    hacher_mot_de_passe,
+    verifier_mot_de_passe,
+)
 from app.main import app
 from app.models.client import Client, TypeClient
 from app.models.personnel import FonctionPersonnel, Personnel
@@ -356,6 +361,48 @@ def test_anonymisation(client_http: TestClient, entete: dict[str, str]) -> None:
     assert corps["prenom"] == "Anonymisé"
     assert corps["email"].endswith("@delta.invalid")
     assert corps["est_administrateur"] is False
+
+
+def test_anonymisation_efface_les_donnees_en_base(
+    client_http: TestClient, entete: dict[str, str], db: Session
+) -> None:
+    """Vérifie l'état réellement persisté, pas seulement la réponse HTTP.
+
+    `db.get()` lit par clé primaire, sans le filtre d'archivage que
+    `PersonnelRepository.get_by_id` applique par défaut — c'est la même
+    preuve que celle obtenue manuellement via `psql` lors de la vérification
+    empirique, rejouée ici automatiquement. `db.expire_all()` force une
+    relecture réelle plutôt que de faire confiance à l'objet Python déjà en
+    mémoire, identique à celui que le service vient de muter.
+    """
+    cree = _creer(client_http, entete, telephone="+261340000000")
+    cible = db.get(Personnel, cree["id_personnel"])
+    assert cible is not None
+    cible.mot_de_passe = hacher_mot_de_passe("motdepasse123")
+    cible.specialite = "Pâtisserie"
+    db.commit()
+    ancienne_empreinte = cible.mot_de_passe
+
+    reponse = client_http.post(
+        f"{PERSONNEL}/{cree['id_personnel']}/anonymisation", headers=entete
+    )
+    assert reponse.status_code == 200
+
+    db.expire_all()
+    en_base = db.get(Personnel, cree["id_personnel"])
+    assert en_base is not None
+    assert en_base.nom == "Anonymisé"
+    assert en_base.prenom == "Anonymisé"
+    assert en_base.telephone is None
+    assert en_base.specialite is None
+    assert en_base.zone_livraison is None
+    assert en_base.email.endswith("@delta.invalid")
+    assert en_base.est_administrateur is False
+    assert en_base.supprime_le is not None
+    # Le mot de passe n'est pas seulement changé : l'ancien ne fonctionne
+    # plus, ce qui rend toute connexion future impossible.
+    assert en_base.mot_de_passe != ancienne_empreinte
+    assert not verifier_mot_de_passe("motdepasse123", en_base.mot_de_passe)
 
 
 def test_anonymisation_archive_aussi(
