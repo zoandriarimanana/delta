@@ -7,7 +7,7 @@ from decimal import Decimal
 import pytest
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import ConflitMetier
+from app.core.exceptions import ConflitMetier, ReferenceInvalide
 from app.core.security import hacher_mot_de_passe
 from app.models.client import Client, TypeClient
 from app.models.client_particulier import ClientParticulier
@@ -149,3 +149,116 @@ def test_plusieurs_tentatives_echouees_sont_acceptees(db: Session) -> None:
     second = service.initier(commande, _donnees())
 
     assert second.id_paiement != premier.id_paiement
+
+
+# --- Confirmation (9.4) ------------------------------------------------
+
+
+def test_confirmer_reussi_fait_progresser_la_commande(db: Session) -> None:
+    client = _client(db)
+    commande = _commande(db, client)
+    service = _service(db)
+    paiement = service.initier(commande, _donnees())
+
+    resultat = service.confirmer(paiement.reference_externe, StatutPaiement.REUSSI)
+
+    assert resultat.statut == StatutPaiement.REUSSI
+    assert commande.statut == StatutCommande.CONFIRMEE
+
+
+def test_confirmer_echoue_n_a_aucun_effet_sur_la_commande(db: Session) -> None:
+    client = _client(db)
+    commande = _commande(db, client)
+    service = _service(db)
+    paiement = service.initier(commande, _donnees())
+
+    service.confirmer(paiement.reference_externe, StatutPaiement.ECHOUE)
+
+    assert commande.statut == StatutCommande.EN_ATTENTE
+
+
+def test_confirmer_reference_inconnue_leve_reference_invalide(db: Session) -> None:
+    service = _service(db)
+
+    with pytest.raises(ReferenceInvalide):
+        service.confirmer("ref-inexistante", StatutPaiement.REUSSI)
+
+
+def test_confirmer_ne_regresse_jamais_un_statut_de_commande_plus_avance(
+    db: Session,
+) -> None:
+    """Une confirmation tardive, sur une commande déjà bien avancée, ne doit
+    pas la ramener en arrière."""
+    client = _client(db)
+    commande = _commande(db, client)
+    service = _service(db)
+    paiement = service.initier(commande, _donnees())
+    commande.statut = StatutCommande.SERVIE
+    db.flush()
+
+    service.confirmer(paiement.reference_externe, StatutPaiement.REUSSI)
+
+    assert commande.statut == StatutCommande.SERVIE
+
+
+def test_confirmer_est_idempotent(db: Session) -> None:
+    """Un webhook peut être livré plusieurs fois par le fournisseur : la
+    seconde confirmation ne doit rien rejouer, quel que soit son contenu."""
+    client = _client(db)
+    commande = _commande(db, client)
+    service = _service(db)
+    paiement = service.initier(commande, _donnees())
+    service.confirmer(paiement.reference_externe, StatutPaiement.REUSSI)
+    assert commande.statut == StatutCommande.CONFIRMEE
+
+    # Deuxième webhook, contradictoire : ne doit ni changer le paiement ni
+    # toucher la commande à nouveau.
+    resultat = service.confirmer(paiement.reference_externe, StatutPaiement.ECHOUE)
+
+    assert resultat.statut == StatutPaiement.REUSSI
+    assert commande.statut == StatutCommande.CONFIRMEE
+
+
+def test_confirmer_rejoue_sans_toucher_une_commande_avancee_depuis(db: Session) -> None:
+    """Cas distinct de `test_confirmer_ne_regresse_jamais_...` (qui porte sur
+    la *première* confirmation d'un paiement encore `En_attente`) et de
+    `test_confirmer_est_idempotent` (dont la commande reste à `Confirmee`
+    au moment du rejeu). Ici, le rejeu arrive après que la commande a
+    avancé, par un autre chemin (la livraison, Sprint 3), bien au-delà de
+    `Confirmee` — le webhook rejoué ne doit toucher ni le paiement ni la
+    commande, l'un comme l'autre étant déjà réglés."""
+    client = _client(db)
+    commande = _commande(db, client)
+    service = _service(db)
+    paiement = service.initier(commande, _donnees())
+    service.confirmer(paiement.reference_externe, StatutPaiement.REUSSI)
+    assert commande.statut == StatutCommande.CONFIRMEE
+
+    # La commande avance indépendamment du paiement — remise effectuée,
+    # synchronisation LIVRAISON -> COMMANDE (Sprint 3).
+    commande.statut = StatutCommande.SERVIE
+    db.flush()
+
+    resultat = service.confirmer(paiement.reference_externe, StatutPaiement.REUSSI)
+
+    assert resultat.statut == StatutPaiement.REUSSI
+    assert commande.statut == StatutCommande.SERVIE
+
+
+def test_confirmer_traduit_la_course_entre_deux_confirmations_en_conflit(
+    db: Session,
+) -> None:
+    """Preuve que la traduction d'`IntegrityError` vit bien dans
+    `confirmer()` — et non dans `initier()`, où elle serait du code mort
+    (cf. `docs/mld.md`). Deux paiements distincts pour la même commande,
+    tous deux confirmés `Reussi` : le second doit être refusé."""
+    client = _client(db)
+    commande = _commande(db, client)
+    service = _service(db)
+    premier = service.initier(commande, _donnees())
+    second = service.initier(commande, _donnees())
+
+    service.confirmer(premier.reference_externe, StatutPaiement.REUSSI)
+
+    with pytest.raises(ConflitMetier):
+        service.confirmer(second.reference_externe, StatutPaiement.REUSSI)

@@ -34,6 +34,7 @@ from app.routers import (
     formation_router,
     livraison_router,
     logement_router,
+    paiement_router,
     personnel_auth_router,
     personnel_router,
     produit_router,
@@ -146,3 +147,4 @@ app.include_router(beneficiaire_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(client_entreprise_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(consommation_repas_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(avis_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(paiement_router.router, prefix=settings.API_V1_PREFIX)
