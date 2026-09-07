@@ -219,6 +219,32 @@ def test_confirmer_est_idempotent(db: Session) -> None:
     assert commande.statut == StatutCommande.CONFIRMEE
 
 
+def test_confirmer_rejoue_sans_toucher_une_commande_avancee_depuis(db: Session) -> None:
+    """Cas distinct de `test_confirmer_ne_regresse_jamais_...` (qui porte sur
+    la *première* confirmation d'un paiement encore `En_attente`) et de
+    `test_confirmer_est_idempotent` (dont la commande reste à `Confirmee`
+    au moment du rejeu). Ici, le rejeu arrive après que la commande a
+    avancé, par un autre chemin (la livraison, Sprint 3), bien au-delà de
+    `Confirmee` — le webhook rejoué ne doit toucher ni le paiement ni la
+    commande, l'un comme l'autre étant déjà réglés."""
+    client = _client(db)
+    commande = _commande(db, client)
+    service = _service(db)
+    paiement = service.initier(commande, _donnees())
+    service.confirmer(paiement.reference_externe, StatutPaiement.REUSSI)
+    assert commande.statut == StatutCommande.CONFIRMEE
+
+    # La commande avance indépendamment du paiement — remise effectuée,
+    # synchronisation LIVRAISON -> COMMANDE (Sprint 3).
+    commande.statut = StatutCommande.SERVIE
+    db.flush()
+
+    resultat = service.confirmer(paiement.reference_externe, StatutPaiement.REUSSI)
+
+    assert resultat.statut == StatutPaiement.REUSSI
+    assert commande.statut == StatutCommande.SERVIE
+
+
 def test_confirmer_traduit_la_course_entre_deux_confirmations_en_conflit(
     db: Session,
 ) -> None:
