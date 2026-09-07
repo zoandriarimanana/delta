@@ -589,6 +589,65 @@ Huit tâches livrées là où cinq étaient prévues.
       Ces actions écrivent `COMMANDE.statut` depuis une décision humaine, elles
       ne rétablissent pas une propagation automatique depuis `LIVRAISON`.
 
+### Découpage détaillé validé (10.1 → 10.6)
+
+Établi après un état des lieux vérifié dans le code (routers/services réels,
+pas supposés) : l'état du backend diffère significativement entre `PERSONNEL`
+(CRUD déjà complet), `ABONNEMENT` (dashboard admin déjà livré au Sprint 7.3)
+et `RESERVATION`/`COMMANDE` (aucune route administrative aujourd'hui). D'où un
+découpage en six tâches plutôt que les deux lignes ci-dessus, chacune sa
+propre PR (backend et frontend séparés pour 10.1, comme pour 9.1/9.2).
+
+- [ ] **10.1 — Dashboard `PERSONNEL`** : backend d'abord — un seul endpoint,
+      `POST /personnel/{id}/anonymisation`, admin uniquement, expose
+      `PersonnelService.anonymiser()` (déjà implémenté depuis #23, jamais
+      exposé par API). Puis frontend — `features/personnel/`, même structure
+      que `features/abonnement/` : liste filtrable par fonction, fiche,
+      formulaire création/édition, archivage, restauration, et le nouveau
+      bouton d'anonymisation.
+- [ ] **10.2 — `RESERVATION` administration (backend)** : `GET
+      /reservations/administration` et `/administration/{id}` (les 4 types),
+      même ordre de déclaration que `abonnement_router.py`
+      (`/administration` avant la route paramétrée). **Corrige un gap
+      d'intégrité pré-existant, pas une extension** : `PUT
+      /reservations/{id}/statut` (client) n'acceptera plus que `Annulee` —
+      aujourd'hui rien n'empêche un client de marquer sa propre réservation
+      `Honoree`, ce qui débloque un avis de service sans prestation réelle
+      (cf. `avis_service.py`). `Honoree` devient une transition
+      administrative dédiée, réservée à `PersonnelAdministrateur`.
+- [ ] **10.3 — `RESERVATION` administration (frontend)** : vue
+      administration dans `features/reservation/` (le module ne porte
+      aujourd'hui que l'écriture client), les 4 types, actions « Marquer
+      honorée » / « Annuler » réservées à l'écran admin.
+- [ ] **10.4 — `LIVRAISON.relancer()` (backend)** : transition dédiée et
+      **unique** `Echouee → En_attente`, `POST
+      /livraisons/{id}/relance`, réservée `PersonnelAdministrateur`.
+      `STATUTS_TERMINAUX` reste **inchangé** — cette méthode contourne
+      délibérément `_refuser_si_terminee`, elle ne l'affaiblit pas.
+      `id_personnel` repasse à `NULL` après relance : force une
+      réaffectation explicite, cohérence avec le sens déjà établi de `NULL`
+      (« pas encore affectée »).
+- [ ] **10.5 — `COMMANDE` administration + actions (backend)** : `GET
+      /commandes/administration` et `/administration/{id}`. **Annuler** :
+      transition admin vers `Annulee`, aucune propagation vers `LIVRAISON`
+      (synchronisation à sens unique, rappel ci-dessus). **Rembourser** :
+      **ne touche pas `PAIEMENT`** — nouvelle colonne
+      `COMMANDE.rembourse_le TIMESTAMPTZ NULL`, miroir direct de
+      `supprime_le`, posée par un endpoint admin dédié. Migration Alembic +
+      mise à jour `docs/mld.md` avec un paragraphe explicite : ce marqueur
+      est un geste manuel simplifié (remboursement traité hors système —
+      espèces, virement), **pas** une intégration réelle
+      remboursement↔`PAIEMENT`. La question `type_operation` documentée dans
+      `docs/mld.md` (section Paiement) reste une dette **distincte et non
+      résolue** par ce geste.
+- [ ] **10.6 — `COMMANDE` administration (frontend)** : vue administration
+      dans `features/commande/` — liste, filtre par statut, fiche avec les
+      trois actions (annuler, relancer la livraison via 10.4, marquer
+      remboursée via 10.5). Panneau « Réservations » et panneau
+      « Abonnements » : **simples liens** vers les écrans de 10.3 et de
+      l'administration abonnements déjà livrée au Sprint 7.3 — pas de
+      nouvelle page agrégeant les trois domaines.
+
 **Travaux hors sprint : administration du catalogue produit.** L'**administration du
 catalogue produit** a reçu son interface après le Sprint 6 (PRs #88, #90, #91 le 3 sept).
 Le CRUD API était protégé par `get_current_personnel_administrateur` depuis le Sprint 3, mais
