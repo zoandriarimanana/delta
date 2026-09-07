@@ -8,7 +8,10 @@
  * - les refus 409 sont repris tels quels — « cette commande est annulée » ou
  *   « cette commande a déjà été payée » disent au client quoi corriger ;
  * - `onConfirme` n'est appelé qu'une fois le paiement passé à `Reussi`, via
- *   `simuler()`, jamais à l'initiation (`En_attente`).
+ *   `simuler()`, jamais à l'initiation (`En_attente`) ;
+ * - le bouton « Simuler la confirmation » est **masqué** hors
+ *   `VITE_ENVIRONMENT=developpement` — confort d'affichage, la seule vraie
+ *   protection est le 404 backend (cf. `docs/mld.md`).
  */
 
 import { cleanup, render, screen } from '@testing-library/react';
@@ -41,6 +44,7 @@ function erreurApi(status: number, detail: string) {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+  vi.unstubAllEnvs();
   effacerJeton();
 });
 
@@ -54,7 +58,12 @@ describe('visiteur non connecté', () => {
 });
 
 describe('client connecté', () => {
-  beforeEach(() => enregistrerSession('jeton.de.test', 'client'));
+  beforeEach(() => {
+    enregistrerSession('jeton.de.test', 'client');
+    // Explicite plutôt que de dépendre de frontend/.env : ces tests portent
+    // sur le comportement en développement, indépendamment de l'ambiant.
+    vi.stubEnv('VITE_ENVIRONMENT', 'developpement');
+  });
 
   it('initie le paiement pour la commande passée en propriété, sans montant', async () => {
     vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
@@ -155,5 +164,31 @@ describe('client connecté', () => {
     expect(
       screen.queryByRole('button', { name: /simuler la confirmation/i })
     ).toBeNull();
+  });
+});
+
+describe('hors developpement (VITE_ENVIRONMENT=production)', () => {
+  beforeEach(() => {
+    enregistrerSession('jeton.de.test', 'client');
+    vi.stubEnv('VITE_ENVIRONMENT', 'production');
+  });
+
+  it('masque le bouton « Simuler la confirmation » alors que le paiement reste En_attente', async () => {
+    // Un clic sur ce bouton échouerait de toute façon en 404 côté serveur
+    // (Settings.ENVIRONMENT, cf. docs/mld.md) : le masquer évite qu'un client
+    // le voie échouer silencieusement, ce qui donnerait l'impression d'une
+    // fonctionnalité cassée plutôt qu'intentionnellement absente.
+    vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
+    render(<FormulairePaiement idCommande={42} />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /payer cette commande/i })
+    );
+
+    expect(await screen.findByText(/en attente de confirmation/i)).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: /simuler la confirmation/i })
+    ).toBeNull();
+    expect(simulerConfirmation).not.toHaveBeenCalled();
   });
 });

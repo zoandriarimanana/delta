@@ -7,6 +7,15 @@
  * isoler le risque de la simulation du tunnel déjà stable). L'historique des
  * commandes monte ce composant sans rien savoir de son implémentation, même
  * mécanique que `FormulaireAvis`.
+ *
+ * Le bouton « Simuler la confirmation » est masqué hors
+ * `VITE_ENVIRONMENT=developpement` — **confort d'affichage seulement** : un
+ * clic hors développement échouerait de toute façon en 404, identique à un
+ * paiement introuvable, derrière `Settings.ENVIRONMENT` côté serveur (cf.
+ * `docs/mld.md`). Sans ce masquage, un client verrait un bouton qui échoue
+ * silencieusement — l'impression d'une fonctionnalité cassée plutôt
+ * qu'intentionnellement absente. La seule vraie garantie reste le 404
+ * backend ; ce masquage ne protège rien à lui seul.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -39,6 +48,12 @@ const LIBELLES_STATUT: Record<string, string> = {
   Reussi: 'Paiement réussi',
   Echoue: 'Paiement échoué',
 };
+
+/** Lu à chaque rendu, jamais figé au chargement du module : voir le test qui
+ * bascule cette variable d'un rendu à l'autre via `vi.stubEnv`. */
+function simulationActive(): boolean {
+  return import.meta.env.VITE_ENVIRONMENT === 'developpement';
+}
 
 export default function FormulairePaiement({ idCommande, onConfirme }: Proprietes) {
   const connecte = useEstConnecte();
@@ -154,7 +169,7 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
         </p>
       )}
 
-      {paiement.statut === 'En_attente' && (
+      {paiement.statut === 'En_attente' && simulationActive() && (
         <button
           type="button"
           onClick={() => void simuler()}
