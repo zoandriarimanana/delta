@@ -1,6 +1,7 @@
 """Tests du service AVIS, contre PostgreSQL uniquement (cf. test_avis_repository.py)."""
 
 from datetime import date
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.orm import Session
@@ -42,8 +43,13 @@ def _client(db: Session, email: str = "a@delta.mg") -> Client:
     return client
 
 
-def _ligne(db: Session, client: Client) -> LigneCommande:
-    categorie = CategorieProduit(libelle=f"Cat-{client.id_client}")
+def _ligne(
+    db: Session,
+    client: Client,
+    type_commande: TypeCommande = TypeCommande.SUR_PLACE,
+    statut: StatutCommande = StatutCommande.SERVIE,
+) -> LigneCommande:
+    categorie = CategorieProduit(libelle=f"Cat-{client.id_client}-{uuid4().hex[:8]}")
     db.add(categorie)
     db.flush()
     produit = Produit(
@@ -59,8 +65,8 @@ def _ligne(db: Session, client: Client) -> LigneCommande:
     db.add(produit)
     db.flush()
     commande = Commande(
-        type_commande=TypeCommande.SUR_PLACE,
-        statut=StatutCommande.SERVIE,
+        type_commande=type_commande,
+        statut=statut,
         montant_total=1000,
         id_client=client.id_client,
     )
@@ -77,13 +83,15 @@ def _ligne(db: Session, client: Client) -> LigneCommande:
     return ligne
 
 
-def _reservation(db: Session, client: Client) -> Reservation:
+def _reservation(
+    db: Session, client: Client, statut: StatutReservation = StatutReservation.HONOREE
+) -> Reservation:
     reservation = Reservation(
         type_reservation=TypeReservation.TABLE,
         date_debut=date(2026, 1, 1),
         date_fin=date(2026, 1, 1),
         nombre_personnes=2,
-        statut=StatutReservation.HONOREE,
+        statut=statut,
         avec_hebergement=False,
         id_client=client.id_client,
     )
@@ -164,6 +172,117 @@ def test_creer_avis_service_refuse_la_reservation_d_un_autre_client(
             ),
             autre,
         )
+
+
+# --- Éligibilité : statut terminal de la cible ------------------------------
+
+
+@pytest.mark.parametrize(
+    "statut",
+    [
+        StatutCommande.EN_ATTENTE,
+        StatutCommande.CONFIRMEE,
+        StatutCommande.EN_PREPARATION,
+        StatutCommande.ANNULEE,
+    ],
+)
+def test_creer_avis_produit_refuse_une_commande_non_terminee(
+    db: Session, service: AvisService, statut: StatutCommande
+) -> None:
+    client = _client(db)
+    ligne = _ligne(db, client, statut=statut)
+
+    with pytest.raises(ConflitMetier):
+        service.creer(
+            AvisCreate(type_avis="Produit", note=5, id_ligne=ligne.id_ligne), client
+        )
+
+
+def test_creer_avis_produit_accepte_une_commande_servie_sur_place(
+    db: Session, service: AvisService
+) -> None:
+    client = _client(db)
+    ligne = _ligne(
+        db, client, type_commande=TypeCommande.SUR_PLACE, statut=StatutCommande.SERVIE
+    )
+
+    avis = service.creer(
+        AvisCreate(type_avis="Produit", note=5, id_ligne=ligne.id_ligne), client
+    )
+
+    assert avis.id_ligne == ligne.id_ligne
+
+
+def test_creer_avis_produit_accepte_une_commande_livree_en_ligne(
+    db: Session, service: AvisService
+) -> None:
+    """`STATUT_TERMINAL` diffère selon le type : `Livree` pour `En_ligne`, pas
+    `Servie` — même règle que la synchronisation LIVRAISON -> COMMANDE."""
+    client = _client(db)
+    ligne = _ligne(
+        db, client, type_commande=TypeCommande.EN_LIGNE, statut=StatutCommande.LIVREE
+    )
+
+    avis = service.creer(
+        AvisCreate(type_avis="Produit", note=5, id_ligne=ligne.id_ligne), client
+    )
+
+    assert avis.id_ligne == ligne.id_ligne
+
+
+def test_creer_avis_produit_refuse_une_commande_en_ligne_marquee_servie(
+    db: Session, service: AvisService
+) -> None:
+    """`Servie` est le statut terminal de `Sur_place`, pas de `En_ligne` : une
+    commande En_ligne reste non éligible même à `Servie`."""
+    client = _client(db)
+    ligne = _ligne(
+        db, client, type_commande=TypeCommande.EN_LIGNE, statut=StatutCommande.SERVIE
+    )
+
+    with pytest.raises(ConflitMetier):
+        service.creer(
+            AvisCreate(type_avis="Produit", note=5, id_ligne=ligne.id_ligne), client
+        )
+
+
+@pytest.mark.parametrize(
+    "statut",
+    [
+        StatutReservation.EN_ATTENTE,
+        StatutReservation.CONFIRMEE,
+        StatutReservation.ANNULEE,
+    ],
+)
+def test_creer_avis_service_refuse_une_reservation_non_honoree(
+    db: Session, service: AvisService, statut: StatutReservation
+) -> None:
+    client = _client(db)
+    reservation = _reservation(db, client, statut=statut)
+
+    with pytest.raises(ConflitMetier):
+        service.creer(
+            AvisCreate(
+                type_avis="Service", note=4, id_reservation=reservation.id_reservation
+            ),
+            client,
+        )
+
+
+def test_creer_avis_service_accepte_une_reservation_honoree(
+    db: Session, service: AvisService
+) -> None:
+    client = _client(db)
+    reservation = _reservation(db, client, statut=StatutReservation.HONOREE)
+
+    avis = service.creer(
+        AvisCreate(
+            type_avis="Service", note=4, id_reservation=reservation.id_reservation
+        ),
+        client,
+    )
+
+    assert avis.id_reservation == reservation.id_reservation
 
 
 # --- Unicité par cible --------------------------------------------------
