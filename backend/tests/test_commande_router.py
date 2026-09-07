@@ -22,6 +22,8 @@ from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
 from app.main import app
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
+from app.models.commande import Commande, StatutCommande
+from app.models.paiement import Paiement, StatutPaiement
 from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.produit import Produit
 
@@ -611,3 +613,154 @@ def test_les_deux_chemins_ensemble_retournent_422(
     )
 
     assert reponse.status_code == 422
+
+
+# --- Paiement (9.3) -----------------------------------------------------------
+
+
+def _sa_commande(
+    client_http: TestClient, entete: dict[str, str], eclair: Produit
+) -> dict:
+    return client_http.post(
+        COMMANDES, json=_corps(eclair.id_produit), headers=entete
+    ).json()
+
+
+def _corps_paiement(**extra: object) -> dict:
+    return {"methode": "Mobile_money", "fournisseur": "Mvola", **extra}
+
+
+def test_initier_paiement_reussit_pour_sa_propre_commande(
+    client_http: TestClient, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.post(
+        f"{COMMANDES}/{commande['id_commande']}/paiements",
+        json=_corps_paiement(),
+        headers=entete,
+    )
+
+    assert reponse.status_code == 201
+    corps = reponse.json()
+    assert corps["statut"] == "En_attente"
+    assert corps["montant"] == commande["montant_total"]
+    assert corps["reference_externe"] != ""
+
+
+def test_initier_paiement_ignore_un_montant_envoye_par_le_client(
+    client_http: TestClient, entete: dict[str, str], eclair: Produit
+) -> None:
+    """`montant` n'est pas un champ du schema d'entrée : l'envoyer ne doit
+    avoir aucun effet, même raisonnement que `prix_unitaire_applique`."""
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.post(
+        f"{COMMANDES}/{commande['id_commande']}/paiements",
+        json=_corps_paiement(montant="0.01"),
+        headers=entete,
+    )
+
+    assert reponse.status_code == 201
+    assert reponse.json()["montant"] == commande["montant_total"]
+
+
+def test_initier_paiement_sans_jeton_retourne_401(
+    client_http: TestClient, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.post(
+        f"{COMMANDES}/{commande['id_commande']}/paiements", json=_corps_paiement()
+    )
+
+    assert reponse.status_code == 401
+
+
+def test_initier_paiement_sur_la_commande_dautrui_retourne_404(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    autre = _creer_client(db)
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.post(
+        f"{COMMANDES}/{commande['id_commande']}/paiements",
+        json=_corps_paiement(),
+        headers=_entete(autre),
+    )
+
+    assert reponse.status_code == 404
+
+
+def test_initier_paiement_commande_inconnue_retourne_404(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    reponse = client_http.post(
+        f"{COMMANDES}/999999/paiements", json=_corps_paiement(), headers=entete
+    )
+
+    assert reponse.status_code == 404
+
+
+def test_initier_paiement_refuse_une_commande_annulee(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+    commande_bd = db.get(Commande, commande["id_commande"])
+    assert commande_bd is not None
+    commande_bd.statut = StatutCommande.ANNULEE
+    db.commit()
+
+    reponse = client_http.post(
+        f"{COMMANDES}/{commande['id_commande']}/paiements",
+        json=_corps_paiement(),
+        headers=entete,
+    )
+
+    assert reponse.status_code == 409
+
+
+def test_initier_paiement_refuse_si_deja_payee(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+    premiere = client_http.post(
+        f"{COMMANDES}/{commande['id_commande']}/paiements",
+        json=_corps_paiement(),
+        headers=entete,
+    ).json()
+    paiement = db.get(Paiement, premiere["id_paiement"])
+    assert paiement is not None
+    paiement.statut = StatutPaiement.REUSSI
+    db.commit()
+
+    reponse = client_http.post(
+        f"{COMMANDES}/{commande['id_commande']}/paiements",
+        json=_corps_paiement(),
+        headers=entete,
+    )
+
+    assert reponse.status_code == 409
+
+
+def test_initier_paiement_accepte_une_nouvelle_tentative_apres_un_echec(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+    premiere = client_http.post(
+        f"{COMMANDES}/{commande['id_commande']}/paiements",
+        json=_corps_paiement(),
+        headers=entete,
+    ).json()
+    paiement = db.get(Paiement, premiere["id_paiement"])
+    assert paiement is not None
+    paiement.statut = StatutPaiement.ECHOUE
+    db.commit()
+
+    reponse = client_http.post(
+        f"{COMMANDES}/{commande['id_commande']}/paiements",
+        json=_corps_paiement(),
+        headers=entete,
+    )
+
+    assert reponse.status_code == 201
