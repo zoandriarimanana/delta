@@ -14,4 +14,12 @@ export interface Logement {
   capacite: number;
   tarif_nuitee: string;
   statut: StatutLogement;
+  /**
+   * Calculée à la demande, **uniquement sur la fiche** (`GET /logements/{id}`)
+   * — jamais sur la liste, non paginée (cf. `docs/roadmap.md`, 8.3). `null`
+   * tant qu'aucun avis actif n'existe, jamais `0` : ce serait une moyenne
+   * valide.
+   */
+  note_moyenne: string | null;
+  nombre_avis: number;
 }

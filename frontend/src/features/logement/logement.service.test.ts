@@ -12,6 +12,8 @@ function logement(statut: StatutLogement): Logement {
     capacite: 2,
     tarif_nuitee: '80000.00',
     statut,
+    note_moyenne: null,
+    nombre_avis: 0,
   };
 }
 

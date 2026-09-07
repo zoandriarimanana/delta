@@ -8,6 +8,7 @@
 
 import { Link, useParams } from 'react-router';
 
+import NoteMoyenne from '@/components/ui/NoteMoyenne';
 import { formaterMontant } from '@/features/commande/commande.service';
 
 import CarteSession from '../components/CarteSession';
@@ -56,6 +57,9 @@ export default function FormationDetailPage() {
         {' — '}
         {formaterMontant(fiche.prix)}
       </p>
+      <div className="mt-2">
+        <NoteMoyenne moyenne={fiche.note_moyenne} nombre={fiche.nombre_avis} />
+      </div>
       {fiche.propose_hebergement && (
         <p className="mt-1 text-sm text-slate-500">
           Un hébergement peut être demandé à la réservation.

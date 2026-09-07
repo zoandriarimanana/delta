@@ -12,6 +12,7 @@
 
 import { Link, useParams } from 'react-router';
 
+import NoteMoyenne from '@/components/ui/NoteMoyenne';
 import { formaterMontant } from '@/features/commande/commande.service';
 import FormulaireReservationCreneau from '@/features/reservation/components/FormulaireReservationCreneau';
 
@@ -53,6 +54,9 @@ export default function LogementDetailPage() {
         {donnees.capacite} personne(s) — {formaterMontant(donnees.tarif_nuitee)} / nuit
       </p>
       <p className="mt-1 text-sm text-slate-600">{libelleStatut(donnees.statut)}</p>
+      <div className="mt-2">
+        <NoteMoyenne moyenne={donnees.note_moyenne} nombre={donnees.nombre_avis} />
+      </div>
 
       <h2 className="mt-8 text-xl font-semibold text-slate-900">Réserver</h2>
       <FormulaireReservationCreneau
