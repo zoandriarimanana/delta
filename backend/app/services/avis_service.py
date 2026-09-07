@@ -19,7 +19,7 @@ from app.models.client import Client
 from app.models.commande import STATUT_TERMINAL
 from app.models.ligne_commande import LigneCommande
 from app.models.reservation import Reservation, StatutReservation
-from app.repositories.avis_repository import AvisRepository
+from app.repositories.avis_repository import AvisRepository, MoyenneNotes
 from app.repositories.ligne_commande_repository import LigneCommandeRepository
 from app.repositories.reservation_repository import ReservationRepository
 from app.schemas.avis import AvisCreate
@@ -76,6 +76,20 @@ class AvisService:
 
     def lister_par_reservation(self, id_reservation: int) -> Sequence[Avis]:
         return self.avis.par_reservation(id_reservation)
+
+    # --- Note moyenne, à la demande (8.3) ---------------------------------
+
+    def moyenne_par_produit(self, id_produit: int) -> MoyenneNotes:
+        return self.avis.moyenne_par_produit(id_produit)
+
+    def moyenne_par_salle(self, id_salle: int) -> MoyenneNotes:
+        return self.avis.moyenne_par_salle(id_salle)
+
+    def moyenne_par_logement(self, id_logement: int) -> MoyenneNotes:
+        return self.avis.moyenne_par_logement(id_logement)
+
+    def moyenne_par_formation(self, id_formation: int) -> MoyenneNotes:
+        return self.avis.moyenne_par_formation(id_formation)
 
     # --- Création -----------------------------------------------------------
 

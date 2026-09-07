@@ -94,3 +94,8 @@ class SalleRead(BaseModel):
     tarif_horaire: Decimal | None = None
     tarif_journee: Decimal | None = None
     equipements: str | None = None
+    #: Calculée à la demande sur la fiche salle (`GET /salles/{id}`), jamais
+    #: sur la liste — cf. `docs/roadmap.md`, 8.3. `None` tant qu'aucun avis
+    #: actif n'existe, jamais `0` : ce serait une note valide.
+    note_moyenne: Decimal | None = None
+    nombre_avis: int = 0

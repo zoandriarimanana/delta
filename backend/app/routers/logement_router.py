@@ -17,6 +17,7 @@ from app.core.database import get_db
 from app.core.deps import PersonnelAdministrateur
 from app.models.logement import StatutLogement
 from app.schemas.logement import LogementCreate, LogementRead, LogementUpdate
+from app.services.avis_service import AvisService
 from app.services.logement_service import LogementService
 
 router = APIRouter(prefix="/logements", tags=["logement"])
@@ -49,8 +50,17 @@ def lister(
     "/{id_logement}", response_model=LogementRead, summary="Obtenir un logement"
 )
 def obtenir(id_logement: int, db: SessionBase) -> LogementRead:
-    """404 si le logement désigné par l'URL n'existe pas ou est archivé."""
-    return LogementRead.model_validate(LogementService(db).obtenir(id_logement))
+    """404 si le logement désigné par l'URL n'existe pas ou est archivé.
+
+    `note_moyenne`/`nombre_avis` sont calculés ici, sur la fiche — pas sur la
+    liste, qui n'est pas paginée : cf. `docs/roadmap.md`, 8.3.
+    """
+    logement = LogementService(db).obtenir(id_logement)
+    moyenne = AvisService(db).moyenne_par_logement(id_logement)
+    lecture = LogementRead.model_validate(logement)
+    return lecture.model_copy(
+        update={"note_moyenne": moyenne.moyenne, "nombre_avis": moyenne.nombre}
+    )
 
 
 @router.post(

@@ -94,6 +94,11 @@ class ProduitRead(BaseModel):
     supplement_personnalisation: Decimal | None = None
     est_livrable: bool
     id_categorie: int
+    #: Calculée à la demande sur la fiche produit (`GET /produits/{id}`),
+    #: jamais sur la liste — cf. `docs/roadmap.md`, 8.3. `None` tant qu'aucun
+    #: avis actif n'existe, jamais `0` : ce serait une note valide.
+    note_moyenne: Decimal | None = None
+    nombre_avis: int = 0
 
 
 class ProduitAdministrationRead(ProduitRead):
