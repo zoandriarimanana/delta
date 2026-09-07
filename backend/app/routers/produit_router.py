@@ -22,6 +22,7 @@ from app.schemas.produit import (
     ProduitRead,
     ProduitUpdate,
 )
+from app.services.avis_service import AvisService
 from app.services.produit_service import ProduitService
 
 router = APIRouter(prefix="/produits", tags=["catalogue"])
@@ -77,9 +78,17 @@ def lister_pour_administration(
 
 @router.get("/{id_produit}", response_model=ProduitRead, summary="Obtenir un produit")
 def obtenir(id_produit: int, db: SessionBase) -> ProduitRead:
-    """404 si le produit désigné par l'URL n'existe pas."""
+    """404 si le produit désigné par l'URL n'existe pas.
+
+    `note_moyenne`/`nombre_avis` sont calculés ici, sur la fiche — pas sur la
+    liste, qui n'est pas paginée : cf. `docs/roadmap.md`, 8.3.
+    """
     produit = ProduitService(db).obtenir(id_produit)
-    return ProduitRead.model_validate(produit)
+    moyenne = AvisService(db).moyenne_par_produit(id_produit)
+    lecture = ProduitRead.model_validate(produit)
+    return lecture.model_copy(
+        update={"note_moyenne": moyenne.moyenne, "nombre_avis": moyenne.nombre}
+    )
 
 
 @router.post(

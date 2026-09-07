@@ -7,6 +7,11 @@ Le point de vigilance est le réglage d'accès : **lectures publiques, écriture
 réservées aux administrateurs**. C'est celui du catalogue produit, et il tient à
 la nature de la donnée — une offre de formation est publiée, contrairement à
 l'annuaire du personnel.
+
+Contre PostgreSQL, et non plus un SQLite minimal (revu en 8.3) : la fiche
+formation (`GET /formations/{id}`) interroge désormais `AVIS` via
+`RESERVATION`, qui porte une contrainte d'exclusion `EXCLUDE USING gist` que
+SQLite ne sait pas créer — même raison que `test_salle_router.py`.
 """
 
 from collections.abc import Iterator
@@ -21,10 +26,9 @@ from app.core.database import get_db
 from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
 from app.main import app
 from app.models.client import Client, TypeClient
-from app.models.domaine_formation import DomaineFormation
-from app.models.formation import Formation
 from app.models.personnel import FonctionPersonnel, Personnel
-from tests.conftest import creer_engine_sqlite
+
+pytestmark = pytest.mark.postgres
 
 DOMAINES = f"{settings.API_V1_PREFIX}/domaines-formation"
 FORMATIONS = f"{settings.API_V1_PREFIX}/formations"
@@ -32,15 +36,8 @@ MDP = "motdepasse123"
 
 
 @pytest.fixture
-def db() -> Iterator[Session]:
-    engine = creer_engine_sqlite(
-        Client.__table__,
-        Personnel.__table__,
-        DomaineFormation.__table__,
-        Formation.__table__,
-    )
-    with Session(engine) as session:
-        yield session
+def db(session_postgres: Session) -> Session:
+    return session_postgres
 
 
 @pytest.fixture

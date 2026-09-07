@@ -64,3 +64,9 @@ class FormationRead(BaseModel):
     capacite_max: int
     propose_hebergement: bool
     id_domaine: int
+    #: Calculée à la demande sur la fiche formation (`GET /formations/{id}`),
+    #: jamais sur la liste — cf. `docs/roadmap.md`, 8.3. `None` tant qu'aucun
+    #: avis actif n'existe, jamais `0` : ce serait une note valide. Agrégée au
+    #: niveau de la formation, toutes sessions confondues.
+    note_moyenne: Decimal | None = None
+    nombre_avis: int = 0

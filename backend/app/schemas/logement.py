@@ -63,3 +63,8 @@ class LogementRead(BaseModel):
     capacite: int
     tarif_nuitee: Decimal
     statut: StatutLogement
+    #: Calculée à la demande sur la fiche logement (`GET /logements/{id}`),
+    #: jamais sur la liste — cf. `docs/roadmap.md`, 8.3. `None` tant qu'aucun
+    #: avis actif n'existe, jamais `0` : ce serait une note valide.
+    note_moyenne: Decimal | None = None
+    nombre_avis: int = 0

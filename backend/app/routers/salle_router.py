@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import PersonnelAdministrateur
 from app.schemas.salle import SalleCreate, SalleRead, SalleUpdate
+from app.services.avis_service import AvisService
 from app.services.salle_service import SalleService
 
 router = APIRouter(prefix="/salles", tags=["salle"])
@@ -40,8 +41,17 @@ def lister(
 
 @router.get("/{id_salle}", response_model=SalleRead, summary="Obtenir une salle")
 def obtenir(id_salle: int, db: SessionBase) -> SalleRead:
-    """404 si la salle désignée par l'URL n'existe pas ou est archivée."""
-    return SalleRead.model_validate(SalleService(db).obtenir(id_salle))
+    """404 si la salle désignée par l'URL n'existe pas ou est archivée.
+
+    `note_moyenne`/`nombre_avis` sont calculés ici, sur la fiche — pas sur la
+    liste, qui n'est pas paginée : cf. `docs/roadmap.md`, 8.3.
+    """
+    salle = SalleService(db).obtenir(id_salle)
+    moyenne = AvisService(db).moyenne_par_salle(id_salle)
+    lecture = SalleRead.model_validate(salle)
+    return lecture.model_copy(
+        update={"note_moyenne": moyenne.moyenne, "nombre_avis": moyenne.nombre}
+    )
 
 
 @router.post(

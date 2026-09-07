@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import PersonnelAdministrateur
 from app.schemas.formation import FormationCreate, FormationRead, FormationUpdate
+from app.services.avis_service import AvisService
 from app.services.formation_service import FormationService
 
 router = APIRouter(prefix="/formations", tags=["formation"])
@@ -40,8 +41,18 @@ def lister(
     "/{id_formation}", response_model=FormationRead, summary="Obtenir une formation"
 )
 def obtenir(id_formation: int, db: SessionBase) -> FormationRead:
-    """404 si la formation désignée par l'URL n'existe pas ou est archivée."""
-    return FormationRead.model_validate(FormationService(db).obtenir(id_formation))
+    """404 si la formation désignée par l'URL n'existe pas ou est archivée.
+
+    `note_moyenne`/`nombre_avis` sont calculés ici, sur la fiche — pas sur la
+    liste, qui n'est pas paginée : cf. `docs/roadmap.md`, 8.3. Agrégés au
+    niveau de la formation, toutes sessions confondues.
+    """
+    formation = FormationService(db).obtenir(id_formation)
+    moyenne = AvisService(db).moyenne_par_formation(id_formation)
+    lecture = FormationRead.model_validate(formation)
+    return lecture.model_copy(
+        update={"note_moyenne": moyenne.moyenne, "nombre_avis": moyenne.nombre}
+    )
 
 
 @router.post(
