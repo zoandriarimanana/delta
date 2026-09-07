@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from app.models.client import Client
     from app.models.ligne_commande import LigneCommande
     from app.models.livraison import Livraison
+    from app.models.paiement import Paiement
     from app.models.personnel import Personnel
     from app.models.reservation import Reservation
 
@@ -175,3 +176,4 @@ class Commande(SoftDeleteMixin, Base):
     livraison: Mapped[Livraison | None] = relationship(
         back_populates="commande", passive_deletes=True
     )
+    paiements: Mapped[list[Paiement]] = relationship(back_populates="commande")
