@@ -598,13 +598,23 @@ et `RESERVATION`/`COMMANDE` (aucune route administrative aujourd'hui). D'où un
 découpage en six tâches plutôt que les deux lignes ci-dessus, chacune sa
 propre PR (backend et frontend séparés pour 10.1, comme pour 9.1/9.2).
 
-- [ ] **10.1 — Dashboard `PERSONNEL`** : backend d'abord — un seul endpoint,
-      `POST /personnel/{id}/anonymisation`, admin uniquement, expose
-      `PersonnelService.anonymiser()` (déjà implémenté depuis #23, jamais
-      exposé par API). Puis frontend — `features/personnel/`, même structure
-      que `features/abonnement/` : liste filtrable par fonction, fiche,
-      formulaire création/édition, archivage, restauration, et le nouveau
-      bouton d'anonymisation.
+- [x] **10.1 — Dashboard `PERSONNEL`** : backend d'abord (#113) — un seul
+      endpoint, `POST /personnel/{id}/anonymisation`, admin uniquement,
+      expose `PersonnelService.anonymiser()` (déjà implémenté depuis #23,
+      jamais exposé par API). Puis frontend — `features/personnel/`,
+      même structure que `features/abonnement/` : liste filtrable par
+      fonction, fiche, formulaire création/édition, archivage,
+      restauration, et le bouton d'anonymisation.
+      — **Constat vérifié en construisant le frontend** : `GET /personnel`
+      n'expose aucun paramètre `inclure_supprimes` (contrairement à `GET
+      /produits/administration`), donc une ligne tout juste archivée ou
+      anonymisée redevient introuvable via l'API. La fiche compense en
+      gardant sa dernière donnée locale connue plutôt que de recharger
+      après ces deux actions, et propose la restauration en **annulation
+      immédiate** plutôt qu'une gestion d'archives persistante — décision
+      actée avant l'implémentation, pas une dette : aucun endpoint
+      `/personnel/administration` n'existe pour lister les archivés, et
+      n'en a pas été demandé.
 - [ ] **10.2 — `RESERVATION` administration (backend)** : `GET
       /reservations/administration` et `/administration/{id}` (les 4 types),
       même ordre de déclaration que `abonnement_router.py`
