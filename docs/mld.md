@@ -689,6 +689,27 @@ initial, pas la correction d'une omission comme `AVIS` ou `COMMANDE.date_command
   déjà stable et testé, plutôt que de le modifier pour un mécanisme encore
   simulé.
 
+- **`POST /paiements/{id_paiement}/simuler-confirmation`**, décidé en
+  construisant 9.5 : un paiement initié reste `En_attente` tant qu'aucun
+  webhook ne le confirme (cf. ci-dessus), et rien n'expose de moyen de
+  déclencher cette confirmation simulée depuis l'écran de paiement. Cet
+  endpoint rejoue le chemin du webhook (`PaiementService.confirmer`) sans
+  rien dupliquer, réservé au client propriétaire du paiement.
+
+  **C'est le seul endroit du code applicatif qui référence
+  `PasserelleSimulee` par son nom** plutôt que par le contrat
+  `PasserellePaiement` — délibérément : sa raison d'être (fabriquer la
+  confirmation qu'un vrai fournisseur enverrait de lui-même) est un
+  comportement propre à la simulation, absent de toute vraie passerelle.
+
+  **Dette technique assumée, pas un oubli** : cet endpoint n'a de sens que
+  tant qu'aucune vraie passerelle n'est branchée. Aucune protection ne
+  l'empêche de fonctionner si une vraie passerelle venait à remplacer
+  `PasserelleSimulee` sans qu'il soit retiré — décision actée en
+  construisant 9.5, pour ne pas alourdir ce sprint d'une garde défensive
+  contre un futur qui n'existe pas encore. Voir `docs/roadmap.md`, section
+  Dette technique.
+
 ## Contraintes d'exclusivité à implémenter en `CHECK` / trigger (pas de l'algèbre relationnelle pure)
 
 1. **CLIENT** : exactement une ligne fille (`CLIENT_PARTICULIER` xor `CLIENT_ENTREPRISE`).

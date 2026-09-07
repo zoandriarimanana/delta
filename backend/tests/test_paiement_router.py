@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import hacher_mot_de_passe
+from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
 from app.main import app
 from app.models.client import Client, TypeClient
 from app.models.client_particulier import ClientParticulier
@@ -58,10 +58,10 @@ def client_http(db: Session) -> Iterator[TestClient]:
         app.dependency_overrides.clear()
 
 
-def _client(db: Session) -> Client:
+def _client(db: Session, *, email: str = "p@delta.mg") -> Client:
     client = Client(
         type_client=TypeClient.PARTICULIER,
-        email="p@delta.mg",
+        email=email,
         mot_de_passe=MOT_DE_PASSE,
     )
     client.particulier = ClientParticulier(
@@ -72,8 +72,11 @@ def _client(db: Session) -> Client:
     return client
 
 
-def _commande_avec_paiement(db: Session) -> Paiement:
-    client = _client(db)
+def _commande_avec_paiement(
+    db: Session, *, reference: str = "ref-webhook-1", client: Client | None = None
+) -> Paiement:
+    if client is None:
+        client = _client(db)
     commande = Commande(
         type_commande=TypeCommande.SUR_PLACE,
         statut=StatutCommande.EN_ATTENTE,
@@ -87,12 +90,17 @@ def _commande_avec_paiement(db: Session) -> Paiement:
         methode=MethodePaiement.MOBILE_MONEY,
         fournisseur=FournisseurPaiement.MVOLA,
         statut=StatutPaiement.EN_ATTENTE,
-        reference_externe="ref-webhook-1",
+        reference_externe=reference,
         id_commande=commande.id_commande,
     )
     db.add(paiement)
     db.commit()
     return paiement
+
+
+def _jeton(client: Client) -> dict[str, str]:
+    jeton = creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
+    return {"Authorization": f"Bearer {jeton}"}
 
 
 # --- Signature, avant tout traitement ---------------------------------------
@@ -206,3 +214,83 @@ def test_webhook_reference_inconnue_retourne_422(client_http: TestClient) -> Non
     )
 
     assert reponse.status_code == 422
+
+
+# --- Simulation de confirmation (dev uniquement) -----------------------------
+
+
+def _url_simulation(id_paiement: int) -> str:
+    return f"{settings.API_V1_PREFIX}/paiements/{id_paiement}/simuler-confirmation"
+
+
+def test_simuler_confirmation_fait_progresser_le_paiement_et_la_commande(
+    client_http: TestClient, db: Session
+) -> None:
+    proprietaire = _client(db)
+    paiement = _commande_avec_paiement(db, reference="ref-simu-1", client=proprietaire)
+
+    reponse = client_http.post(
+        _url_simulation(paiement.id_paiement), headers=_jeton(proprietaire)
+    )
+
+    assert reponse.status_code == 200
+    corps = reponse.json()
+    assert corps["statut"] == "Reussi"
+
+    db.refresh(paiement)
+    commande = db.get(Commande, paiement.id_commande)
+    assert commande is not None
+    assert commande.statut == StatutCommande.CONFIRMEE
+
+
+def test_simuler_confirmation_refuse_le_paiement_d_un_autre_client(
+    client_http: TestClient, db: Session
+) -> None:
+    proprietaire = _client(db, email="proprietaire@delta.mg")
+    autre = _client(db, email="autre@delta.mg")
+    paiement = _commande_avec_paiement(db, reference="ref-simu-2", client=proprietaire)
+
+    reponse = client_http.post(
+        _url_simulation(paiement.id_paiement), headers=_jeton(autre)
+    )
+
+    assert reponse.status_code == 404
+
+
+def test_simuler_confirmation_refuse_un_paiement_inconnu(
+    client_http: TestClient, db: Session
+) -> None:
+    proprietaire = _client(db)
+
+    reponse = client_http.post(_url_simulation(999999), headers=_jeton(proprietaire))
+
+    assert reponse.status_code == 404
+
+
+def test_simuler_confirmation_sans_jeton_retourne_401(
+    client_http: TestClient, db: Session
+) -> None:
+    proprietaire = _client(db)
+    paiement = _commande_avec_paiement(db, reference="ref-simu-3", client=proprietaire)
+
+    reponse = client_http.post(_url_simulation(paiement.id_paiement))
+
+    assert reponse.status_code == 401
+
+
+def test_simuler_confirmation_est_idempotente(
+    client_http: TestClient, db: Session
+) -> None:
+    """Rejoue le même chemin que le webhook (`PaiementService.confirmer`),
+    qui est déjà prouvé idempotent — ce test vérifie seulement que
+    l'endpoint ne casse pas en cas de double appel, pas la logique elle-même."""
+    proprietaire = _client(db)
+    paiement = _commande_avec_paiement(db, reference="ref-simu-4", client=proprietaire)
+    entetes = _jeton(proprietaire)
+
+    premiere = client_http.post(_url_simulation(paiement.id_paiement), headers=entetes)
+    seconde = client_http.post(_url_simulation(paiement.id_paiement), headers=entetes)
+
+    assert premiere.status_code == 200
+    assert seconde.status_code == 200
+    assert seconde.json()["statut"] == "Reussi"

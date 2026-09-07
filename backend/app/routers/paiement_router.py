@@ -1,12 +1,18 @@
 """Endpoints de PAIEMENT.
 
-Un seul endpoint pour l'instant : le webhook de confirmation, **public** —
-un vrai fournisseur ne porte pas notre jeton, seule la signature de la
-requête l'authentifie. L'initiation (`POST /commandes/{id}/paiements`) vit
-dans `commande_router.py`, nichée sous la commande qu'elle concerne
-(cf. `docs/architecture.md`) ; le webhook, lui, n'a pas de commande dans son
-URL — le fournisseur ne connaît que `reference_externe`, jamais notre
-`id_commande`.
+Le webhook de confirmation est **public** — un vrai fournisseur ne porte pas
+notre jeton, seule la signature de la requête l'authentifie. L'initiation
+(`POST /commandes/{id}/paiements`) vit dans `commande_router.py`, nichée sous
+la commande qu'elle concerne (cf. `docs/architecture.md`) ; le webhook, lui,
+n'a pas de commande dans son URL — le fournisseur ne connaît que
+`reference_externe`, jamais notre `id_commande`.
+
+`simuler_confirmation` (ci-dessous) est le **seul** endroit du code
+applicatif où `PasserelleSimulee` est référencée par son nom plutôt que par
+le contrat `PasserellePaiement` — délibérément : sa raison d'être est un
+comportement propre à la simulation, absent de toute vraie passerelle. Dette
+documentée dans `docs/mld.md`, à retirer par le sprint qui branchera un vrai
+fournisseur.
 """
 
 from typing import Annotated
@@ -17,9 +23,11 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.exceptions import AuthentificationInvalide
+from app.core.deps import ClientConnecte
+from app.core.exceptions import AuthentificationInvalide, RessourceIntrouvable
 from app.schemas.paiement import PaiementRead, WebhookPaiement
 from app.services.paiement_service import PaiementService
+from app.services.passerelle_paiement_simulee import PasserelleSimulee
 
 router = APIRouter(prefix="/paiements", tags=["paiement"])
 
@@ -66,3 +74,36 @@ async def webhook(request: Request, db: SessionBase) -> PaiementRead:
 
     paiement = service.confirmer(corps.reference_externe, corps.statut)
     return PaiementRead.model_validate(paiement)
+
+
+@router.post(
+    "/{id_paiement}/simuler-confirmation",
+    response_model=PaiementRead,
+    summary="Simule la confirmation d'un paiement (dev uniquement)",
+)
+def simuler_confirmation(
+    id_paiement: int, client: ClientConnecte, db: SessionBase
+) -> PaiementRead:
+    """Déclenche, depuis l'écran de paiement, la confirmation qu'un vrai
+    fournisseur enverrait plus tard par webhook — en attendant les accès
+    API réels (cf. `docs/mld.md`). Rejoue le même chemin que le webhook
+    (`PaiementService.confirmer`), rien n'est dupliqué.
+
+    **404** — et non 403 — sur le paiement d'un autre client, même
+    raisonnement que `suivi_livraison`.
+
+    N'existe que le temps de la simulation : ce endpoint n'a aucun sens une
+    fois une vraie passerelle branchée, un vrai fournisseur confirmant de
+    lui-même.
+    """
+    service = PaiementService(db)
+    paiement = service.paiements.get_by_id(id_paiement)
+    if paiement is None or paiement.commande.id_client != client.id_client:
+        raise RessourceIntrouvable("Paiement introuvable.")
+
+    charge_utile, _ = PasserelleSimulee().simuler_confirmation(
+        paiement.reference_externe
+    )
+    corps = WebhookPaiement.model_validate_json(charge_utile)
+    resultat = service.confirmer(corps.reference_externe, corps.statut)
+    return PaiementRead.model_validate(resultat)

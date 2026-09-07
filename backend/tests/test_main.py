@@ -98,6 +98,7 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/avis",
         f"{prefixe}/avis/{{id_avis}}",
         f"{prefixe}/paiements/webhook",
+        f"{prefixe}/paiements/{{id_paiement}}/simuler-confirmation",
     }
 
 
