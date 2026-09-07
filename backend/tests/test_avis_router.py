@@ -56,7 +56,12 @@ def _client(db: Session, email: str = "a@delta.mg") -> Client:
     return client
 
 
-def _ligne(db: Session, client: Client) -> LigneCommande:
+def _ligne(
+    db: Session,
+    client: Client,
+    type_commande: TypeCommande = TypeCommande.SUR_PLACE,
+    statut: StatutCommande = StatutCommande.SERVIE,
+) -> LigneCommande:
     categorie = CategorieProduit(libelle=f"Cat-{client.id_client}-{uuid4().hex[:8]}")
     db.add(categorie)
     db.flush()
@@ -73,8 +78,8 @@ def _ligne(db: Session, client: Client) -> LigneCommande:
     db.add(produit)
     db.flush()
     commande = Commande(
-        type_commande=TypeCommande.SUR_PLACE,
-        statut=StatutCommande.SERVIE,
+        type_commande=type_commande,
+        statut=statut,
         montant_total=1000,
         id_client=client.id_client,
     )
@@ -91,13 +96,15 @@ def _ligne(db: Session, client: Client) -> LigneCommande:
     return ligne
 
 
-def _reservation(db: Session, client: Client) -> Reservation:
+def _reservation(
+    db: Session, client: Client, statut: StatutReservation = StatutReservation.HONOREE
+) -> Reservation:
     reservation = Reservation(
         type_reservation=TypeReservation.TABLE,
         date_debut=date(2026, 1, 1),
         date_fin=date(2026, 1, 1),
         nombre_personnes=2,
-        statut=StatutReservation.HONOREE,
+        statut=statut,
         avec_hebergement=False,
         id_client=client.id_client,
     )
@@ -255,3 +262,41 @@ def test_creation_avis_service_sur_sa_reservation(
     )
 
     assert reponse.status_code == 201
+
+
+def test_creation_sur_une_commande_non_terminee_retourne_409(
+    client_http: TestClient,
+    entete_client: dict[str, str],
+    db: Session,
+    client: Client,
+) -> None:
+    ligne = _ligne(db, client, statut=StatutCommande.EN_ATTENTE)
+
+    reponse = client_http.post(
+        AVIS,
+        json={"type_avis": "Produit", "note": 5, "id_ligne": ligne.id_ligne},
+        headers=entete_client,
+    )
+
+    assert reponse.status_code == 409
+
+
+def test_creation_sur_une_reservation_non_honoree_retourne_409(
+    client_http: TestClient,
+    entete_client: dict[str, str],
+    db: Session,
+    client: Client,
+) -> None:
+    reservation = _reservation(db, client, statut=StatutReservation.CONFIRMEE)
+
+    reponse = client_http.post(
+        AVIS,
+        json={
+            "type_avis": "Service",
+            "note": 4,
+            "id_reservation": reservation.id_reservation,
+        },
+        headers=entete_client,
+    )
+
+    assert reponse.status_code == 409

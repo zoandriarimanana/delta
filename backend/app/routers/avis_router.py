@@ -28,7 +28,9 @@ SessionBase = Annotated[Session, Depends(get_db)]
 )
 def creer(donnees: AvisCreate, client: ClientConnecte, db: SessionBase) -> AvisRead:
     """**422** si la cible n'existe pas ou n'appartient pas au client connecté.
-    **409** si un avis a déjà été déposé sur cette cible."""
+    **409** si la cible n'a pas atteint son statut terminal (`Livree`/`Servie`
+    pour une commande, `Honoree` pour une réservation), ou si un avis a déjà
+    été déposé sur cette cible."""
     return AvisRead.model_validate(AvisService(db).creer(donnees, client))
 
 
