@@ -4,7 +4,7 @@ Ordre de priorisation : dépendances techniques d'abord, puis cœur transactionn
 puis modules métier du plus généraliste au plus spécifique, paiement en ligne et
 back-office avancé en dernier.
 
-**Sprint courant : Sprint 9.** Mettre à jour cette ligne à chaque changement de sprint.
+**Sprint courant : Sprint 10.** Mettre à jour cette ligne à chaque changement de sprint.
 
 Avant de commencer une tâche : vérifier la Definition of Ready dans `CONTRIBUTING.md`.
 Avant de clore une tâche : vérifier la Definition of Done dans `CONTRIBUTING.md`.
@@ -510,10 +510,69 @@ Huit tâches livrées là où cinq étaient prévues.
       contre le backend réel via navigateur headless, y compris le refus 409
       sur une course affichage/validation reproduite délibérément.
 
-## Sprint 9 — Paiement en ligne *(reporté, non prioritaire au départ)*
+## Sprint 9 — Paiement en ligne
 
-- [ ] Intégration passerelle (carte + mobile money)
-- [ ] Webhook de confirmation, mise à jour statut commande
+- [x] Intégration passerelle (carte + mobile money)
+- [x] Webhook de confirmation, mise à jour statut commande
+      — **Simulé**, en attendant l'obtention des accès API réels aux
+      fournisseurs (banques, MVOLA, Orange Money, Airtel Money) — décision
+      actée en ouvrant le sprint, malgré la mention initiale « reporté, non
+      prioritaire au départ » : l'équipe reste demandeuse des deux moyens de
+      paiement, seul l'accès aux API réelles manquait, pas la volonté de
+      construire le circuit.
+      — **9.1 (#106)** : schéma et migration de `PAIEMENT`. `methode` et
+      `fournisseur` en domaines formels (`CHECK`), `statut` sans valeur
+      `Rembourse` — délibérément, le remboursement restant hors périmètre de
+      ce sprint (cf. `docs/mld.md`). Plusieurs paiements possibles par
+      commande (pas de `UNIQUE` sur `id_commande`), pour couvrir nativement
+      les tentatives échouées ; un index unique **partiel**
+      `uq_paiement_commande_reussi` interdit malgré tout plus d'un paiement
+      `Reussi` actif par commande — même architecture à deux niveaux que le
+      chevauchement `ABONNEMENT` (#97) et les créneaux `SALLE`/`LOGEMENT`
+      (#47). `reference_externe` en `UNIQUE` **globale**, jamais réattribuée
+      par un fournisseur.
+      — **9.2 (#107)** : `PasserellePaiement`, contrat `Protocol` (non `ABC`)
+      pour qu'aucun appelant n'ait à importer une implémentation concrète
+      pour se typer. `PasserelleSimulee` configurable à la construction
+      (`ComportementSimulation` : toujours_reussi/toujours_echoue/aleatoire)
+      — `initier()` écrit **toujours** `En_attente`, jamais `Reussi`
+      directement : le comportement configuré ne s'exprime que plus tard,
+      via `simuler_confirmation()`, hors du contrat public.
+      — **9.3 (#108)** : `POST /commandes/{id}/paiements`, réservé au
+      propriétaire. **409** si la commande est `Annulee` ou déjà payée —
+      pré-contrôle applicatif **seul**, sans filet d'`IntegrityError` :
+      `initier()` ne pouvant jamais écrire `Reussi`, elle ne peut jamais
+      violer l'index partiel de 9.1 elle-même. Un test avait d'abord prouvé
+      qu'un tel filet, copié d'`AbonnementService`, était du code mort — retiré
+      avant merge.
+      — **9.4 (#109)** : `POST /paiements/webhook`, public — un vrai
+      fournisseur ne porte pas notre jeton. Signature vérifiée **avant** tout
+      décodage du corps. Synchronisation `PAIEMENT → COMMANDE` à sens unique
+      (`En_attente` → `Confirmee`), même patron que `LIVRAISON → COMMANDE`
+      (#25) ; ne régresse jamais un statut de commande déjà plus avancé.
+      **C'est ici, et nulle part ailleurs**, que la traduction de la course
+      entre deux confirmations concurrentes sur `uq_paiement_commande_reussi`
+      vit, en **409**. Deux bogues réels trouvés par les tests avant merge :
+      un accès paresseux à `paiement.commande` placé avant le bloc
+      `try/except` déclenchait un autoflush qui faisait fuir l'erreur hors du
+      filet ; et une `ValidationError` Pydantic levée manuellement n'était pas
+      auto-traduite par FastAPI en 422, contrairement à un paramètre de route
+      typé — les deux corrigés.
+      — **9.5 backend (#110)** : `POST /paiements/{id}/simuler-confirmation`,
+      pour déclencher depuis l'écran de paiement la confirmation qu'un vrai
+      fournisseur enverrait de lui-même. **Fermé par défaut** derrière
+      `Settings.ENVIRONMENT` (défaut fermé `production`) : refuse hors
+      `developpement` avec le même 404 générique qu'un paiement introuvable.
+      Dette technique assumée et non résorbée par cette garde — voir la table
+      ci-dessous.
+      — **9.5 frontend (#111)** : `features/paiement/`, même structure que
+      `features/avis/` (8.4). Formulaire méthode/fournisseur → initiation →
+      affichage du statut, bouton de simulation **masqué** hors
+      `VITE_ENVIRONMENT=developpement` (confort d'affichage seulement, la
+      garde réelle reste le 404 backend de 9.5 backend). `useHistorique`
+      gagne `recharger()` pour refléter `COMMANDE.statut` après confirmation.
+      Vérifié de bout en bout via navigateur réel contre le backend réel,
+      dans les deux environnements.
 
 ## Sprint 10 — Back-office avancé & reporting
 
