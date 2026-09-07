@@ -711,6 +711,16 @@ initial, pas la correction d'une omission comme `AVIS` ou `COMMANDE.date_command
   dans un bouton caché côté frontend, qui ne protégerait rien face à un
   appel direct.
 
+  Le bouton « Simuler la confirmation » de `FormulairePaiement` (Sprint 9.5
+  frontend) est malgré tout **masqué** hors `VITE_ENVIRONMENT=developpement`
+  — un **confort d'affichage ajouté après coup**, pas une protection : sans
+  lui, un clic sur ce bouton en production échouerait de toute façon en 404
+  identique, mais un client le verrait échouer silencieusement, ce qui
+  donne l'impression d'une fonctionnalité cassée plutôt
+  qu'intentionnellement absente. Retirer ce masquage n'affaiblirait aucune
+  garantie ; l'ajouter n'en crée aucune — la seule vraie garantie reste
+  `Settings.ENVIRONMENT` côté serveur, ci-dessus.
+
   **Dette technique assumée malgré cette garde, pas un oubli** : cet
   endpoint n'a de sens que tant qu'aucune vraie passerelle n'est branchée,
   et la garde `ENVIRONMENT` ne le retire pas — elle empêche seulement qu'il

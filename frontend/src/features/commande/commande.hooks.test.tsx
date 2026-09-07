@@ -11,9 +11,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { effacerJeton } from '@/lib/tokenStorage';
 
-import { creerCommande, creerCommandeInvite } from './commande.api';
+import {
+  creerCommande,
+  creerCommandeInvite,
+  recupererHistorique,
+} from './commande.api';
 import { resynchroniserPanier } from './commande.panier';
-import { usePanier, useValidationCommande } from './commande.hooks';
+import { useHistorique, usePanier, useValidationCommande } from './commande.hooks';
 import type { Commande } from './commande.types';
 import type { Produit } from '@/features/produit/produit.types';
 
@@ -216,5 +220,25 @@ describe('useValidationCommande', () => {
     });
 
     expect(commande!.reference_publique).not.toBeNull();
+  });
+});
+
+describe('useHistorique', () => {
+  it('recharge sur demande, sans que le composant appelant ait à réabonner', async () => {
+    // Utilisé par `FormulairePaiement.onConfirme` (Sprint 9.5) pour refléter
+    // `COMMANDE.statut` mis à jour côté serveur après une confirmation de
+    // paiement — ce module ne le sait pas lui-même, il ne fait que recharger.
+    vi.mocked(recupererHistorique)
+      .mockResolvedValueOnce([COMMANDE])
+      .mockResolvedValueOnce([{ ...COMMANDE, statut: 'Confirmee' }]);
+
+    const { result } = renderHook(() => useHistorique(true));
+
+    await waitFor(() => expect(result.current.commandes).toEqual([COMMANDE]));
+
+    act(() => result.current.recharger());
+
+    await waitFor(() => expect(result.current.commandes[0]?.statut).toBe('Confirmee'));
+    expect(recupererHistorique).toHaveBeenCalledTimes(2);
   });
 });

@@ -108,6 +108,9 @@ jobs:
       # `lib/axiosClient.ts` lève au chargement et toute la suite de tests
       # échoue.
       VITE_API_URL: http://localhost:8000/api/v1
+      # developpement : la CI doit exercer le bouton « Simuler la confirmation »
+      # du module paiement (masqué hors developpement, voir docs/mld.md).
+      VITE_ENVIRONMENT: developpement
 
     defaults:
       run:

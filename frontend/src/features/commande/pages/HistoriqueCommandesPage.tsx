@@ -12,6 +12,7 @@ import { Link } from 'react-router';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
 import { EncartSuiviCommande } from '@/features/livraison/components/EncartSuivi';
+import FormulairePaiement from '@/features/paiement/components/FormulairePaiement';
 
 import RecapitulatifCommande from '../components/RecapitulatifCommande';
 import { formaterDate } from '../commande.service';
@@ -19,7 +20,7 @@ import { useHistorique } from '../commande.hooks';
 
 export default function HistoriqueCommandesPage() {
   const connecte = useEstConnecte();
-  const { commandes, chargement, erreur } = useHistorique(connecte);
+  const { commandes, chargement, erreur, recharger } = useHistorique(connecte);
 
   if (!connecte) {
     return (
@@ -92,6 +93,15 @@ export default function HistoriqueCommandesPage() {
             <RecapitulatifCommande commande={commande} />
             {/* N'affiche rien pour une commande à retirer. */}
             <EncartSuiviCommande idCommande={commande.id_commande} />
+            {/* Une commande annulée ne peut porter aucun paiement (409
+                serveur) : autant ne pas proposer le formulaire, plutôt que
+                de laisser le client découvrir le refus après coup. */}
+            {commande.statut !== 'Annulee' && (
+              <FormulairePaiement
+                idCommande={commande.id_commande}
+                onConfirme={recharger}
+              />
+            )}
           </li>
         ))}
       </ul>
