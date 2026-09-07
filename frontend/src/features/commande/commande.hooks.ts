@@ -204,6 +204,13 @@ export interface EtatHistorique {
   commandes: Commande[];
   chargement: boolean;
   erreur: string | null;
+  /**
+   * Recharge l'historique — utilisé après la confirmation d'un paiement
+   * (`features/paiement/`) pour refléter `COMMANDE.statut` mis à jour côté
+   * serveur, que ce module ne connaît pas lui-même : il ne renvoie que le
+   * paiement, jamais la commande.
+   */
+  recharger: () => void;
 }
 
 /**
@@ -216,11 +223,12 @@ export interface EtatHistorique {
  * Le tri vient du serveur ; le refaire ici masquerait une régression côté API.
  */
 export function useHistorique(actif: boolean): EtatHistorique {
-  const [etat, setEtat] = useState<EtatHistorique>({
+  const [etat, setEtat] = useState<Omit<EtatHistorique, 'recharger'>>({
     commandes: [],
     chargement: actif,
     erreur: null,
   });
+  const [jeton, setJeton] = useState(0);
 
   useEffect(() => {
     if (!actif) {
@@ -229,7 +237,7 @@ export function useHistorique(actif: boolean): EtatHistorique {
     }
 
     let enCours = true;
-    setEtat({ commandes: [], chargement: true, erreur: null });
+    setEtat((precedent) => ({ ...precedent, chargement: true, erreur: null }));
 
     recupererHistorique()
       .then((commandes) => {
@@ -250,9 +258,11 @@ export function useHistorique(actif: boolean): EtatHistorique {
     return () => {
       enCours = false;
     };
-  }, [actif]);
+  }, [actif, jeton]);
 
-  return etat;
+  const recharger = useCallback(() => setJeton((valeur) => valeur + 1), []);
+
+  return { ...etat, recharger };
 }
 
 export interface PriseDeCommande {
