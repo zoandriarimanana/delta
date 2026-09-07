@@ -4,7 +4,7 @@ Ordre de priorisation : dépendances techniques d'abord, puis cœur transactionn
 puis modules métier du plus généraliste au plus spécifique, paiement en ligne et
 back-office avancé en dernier.
 
-**Sprint courant : Sprint 7.** Mettre à jour cette ligne à chaque changement de sprint.
+**Sprint courant : Sprint 9.** Mettre à jour cette ligne à chaque changement de sprint.
 
 Avant de commencer une tâche : vérifier la Definition of Ready dans `CONTRIBUTING.md`.
 Avant de clore une tâche : vérifier la Definition of Done dans `CONTRIBUTING.md`.
@@ -430,14 +430,85 @@ Huit tâches livrées là où cinq étaient prévues.
 
 ## Sprint 7 — Abonnement cantine (B2B)
 
-- [ ] `ABONNEMENT`, `BENEFICIAIRE`, `CONSOMMATION_REPAS`
-- [ ] Gestion des deux modes (`mode_suivi`, `type_facturation`)
-- [ ] Interface admin : gestion des abonnements entreprise + suivi de consommation
+- [x] `ABONNEMENT`, `BENEFICIAIRE`, `CONSOMMATION_REPAS`
+      — **7.1 (#95)** : CRUD complet des trois entités. Trois divergences avec
+      le modèle du Sprint 0 tranchées en construisant : `ABONNEMENT.date_fin`
+      passée `NOT NULL` (+ `CHECK dates_coherentes`), `CHECK
+      tarif_selon_facturation` ajouté, `BENEFICIAIRE.statut` devenu domaine
+      formel. Contrainte d'exclusion PostgreSQL (`EXCLUDE USING gist`)
+      interdisant tout chevauchement d'abonnements actifs sur une même
+      entreprise. Deux bugs réels trouvés et corrigés en cours de route :
+      un piège d'ordre de route répété sur trois routers (`/administration`
+      capté par `/{id}`), et du code mort dans `BeneficiaireService`
+      (`get_by_id()` filtrant déjà l'archivage, une branche ne pouvait jamais
+      s'exécuter).
+- [x] Gestion des deux modes (`mode_suivi`, `type_facturation`)
+      — Livré avec 7.1 (#95) : `Individuel`/`Global` et
+      `Forfait`/`Consommation_reelle` posés dès le modèle et le `CHECK`, pas
+      une tâche distincte.
+- [x] Interface admin : gestion des abonnements entreprise + suivi de consommation
+      — **7.2 (#97)** : `calculer_solde()` — aucune entité `FACTURE`, calcul
+      à la demande à partir de `ABONNEMENT` et de la somme des
+      `CONSOMMATION_REPAS` actives, jamais stocké. Modèle repris tel quel en
+      8.3 pour `note_moyenne`.
+      — **7.3 (#100)** : pages d'administration React (liste, détail,
+      formulaire partagé création/édition, suivi de consommation). Deux
+      correctifs ciblés livrés séparément juste avant, chacun sa propre PR
+      plutôt que noyés dans 7.3 : filtre `id_abonnement` optionnel sur les
+      listes d'administration (#98), et `GET /clients-entreprise/administration`
+      — endpoint qui n'existait pas du tout, nécessaire au sélecteur
+      d'entreprise du formulaire (#99).
 
 ## Sprint 8 — Avis clients
 
-- [ ] `AVIS` (produit / service), contrôle : uniquement si statut Livrée/Honorée
-- [ ] Affichage note moyenne sur fiche produit / page service
+- [x] `AVIS` (produit / service), contrôle : uniquement si statut Livrée/Honorée
+      — Le modèle et ses contraintes structurelles (`cible_xor`, `note_intervalle`,
+      domaine `type_avis`) existaient déjà depuis la migration initiale du
+      Sprint 0 ; seules les couches applicatives manquaient. Découpé en deux
+      PR distinctes plutôt qu'une seule, le contrôle d'éligibilité n'étant pas
+      un sous-produit gratuit du CRUD :
+      — **8.1 (#101)** : CRUD de base. `CHECK type_coherent_avec_cible`
+      (`(type_avis = 'Produit') = (id_ligne IS NOT NULL)`, single-table,
+      même raisonnement que `tarif_selon_facturation`) et deux index uniques
+      **partiels** (`uq_avis_client_ligne`, `uq_avis_client_reservation`,
+      `WHERE supprime_le IS NULL`) — un avis actif par client et par cible,
+      remplaçable après archivage pour modération, même traitement que
+      `identifiant_badge`. **Pas de `AvisUpdate`** : un avis se remplace, il
+      ne se corrige pas. Lecture publique, création réservée au client
+      connecté et propriétaire de la cible (422 identique que la cible soit
+      inexistante ou appartienne à un tiers).
+      — **8.2 (#102)** : contrôle d'éligibilité, séparé du CRUD de base parce
+      qu'il ne l'était pas encore en 8.1. Une commande doit avoir atteint son
+      statut terminal — `STATUT_TERMINAL[type_commande]` (`Livree` ou
+      `Servie` selon le type, jamais une valeur en dur) — et une réservation
+      doit être `Honoree`. Refus en **409** et non 422 : la référence est
+      valide, c'est l'état actuel qui s'y oppose — même distinction que pour
+      un logement non `Disponible`.
+- [x] Affichage note moyenne sur fiche produit / page service
+      — **8.3 (#103)** : agrégation à la demande, aucune colonne stockée,
+      même principe que `calculer_solde()` en 7.2. `note_moyenne`/`nombre_avis`
+      ajoutés aux schemas `*Read` de `PRODUIT`/`SALLE`/`LOGEMENT`/`FORMATION`,
+      calculés **uniquement sur la fiche** (`GET /{id}`), jamais sur les
+      listes, non paginées. `moyenne_par_formation` agrège au niveau de la
+      formation, toutes sessions confondues (double jointure
+      `AVIS → RESERVATION → SESSION_FORMATION`), décision actée en
+      construisant le sprint — pas au niveau de la session individuelle.
+      A révélé et corrigé au passage une incompatibilité SQLite préexistante
+      dans `test_formation_router.py` (moteur minimal sans `AVIS`/`RESERVATION`,
+      basculé sur `session_postgres`).
+      — **8.4 (#104)** : `NoteMoyenne` rejoint `components/ui/` — primitive
+      purement présentationnelle, testée pour ne connaître aucune entité du
+      MLD, même traitement que `Badge`. `null` → « Pas encore noté », jamais
+      `0` ni étoiles vides trompeuses. Nouveau module `features/avis/`
+      (`FormulaireAvis`, union discriminée sur `type_avis` comme
+      `ReservationEnvoyee`, sans mode édition). Bouton « Déposer un avis »
+      inséré à l'historique commandes (par ligne, conditionné à
+      `estTerminee()`) **et** à l'historique réservations (conditionné à
+      `Honoree`) — les deux ensemble dès ce sprint, le backend couvrant les
+      deux cibles symétriquement. Messages 409/422 repris tels quels, même
+      traitement que `reservation/` au Sprint 5 ; vérifié de bout en bout
+      contre le backend réel via navigateur headless, y compris le refus 409
+      sur une course affichage/validation reproduite délibérément.
 
 ## Sprint 9 — Paiement en ligne *(reporté, non prioritaire au départ)*
 
