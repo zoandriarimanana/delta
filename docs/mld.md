@@ -702,13 +702,24 @@ initial, pas la correction d'une omission comme `AVIS` ou `COMMANDE.date_command
   confirmation qu'un vrai fournisseur enverrait de lui-même) est un
   comportement propre à la simulation, absent de toute vraie passerelle.
 
-  **Dette technique assumée, pas un oubli** : cet endpoint n'a de sens que
-  tant qu'aucune vraie passerelle n'est branchée. Aucune protection ne
-  l'empêche de fonctionner si une vraie passerelle venait à remplacer
-  `PasserelleSimulee` sans qu'il soit retiré — décision actée en
-  construisant 9.5, pour ne pas alourdir ce sprint d'une garde défensive
-  contre un futur qui n'existe pas encore. Voir `docs/roadmap.md`, section
-  Dette technique.
+  **Fermé par défaut derrière `Settings.ENVIRONMENT`** : l'endpoint refuse
+  en dehors de `developpement`, avec le **même 404 générique** qu'un
+  paiement introuvable — pour ne pas même laisser deviner son existence une
+  fois une vraie passerelle en place. Le défaut de `ENVIRONMENT` est
+  `production` : un déploiement qui omettrait la variable reste protégé par
+  omission plutôt qu'exposé par omission. La garde vit dans le routeur, pas
+  dans un bouton caché côté frontend, qui ne protégerait rien face à un
+  appel direct.
+
+  **Dette technique assumée malgré cette garde, pas un oubli** : cet
+  endpoint n'a de sens que tant qu'aucune vraie passerelle n'est branchée,
+  et la garde `ENVIRONMENT` ne le retire pas — elle empêche seulement qu'il
+  réponde en production. Rien n'empêche non plus qu'il continue de
+  fonctionner en environnement `developpement` une fois une vraie
+  passerelle branchée dans cet environnement — décision actée en
+  construisant 9.5 : retirer le code lui-même reste la responsabilité du
+  sprint qui branchera un vrai fournisseur, pas de cette garde. Voir
+  `docs/roadmap.md`, section Dette technique.
 
 ## Contraintes d'exclusivité à implémenter en `CHECK` / trigger (pas de l'algèbre relationnelle pure)
 

@@ -294,3 +294,25 @@ def test_simuler_confirmation_est_idempotente(
     assert premiere.status_code == 200
     assert seconde.status_code == 200
     assert seconde.json()["statut"] == "Reussi"
+
+
+def test_simuler_confirmation_refuse_hors_environnement_developpement(
+    client_http: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """La garde vit dans le backend, pas dans un bouton caché côté
+    frontend : ce test appelle l'endpoint directement, sans passer par
+    aucune interface, avec `ENVIRONMENT=production` — même 404 générique
+    qu'un paiement introuvable, pour ne rien laisser deviner."""
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    proprietaire = _client(db)
+    paiement = _commande_avec_paiement(db, reference="ref-simu-5", client=proprietaire)
+
+    reponse = client_http.post(
+        _url_simulation(paiement.id_paiement), headers=_jeton(proprietaire)
+    )
+
+    assert reponse.status_code == 404
+    assert reponse.json()["detail"] == "Paiement introuvable."
+
+    db.refresh(paiement)
+    assert paiement.statut == StatutPaiement.EN_ATTENTE

@@ -13,6 +13,12 @@ le contrat `PasserellePaiement` — délibérément : sa raison d'être est un
 comportement propre à la simulation, absent de toute vraie passerelle. Dette
 documentée dans `docs/mld.md`, à retirer par le sprint qui branchera un vrai
 fournisseur.
+
+`simuler_confirmation` est en outre **fermée par défaut** : elle vérifie
+`settings.ENVIRONMENT` et refuse en dehors de `developpement`, avec le même
+404 générique qu'un paiement introuvable — la garde vit dans le backend et
+non dans un simple bouton caché côté frontend, qui ne protégerait rien face
+à un appel direct à l'endpoint.
 """
 
 from typing import Annotated
@@ -22,12 +28,15 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import ClientConnecte
 from app.core.exceptions import AuthentificationInvalide, RessourceIntrouvable
 from app.schemas.paiement import PaiementRead, WebhookPaiement
 from app.services.paiement_service import PaiementService
 from app.services.passerelle_paiement_simulee import PasserelleSimulee
+
+MESSAGE_PAIEMENT_INTROUVABLE = "Paiement introuvable."
 
 router = APIRouter(prefix="/paiements", tags=["paiement"])
 
@@ -90,16 +99,23 @@ def simuler_confirmation(
     (`PaiementService.confirmer`), rien n'est dupliqué.
 
     **404** — et non 403 — sur le paiement d'un autre client, même
-    raisonnement que `suivi_livraison`.
+    raisonnement que `suivi_livraison`. **404 également** hors de
+    `ENVIRONMENT=developpement` : le même message générique, pour ne pas
+    même laisser deviner que l'endpoint existe une fois une vraie passerelle
+    en place.
 
     N'existe que le temps de la simulation : ce endpoint n'a aucun sens une
     fois une vraie passerelle branchée, un vrai fournisseur confirmant de
-    lui-même.
+    lui-même. La garde ci-dessous est la protection réelle — pas un bouton
+    caché côté frontend, qui ne protégerait rien face à un appel direct.
     """
+    if settings.ENVIRONMENT != "developpement":
+        raise RessourceIntrouvable(MESSAGE_PAIEMENT_INTROUVABLE)
+
     service = PaiementService(db)
     paiement = service.paiements.get_by_id(id_paiement)
     if paiement is None or paiement.commande.id_client != client.id_client:
-        raise RessourceIntrouvable("Paiement introuvable.")
+        raise RessourceIntrouvable(MESSAGE_PAIEMENT_INTROUVABLE)
 
     charge_utile, _ = PasserelleSimulee().simuler_confirmation(
         paiement.reference_externe
