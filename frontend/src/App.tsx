@@ -25,6 +25,8 @@ import AdministrationCategoriesPage from '@/features/produit/pages/Administratio
 import AdministrationProduitsPage from '@/features/produit/pages/AdministrationProduitsPage';
 import ProduitDetailPage from '@/features/produit/pages/ProduitDetailPage';
 import ProduitListPage from '@/features/produit/pages/ProduitListPage';
+import AdministrationPersonnelPage from '@/features/personnel/pages/AdministrationPersonnelPage';
+import PersonnelDetailAdministrationPage from '@/features/personnel/pages/PersonnelDetailAdministrationPage';
 import MesReservationsPage from '@/features/reservation/pages/MesReservationsPage';
 import SalleDetailPage from '@/features/salle/pages/SalleDetailPage';
 import SalleListPage from '@/features/salle/pages/SalleListPage';
@@ -105,6 +107,26 @@ export default function App() {
             element={
               <RoutePersonnel>
                 <AbonnementDetailAdministrationPage />
+              </RoutePersonnel>
+            }
+          />
+          {/* Même précaution : `/administration` avant la route paramétrée.
+              Aucune collision avec les routes personnel/ existantes
+              (commandes, catalogue, categories, abonnements) — vérifié avant
+              l'ouverture de cette tâche. */}
+          <Route
+            path="personnel/administration"
+            element={
+              <RoutePersonnel>
+                <AdministrationPersonnelPage />
+              </RoutePersonnel>
+            }
+          />
+          <Route
+            path="personnel/administration/:idPersonnel"
+            element={
+              <RoutePersonnel>
+                <PersonnelDetailAdministrationPage />
               </RoutePersonnel>
             }
           />
