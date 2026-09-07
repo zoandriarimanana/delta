@@ -23,8 +23,10 @@ from app.schemas.commande import (
     CommandeRead,
 )
 from app.schemas.livraison import LivraisonPublique
+from app.schemas.paiement import PaiementCreate, PaiementRead
 from app.services.commande_service import CommandeService
 from app.services.livraison_service import LivraisonService
+from app.services.paiement_service import PaiementService
 
 router = APIRouter(prefix="/commandes", tags=["commande"])
 
@@ -194,3 +196,26 @@ def suivi_livraison(
         raise RessourceIntrouvable("Commande introuvable.")
     livraison = LivraisonService(db).obtenir_par_commande(id_commande)
     return LivraisonPublique.model_validate(livraison)
+
+
+@router.post(
+    "/{id_commande}/paiements",
+    response_model=PaiementRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Initier un paiement pour une de ses commandes",
+)
+def initier_paiement(
+    id_commande: int, donnees: PaiementCreate, client: ClientConnecte, db: SessionBase
+) -> PaiementRead:
+    """Initie un paiement — simulé pour ce sprint, en attendant les accès
+    API réels aux fournisseurs (cf. `docs/mld.md`).
+
+    **404** — et non 403 — sur la commande d'un autre client, même
+    raisonnement que `suivi_livraison`. **409** si la commande est annulée,
+    ou si elle porte déjà un paiement réussi.
+    """
+    commande = CommandeService(db).obtenir(id_commande)
+    if commande.id_client != client.id_client:
+        raise RessourceIntrouvable("Commande introuvable.")
+    paiement = PaiementService(db).initier(commande, donnees)
+    return PaiementRead.model_validate(paiement)

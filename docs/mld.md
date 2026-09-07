@@ -617,11 +617,18 @@ initial, pas la correction d'une omission comme `AVIS` ou `COMMANDE.date_command
   ```
 
   Même architecture à deux niveaux que le chevauchement `ABONNEMENT` (#97) et
-  les créneaux `SALLE`/`LOGEMENT` (#47) : le service pré-contrôle pour
-  produire un 409 lisible, mais c'est l'index qui tranche en cas de course
-  entre deux paiements simultanés — sans lui, deux requêtes concurrentes
-  pourraient toutes deux lire « aucun paiement réussi » avant que l'une
-  n'écrive.
+  les créneaux `SALLE`/`LOGEMENT` (#47) : un service pré-contrôle pour
+  produire un 409 lisible, mais c'est l'index qui tranche en cas de course.
+
+  **La course se situe entre deux confirmations, pas deux initiations.**
+  `PasserellePaiement.initier()` écrit toujours `statut=En_attente` — jamais
+  `Reussi` — donc l'initiation elle-même ne peut jamais violer cet index.
+  C'est la confirmation (webhook, Sprint 9.4), qui fait passer un paiement à
+  `Reussi`, qui doit pré-contrôler et retomber sur l'index en cas de course
+  entre deux confirmations concurrentes pour la même commande — pas
+  `PaiementService.initier()` (Sprint 9.3), qui ne fait que le pré-contrôle
+  applicatif (refuser une nouvelle initiation si un paiement est déjà
+  `Reussi`), sans jamais pouvoir déclencher lui-même cette contrainte.
 
 - `PAIEMENT.methode` ∈ {Carte, Mobile_money}. Domaine formel, `CHECK` en
   base, même traitement que `COMMANDE.type_commande`.
