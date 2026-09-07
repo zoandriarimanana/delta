@@ -21,6 +21,19 @@ class PaiementCreate(BaseModel):
     fournisseur: FournisseurPaiement
 
 
+class WebhookPaiement(BaseModel):
+    """Charge utile de la confirmation reçue par webhook.
+
+    Validée **après** la vérification de signature (cf. `paiement_router.py`)
+    : un corps illisible sans signature valide ne doit rien révéler sur ce
+    que le service attend, la vérification de signature doit rester le tout
+    premier obstacle.
+    """
+
+    reference_externe: str
+    statut: StatutPaiement
+
+
 class PaiementRead(BaseModel):
     """Paiement en sortie d'API."""
 

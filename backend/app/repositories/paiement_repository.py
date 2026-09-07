@@ -7,17 +7,20 @@ from app.repositories.base_repository import BaseRepository
 
 
 class PaiementRepository(BaseRepository[Paiement]):
-    """CRUD générique, plus le pré-contrôle du double paiement."""
+    """CRUD générique, plus le pré-contrôle du double paiement et la
+    corrélation du webhook."""
 
     modele = Paiement
 
     def existe_reussi_pour_commande(self, id_commande: int) -> bool:
         """Indique si la commande porte déjà un paiement `Reussi` actif.
 
-        Pré-contrôle applicatif, pour produire un 409 lisible avant
-        d'écrire : la garantie réelle est l'index unique partiel
-        `uq_paiement_commande_reussi` (cf. `docs/mld.md`), seul arbitre en
-        cas de course entre deux initiations simultanées.
+        Pré-contrôle applicatif, appelé à l'**initiation** : refuse d'en
+        ouvrir un nouveau si la commande est déjà payée. La garantie réelle
+        reste l'index unique partiel `uq_paiement_commande_reussi` (cf.
+        `docs/mld.md`), dont la course s'arbitre à la **confirmation**
+        (deux webhooks concurrents), pas ici — voir
+        `PaiementService.confirmer`.
         """
         requete = (
             select(Paiement.id_paiement)
@@ -29,3 +32,13 @@ class PaiementRepository(BaseRepository[Paiement]):
             .limit(1)
         )
         return self.db.scalars(requete).first() is not None
+
+    def par_reference_externe(self, reference_externe: str) -> Paiement | None:
+        """Retrouve le paiement portant cette référence — clé de corrélation
+        du webhook (cf. `docs/mld.md`), jamais `id_paiement` que le
+        fournisseur ne connaît pas."""
+        requete = select(Paiement).where(
+            Paiement.reference_externe == reference_externe,
+            Paiement.supprime_le.is_(None),
+        )
+        return self.db.scalars(requete).first()
