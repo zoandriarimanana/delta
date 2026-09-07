@@ -21,6 +21,8 @@ const PRODUIT: Produit = {
   supplement_personnalisation: null,
   est_livrable: true,
   id_categorie: 1,
+  note_moyenne: '4.5000000000000000',
+  nombre_avis: 8,
 };
 
 function afficher(chemin: string) {
@@ -63,6 +65,12 @@ it('annonce un produit épuisé', async () => {
   afficher('/produits/1');
 
   expect(await screen.findByText('Épuisé')).toBeDefined();
+});
+
+it('affiche la note moyenne calculée sur la fiche', async () => {
+  afficher('/produits/1');
+
+  expect(await screen.findByText('4.5 sur 5 · 8 avis')).toBeDefined();
 });
 
 it('affiche un message d’erreur plutôt qu’une page blanche', async () => {

@@ -9,12 +9,42 @@
 import type {
   CheminAcheteur,
   CibleAcheteur,
+  Commande,
   LignePanier,
   LigneCommandeEnvoyee,
+  StatutCommande,
+  TypeCommande,
 } from './commande.types';
 import type { Produit } from '@/features/produit/produit.types';
 
 export const DEVISE = 'Ar';
+
+/**
+ * Statut terminal selon le type de commande — miroir de
+ * `STATUT_TERMINAL` côté serveur (`app/models/commande.py`). Une commande sur
+ * place se termine sur `Servie`, les deux autres types sur `Livree`.
+ *
+ * Dupliqué ici, et non redemandé au serveur : c'est une règle de lecture pure,
+ * qui ne dépend d'aucune donnée que le frontend n'a pas déjà.
+ */
+const STATUT_TERMINAL: Record<TypeCommande, StatutCommande> = {
+  Sur_place: 'Servie',
+  En_ligne: 'Livree',
+  A_emporter: 'Livree',
+};
+
+/**
+ * Une commande a-t-elle atteint son statut terminal ?
+ *
+ * Conditionne l'affichage du bouton « Déposer un avis » dans l'historique :
+ * le serveur refuserait de toute façon en 409 une commande encore
+ * `En_attente`, mais découvrir le refus après avoir rempli le formulaire
+ * n'apprendrait rien — même raisonnement que `estReservable` pour un
+ * logement.
+ */
+export function estTerminee(commande: Pick<Commande, 'statut' | 'type_commande'>) {
+  return commande.statut === STATUT_TERMINAL[commande.type_commande];
+}
 
 /**
  * Ajoute un produit, ou augmente sa quantité s'il est déjà au panier.

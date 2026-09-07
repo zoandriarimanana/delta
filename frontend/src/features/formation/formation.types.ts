@@ -23,6 +23,15 @@ export interface Formation {
   capacite_max: number;
   propose_hebergement: boolean;
   id_domaine: number;
+  /**
+   * Calculée à la demande, **uniquement sur la fiche**
+   * (`GET /formations/{id}`) — jamais sur la liste, non paginée (cf.
+   * `docs/roadmap.md`, 8.3). Agrégée au niveau de la formation, toutes
+   * sessions confondues. `null` tant qu'aucun avis actif n'existe, jamais
+   * `0` : ce serait une moyenne valide.
+   */
+  note_moyenne: string | null;
+  nombre_avis: number;
 }
 
 /**

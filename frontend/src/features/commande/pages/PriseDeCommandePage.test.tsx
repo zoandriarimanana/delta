@@ -37,6 +37,8 @@ const PRODUIT = {
   supplement_personnalisation: null,
   est_livrable: true,
   id_categorie: 1,
+  note_moyenne: null,
+  nombre_avis: 0,
 };
 
 const COMMANDE = {

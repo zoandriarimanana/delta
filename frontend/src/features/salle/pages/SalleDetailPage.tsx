@@ -8,6 +8,7 @@
 
 import { Link, useParams } from 'react-router';
 
+import NoteMoyenne from '@/components/ui/NoteMoyenne';
 import FormulaireReservationCreneau from '@/features/reservation/components/FormulaireReservationCreneau';
 
 import { useSalle } from '../salle.hooks';
@@ -49,6 +50,9 @@ export default function SalleDetailPage() {
       <p className="mt-2 text-slate-700">
         {donnees.capacite} personne(s) — {libelleTarif(donnees)}
       </p>
+      <div className="mt-2">
+        <NoteMoyenne moyenne={donnees.note_moyenne} nombre={donnees.nombre_avis} />
+      </div>
       {donnees.equipements !== null && (
         <p className="mt-1 text-sm text-slate-600">{donnees.equipements}</p>
       )}

@@ -2,6 +2,7 @@
 
 import { Link, useParams } from 'react-router';
 
+import NoteMoyenne from '@/components/ui/NoteMoyenne';
 import { usePanier } from '@/features/commande/commande.hooks';
 
 import EtatRequete from '../components/EtatRequete';
@@ -51,6 +52,12 @@ export default function ProduitDetailPage() {
             <p className="mt-2 text-lg text-slate-800">
               {formaterPrix(produit.donnees)}
             </p>
+            <div className="mt-2">
+              <NoteMoyenne
+                moyenne={produit.donnees.note_moyenne}
+                nombre={produit.donnees.nombre_avis}
+              />
+            </div>
             {produit.donnees.description !== null && (
               <p className="mt-4 text-slate-700">{produit.donnees.description}</p>
             )}

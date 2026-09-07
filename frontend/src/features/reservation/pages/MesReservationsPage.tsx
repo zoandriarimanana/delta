@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 
 import { formaterDate } from '@/features/commande/commande.service';
+import FormulaireAvis from '@/features/avis/components/FormulaireAvis';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
 import { recupererReservations } from '../reservation.api';
@@ -89,32 +90,56 @@ export default function MesReservationsPage() {
 
       <ul className="mt-6 space-y-4">
         {(reservations ?? []).map((reservation) => (
-          <li
+          <ReservationAvecAvis
             key={reservation.id_reservation}
-            className="rounded border border-slate-200 bg-white p-4"
-          >
-            <h2 className="font-medium text-slate-900">{libelleCible(reservation)}</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Réservation n° {reservation.id_reservation}
-            </p>
-            <p className="mt-1 text-sm text-slate-600">
-              <time dateTime={reservation.date_debut}>
-                {formaterDate(reservation.date_debut)}
-              </time>
-              {' — '}
-              {reservation.nombre_personnes} personne(s)
-            </p>
-            <p className="mt-1 text-sm text-slate-700">
-              {libelleStatut(reservation.statut, reservation.type_reservation)}
-            </p>
-            {reservation.avec_hebergement && (
-              // Le drapeau dit un souhait, pas une chambre attribuée — la
-              // formulation le reflète (cf. `docs/mld.md`).
-              <p className="mt-1 text-sm text-slate-500">Hébergement demandé</p>
-            )}
-          </li>
+            reservation={reservation}
+          />
         ))}
       </ul>
     </section>
+  );
+}
+
+function ReservationAvecAvis({ reservation }: { reservation: Reservation }) {
+  const [ouvert, setOuvert] = useState(false);
+  // Le serveur refuserait de toute façon en 409 une réservation non honorée
+  // (cf. `docs/mld.md`) : ne pas proposer le bouton évite au client de
+  // découvrir le refus après avoir rempli le formulaire.
+  const proposerAvis = reservation.statut === 'Honoree';
+
+  return (
+    <li className="rounded border border-slate-200 bg-white p-4">
+      <h2 className="font-medium text-slate-900">{libelleCible(reservation)}</h2>
+      <p className="mt-1 text-xs text-slate-500">
+        Réservation n° {reservation.id_reservation}
+      </p>
+      <p className="mt-1 text-sm text-slate-600">
+        <time dateTime={reservation.date_debut}>
+          {formaterDate(reservation.date_debut)}
+        </time>
+        {' — '}
+        {reservation.nombre_personnes} personne(s)
+      </p>
+      <p className="mt-1 text-sm text-slate-700">
+        {libelleStatut(reservation.statut, reservation.type_reservation)}
+      </p>
+      {reservation.avec_hebergement && (
+        // Le drapeau dit un souhait, pas une chambre attribuée — la
+        // formulation le reflète (cf. `docs/mld.md`).
+        <p className="mt-1 text-sm text-slate-500">Hébergement demandé</p>
+      )}
+      {proposerAvis && !ouvert && (
+        <button
+          type="button"
+          onClick={() => setOuvert(true)}
+          className="mt-1 text-sm text-slate-900 underline"
+        >
+          Déposer un avis
+        </button>
+      )}
+      {ouvert && (
+        <FormulaireAvis cible="Service" idCible={reservation.id_reservation} />
+      )}
+    </li>
   );
 }

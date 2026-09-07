@@ -13,6 +13,8 @@ function salle(tarifHoraire: string | null, tarifJournee: string | null): Salle 
     tarif_horaire: tarifHoraire,
     tarif_journee: tarifJournee,
     equipements: null,
+    note_moyenne: null,
+    nombre_avis: 0,
   };
 }
 

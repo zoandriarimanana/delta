@@ -18,4 +18,11 @@ export interface Salle {
   /** `null` si la salle n'est louée qu'à l'heure. */
   tarif_journee: string | null;
   equipements: string | null;
+  /**
+   * Calculée à la demande, **uniquement sur la fiche** (`GET /salles/{id}`) —
+   * jamais sur la liste, non paginée (cf. `docs/roadmap.md`, 8.3). `null` tant
+   * qu'aucun avis actif n'existe, jamais `0` : ce serait une moyenne valide.
+   */
+  note_moyenne: string | null;
+  nombre_avis: number;
 }
