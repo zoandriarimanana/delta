@@ -5,6 +5,8 @@ depuis les variables d'environnement / le fichier `.env`. Aucun secret ne
 doit être codé en dur ici.
 """
 
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,6 +37,14 @@ class Settings(BaseSettings):
 
     # --- CORS (origines autorisées, séparées par des virgules) ---
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173"
+
+    # --- Environnement d'exécution ---
+    # Défaut fermé (`production`) : un déploiement qui omet cette variable
+    # reste protégé plutôt que de se retrouver exposé par omission. Seul
+    # `developpement` active les endpoints qui n'ont de sens que le temps
+    # d'une simulation (voir `PaiementService`/`simuler_confirmation`,
+    # Sprint 9.5, docs/mld.md).
+    ENVIRONMENT: Literal["developpement", "production"] = "production"
 
     model_config = SettingsConfigDict(
         env_file=".env",

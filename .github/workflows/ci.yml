@@ -58,6 +58,9 @@ jobs:
       API_V1_PREFIX: /api/v1
       PROJECT_NAME: Delta
       BACKEND_CORS_ORIGINS: http://localhost:5173
+      # developpement : la CI doit exercer POST /paiements/{id}/simuler-confirmation
+      # (fermé par défaut, voir docs/mld.md), pas seulement prouver qu'il refuse.
+      ENVIRONMENT: developpement
 
     defaults:
       run:
