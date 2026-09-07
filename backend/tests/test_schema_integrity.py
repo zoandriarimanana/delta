@@ -17,10 +17,10 @@ import pytest
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import configure_mappers
 
-import app.models  # noqa: F401  (peuple Base.metadata avec les 20 entités)
+import app.models  # noqa: F401  (peuple Base.metadata avec les 21 entités)
 from app.core.database import Base
 
-# Les 20 tables du MLD (`docs/mld.md`).
+# Les 21 tables du MLD (`docs/mld.md`).
 TABLES_ATTENDUES = frozenset(
     {
         "abonnement",
@@ -38,6 +38,7 @@ TABLES_ATTENDUES = frozenset(
         "ligne_commande",
         "livraison",
         "logement",
+        "paiement",
         "personnel",
         "produit",
         "reservation",
@@ -104,6 +105,7 @@ FK_RESTRICT_ATTENDUES = [
     ("formation", "id_domaine"),
     ("ligne_commande", "id_produit"),
     ("livraison", "id_commande"),
+    ("paiement", "id_commande"),
     ("produit", "id_categorie"),
     ("reservation", "id_client"),
     ("session_formation", "id_formation"),
@@ -126,8 +128,8 @@ def test_mappers_configurables() -> None:
 
 
 def test_nombre_de_tables() -> None:
-    """Les 20 tables du MLD sont bien enregistrées dans `Base.metadata`."""
-    assert len(Base.metadata.tables) == 20
+    """Les 21 tables du MLD sont bien enregistrées dans `Base.metadata`."""
+    assert len(Base.metadata.tables) == 21
 
 
 def test_liste_des_tables() -> None:

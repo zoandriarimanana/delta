@@ -591,6 +591,97 @@ AVIS(id_avis, type_avis, note, commentaire, date_avis, #id_client, #id_ligne, #i
   et les deux autres) : celles-ci expriment une propriété structurelle jamais
   réattribuée, pas une identité métier susceptible d'être reprise.
 
+## Paiement
+
+```
+PAIEMENT(id_paiement, montant, methode, fournisseur, statut, reference_externe, date_paiement, #id_commande)
+```
+
+Absente du dictionnaire de données d'origine et de tout sprint jusqu'ici : le
+Sprint 9 introduit la première entité entièrement nouvelle depuis le schéma
+initial, pas la correction d'une omission comme `AVIS` ou `COMMANDE.date_commande`.
+
+- **Plusieurs paiements sont possibles pour une même commande** :
+  `#id_commande` n'est **pas** une clé étrangère unique. Décision actée en
+  ouvrant le Sprint 9, pour couvrir nativement les tentatives échouées — une
+  carte refusée, un mobile money interrompu — sans qu'aucune ligne ne
+  représente le paiement effectif tant qu'elle n'est pas `Reussi`.
+
+  Une **exception** existe malgré tout : un index unique **partiel**
+  interdit plus d'un paiement `Reussi` actif par commande.
+
+  ```sql
+  CREATE UNIQUE INDEX uq_paiement_commande_reussi
+    ON paiement (id_commande)
+    WHERE statut = 'Reussi' AND supprime_le IS NULL;
+  ```
+
+  Même architecture à deux niveaux que le chevauchement `ABONNEMENT` (#97) et
+  les créneaux `SALLE`/`LOGEMENT` (#47) : le service pré-contrôle pour
+  produire un 409 lisible, mais c'est l'index qui tranche en cas de course
+  entre deux paiements simultanés — sans lui, deux requêtes concurrentes
+  pourraient toutes deux lire « aucun paiement réussi » avant que l'une
+  n'écrive.
+
+- `PAIEMENT.methode` ∈ {Carte, Mobile_money}. Domaine formel, `CHECK` en
+  base, même traitement que `COMMANDE.type_commande`.
+
+- `PAIEMENT.fournisseur` ∈ {Mvola, Orange_money, Airtel_money, Stripe}.
+  Domaine formel et non chaîne libre, même raisonnement que
+  `PERSONNEL.fonction` : une chaîne libre laisserait passer un identifiant de
+  fournisseur mal orthographié sans rien signaler. Liste **fermée**, décidée
+  en ouvrant le sprint ; un fournisseur non prévu impose une migration,
+  délibérément.
+
+- `PAIEMENT.statut` ∈ {En_attente, Reussi, Echoue}. Domaine formel, `CHECK`
+  en base, même traitement que `COMMANDE.statut`.
+
+  **Pas de valeur « Rembourse »**, délibérément : le remboursement est **hors
+  périmètre du Sprint 9**. Le roadmap ne porte que l'intégration passerelle
+  et le webhook de confirmation — rien sur le remboursement. L'ajouter
+  maintenant mélangerait sur une même ligne deux cycles de vie distincts (un
+  encaissement, puis un reversement), même écueil que celui déjà évité pour
+  `SESSION_FORMATION`, qui n'a pas de statut « Complete ».
+
+  **Note pour le sprint qui traitera le remboursement** : ne pas ajouter
+  `Rembourse` au domaine existant. Un remboursement inverse le sens de
+  l'argent ; le traiter comme un quatrième statut de la ligne de paiement
+  d'origine confondrait « ce paiement a eu lieu » (fait immuable) et « il a
+  depuis été reversé » (fait distinct, sur une opération distincte). La
+  question a été anticipée et délibérément reportée en construisant le
+  Sprint 9, pas oubliée — voir si une colonne `type_operation` distinguant
+  `Paiement`/`Remboursement` est la meilleure réponse, plutôt que de
+  réutiliser `statut`.
+
+- `PAIEMENT.reference_externe` est l'identifiant de transaction attribué par
+  le fournisseur — simulé pour ce sprint, `FournisseurPaiement` n'ayant pas
+  encore d'implémentation réelle. C'est la clé de corrélation du webhook : la
+  confirmation reçue ne porte que cette référence, jamais `id_paiement`, qui
+  n'a aucun sens hors de la plateforme.
+
+  `UNIQUE` en base et **globale**, non partielle, contrairement à
+  `identifiant_badge` : une référence de transaction n'est **jamais**
+  réattribuée par un fournisseur, y compris pour un paiement archivé — même
+  raisonnement que `LIVRAISON.#id_commande`, une propriété structurelle et
+  non une identité métier susceptible d'être reprise.
+
+- **Synchronisation `PAIEMENT → COMMANDE`, à sens unique**, même patron que
+  `LIVRAISON → COMMANDE` (Sprint 3) : un paiement passant à `Reussi` fait
+  progresser `COMMANDE.statut` (`En_attente` → `Confirmee`) dans la même
+  transaction. Rien sur `COMMANDE` ne modifie jamais `PAIEMENT` en retour. Un
+  paiement `Echoue` n'a **aucun** effet sur la commande — la marchandise
+  n'est pas encore engagée, retenter est une décision du client, pas un
+  changement d'état automatique.
+
+- **Déclenchement séparé du tunnel de commande**, décidé en ouvrant le
+  Sprint 9 : l'initiation d'un paiement n'est **pas** intégrée à
+  `POST /commandes`. Une commande naît dans son cycle de vie actuel, inchangé
+  ; le paiement s'initie ensuite, depuis un écran dédié sur une commande déjà
+  créée. Objectif explicite : isoler tout le risque de la simulation — et de
+  son remplacement futur par une vraie passerelle — du tunnel de commande
+  déjà stable et testé, plutôt que de le modifier pour un mécanisme encore
+  simulé.
+
 ## Contraintes d'exclusivité à implémenter en `CHECK` / trigger (pas de l'algèbre relationnelle pure)
 
 1. **CLIENT** : exactement une ligne fille (`CLIENT_PARTICULIER` xor `CLIENT_ENTREPRISE`).
@@ -658,10 +749,10 @@ règle d'identité, pas seulement une unicité de libellé.
 
 ## Suppression logique — `supprime_le`
 
-**Les 20 tables portent une colonne `supprime_le TIMESTAMPTZ NULL.`** `NULL`
+**Les 21 tables portent une colonne `supprime_le TIMESTAMPTZ NULL.`** `NULL`
 signifie « ligne active » ; une date signifie « ligne archivée ». C'est la seule
 colonne transverse du schéma, et elle n'apparaît pas dans les notations
-`TABLE(...)` ci-dessus pour ne pas les alourdir vingt fois.
+`TABLE(...)` ci-dessus pour ne pas les alourdir vingt-et-une fois.
 
 Aucune exception : `CLIENT_PARTICULIER` et `CLIENT_ENTREPRISE` la portent aussi,
 bien qu'elles n'aient pas de cycle de vie propre. Deux raisons — un index partiel
