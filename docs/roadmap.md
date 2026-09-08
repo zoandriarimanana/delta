@@ -636,10 +636,20 @@ propre PR (backend et frontend séparés pour 10.1, comme pour 9.1/9.2).
       422 et la ligne reste inchangée en base ; un administrateur peut la
       marquer `Honoree`, ce qui débloque ensuite avec succès le dépôt d'un
       avis de service sur cette réservation. Documenté dans `docs/mld.md`.
-- [ ] **10.3 — `RESERVATION` administration (frontend)** : vue
-      administration dans `features/reservation/` (le module ne porte
-      aujourd'hui que l'écriture client), les 4 types, actions « Marquer
-      honorée » / « Annuler » réservées à l'écran admin.
+- [x] **10.3 — `RESERVATION` administration (frontend)** : vue
+      administration dans `features/reservation/` (le module ne portait
+      jusqu'ici que l'écriture client), les 4 types, actions « Marquer
+      honorée » / « Annuler » réservées à l'écran admin, consommant 10.2.
+      — Une seule page, actions en ligne : pas de fiche séparée comme
+      `PERSONNEL`, les deux actions étant de simples transitions de statut.
+      — Le filtre type/statut est **côté client** : `GET
+      /reservations/administration` ne porte aucun paramètre de filtre
+      (contrairement à `GET /personnel`) — décision actée pour ne pas
+      rouvrir le backend d'une tâche frontend. Les boutons se masquent
+      selon le statut courant (`Annulee` : aucune action ; `Honoree` :
+      seule « Annuler » reste) pour ne pas laisser l'utilisateur découvrir
+      un refus 409 après coup. Vérifié de bout en bout via navigateur réel
+      contre le backend réel.
 - [ ] **10.4 — `LIVRAISON.relancer()` (backend)** : transition dédiée et
       **unique** `Echouee → En_attente`, `POST
       /livraisons/{id}/relance`, réservée `PersonnelAdministrateur`.

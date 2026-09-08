@@ -85,6 +85,7 @@ export default function MainLayout() {
           { vers: '/personnel/catalogue', libelle: 'Catalogue' },
           { vers: '/personnel/abonnements', libelle: 'Abonnements' },
           { vers: '/personnel/administration', libelle: 'Personnel' },
+          { vers: '/personnel/reservations', libelle: 'Réservations' },
         ]
       : []),
     { vers: '/panier', libelle: 'Panier', compteur: nombre },
