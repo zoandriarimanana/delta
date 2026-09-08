@@ -16,14 +16,15 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.cookies import NOM_COOKIE_SESSION
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, hacher_mot_de_passe
 from app.main import app
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
 from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.produit import Produit
-from tests.conftest import creer_engine_sqlite
+from tests.conftest import authentifier, creer_engine_sqlite
 
 CATEGORIES = f"{settings.API_V1_PREFIX}/categories-produit"
 PRODUITS = f"{settings.API_V1_PREFIX}/produits"
@@ -80,8 +81,7 @@ def entete_authentifie(db: Session) -> dict[str, str]:
     )
     db.add(admin)
     db.commit()
-    jeton = creer_jeton_acces(admin.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(admin.id_personnel, TypeSujet.PERSONNEL)
 
 
 @pytest.fixture
@@ -94,8 +94,7 @@ def entete_client(db: Session) -> dict[str, str]:
     )
     db.add(client)
     db.commit()
-    jeton = creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(client.id_client, TypeSujet.CLIENT)
 
 
 @pytest.fixture
@@ -111,8 +110,7 @@ def entete_agent(db: Session) -> dict[str, str]:
     )
     db.add(agent)
     db.commit()
-    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(agent.id_personnel, TypeSujet.PERSONNEL)
 
 
 @pytest.fixture
@@ -154,7 +152,7 @@ def test_ecriture_refusee_avec_un_jeton_invalide(client_http: TestClient) -> Non
     reponse = client_http.post(
         CATEGORIES,
         json={"libelle": "Boulangerie"},
-        headers={"Authorization": "Bearer pas.un.jeton"},
+        headers={"Cookie": f"{NOM_COOKIE_SESSION}=pas.un.jeton"},
     )
 
     assert reponse.status_code == 401

@@ -4,16 +4,22 @@ La dépendance est appelée directement plutôt que par une requête HTTP : aucu
 endpoint protégé n'existe encore, et monter une application factice ne
 prouverait rien de plus sur sa logique. La traduction en 401 est déjà couverte
 par `test_main.py`, qui vérifie le gestionnaire global d'`AuthentificationInvalide`.
+
+Depuis T0.10, l'identité se lit dans le cookie `delta_session` plutôt que dans
+l'en-tête `Authorization` : `_requete` construit une vraie `Request` Starlette
+portant ce cookie (ou aucun), sans passer par un client HTTP — cohérent avec
+la philosophie du fichier, qui teste la dépendance directement.
 """
 
 from collections.abc import Iterator
 from datetime import timedelta
 
 import pytest
-from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import create_engine, delete
 from sqlalchemy.orm import Session
+from starlette.requests import Request
 
+from app.core.cookies import NOM_COOKIE_SESSION
 from app.core.database import Base
 from app.core.deps import (
     get_current_client,
@@ -47,28 +53,36 @@ def client_inscrit(db: Session) -> Client:
     return client
 
 
-def _entete(jeton: str) -> HTTPAuthorizationCredentials:
-    return HTTPAuthorizationCredentials(scheme="Bearer", credentials=jeton)
+def _requete(jeton: str | None) -> Request:
+    """Requête Starlette minimale, portant `jeton` en cookie de session.
+
+    `Request.cookies` parse l'en-tête `cookie` bas niveau : construire ce
+    scope suffit, sans passer par un client HTTP.
+    """
+    en_tetes: list[tuple[bytes, bytes]] = []
+    if jeton is not None:
+        en_tetes.append((b"cookie", f"{NOM_COOKIE_SESSION}={jeton}".encode()))
+    return Request({"type": "http", "headers": en_tetes})
 
 
 def test_retourne_le_client_du_jeton(db: Session, client_inscrit: Client) -> None:
     jeton = creer_jeton_acces(client_inscrit.id_client, TypeSujet.CLIENT)
 
-    obtenu = get_current_client(_entete(jeton), db)
+    obtenu = get_current_client(_requete(jeton.jeton), db)
 
     assert obtenu.id_client == client_inscrit.id_client
     assert obtenu.email == "jean@example.mg"
 
 
 def test_refuse_sans_en_tete(db: Session) -> None:
-    """En-tête absent : 401, et surtout pas le 403 que HTTPBearer lèverait seul."""
+    """Cookie absent : 401."""
     with pytest.raises(AuthentificationInvalide):
-        get_current_client(None, db)
+        get_current_client(_requete(None), db)
 
 
 def test_refuse_un_jeton_illisible(db: Session) -> None:
     with pytest.raises(AuthentificationInvalide):
-        get_current_client(_entete("pas.un.jeton"), db)
+        get_current_client(_requete("pas.un.jeton"), db)
 
 
 def test_refuse_un_jeton_expire(db: Session, client_inscrit: Client) -> None:
@@ -77,7 +91,7 @@ def test_refuse_un_jeton_expire(db: Session, client_inscrit: Client) -> None:
     )
 
     with pytest.raises(AuthentificationInvalide):
-        get_current_client(_entete(jeton), db)
+        get_current_client(_requete(jeton.jeton), db)
 
 
 def test_refuse_un_jeton_signe_avec_une_autre_cle(
@@ -91,7 +105,7 @@ def test_refuse_un_jeton_signe_avec_une_autre_cle(
     monkeypatch.undo()
 
     with pytest.raises(AuthentificationInvalide):
-        get_current_client(_entete(jeton_etranger), db)
+        get_current_client(_requete(jeton_etranger.jeton), db)
 
 
 def test_refuse_un_compte_supprime(db: Session, client_inscrit: Client) -> None:
@@ -113,7 +127,7 @@ def test_refuse_un_compte_supprime(db: Session, client_inscrit: Client) -> None:
     db.expunge_all()
 
     with pytest.raises(AuthentificationInvalide):
-        get_current_client(_entete(jeton), db)
+        get_current_client(_requete(jeton.jeton), db)
 
 
 def _espionner_get_by_id(
@@ -147,7 +161,7 @@ def test_refuse_un_identifiant_jamais_attribue(
     jeton = creer_jeton_acces(99999, TypeSujet.CLIENT)
 
     with pytest.raises(AuthentificationInvalide):
-        get_current_client(_entete(jeton), db)
+        get_current_client(_requete(jeton.jeton), db)
 
     assert appels == [(99999, None)]
 
@@ -173,7 +187,7 @@ def test_identifiant_inconnu_et_compte_supprime_partagent_le_chemin(
     messages = set()
     for jeton in (jeton_supprime, jeton_inconnu):
         with pytest.raises(AuthentificationInvalide) as capture:
-            get_current_client(_entete(jeton), db)
+            get_current_client(_requete(jeton.jeton), db)
         messages.add(str(capture.value))
 
     assert appels == [(identifiant_reel, None), (99999, None)]
@@ -185,7 +199,7 @@ def test_refuse_un_sujet_non_numerique(db: Session) -> None:
     jeton = creer_jeton_acces("pas-un-identifiant", TypeSujet.CLIENT)
 
     with pytest.raises(AuthentificationInvalide):
-        get_current_client(_entete(jeton), db)
+        get_current_client(_requete(jeton.jeton), db)
 
 
 def test_message_de_refus_identique_dans_tous_les_cas(
@@ -201,7 +215,7 @@ def test_message_de_refus_identique_dans_tous_les_cas(
     )
     messages = set()
 
-    for cas in (None, _entete("illisible"), _entete(expire)):
+    for cas in (_requete(None), _requete("illisible"), _requete(expire.jeton)):
         with pytest.raises(AuthentificationInvalide) as capture:
             get_current_client(cas, db)
         messages.add(str(capture.value))
@@ -245,7 +259,7 @@ def administrateur(db: Session) -> Personnel:
 def test_retourne_le_salarie_du_jeton(db: Session, salarie: Personnel) -> None:
     jeton = creer_jeton_acces(salarie.id_personnel, TypeSujet.PERSONNEL)
 
-    assert get_current_personnel(_entete(jeton), db).id_personnel == (
+    assert get_current_personnel(_requete(jeton.jeton), db).id_personnel == (
         salarie.id_personnel
     )
 
@@ -262,7 +276,7 @@ def test_un_jeton_client_n_ouvre_pas_un_endpoint_personnel(
     jeton = creer_jeton_acces(client_inscrit.id_client, TypeSujet.CLIENT)
 
     with pytest.raises(AuthentificationInvalide):
-        get_current_personnel(_entete(jeton), db)
+        get_current_personnel(_requete(jeton.jeton), db)
 
 
 def test_un_jeton_personnel_n_ouvre_pas_un_endpoint_client(
@@ -272,7 +286,7 @@ def test_un_jeton_personnel_n_ouvre_pas_un_endpoint_client(
     jeton = creer_jeton_acces(salarie.id_personnel, TypeSujet.PERSONNEL)
 
     with pytest.raises(AuthentificationInvalide):
-        get_current_client(_entete(jeton), db)
+        get_current_client(_requete(jeton.jeton), db)
 
 
 def test_les_identifiants_se_recouvrent_bien(
@@ -302,7 +316,7 @@ def test_jeton_sans_revendication_de_type_refuse(
     )
 
     with pytest.raises(AuthentificationInvalide):
-        get_current_client(_entete(jeton), db)
+        get_current_client(_requete(jeton), db)
 
 
 def test_salarie_sans_mot_de_passe_refuse(db: Session) -> None:
@@ -322,7 +336,7 @@ def test_salarie_sans_mot_de_passe_refuse(db: Session) -> None:
     jeton = creer_jeton_acces(sans_compte.id_personnel, TypeSujet.PERSONNEL)
 
     with pytest.raises(AuthentificationInvalide):
-        get_current_personnel(_entete(jeton), db)
+        get_current_personnel(_requete(jeton.jeton), db)
 
 
 def test_salarie_archive_refuse(db: Session, salarie: Personnel) -> None:
@@ -334,7 +348,7 @@ def test_salarie_archive_refuse(db: Session, salarie: Personnel) -> None:
     db.commit()
 
     with pytest.raises(AuthentificationInvalide):
-        get_current_personnel(_entete(jeton), db)
+        get_current_personnel(_requete(jeton.jeton), db)
 
 
 # --- Autorisation --------------------------------------------------------------

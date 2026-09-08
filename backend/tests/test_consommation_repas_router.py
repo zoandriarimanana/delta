@@ -9,12 +9,13 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, hacher_mot_de_passe
 from app.main import app
 from app.models.abonnement import Abonnement, ModeSuivi, TypeFacturation
 from app.models.client import Client, TypeClient
 from app.models.client_entreprise import ClientEntreprise
 from app.models.personnel import FonctionPersonnel, Personnel
+from tests.conftest import authentifier
 
 CONSOMMATIONS = f"{settings.API_V1_PREFIX}/consommations"
 ADMIN_CONSOMMATIONS = f"{CONSOMMATIONS}/administration"
@@ -68,8 +69,7 @@ def _abonnement(db: Session, id_client_entreprise: int) -> Abonnement:
 
 
 def _entete_client(compte: Client) -> dict[str, str]:
-    jeton = creer_jeton_acces(compte.id_client, TypeSujet.CLIENT)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(compte.id_client, TypeSujet.CLIENT)
 
 
 @pytest.fixture
@@ -101,8 +101,7 @@ def entete_personnel(db: Session) -> dict[str, str]:
     )
     db.add(agent)
     db.commit()
-    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(agent.id_personnel, TypeSujet.PERSONNEL)
 
 
 @pytest.fixture
@@ -117,8 +116,7 @@ def entete_admin(db: Session) -> dict[str, str]:
     )
     db.add(admin)
     db.commit()
-    jeton = creer_jeton_acces(admin.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(admin.id_personnel, TypeSujet.PERSONNEL)
 
 
 def test_la_route_administration_n_est_pas_captee_par_la_route_parametree(

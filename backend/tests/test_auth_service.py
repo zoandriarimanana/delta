@@ -142,7 +142,7 @@ def test_jeton_emis_identifie_le_client(service: AuthService) -> None:
     client = service.inscrire_particulier(_inscription())
 
     charge_utile = decoder_jeton_acces(
-        creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
+        creer_jeton_acces(client.id_client, TypeSujet.CLIENT).jeton
     )
 
     assert charge_utile is not None

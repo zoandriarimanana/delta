@@ -14,12 +14,13 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, hacher_mot_de_passe
 from app.main import app
 from app.models.abonnement import Abonnement, ModeSuivi, TypeFacturation
 from app.models.client import Client, TypeClient
 from app.models.client_entreprise import ClientEntreprise
 from app.models.personnel import FonctionPersonnel, Personnel
+from tests.conftest import authentifier
 
 BENEFICIAIRES = f"{settings.API_V1_PREFIX}/beneficiaires"
 ADMIN_BENEFICIAIRES = f"{BENEFICIAIRES}/administration"
@@ -72,11 +73,6 @@ def _abonnement(db: Session, id_client_entreprise: int) -> Abonnement:
     return abonnement
 
 
-def _entete(compte: Client) -> dict[str, str]:
-    jeton = creer_jeton_acces(compte.id_client, TypeSujet.CLIENT)
-    return {"Authorization": f"Bearer {jeton}"}
-
-
 @pytest.fixture
 def entreprise(db: Session) -> Client:
     return _entreprise(db)
@@ -89,7 +85,7 @@ def abonnement(db: Session, entreprise: Client) -> Abonnement:
 
 @pytest.fixture
 def entete_entreprise(entreprise: Client) -> dict[str, str]:
-    return _entete(entreprise)
+    return authentifier(entreprise.id_client, TypeSujet.CLIENT)
 
 
 @pytest.fixture
@@ -104,8 +100,7 @@ def entete_admin(db: Session) -> dict[str, str]:
     )
     db.add(admin)
     db.commit()
-    jeton = creer_jeton_acces(admin.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(admin.id_personnel, TypeSujet.PERSONNEL)
 
 
 def _charge_utile(id_abonnement: int, badge: str = "B001") -> dict:
@@ -199,7 +194,7 @@ def test_administration_sans_filtre_voit_tous_les_abonnements(
     client_http.post(
         BENEFICIAIRES,
         json=_charge_utile(abonnement_autre.id_abonnement, "B002"),
-        headers=_entete(autre),
+        headers=authentifier(autre.id_client, TypeSujet.CLIENT),
     )
 
     reponse = client_http.get(ADMIN_BENEFICIAIRES, headers=entete_admin)
@@ -225,7 +220,7 @@ def test_administration_avec_filtre_ne_voit_que_l_abonnement_designe(
     client_http.post(
         BENEFICIAIRES,
         json=_charge_utile(abonnement_autre.id_abonnement, "B002"),
-        headers=_entete(autre),
+        headers=authentifier(autre.id_client, TypeSujet.CLIENT),
     )
 
     reponse = client_http.get(

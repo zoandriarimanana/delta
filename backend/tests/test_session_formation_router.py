@@ -20,14 +20,14 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, hacher_mot_de_passe
 from app.main import app
 from app.models.client import Client, TypeClient
 from app.models.domaine_formation import DomaineFormation
 from app.models.formation import Formation
 from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.session_formation import SessionFormation
-from tests.conftest import creer_engine_sqlite
+from tests.conftest import authentifier, creer_engine_sqlite
 
 DOMAINES = f"{settings.API_V1_PREFIX}/domaines-formation"
 FORMATIONS = f"{settings.API_V1_PREFIX}/formations"
@@ -77,8 +77,7 @@ def entete_admin(db: Session) -> dict[str, str]:
     )
     db.add(admin)
     db.commit()
-    jeton = creer_jeton_acces(admin.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(admin.id_personnel, TypeSujet.PERSONNEL)
 
 
 @pytest.fixture
@@ -90,8 +89,7 @@ def entete_client(db: Session) -> dict[str, str]:
     )
     db.add(client)
     db.commit()
-    jeton = creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(client.id_client, TypeSujet.CLIENT)
 
 
 @pytest.fixture

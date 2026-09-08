@@ -17,8 +17,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.cookies import NOM_COOKIE_SESSION
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, hacher_mot_de_passe
 from app.main import app
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
@@ -26,6 +27,7 @@ from app.models.commande import Commande, StatutCommande
 from app.models.paiement import Paiement, StatutPaiement
 from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.produit import Produit
+from tests.conftest import authentifier
 
 pytestmark = pytest.mark.postgres
 
@@ -62,8 +64,7 @@ def _creer_client(db: Session) -> Client:
 
 
 def _entete(compte: Client) -> dict[str, str]:
-    jeton = creer_jeton_acces(compte.id_client, TypeSujet.CLIENT)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(compte.id_client, TypeSujet.CLIENT)
 
 
 @pytest.fixture
@@ -344,7 +345,7 @@ def test_un_jeton_expire_ne_bascule_pas_en_mode_invite(
     reponse = client_http.post(
         COMMANDES,
         json=_corps(eclair.id_produit),
-        headers={"Authorization": "Bearer jeton.invalide"},
+        headers={"Cookie": f"{NOM_COOKIE_SESSION}=jeton.invalide"},
     )
 
     assert reponse.status_code == 401
@@ -513,8 +514,7 @@ def _salarie_connecte(db: Session, avec_mot_de_passe: bool = True) -> dict[str, 
     )
     db.add(agent)
     db.commit()
-    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(agent.id_personnel, TypeSujet.PERSONNEL)
 
 
 def _corps_personnel(id_produit: int, **extra: object) -> dict:
@@ -780,8 +780,7 @@ def _entete_admin(db: Session) -> dict[str, str]:
     )
     db.add(admin)
     db.commit()
-    jeton = creer_jeton_acces(admin.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(admin.id_personnel, TypeSujet.PERSONNEL)
 
 
 def _entete_agent(db: Session) -> dict[str, str]:
@@ -795,8 +794,7 @@ def _entete_agent(db: Session) -> dict[str, str]:
     )
     db.add(agent)
     db.commit()
-    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(agent.id_personnel, TypeSujet.PERSONNEL)
 
 
 def test_administration_liste_les_commandes_de_tous_les_clients(

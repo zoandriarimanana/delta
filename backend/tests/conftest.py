@@ -24,6 +24,26 @@ consommé une partie de la limite pour la même adresse IP (celle que
 `TestClient` utilise par défaut, partagée par tous les tests). L'autofixture
 ci-dessous repart de zéro avant chaque test, qu'il touche ou non ces
 endpoints.
+
+**Quatrième outil, `authentifier()`** : depuis T0.10, l'identité ne se lit
+plus dans un en-tête `Authorization` mais dans le cookie `delta_session`, et
+toute requête mutante qui le porte exige en plus un en-tête `X-CSRF-Token`
+(`core/csrf.py`). Un test qui fabrique lui-même un jeton (sans passer par
+`POST /auth/connexion`) doit donc produire ces en-têtes — cette fonction
+centralise le geste, pour que les dizaines de fichiers de tests qui
+authentifient ainsi ne divergent pas dans la façon de le faire.
+
+Elle pose `Cookie` comme un **en-tête de requête ordinaire**, jamais sur
+`client_http.cookies` (le "cookie jar" partagé par toutes les requêtes du
+`TestClient`, comme un vrai navigateur le ferait). Une première version
+posait la session sur ce jar partagé — elle s'est révélée fausse dès qu'un
+test authentifie deux identités différentes dans le même corps (comparer
+« l'entreprise A » et « l'entreprise B », par exemple) : la seconde
+authentification écrasait la première sur le jar, et une requête ultérieure
+censée rejouer la première s'exécutait silencieusement sous la seconde
+identité. Un en-tête `Cookie` par requête rend chaque appel indépendant des
+autres — exactement le modèle de l'ancien en-tête `Authorization`, un jeton
+par requête plutôt qu'une session partagée entre elles.
 """
 
 from collections.abc import Iterator
@@ -34,14 +54,29 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from app.core.cookies import NOM_COOKIE_CSRF, NOM_COOKIE_SESSION
 from app.core.database import Base
 from app.core.database import engine as engine_application
 from app.core.rate_limit import limiter
+from app.core.security import TypeSujet, creer_jeton_acces
 
 
 @pytest.fixture(autouse=True)
 def _reinitialiser_le_limiteur() -> None:
     limiter.reset()
+
+
+def authentifier(identifiant: int, type_sujet: TypeSujet) -> dict[str, str]:
+    """Retourne les en-têtes qui authentifient une requête pour ce sujet.
+
+    `Cookie` porte les deux cookies de session à la main (jamais posés sur le
+    `TestClient`, voir ci-dessus) ; `X-CSRF-Token` satisfait le middleware
+    anti-CSRF sur les méthodes mutantes. L'inclure aussi sur un `GET` est
+    sans effet : le middleware ne regarde que les méthodes mutantes.
+    """
+    jeton = creer_jeton_acces(identifiant, type_sujet)
+    cookie = f"{NOM_COOKIE_SESSION}={jeton.jeton}; {NOM_COOKIE_CSRF}={jeton.csrf}"
+    return {"Cookie": cookie, "X-CSRF-Token": jeton.csrf}
 
 
 def creer_engine_sqlite(*tables: object) -> Engine:

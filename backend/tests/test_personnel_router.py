@@ -18,17 +18,13 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.cookies import NOM_COOKIE_CSRF, NOM_COOKIE_SESSION
 from app.core.database import get_db
-from app.core.security import (
-    TypeSujet,
-    creer_jeton_acces,
-    hacher_mot_de_passe,
-    verifier_mot_de_passe,
-)
+from app.core.security import TypeSujet, hacher_mot_de_passe, verifier_mot_de_passe
 from app.main import app
 from app.models.client import Client, TypeClient
 from app.models.personnel import FonctionPersonnel, Personnel
-from tests.conftest import creer_engine_sqlite
+from tests.conftest import authentifier, creer_engine_sqlite
 
 PERSONNEL = f"{settings.API_V1_PREFIX}/personnel"
 
@@ -74,8 +70,7 @@ def _jeton_personnel(
     )
     db.add(agent)
     db.commit()
-    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(agent.id_personnel, TypeSujet.PERSONNEL)
 
 
 @pytest.fixture
@@ -100,8 +95,7 @@ def entete_client(db: Session) -> dict[str, str]:
     )
     db.add(client)
     db.commit()
-    jeton = creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(client.id_client, TypeSujet.CLIENT)
 
 
 def _creer(client_http: TestClient, entete: dict[str, str], **extra: object) -> dict:
@@ -139,7 +133,7 @@ def test_tout_endpoint_exige_un_jeton(
 
 def test_jeton_invalide_refuse(client_http: TestClient) -> None:
     reponse = client_http.get(
-        PERSONNEL, headers={"Authorization": "Bearer pas.un.jeton"}
+        PERSONNEL, headers={"Cookie": f"{NOM_COOKIE_SESSION}=pas.un.jeton"}
     )
 
     assert reponse.status_code == 401
@@ -625,8 +619,11 @@ def test_connexion_personnel_retourne_un_jeton_utilisable(
     )
 
     assert reponse.status_code == 200
-    jeton = reponse.json()["access_token"]
-    entete = {"Authorization": f"Bearer {jeton}"}
+    assert reponse.json() == {"type": "personnel"}
+    # `client_http` gère les `Set-Cookie` comme un vrai navigateur : le cookie
+    # de session est déjà posé. Seul le jeton anti-CSRF doit être relu et
+    # renvoyé en en-tête — exactement le geste qu'un vrai frontend ferait.
+    entete = {"X-CSRF-Token": client_http.cookies[NOM_COOKIE_CSRF]}
     assert client_http.post(PERSONNEL, json=VALIDE, headers=entete).status_code == 201
 
 
