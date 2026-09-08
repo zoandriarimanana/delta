@@ -46,6 +46,7 @@ const COMMANDE_INVITEE: Commande = {
       prix_unitaire_applique: '3.50',
     },
   ],
+  rembourse_le: null,
 };
 
 const COMMANDE_CLIENT: Commande = {

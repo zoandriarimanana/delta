@@ -15,6 +15,7 @@ import type {
 } from './commande.types';
 
 const CHEMIN = '/commandes';
+const CHEMIN_ADMINISTRATION = '/commandes/administration';
 
 /**
  * Crée une commande au nom du client connecté.
@@ -66,5 +67,55 @@ export async function creerCommandePersonnel(
   donnees: CommandePersonnelEnvoyee
 ): Promise<Commande> {
   const reponse = await axiosClient.post<Commande>('/commandes/personnel', donnees);
+  return reponse.data;
+}
+
+/**
+ * Toutes les commandes, tous clients confondus. Réservé à l'administration.
+ *
+ * Ne porte aucun paramètre de filtre côté serveur — `GET
+ * /commandes/administration` n'en expose pas, même constat que pour
+ * RESERVATION en 10.2 (cf. `reservation.api.ts`). Le filtre par statut de
+ * `AdministrationCommandesPage` s'applique donc côté client.
+ */
+export async function recupererCommandesAdministration(): Promise<Commande[]> {
+  const reponse = await axiosClient.get<Commande[]>(CHEMIN_ADMINISTRATION);
+  return reponse.data;
+}
+
+/** Fiche d'une commande, administration. 404 si inconnue ou archivée. */
+export async function obtenirCommandeAdministration(
+  idCommande: number
+): Promise<Commande> {
+  const reponse = await axiosClient.get<Commande>(
+    `${CHEMIN_ADMINISTRATION}/${idCommande}`
+  );
+  return reponse.data;
+}
+
+/**
+ * Annule une commande — administration. Aucune propagation vers `LIVRAISON`
+ * (cf. `docs/architecture.md`, synchronisation à sens unique).
+ */
+export async function annulerCommandeAdministration(
+  idCommande: number
+): Promise<Commande> {
+  const reponse = await axiosClient.put<Commande>(
+    `${CHEMIN_ADMINISTRATION}/${idCommande}/statut`,
+    { statut: 'Annulee' }
+  );
+  return reponse.data;
+}
+
+/**
+ * Marque une commande remboursée — geste manuel simplifié, ne touche à
+ * aucune ligne de `PAIEMENT` (cf. `docs/mld.md`). Idempotent côté serveur.
+ */
+export async function rembourserCommandeAdministration(
+  idCommande: number
+): Promise<Commande> {
+  const reponse = await axiosClient.post<Commande>(
+    `${CHEMIN_ADMINISTRATION}/${idCommande}/remboursement`
+  );
   return reponse.data;
 }

@@ -35,6 +35,13 @@ export interface Commande {
   nom_invite: string | null;
   contact_invite: string | null;
   lignes: LigneCommandeLue[];
+  /**
+   * Horodatage d'un remboursement (Sprint 10.6) — `null` tant qu'aucun n'a
+   * été posé. Miroir direct de `supprime_le` côté serveur, mais sans lien
+   * avec `PAIEMENT` : c'est un geste administratif manuel, pas la trace
+   * d'un reversement réel (cf. `docs/mld.md`).
+   */
+  rembourse_le: string | null;
 }
 
 /** Ligne envoyée à la création : le serveur fixe le prix, pas le client. */

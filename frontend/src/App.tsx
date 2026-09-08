@@ -12,6 +12,8 @@ import AdministrationAbonnementsPage from '@/features/abonnement/pages/Administr
 import ConnexionPage from '@/features/auth/pages/ConnexionPage';
 import ConnexionPersonnelPage from '@/features/auth/pages/ConnexionPersonnelPage';
 import InscriptionPage from '@/features/auth/pages/InscriptionPage';
+import AdministrationCommandesPage from '@/features/commande/pages/AdministrationCommandesPage';
+import CommandeDetailAdministrationPage from '@/features/commande/pages/CommandeDetailAdministrationPage';
 import CommandeInviteePage from '@/features/commande/pages/CommandeInviteePage';
 import HistoriqueCommandesPage from '@/features/commande/pages/HistoriqueCommandesPage';
 import PanierPage from '@/features/commande/pages/PanierPage';
@@ -136,6 +138,24 @@ export default function App() {
             element={
               <RoutePersonnel>
                 <AdministrationReservationsPage />
+              </RoutePersonnel>
+            }
+          />
+          {/* Distincte de `personnel/commandes` (prise de commande, Sprint 6) :
+              chemins de longueurs différentes, aucune collision possible. */}
+          <Route
+            path="personnel/commandes/administration"
+            element={
+              <RoutePersonnel>
+                <AdministrationCommandesPage />
+              </RoutePersonnel>
+            }
+          />
+          <Route
+            path="personnel/commandes/administration/:idCommande"
+            element={
+              <RoutePersonnel>
+                <CommandeDetailAdministrationPage />
               </RoutePersonnel>
             }
           />
