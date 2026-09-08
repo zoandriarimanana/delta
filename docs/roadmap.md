@@ -615,16 +615,27 @@ propre PR (backend et frontend séparés pour 10.1, comme pour 9.1/9.2).
       actée avant l'implémentation, pas une dette : aucun endpoint
       `/personnel/administration` n'existe pour lister les archivés, et
       n'en a pas été demandé.
-- [ ] **10.2 — `RESERVATION` administration (backend)** : `GET
+- [x] **10.2 — `RESERVATION` administration (backend)** : `GET
       /reservations/administration` et `/administration/{id}` (les 4 types),
       même ordre de déclaration que `abonnement_router.py`
       (`/administration` avant la route paramétrée). **Corrige un gap
       d'intégrité pré-existant, pas une extension** : `PUT
-      /reservations/{id}/statut` (client) n'acceptera plus que `Annulee` —
-      aujourd'hui rien n'empêche un client de marquer sa propre réservation
-      `Honoree`, ce qui débloque un avis de service sans prestation réelle
+      /reservations/{id}/statut` (client) n'accepte plus que `Annulee` —
+      rien n'empêchait auparavant un client de marquer sa propre réservation
+      `Honoree`, ce qui débloquait un avis de service sans prestation réelle
       (cf. `avis_service.py`). `Honoree` devient une transition
-      administrative dédiée, réservée à `PersonnelAdministrateur`.
+      administrative dédiée, `PUT
+      /reservations/administration/{id}/statut`, réservée à
+      `PersonnelAdministrateur`.
+      — La garantie est portée par le **schema**, pas par une vérification
+      manuelle dans le routeur : `ReservationAnnulation.statut` est typé
+      `Literal[StatutReservation.ANNULEE]`, Pydantic rejetant en 422 toute
+      autre valeur avant même d'atteindre le service — même philosophie que
+      les champs délibérément absents de `PersonnelCreate`. Vérifié
+      empiriquement de bout en bout : un client qui tente `Honoree` reçoit
+      422 et la ligne reste inchangée en base ; un administrateur peut la
+      marquer `Honoree`, ce qui débloque ensuite avec succès le dépôt d'un
+      avis de service sur cette réservation. Documenté dans `docs/mld.md`.
 - [ ] **10.3 — `RESERVATION` administration (frontend)** : vue
       administration dans `features/reservation/` (le module ne porte
       aujourd'hui que l'écriture client), les 4 types, actions « Marquer

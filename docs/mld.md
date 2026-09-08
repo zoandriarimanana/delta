@@ -400,6 +400,22 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   stagiaire venu a consommé la sienne ; la lui rendre ferait réapparaître une
   place déjà utilisée.
 
+  **`Honoree` ne peut être posé que par un administrateur**, jamais par le
+  client propriétaire — corrigé au Sprint 10.2. Le domaine formel garantit
+  qu'une valeur hors des quatre n'est pas acceptée, mais ne dit rien de *qui*
+  a le droit de choisir laquelle : jusqu'ici, l'unique point d'écriture
+  (`PUT /reservations/{id}/statut`, réservé au client) acceptait les quatre
+  valeurs sans distinction. Un client pouvait donc se déclarer lui-même
+  « servi » sans prestation réelle, ce qui débloquait un avis de service
+  (`AVIS.type_avis = Service` exige `RESERVATION.statut = Honoree`, voir
+  `avis_service.py`) sur une réservation jamais honorée. Ce n'était pas une
+  omission de transcription comme l'unicité de `CLIENT.email` : le MLD
+  d'origine ne portait aucune notion de droits, la faille est apparue en
+  construisant l'usage réel du domaine. Le client ne peut désormais plus
+  demander que `Annulee` sur cet endpoint ; `Honoree` vit sur
+  `PUT /reservations/administration/{id}/statut`, réservé
+  `PersonnelAdministrateur`.
+
 - **Le compteur `SESSION_FORMATION.places_restantes` est tenu par
   `ReservationService`**, et par lui seul. Une réservation le décrémente à la
   création, par un `UPDATE` conditionnel atomique — c'est PostgreSQL qui arbitre

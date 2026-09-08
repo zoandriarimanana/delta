@@ -94,6 +94,11 @@ class ReservationService:
         """Historique des réservations d'un client, les plus récentes d'abord."""
         return self.reservations.lister_par_client(client.id_client)
 
+    def lister(self) -> Sequence[Reservation]:
+        """Toutes les réservations actives, les 4 types confondus. Réservé à
+        l'administrateur — même patron que `AbonnementService.lister`."""
+        return self.reservations.list()
+
     # --- Création -------------------------------------------------------------
 
     def creer(self, donnees: ReservationCreate, client: Client) -> Reservation:

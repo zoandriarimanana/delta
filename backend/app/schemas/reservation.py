@@ -1,7 +1,7 @@
 """Schemas Pydantic de l'entité RESERVATION."""
 
 from datetime import datetime
-from typing import ClassVar
+from typing import ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -132,6 +132,32 @@ class ReservationRead(BaseModel):
 
 
 class ReservationChangementStatut(BaseModel):
-    """Changement de statut d'une réservation."""
+    """Changement de statut d'une réservation — **réservé à l'administration**.
+
+    Porte le domaine complet, `Honoree` compris : c'est l'administrateur qui
+    constate qu'une prestation a eu lieu, pas le client qui la reçoit. Voir
+    `ReservationAnnulation` pour le seul chemin ouvert au client.
+    """
 
     statut: StatutReservation
+
+
+class ReservationAnnulation(BaseModel):
+    """Changement de statut d'une réservation, **côté client**.
+
+    `statut` n'accepte que `Annulee` : c'est la **seule** transition qu'un
+    client peut demander sur sa propre réservation. Rien n'empêchait
+    auparavant un client d'envoyer `Honoree` sur ce même endpoint — un
+    client pouvait ainsi se déclarer lui-même « servi » sans prestation
+    réelle, ce qui débloquait un avis de service (cf. `avis_service.py`,
+    qui exige `Honoree`). `Literal` fait refuser toute autre valeur en 422
+    par Pydantic, avant même d'atteindre le service : la garantie est
+    structurelle, pas une vérification qu'on pourrait oublier d'appeler.
+
+    Constaté et corrigé en construisant le Sprint 10.2 — ce n'était pas une
+    omission de transcription comme l'unicité de `CLIENT.email`, mais un
+    trou d'intégrité resté sans conséquence tant qu'aucun frontend
+    n'appelait cet endpoint.
+    """
+
+    statut: Literal[StatutReservation.ANNULEE] = StatutReservation.ANNULEE
