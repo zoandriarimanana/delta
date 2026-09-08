@@ -32,8 +32,11 @@ class Client(SoftDeleteMixin, Base):
 
     Les données propres à chaque sous-type vivent dans `client_particulier` et
     `client_entreprise`, en 1-1 explicite (leur PK est aussi la FK vers cette
-    table). L'invariant « exactement une ligne fille » n'est PAS garanti en base
-    à ce stade : voir la dette technique T0.7 dans `docs/roadmap.md`.
+    table). L'invariant « exactement une ligne fille » est garanti en base par
+    un trigger différé (`verifier_exclusivite_client`, migration `4cfa278b3371`,
+    Sprint 11) — la transaction unique CLIENT + ligne fille dans `AuthService`
+    reste la garantie de première ligne, le trigger n'est qu'un filet contre
+    tout écrivain hors API.
     """
 
     __tablename__ = "client"
