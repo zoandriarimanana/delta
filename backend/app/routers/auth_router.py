@@ -7,10 +7,11 @@ gestionnaires globaux de `app/main.py`.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.rate_limit import LIMITE_CONNEXION, limiter
 from app.core.security import TypeSujet, creer_jeton_acces
 from app.schemas.auth import (
     Connexion,
@@ -66,11 +67,18 @@ def inscrire_entreprise(donnees: InscriptionEntreprise, db: SessionBase) -> Clie
 
 
 @router.post("/connexion", response_model=Token, summary="Obtenir un jeton d'accès")
-def se_connecter(identifiants: Connexion, db: SessionBase) -> Token:
+@limiter.limit(LIMITE_CONNEXION)
+def se_connecter(request: Request, identifiants: Connexion, db: SessionBase) -> Token:
     """Vérifie les identifiants et retourne un JWT.
 
     Répond 401 sans préciser si c'est l'e-mail ou le mot de passe qui est en
-    cause (`AuthentificationInvalide`, traduite globalement).
+    cause (`AuthentificationInvalide`, traduite globalement). Au-delà de
+    `LIMITE_CONNEXION` tentatives par adresse IP, répond 429 (dette technique
+    T0.6) — le hachage bcrypt ralentit une attaque par force brute sans
+    l'empêcher, et rien ne freinait jusqu'ici le bourrage d'identifiants.
+
+    `request: Request` est exigé par `@limiter.limit` pour identifier
+    l'appelant, pas par la logique métier de cet endpoint.
     """
     client = AuthService(db).authentifier(identifiants)
     return Token(access_token=creer_jeton_acces(client.id_client, TypeSujet.CLIENT))

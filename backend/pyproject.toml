@@ -25,6 +25,12 @@ dependencies = [
     # d'abstraction supplémentaire.
     "bcrypt>=4.1",
     "python-multipart>=0.0.9",
+    # Rate limiting sur /auth/connexion et /auth/personnel/connexion (dette
+    # technique T0.6). Le backend de stockage se choisit par URI
+    # (RATE_LIMIT_STORAGE_URI) sans changement de code applicatif : mémoire
+    # aujourd'hui, redis:// le jour où un déploiement multi-workers l'exige
+    # (voir docs/roadmap.md, Dette technique).
+    "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]

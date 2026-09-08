@@ -38,6 +38,16 @@ class Settings(BaseSettings):
     # --- CORS (origines autorisées, séparées par des virgules) ---
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173"
 
+    # --- Rate limiting (dette technique T0.6) ---
+    # URI du backend de stockage `slowapi`/`limits`. `memory://` par défaut :
+    # correct pour un déploiement mono-processus/mono-instance, seul cas
+    # existant aujourd'hui (aucun plan de déploiement multi-workers dans ce
+    # projet). Devient incorrect (limite multipliée par le nombre de workers)
+    # dès qu'un déploiement en scale plusieurs — passer alors à
+    # `redis://hôte:port`, un simple changement de configuration, le code
+    # applicatif n'a pas à changer. Voir docs/roadmap.md, Dette technique.
+    RATE_LIMIT_STORAGE_URI: str = "memory://"
+
     # --- Environnement d'exécution ---
     # Défaut fermé (`production`) : un déploiement qui omet cette variable
     # reste protégé plutôt que de se retrouver exposé par omission. Seul

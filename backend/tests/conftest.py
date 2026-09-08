@@ -13,6 +13,17 @@ Deux pièges de SQLite sont traités ici plutôt que dans chaque fichier :
 
 Ce module fournit en outre `session_postgres`, pour les tests qui **ne peuvent
 pas** tourner sur SQLite — voir sa docstring.
+
+**Troisième piège, sans rapport avec SQLite** : `app.core.rate_limit.limiter`
+est un singleton unique pour tout le process pytest, comme pour l'application
+réelle. Sans réinitialisation entre les tests, les appels à `/auth/connexion`
+et `/auth/personnel/connexion` d'un test s'additionneraient à ceux du
+précédent — un test sans aucun rapport avec le rate limiting pourrait recevoir
+429 au lieu du code attendu, simplement parce qu'un test antérieur a déjà
+consommé une partie de la limite pour la même adresse IP (celle que
+`TestClient` utilise par défaut, partagée par tous les tests). L'autofixture
+ci-dessous repart de zéro avant chaque test, qu'il touche ou non ces
+endpoints.
 """
 
 from collections.abc import Iterator
@@ -25,6 +36,12 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
 from app.core.database import engine as engine_application
+from app.core.rate_limit import limiter
+
+
+@pytest.fixture(autouse=True)
+def _reinitialiser_le_limiteur() -> None:
+    limiter.reset()
 
 
 def creer_engine_sqlite(*tables: object) -> Engine:
