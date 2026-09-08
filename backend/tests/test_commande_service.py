@@ -19,7 +19,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import text, update
+from sqlalchemy import select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -32,6 +32,7 @@ from app.core.security import hacher_mot_de_passe
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
 from app.models.commande import Commande, StatutCommande, TypeCommande
+from app.models.paiement import Paiement
 from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.produit import Produit
 from app.models.reservation import Reservation, StatutReservation, TypeReservation
@@ -1245,3 +1246,143 @@ def test_la_validation_de_reservation_n_a_qu_une_implementation() -> None:
     assert "STATUTS_RATTACHABLES" not in hors_valideur
     # Les deux appelants passent bien par la méthode partagée.
     assert hors_valideur.count("_reservation_rattachable(") == 2
+
+
+# --- Administration (10.5) -----------------------------------------------------
+
+
+def test_lister_retourne_les_commandes_de_tous_les_clients(
+    service: CommandeService, db: Session, eclair: Produit
+) -> None:
+    premier = Client(
+        type_client=TypeClient.PARTICULIER,
+        email=_email("premier"),
+        mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+    )
+    autre = Client(
+        type_client=TypeClient.PARTICULIER,
+        email=_email("autre"),
+        mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+    )
+    db.add_all([premier, autre])
+    db.commit()
+    service.creer(_commande(eclair.id_produit), premier)
+    service.creer(_commande(eclair.id_produit), autre)
+
+    commandes = service.lister()
+
+    ids_clients = {c.id_client for c in commandes}
+    assert {premier.id_client, autre.id_client} <= ids_clients
+
+
+def test_annuler_passe_le_statut_a_annulee(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    commande = service.creer(_commande(eclair.id_produit), client)
+
+    annulee = service.annuler(commande.id_commande)
+
+    assert annulee.statut is StatutCommande.ANNULEE
+
+
+def test_annuler_ne_propage_pas_vers_la_livraison(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """La synchronisation LIVRAISON → COMMANDE reste à sens unique :
+    annuler la commande ne doit toucher à aucune livraison existante."""
+    donnees = CommandeCreate(
+        type_commande=TypeCommande.EN_LIGNE,
+        adresse_livraison="Lot II M 45 Antananarivo",
+        lignes=[LigneCommandeCreate(id_produit=eclair.id_produit, quantite=1)],
+    )
+    commande = service.creer(donnees, client)
+    livraison_avant = service.livraisons.obtenir_par_commande(commande.id_commande)
+
+    service.annuler(commande.id_commande)
+
+    livraison_apres = service.livraisons.obtenir_par_commande(commande.id_commande)
+    assert livraison_apres.statut == livraison_avant.statut
+
+
+def test_annuler_refuse_une_commande_deja_annulee(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    commande = service.creer(_commande(eclair.id_produit), client)
+    service.annuler(commande.id_commande)
+
+    with pytest.raises(ConflitMetier):
+        service.annuler(commande.id_commande)
+
+
+def test_annuler_refuse_une_commande_deja_au_statut_terminal(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """`Livree` pour une commande `En_ligne` — la marchandise a été remise,
+    annuler n'a plus de sens."""
+    commande = service.creer(_commande(eclair.id_produit), client)
+    commande.statut = StatutCommande.LIVREE
+    db.commit()
+
+    with pytest.raises(ConflitMetier):
+        service.annuler(commande.id_commande)
+
+
+def test_annuler_une_inconnue_leve_introuvable(service: CommandeService) -> None:
+    with pytest.raises(RessourceIntrouvable):
+        service.annuler(999999)
+
+
+def test_rembourser_pose_l_horodatage(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    commande = service.creer(_commande(eclair.id_produit), client)
+    assert commande.rembourse_le is None
+
+    remboursee = service.rembourser(commande.id_commande)
+
+    assert remboursee.rembourse_le is not None
+
+
+def test_rembourser_est_idempotent_sans_erreur(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    """Rejouer l'action avance l'horodatage plutôt que d'échouer — même
+    traitement que l'archivage (`SoftDeleteMixin.delete`)."""
+    commande = service.creer(_commande(eclair.id_produit), client)
+    premiere = service.rembourser(commande.id_commande)
+
+    seconde = service.rembourser(commande.id_commande)
+
+    assert seconde.rembourse_le is not None
+    assert seconde.rembourse_le >= premiere.rembourse_le
+
+
+def test_rembourser_n_exige_aucun_statut_prealable(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    """Un remboursement peut suivre n'importe quelle décision humaine — pas
+    seulement une annulation."""
+    commande = service.creer(_commande(eclair.id_produit), client)
+
+    remboursee = service.rembourser(commande.id_commande)
+
+    assert remboursee.statut is StatutCommande.EN_ATTENTE
+    assert remboursee.rembourse_le is not None
+
+
+def test_rembourser_ne_touche_a_aucun_paiement(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """Geste manuel simplifié : aucune ligne de PAIEMENT n'est créée ni
+    modifiée par ce marqueur."""
+    commande = service.creer(_commande(eclair.id_produit), client)
+
+    service.rembourser(commande.id_commande)
+
+    requete = select(Paiement).where(Paiement.id_commande == commande.id_commande)
+    assert db.scalars(requete).all() == []
+
+
+def test_rembourser_une_inconnue_leve_introuvable(service: CommandeService) -> None:
+    with pytest.raises(RessourceIntrouvable):
+        service.rembourser(999999)

@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -98,6 +99,22 @@ class CommandeRead(BaseModel):
     #: Réservation dont la commande découle, `None` dans le cas courant.
     id_reservation: int | None = None
     lignes: list[LigneCommandeRead] = []
+    #: Marqueur manuel posé par un administrateur, `None` tant qu'aucun
+    #: remboursement n'a été enregistré. Ne reflète aucun état de `PAIEMENT` —
+    #: voir `docs/mld.md`, section Paiement.
+    rembourse_le: datetime | None = None
+
+
+class CommandeAnnulationAdministration(BaseModel):
+    """Annulation d'une commande, côté administration.
+
+    `statut` n'accepte que `Annulee` : c'est la **seule** transition que ce
+    endpoint expose. Un `Literal` fait refuser toute autre valeur en 422 par
+    Pydantic, avant même d'atteindre le service — même mécanisme que
+    `ReservationAnnulation` (Sprint 10.2).
+    """
+
+    statut: Literal[StatutCommande.ANNULEE] = StatutCommande.ANNULEE
 
 
 class CommandePersonnelCreate(CommandeCreate):

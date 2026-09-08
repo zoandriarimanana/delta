@@ -764,3 +764,192 @@ def test_initier_paiement_accepte_une_nouvelle_tentative_apres_un_echec(
     )
 
     assert reponse.status_code == 201
+
+
+# --- Administration (10.5) -----------------------------------------------------
+
+
+def _entete_admin(db: Session) -> dict[str, str]:
+    admin = Personnel(
+        nom="Admin",
+        prenom="Test",
+        fonction=FonctionPersonnel.AUTRE,
+        email=f"admin_{uuid4().hex[:8]}@delta.mg",
+        est_administrateur=True,
+        mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+    )
+    db.add(admin)
+    db.commit()
+    jeton = creer_jeton_acces(admin.id_personnel, TypeSujet.PERSONNEL)
+    return {"Authorization": f"Bearer {jeton}"}
+
+
+def _entete_agent(db: Session) -> dict[str, str]:
+    agent = Personnel(
+        nom="Agent",
+        prenom="Test",
+        fonction=FonctionPersonnel.CUISINIER,
+        email=f"agent_{uuid4().hex[:8]}@delta.mg",
+        est_administrateur=False,
+        mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+    )
+    db.add(agent)
+    db.commit()
+    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
+    return {"Authorization": f"Bearer {jeton}"}
+
+
+def test_administration_liste_les_commandes_de_tous_les_clients(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.get(f"{COMMANDES}/administration", headers=_entete_admin(db))
+
+    assert reponse.status_code == 200
+    assert len(reponse.json()) >= 1
+
+
+def test_administration_liste_refusee_a_un_client(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    reponse = client_http.get(f"{COMMANDES}/administration", headers=entete)
+
+    assert reponse.status_code == 401
+
+
+def test_administration_liste_refusee_a_un_salarie_sans_droit(
+    client_http: TestClient, db: Session
+) -> None:
+    reponse = client_http.get(f"{COMMANDES}/administration", headers=_entete_agent(db))
+
+    assert reponse.status_code == 403
+
+
+def test_administration_obtient_la_commande_d_un_client_quelconque(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.get(
+        f"{COMMANDES}/administration/{commande['id_commande']}",
+        headers=_entete_admin(db),
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["id_commande"] == commande["id_commande"]
+
+
+def test_administration_obtenir_une_inconnue_retourne_404(
+    client_http: TestClient, db: Session
+) -> None:
+    reponse = client_http.get(
+        f"{COMMANDES}/administration/999999", headers=_entete_admin(db)
+    )
+
+    assert reponse.status_code == 404
+
+
+def test_administration_annule_une_commande(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.put(
+        f"{COMMANDES}/administration/{commande['id_commande']}/statut",
+        json={"statut": "Annulee"},
+        headers=_entete_admin(db),
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["statut"] == "Annulee"
+
+
+def test_administration_annulation_refuse_toute_autre_valeur(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    """`CommandeAnnulationAdministration.statut` est un `Literal` : Pydantic
+    refuse en 422, avant même d'atteindre le service."""
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.put(
+        f"{COMMANDES}/administration/{commande['id_commande']}/statut",
+        json={"statut": "Confirmee"},
+        headers=_entete_admin(db),
+    )
+
+    assert reponse.status_code == 422
+
+
+def test_administration_annulation_refusee_deux_fois(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+    entete_admin = _entete_admin(db)
+    client_http.put(
+        f"{COMMANDES}/administration/{commande['id_commande']}/statut",
+        json={"statut": "Annulee"},
+        headers=entete_admin,
+    )
+
+    reponse = client_http.put(
+        f"{COMMANDES}/administration/{commande['id_commande']}/statut",
+        json={"statut": "Annulee"},
+        headers=entete_admin,
+    )
+
+    assert reponse.status_code == 409
+
+
+def test_administration_annulation_refusee_a_un_salarie_sans_droit(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.put(
+        f"{COMMANDES}/administration/{commande['id_commande']}/statut",
+        json={"statut": "Annulee"},
+        headers=_entete_agent(db),
+    )
+
+    assert reponse.status_code == 403
+
+
+def test_administration_rembourse_une_commande(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.post(
+        f"{COMMANDES}/administration/{commande['id_commande']}/remboursement",
+        headers=_entete_admin(db),
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["rembourse_le"] is not None
+
+
+def test_administration_remboursement_ne_touche_pas_au_statut(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.post(
+        f"{COMMANDES}/administration/{commande['id_commande']}/remboursement",
+        headers=_entete_admin(db),
+    )
+
+    assert reponse.json()["statut"] == "En_attente"
+
+
+def test_administration_remboursement_refuse_a_un_salarie_sans_droit(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.post(
+        f"{COMMANDES}/administration/{commande['id_commande']}/remboursement",
+        headers=_entete_agent(db),
+    )
+
+    assert reponse.status_code == 403

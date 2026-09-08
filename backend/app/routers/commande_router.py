@@ -5,6 +5,13 @@ l'authentification serait optionnelle. Un jeton absent ne doit jamais faire
 basculer silencieusement en mode invité : un jeton expiré donnerait alors une
 commande anonyme au lieu d'un 401, et le client ne la retrouverait jamais dans
 son historique.
+
+**Administration** (Sprint 10.5) : un administrateur voit et agit sur toutes
+les commandes, tous clients confondus — même patron que
+`abonnement_router.py`/`reservation_router.py`. **L'ordre de déclaration est
+significatif** : `/administration` et `/administration/{id_commande}` sont
+déclarées avant `/{id_commande}`, sinon la route paramétrée du client
+capterait `administration` comme un identifiant.
 """
 
 from typing import Annotated
@@ -14,9 +21,10 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import ClientConnecte, PersonnelConnecte
+from app.core.deps import ClientConnecte, PersonnelAdministrateur, PersonnelConnecte
 from app.core.exceptions import RessourceIntrouvable
 from app.schemas.commande import (
+    CommandeAnnulationAdministration,
     CommandeCreate,
     CommandeInviteCreate,
     CommandePersonnelCreate,
@@ -120,6 +128,83 @@ def creer_par_personnel(
     return CommandeRead.model_validate(
         CommandeService(db).creer_par_personnel(donnees, personnel)
     )
+
+
+# --- Administration (segments littéraux : doivent précéder /{id_commande}) --
+
+
+@router.get(
+    "/administration",
+    response_model=list[CommandeRead],
+    summary="Lister toutes les commandes",
+)
+def lister_administration(
+    admin: PersonnelAdministrateur, db: SessionBase
+) -> list[CommandeRead]:
+    """Tous les clients confondus."""
+    commandes = CommandeService(db).lister()
+    return [CommandeRead.model_validate(c) for c in commandes]
+
+
+@router.get(
+    "/administration/{id_commande}",
+    response_model=CommandeRead,
+    summary="Obtenir une commande (administration)",
+)
+def obtenir_administration(
+    id_commande: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> CommandeRead:
+    """404 si l'identifiant ne désigne personne, ou une ligne archivée."""
+    commande = CommandeService(db).obtenir(id_commande)
+    return CommandeRead.model_validate(commande)
+
+
+@router.put(
+    "/administration/{id_commande}/statut",
+    response_model=CommandeRead,
+    summary="Annuler une commande (administration)",
+)
+def annuler_administration(
+    id_commande: int,
+    donnees: CommandeAnnulationAdministration,
+    admin: PersonnelAdministrateur,
+    db: SessionBase,
+) -> CommandeRead:
+    """`donnees` n'accepte structurellement que `Annulee` (cf.
+    `CommandeAnnulationAdministration`).
+
+    **Aucune propagation vers `LIVRAISON`** : c'est cette action-ci qui
+    écrit `COMMANDE.statut` depuis une décision humaine, la synchronisation
+    entre les deux entités reste à sens unique.
+
+    **409** si la commande est déjà annulée, ou a déjà atteint le statut
+    terminal de son type (`Livree` ou `Servie`) — la marchandise a été
+    remise ou servie, annuler n'a plus de sens.
+    """
+    commande = CommandeService(db).annuler(id_commande)
+    return CommandeRead.model_validate(commande)
+
+
+@router.post(
+    "/administration/{id_commande}/remboursement",
+    response_model=CommandeRead,
+    summary="Marquer une commande remboursée (administration)",
+)
+def rembourser_administration(
+    id_commande: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> CommandeRead:
+    """Geste manuel simplifié : pose `COMMANDE.rembourse_le`, ne touche à
+    aucune ligne de `PAIEMENT` (cf. `docs/mld.md`, section Paiement). Le
+    remboursement réel se traite hors système — espèces, virement.
+
+    Idempotent : rejouer l'action avance simplement l'horodatage, sans
+    erreur, aucun statut n'étant exigé en préalable.
+    """
+    commande = CommandeService(db).rembourser(id_commande)
+    return CommandeRead.model_validate(commande)
+
+
+# --- Client (routes sans cible, avant toute route paramétrée) --------------
 
 
 @router.get("", response_model=list[CommandeRead], summary="Historique du client")
