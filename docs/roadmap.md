@@ -862,6 +862,20 @@ neuf sprints) :
       même de la migration. Rayon d'impact mesuré : 17 fichiers de tests
       backend authentifient via en-tête `Bearer`, 24 fichiers frontend
       touchent `tokenStorage` directement ou indirectement.
+      **Migration au déploiement, actée et non un angle mort** : un
+      utilisateur porteur d'un ancien jeton en `localStorage` au moment
+      du bascule ne bénéficie d'aucun mécanisme de transition — le
+      nouveau frontend cesse purement et simplement de lire
+      `localStorage`, ce jeton devient donc mort à l'instant du
+      déploiement. Au premier chargement post-déploiement, cet
+      utilisateur est traité comme non connecté (`GET /auth/moi` répond
+      401, faute de cookie) et doit simplement se reconnecter une fois
+      via le nouveau flux à cookie. Aucun mécanisme de bascule n'est
+      nécessaire ni prévu : le jeton en `localStorage` restait de toute
+      façon soumis à expiration (`ACCESS_TOKEN_EXPIRE_MINUTES`), donc à
+      une reconnexion déjà attendue à plus ou moins brève échéance —
+      cette migration ne fait qu'avancer ce moment pour tout le monde
+      simultanément, une seule fois.
 - [ ] **Sprint 9.5 — décision sur `POST /paiements/{id}/simuler-confirmation`** :
       retirer l'endpoint (backend et bouton frontend) maintenant, ou
       confirmer qu'il reste dette active tant qu'aucune vraie passerelle
