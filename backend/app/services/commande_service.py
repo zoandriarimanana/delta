@@ -506,6 +506,15 @@ class CommandeService:
         préalable — un remboursement peut suivre une annulation, un échec de
         livraison, ou toute autre décision humaine que ce marqueur ne
         cherche pas à qualifier.
+
+        **N'exige pas non plus qu'un paiement `Reussi` existe — décision
+        délibérée, pas un oubli de vérification.** `PAIEMENT` est une
+        intégration simulée et optionnelle, déclenchée séparément du tunnel
+        de commande (Sprint 9) : la majorité des commandes réelles — payées
+        en espèces au comptoir, par mobile money en personne — n'ont jamais
+        de ligne `PAIEMENT`, alors que de l'argent a bien été perçu. Exiger
+        un paiement `Reussi` bloquerait le remboursement pour ce cas
+        d'usage principal. L'administrateur reste seul juge.
         """
         commande = self.obtenir(id_commande)
         commande.rembourse_le = datetime.now(UTC)

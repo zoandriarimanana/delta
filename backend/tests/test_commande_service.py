@@ -32,7 +32,12 @@ from app.core.security import hacher_mot_de_passe
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
 from app.models.commande import Commande, StatutCommande, TypeCommande
-from app.models.paiement import Paiement
+from app.models.paiement import (
+    FournisseurPaiement,
+    MethodePaiement,
+    Paiement,
+    StatutPaiement,
+)
 from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.produit import Produit
 from app.models.reservation import Reservation, StatutReservation, TypeReservation
@@ -1370,17 +1375,71 @@ def test_rembourser_n_exige_aucun_statut_prealable(
     assert remboursee.rembourse_le is not None
 
 
-def test_rembourser_ne_touche_a_aucun_paiement(
+def test_rembourser_sur_une_commande_jamais_payee_ne_cree_aucun_paiement(
     service: CommandeService, client: Client, eclair: Produit, db: Session
 ) -> None:
-    """Geste manuel simplifié : aucune ligne de PAIEMENT n'est créée ni
-    modifiée par ce marqueur."""
+    """Geste manuel simplifié : aucune ligne de PAIEMENT n'est créée par ce
+    marqueur — cas le plus courant, `PAIEMENT` étant une intégration
+    simulée et optionnelle (Sprint 9), pendant qu'une commande payée en
+    espèces ou en personne n'en porte jamais.
+
+    Nommé explicitement « jamais payée » et non simplement « ne touche à
+    aucun paiement » : ce test ne prouve que l'absence de ligne créée dans
+    ce cas précis. Voir `test_rembourser_laisse_intact_un_paiement_reussi`
+    pour le cas — distinct — d'une commande déjà payée."""
     commande = service.creer(_commande(eclair.id_produit), client)
 
     service.rembourser(commande.id_commande)
 
     requete = select(Paiement).where(Paiement.id_commande == commande.id_commande)
     assert db.scalars(requete).all() == []
+
+
+def test_rembourser_est_possible_sans_aucun_paiement_reussi(
+    service: CommandeService, client: Client, eclair: Produit
+) -> None:
+    """**Décision délibérée, pas un oubli de vérification.** `PAIEMENT` est
+    une intégration simulée et optionnelle, déclenchée séparément du
+    tunnel de commande (Sprint 9) : la majorité des commandes réelles —
+    payées en espèces au comptoir, par mobile money en personne — n'auront
+    jamais de ligne `PAIEMENT`, alors que de l'argent a bien été perçu.
+    Exiger un paiement `Reussi` avant d'autoriser ce marqueur bloquerait
+    le remboursement pour ce cas d'usage principal, et contredirait
+    `docs/mld.md` : « le remboursement réel se traite hors système —
+    espèces, virement ». L'administrateur reste seul juge."""
+    commande = service.creer(_commande(eclair.id_produit), client)
+
+    remboursee = service.rembourser(commande.id_commande)
+
+    assert remboursee.rembourse_le is not None
+
+
+def test_rembourser_laisse_intact_un_paiement_reussi(
+    service: CommandeService, client: Client, eclair: Produit, db: Session
+) -> None:
+    """Cas distinct du précédent : ici la commande a bien un paiement
+    `Reussi` existant. Le remboursement doit réussir de la même façon, et
+    surtout **ne rien modifier** sur la ligne de paiement — ni son statut,
+    ni son montant, ni sa référence externe. Ce marqueur ne synchronise
+    rien avec `PAIEMENT`, dans aucun sens."""
+    commande = service.creer(_commande(eclair.id_produit), client)
+    paiement = Paiement(
+        montant=commande.montant_total,
+        methode=MethodePaiement.MOBILE_MONEY,
+        fournisseur=FournisseurPaiement.MVOLA,
+        statut=StatutPaiement.REUSSI,
+        reference_externe=f"SIM-{uuid4().hex}",
+        id_commande=commande.id_commande,
+    )
+    db.add(paiement)
+    db.commit()
+
+    remboursee = service.rembourser(commande.id_commande)
+
+    assert remboursee.rembourse_le is not None
+    db.refresh(paiement)
+    assert paiement.statut is StatutPaiement.REUSSI
+    assert paiement.montant == commande.montant_total
 
 
 def test_rembourser_une_inconnue_leve_introuvable(service: CommandeService) -> None:
