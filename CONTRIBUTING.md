@@ -10,7 +10,7 @@ générique, découpage par module métier).
 
 | Branche | Rôle |
 |---|---|
-| `main` | Code de production. Toujours stable et déployable. Jamais de commit direct. |
+| `main` | Code de production. Toujours stable et déployable. Jamais de commit direct, **jamais cible d'une PR de sprint** — voir ci-dessous. |
 | `develop` | Branche d'intégration de tous les sprints en cours. |
 | `feature/<sprint>-<module>-<description>` | Une fonctionnalité, un module. |
 | `fix/<module>-<description>` | Correction de bug hors urgence. |
@@ -26,6 +26,44 @@ hotfix/livraison-statut-bloque
 
 Règle d'or : **une branche = un seul module métier**, sauf pour les tâches du Sprint 0
 (fondations transverses).
+
+### `main` ne reçoit du contenu que par une release explicite, jamais par une PR de sprint
+
+**Règle absolue** : une PR de sprint ordinaire — `feature/*`, `fix/*`, ou toute
+PR née d'une tâche du roadmap — cible **toujours** `develop`, jamais `main`.
+`main` est une branche de **release délibérée** : elle ne reçoit du contenu que
+par un processus de release explicite (à définir quand le projet en aura
+besoin), jamais comme effet de bord d'un travail de sprint courant.
+
+**Cet incident est arrivé** : une PR de Sprint 10 (#119) a été ouverte contre
+`main` au lieu de `develop` — `--base` omis en relançant `gh pr create` après un
+blocage, retombée sur la branche par défaut du dépôt plutôt que sur `develop`.
+`main` n'avait plus été touché depuis le commit initial de documentation :
+la PR y a donc posé l'intégralité de l'historique cumulé du projet en un seul
+squash, hors du flux `develop` habituel et sans aucune promotion délibérée.
+
+Le correctif s'est révélé plus coûteux que l'erreur elle-même. `develop` a pu
+recevoir le même contenu par un chemin correct sans difficulté (#120). Mais
+corriger `main` en le ramenant à son état antérieur s'est heurté à sa propre
+protection de branche : les checks CI qu'elle exige n'avaient jamais eu de
+raison d'exister sur `main` avant cet incident, donc aucun workflow ne pouvait
+les produire pour la PR de revert — blocage indéfini en « Waiting for status »
+(voir issue #122). Il a fallu doter `main` d'un workflow CI dédié, minimal et
+**auto-désactivant** — il exécute la vraie suite (lint/migration/tests côté
+backend, lint/typage/tests/build côté frontend) quand du code y est
+exceptionnellement présent, et se contente de le constater sinon — avant de
+pouvoir enfin merger le revert (#123, #124).
+
+Autrement dit : la protection qui aurait dû empêcher le merge erroné a aussi,
+un temps, empêché sa propre correction. `main` porte désormais ce workflow en
+permanence, précisément pour que ce blocage ne se reproduise pas — mais la
+vraie garantie reste en amont, dans cette règle : **ne jamais ouvrir de PR de
+sprint contre `main`**. Avant tout `gh pr create`, vérifier explicitement la
+base :
+
+```bash
+gh pr create --base develop ...
+```
 
 ### Point de départ obligatoire : `origin/develop`, jamais la `develop` locale
 
