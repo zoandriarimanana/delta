@@ -4,7 +4,7 @@ Ordre de priorisation : dépendances techniques d'abord, puis cœur transactionn
 puis modules métier du plus généraliste au plus spécifique, paiement en ligne et
 back-office avancé en dernier.
 
-**Sprint courant : Sprint 10.** Mettre à jour cette ligne à chaque changement de sprint.
+**Sprint courant : Sprint 11.** Mettre à jour cette ligne à chaque changement de sprint.
 
 Avant de commencer une tâche : vérifier la Definition of Ready dans `CONTRIBUTING.md`.
 Avant de clore une tâche : vérifier la Definition of Done dans `CONTRIBUTING.md`.
@@ -743,27 +743,79 @@ aucun écran réservé au personnel n'était accessible, y compris celui du cata
 C'est pourquoi ce travail a pu démarrer une fois #73 livré, sans attendre un
 découpage formel de sprint.
 
-## Durcissement pré-production — Dettes critiques
+## Sprint 11 — Durcissement pré-production
 
-Quatre éléments de la dette technique sont **bloquants avant mise en production** et
-n'ont pas d'atterrissage explicite dans les sprints 7-10. Ils doivent être traités
-**avant livraison** — le plus tard : en parallèle du Sprint 10, le dernier sprint
-présenté dans ce roadmap. Les tailler ici, c'est garantir qu'on ne les oublie pas.
+Le roadmap métier est fonctionnellement complet à l'issue du Sprint 10 : les 21
+tables du MLD sont toutes couvertes (voir « Traçabilité MLD → sprints »), et
+aucune table n'attend de sprint. Décision actée en clôturant le Sprint 10 :
+**pas de nouveau sprint métier** — ce sprint consacre le temps d'équipe à la
+dette technique critique accumulée depuis le Sprint 0, listée depuis
+plusieurs sprints dans « Dette technique » sans jamais avoir reçu
+d'atterrissage explicite, malgré deux échéances déjà écrites et dépassées
+(« après validation du Sprint 7 », puis « en parallèle du Sprint 10 »).
 
-- [ ] **T0.10 — Jeton en `httpOnly` + CSRF** (`localStorage` → cookie sécurisé)
-      Durée estimée : 2-3 jours. Affecte CLIENT et PERSONNEL. Dépend d'une
-      modification API pour émettre le cookie.
+Quatre éléments sont **bloquants avant mise en production**. Deux de plus
+— déjà dans la table de dette, pas nouveaux — sont ajoutés à ce sprint parce
+qu'ils appellent une décision explicite plutôt qu'un oubli silencieux.
 
-- [ ] **T0.6 — Rate limiting & verrouillage de compte** (`/auth/connexion`, `/auth/personnel/connexion`)
-      Durée estimée : 1-2 jours. Prévient le credential stuffing et la force brute.
+Ordre validé (le plus mécanique et le moins risqué d'abord ; T0.10 en
+dernier, seul à toucher un mécanisme transverse déjà en place et testé sur
+neuf sprints) :
 
-- [ ] **T0.7 — Trigger PostgreSQL d'exclusivité `CLIENT`** (sécurité de base de données)
-      Durée estimée : 0.5 jour. Migration Alembic + tests.
-      
-- [ ] **T0.5 — Séparation des identifiants dans `docker-compose.yml`** (réduction de surface d'exposition)
-      Durée estimée : 0.5 jour. Créer un `.env` dédié au compose.
-
-Total estimé : 4-6 jours de travail d'équipe. À commencer après validation du Sprint 7.
+- [x] **T0.5 — Séparation des identifiants dans `docker-compose.yml`**
+      (réduction de surface d'exposition). Durée estimée : 0,5 jour.
+      — État réel vérifié avant codage (pas seulement le texte du roadmap) :
+      `docker-compose.yml` chargeait `backend/.env` en entier via `env_file`,
+      donc `SECRET_KEY` et `DATABASE_URL` sans aucun usage pour Postgres.
+      `Settings` (`core/config.py`) exige `POSTGRES_USER`/`PASSWORD`/`DB`
+      dans `backend/.env` — les en retirer aurait cassé cette validation.
+      — Nouveau fichier **dédié**, `docker/.env` (+ `docker/.env.example`,
+      `docker/.gitignore`), portant uniquement les trois clés Postgres,
+      **dupliquées** de `backend/.env` et non déplacées — les deux fichiers
+      restent la source de vérité chacun pour son consommateur.
+      `docker-compose.yml` pointe désormais dessus. Aucun code applicatif
+      touché.
+      — Vérifié de bout en bout : `docker exec delta-postgres env` ne montre
+      plus que les trois clés Postgres (`SECRET_KEY`/`DATABASE_URL` absents) ;
+      `alembic current` depuis le backend reste inchangé (`fb2aad84bf48`,
+      head) — la base et sa connexion applicative n'ont pas bougé ; et
+      `docker/.env` absent fait échouer `docker compose up` bruyamment
+      (`env file ... not found`), même garantie qu'avant sur `backend/.env`.
+- [ ] **T0.7 — Trigger PostgreSQL d'exclusivité `CLIENT`** (sécurité de base
+      de données). Durée estimée : 0,5 jour. Migration Alembic + tests.
+      Purement additif — `auth_service.py` documente déjà l'absence du
+      trigger et la garantie transactionnelle qui tient lieu de filet ;
+      même patron à deux niveaux que le chevauchement `ABONNEMENT` ou les
+      créneaux `SALLE`/`LOGEMENT`.
+- [ ] **T0.6 — Rate limiting & verrouillage de compte** (`/auth/connexion`,
+      `/auth/personnel/connexion`). Durée estimée : 1-2 jours. Prévient le
+      credential stuffing et la force brute. Additif, isolé — reste à
+      trancher : limiteur en mémoire (simple, ne survit pas à un
+      redémarrage ni à plusieurs workers) ou introduction de Redis.
+- [ ] **T0.10 — Jeton en `httpOnly` + CSRF** (`localStorage` → cookie
+      sécurisé). Durée estimée à revoir — 2-3 jours ne couvrait que
+      l'émission du cookie. Affecte CLIENT et PERSONNEL des deux côtés.
+      **Micro-conception écrite exigée avant tout découpage en tâches** :
+      contrat du futur endpoint `/auth/moi`, stratégie CSRF, et la façon
+      dont `useEstConnecte`/`useEstPersonnelConnecte` deviennent
+      asynchrones (état de chargement explicite, plus une lecture
+      synchrone de `localStorage`). Décision actée : pas de second cookie
+      non-`httpOnly` portant le type de session, ce qui resterait une
+      fuite d'information exploitable par XSS et affaiblirait l'objectif
+      même de la migration. Rayon d'impact mesuré : 17 fichiers de tests
+      backend authentifient via en-tête `Bearer`, 24 fichiers frontend
+      touchent `tokenStorage` directement ou indirectement.
+- [ ] **Sprint 9.5 — décision sur `POST /paiements/{id}/simuler-confirmation`** :
+      retirer l'endpoint (backend et bouton frontend) maintenant, ou
+      confirmer qu'il reste dette active tant qu'aucune vraie passerelle
+      n'est branchée. Pas une investigation de code — la garde
+      `Settings.ENVIRONMENT` fonctionne comme documenté, c'est un arbitrage
+      produit.
+- [ ] **Sprint 10.3 — évaluation du verrou de ligne sur `changer_statut()`** :
+      traiter maintenant (`UPDATE` conditionnel ou verrou de ligne, même
+      patron que le décrément de `places_restantes`) ou documenter
+      explicitement comme non urgent selon la taille réelle de l'équipe
+      d'administration.
 
 ---
 
@@ -815,7 +867,6 @@ nommer sa tâche d'origine et sa condition de résorption.
 | Sprint 2 (parcours invité) | Une commande passée en invité ne peut pas être rattachée à un compte créé ensuite : le client la perd de vue dès qu'il s'inscrit, alors qu'elle porte le même `contact_invite`. Écarté volontairement du sprint 2. | Le rattachement suppose de faire confiance à une adresse non vérifiée. À traiter avec un mécanisme de vérification d'e-mail, qui n'existe nulle part dans le projet — donc pas avant qu'il soit décidé. |
 | T0.10 (Sprint 0) | Les jetons d'accès **CLIENT et PERSONNEL** sont stockés ensemble en `localStorage` (`frontend/src/lib/tokenStorage.ts`) : lisibles par tout script de la page, donc exfiltrables en cas de faille XSS. La dette s'applique aux deux populations depuis l'ajout de PERSONNEL en #73. | Basculer sur un cookie `httpOnly` + `SameSite`, ce qui suppose de faire émettre le cookie par l'API et d'ajouter une protection CSRF. **À arbitrer avant mise en prod.** |
 | T0.6 (Sprint 0) | Aucune limitation de tentatives sur `/auth/connexion` : ni rate limiting par IP, ni verrouillage temporaire du compte après N échecs. Le hachage bcrypt ralentit une attaque par force brute sans l'empêcher, et rien ne freine le bourrage d'identifiants (credential stuffing). | Ajouter une limitation de débit et un verrouillage progressif. **À traiter avant mise en prod.** |
-| T0.5 (Sprint 0) | `docker-compose.yml` lit `backend/.env` via `env_file` : le conteneur postgres reçoit donc aussi `SECRET_KEY` et `DATABASE_URL`, dont il n'a aucun usage. Surface d'exposition inutile. | Séparer les identifiants du compose dans un `.env` dédié, dès qu'un second service rejoint l'infrastructure — et **au plus tard avant mise en prod**. |
 | T0.7 (Sprint 0) | Exclusivité `CLIENT` (`CLIENT_PARTICULIER` xor `CLIENT_ENTREPRISE`) garantie uniquement au niveau applicatif, dans `auth_service`. L'invariant est contournable par tout écrivain qui ne passe pas par l'API : import SQL, script de seed, correction manuelle en base. | Ajouter le trigger PL/pgSQL prévu par `docs/mld.md` (contrainte n°1) dans une migration Alembic dédiée. **À durcir avant mise en prod.** |
 | PR #95 (Sprint 7) | `.github/workflows/ci.yml` utilise `actions/checkout@v4`, `actions/setup-python@v5` et `actions/setup-node@v4`, qui ciblent Node.js 20 — déprécié par GitHub Actions. Chaque run affiche désormais `##[warning] Node.js 20 is deprecated…` sur les deux jobs (Backend et Frontend), sans faire échouer la CI. Constaté en vérifiant les annotations de la PR #95, sans rapport avec le code applicatif. | Mettre à jour ces actions vers une version ciblant Node.js 24. Basse priorité, non bloquant : le warning n'affecte ni le résultat des checks ni le comportement de l'application — à traiter quand une PR touche de toute façon `ci.yml`, plutôt que d'ouvrir un chantier dédié. |
 | Sprint 9.5 | `POST /paiements/{id_paiement}/simuler-confirmation` déclenche, depuis l'écran de paiement, la confirmation qu'un vrai fournisseur enverrait normalement de lui-même par webhook. Fermé par défaut derrière `Settings.ENVIRONMENT` (défaut `production`, même 404 générique qu'un paiement introuvable hors `developpement`) — mais cette garde ne retire pas le code : si une vraie passerelle (Mvola, Stripe...) est un jour branchée en environnement `developpement`, l'endpoint continuerait d'y répondre à côté d'elle. | Retirer cet endpoint (backend et bouton frontend) dès qu'une vraie passerelle est branchée, quel que soit l'environnement — un vrai fournisseur confirme de lui-même, ce déclencheur manuel n'aurait alors plus de sens et deviendrait une porte dérobée pour confirmer un paiement sans jamais l'avoir réellement payé. `ENVIRONMENT` protège la production dès maintenant ; la suppression du code reste **à traiter avant mise en prod**. |

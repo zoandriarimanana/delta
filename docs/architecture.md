@@ -29,19 +29,30 @@ Le `--wait` s'appuie sur le healthcheck `pg_isready` du service : la commande ne
 rend la main qu'une fois la base réellement en état d'accepter des connexions,
 ce qui évite un `alembic upgrade head` lancé trop tôt.
 
-Le compose lit ses identifiants dans `backend/.env` via `env_file` : les clés
-`POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` y vivent à côté de
-`DATABASE_URL`, et doivent rester cohérentes avec lui — c'est la même base. Aucune
-valeur par défaut n'est codée dans le compose : si une clé manque, le conteneur
-échoue bruyamment au lieu de démarrer avec des identifiants inventés.
+Le compose lit ses identifiants dans **`docker/.env`**, un fichier dédié au
+service — et non `backend/.env` (dette technique T0.5, résorbée : le conteneur
+recevait auparavant `SECRET_KEY` et `DATABASE_URL`, sans aucun usage, une
+surface d'exposition inutile). Il ne porte que les trois clés
+`POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`, **dupliquées** de
+`backend/.env` — où elles continuent de vivre à côté de `DATABASE_URL`, avec
+qui elles doivent rester cohérentes, c'est la même base. Aucune valeur par
+défaut n'est codée dans le compose : si une clé manque, le conteneur échoue
+bruyamment au lieu de démarrer avec des identifiants inventés.
 
-Avant tout démarrage, copier le gabarit : `cp backend/.env.example backend/.env`.
+Avant tout démarrage, copier les deux gabarits :
 
-Ces trois clés sont déclarées dans `Settings` (`core/config.py`) bien que
-l'application ne les utilise pas — elle passe exclusivement par `DATABASE_URL`.
-C'est volontaire : le `.env` reste ainsi intégralement validé, et une clé mal
-orthographiée échoue au démarrage de l'API avec un message clair plutôt que
-silencieusement au `docker compose up`.
+```bash
+cp backend/.env.example backend/.env
+cp docker/.env.example docker/.env
+```
+
+Ces trois clés restent déclarées dans `Settings` (`core/config.py`), sur
+`backend/.env`, bien que l'application ne les utilise pas — elle passe
+exclusivement par `DATABASE_URL`. C'est volontaire : le `.env` du backend reste
+ainsi intégralement validé, et une clé mal orthographiée échoue au démarrage de
+l'API avec un message clair plutôt que silencieusement au `docker compose up`.
+`docker/.env` n'a pas cette validation applicative — c'est `docker compose`
+lui-même qui échoue bruyamment s'il manque, faute d'`env_file` trouvé.
 
 ## Backend — arborescence
 
