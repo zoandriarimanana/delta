@@ -576,9 +576,10 @@ Huit tâches livrées là où cinq étaient prévues.
 
 ## Sprint 10 — Back-office avancé & reporting
 
-- [ ] Interface complète de gestion `PERSONNEL` (tableau de bord — le CRUD de base
-      est déjà fait au sprint 3, ne pas le refaire)
-- [ ] Tableau de bord commandes/réservations/abonnements
+- [x] Interface complète de gestion `PERSONNEL` (tableau de bord — le CRUD de base
+      est déjà fait au sprint 3, ne pas le refaire) — livré par 10.1.
+- [x] Tableau de bord commandes/réservations/abonnements — livré par 10.2 à
+      10.6 (voir le découpage détaillé ci-dessous).
       — Porte les **trois actions administratives** laissées en suspens par #25
       (Sprint 3) sur une livraison `Echouee` : **relancer la livraison**,
       **rembourser**, **annuler la commande**. Elles n'existent nulle part
@@ -689,13 +690,45 @@ propre PR (backend et frontend séparés pour 10.1, comme pour 9.1/9.2).
       réel : 422 sur toute valeur hors `Annulee`, annulation réussie, rejeu
       refusé en 409, remboursement posant l'horodatage sans créer ni
       modifier aucune ligne `PAIEMENT`.
-- [ ] **10.6 — `COMMANDE` administration (frontend)** : vue administration
+- [x] **10.6 — `COMMANDE` administration (frontend)** : vue administration
       dans `features/commande/` — liste, filtre par statut, fiche avec les
       trois actions (annuler, relancer la livraison via 10.4, marquer
       remboursée via 10.5). Panneau « Réservations » et panneau
       « Abonnements » : **simples liens** vers les écrans de 10.3 et de
       l'administration abonnements déjà livrée au Sprint 7.3 — pas de
       nouvelle page agrégeant les trois domaines.
+      — **Liste + fiche, contrairement à 10.3** (une seule page, actions en
+      ligne) : les trois actions d'une commande ne sont pas des transitions
+      de statut interchangeables — chacune ses propres conditions
+      d'apparition —, les regrouper en ligne aurait produit un tableau
+      illisible. Même choix que PERSONNEL et ABONNEMENT.
+      — **Aucun endpoint « livraison d'une commande » côté personnel** :
+      `GET /commandes/{id}/livraison` (client) répond en 401 à un jeton
+      personnel, et rien d'équivalent n'existe côté administration. La fiche
+      retrouve donc la livraison `Echouee` d'une commande en filtrant
+      `GET /livraisons?statut=Echouee` côté client sur `id_commande` — sans
+      demander la liste complète, puisque le bouton « Relancer » n'a de sens
+      que sur ce seul statut. `LivraisonAdministration` (portant
+      `id_livraison`) rejoint `livraison.types.ts` à cette occasion : premier
+      type frontend miroir de `LivraisonRead`, `SuiviLivraison` restant celui
+      de `LivraisonPublique` pour le parcours client.
+      — **Aucun état local à préserver entre actions**, contrairement à
+      `PersonnelDetailAdministrationPage` : ni `annuler` ni `rembourser`
+      n'archivent la commande (`supprime_le` n'est jamais touché), la fiche
+      peut donc simplement se recharger depuis le serveur après chacune.
+      — **Bug de nav trouvé et corrigé en construisant** : le nouveau chemin
+      `personnel/commandes/administration` partage le préfixe
+      `personnel/commandes` avec « Prise de commande » (Sprint 6). Sans
+      `end` sur ce `NavLink`, le lien « Prise de commande » restait
+      surligné actif sur la fiche d'une commande administrée — corrigé en
+      marquant ce lien `exact`, seul touché par la collision de préfixe.
+      Constaté par capture d'écran lors de la vérification de bout en bout,
+      pas en relisant le code.
+      — Vérifié de bout en bout via un serveur réel (Playwright) : liste
+      chargée et filtrable, liens Abonnements/Réservations corrects,
+      remboursement puis annulation sur une commande sans livraison,
+      relance réussie sur une commande à livraison `Echouee` avec
+      disparition du bouton une fois la tournée redevenue `En_attente`.
 
 **Travaux hors sprint : administration du catalogue produit.** L'**administration du
 catalogue produit** a reçu son interface après le Sprint 6 (PRs #88, #90, #91 le 3 sept).
