@@ -81,11 +81,15 @@ export default function MainLayout() {
       : []),
     ...(personnel
       ? [
-          { vers: '/personnel/commandes', libelle: 'Prise de commande' },
+          // `exact` : sans lui, ce lien resterait actif sur
+          // `/personnel/commandes/administration...` — préfixe partagé
+          // depuis l'ajout du tableau de bord commandes (10.6).
+          { vers: '/personnel/commandes', libelle: 'Prise de commande', exact: true },
           { vers: '/personnel/catalogue', libelle: 'Catalogue' },
           { vers: '/personnel/abonnements', libelle: 'Abonnements' },
           { vers: '/personnel/administration', libelle: 'Personnel' },
           { vers: '/personnel/reservations', libelle: 'Réservations' },
+          { vers: '/personnel/commandes/administration', libelle: 'Commandes' },
         ]
       : []),
     { vers: '/panier', libelle: 'Panier', compteur: nombre },
