@@ -611,11 +611,22 @@ Le rattachement est écrit noir sur blanc parce qu'il était jusqu'ici implicite
 tant qu'aucune case ne les porte, « manque volontaire » et « dette oubliée » se
 ressemblent trop pour qu'on les distingue six mois plus tard.
 
-**Aucun autre chemin ne fait cette transition.** `COMMANDE.statut` n'est écrit
-qu'à deux endroits dans toute l'application : à la création, où il vaut
-`En_attente`, et par cette propagation. Il n'apparaît dans **aucun** schema
-d'entrée — ni `CommandeCreate` ni ailleurs —, donc aucune requête HTTP ne peut
-le fixer. La garantie est structurelle, pas conventionnelle.
+**Aucun autre chemin automatique ne fait cette transition.** Jusqu'au
+Sprint 10.5, `COMMANDE.statut` n'était écrit qu'à deux endroits dans toute
+l'application : à la création, où il vaut `En_attente`, et par cette
+propagation. Il n'apparaissait dans **aucun** schema d'entrée — ni
+`CommandeCreate` ni ailleurs —, donc aucune requête HTTP ne pouvait le
+fixer. La garantie était structurelle, pas conventionnelle.
+
+Le Sprint 10.5 ajoute un **troisième** chemin, délibérément : `PUT
+/commandes/administration/{id}/statut`, réservé `PersonnelAdministrateur`,
+qui écrit `Annulee` depuis une décision humaine — l'une des trois actions
+laissées en suspens par #25 sur une livraison `Echouee` (voir plus haut).
+`CommandeAnnulationAdministration.statut` reste un `Literal[Annulee]` : ce
+chemin n'ouvre donc que **cette seule** valeur, jamais les autres du
+domaine — la garantie structurelle se déplace du « aucune requête ne peut
+l'écrire » au « une seule requête, un seul administrateur, une seule
+valeur possible » ; elle ne disparaît pas, elle se resserre.
 
 Le statut d'arrivée est lu dans `STATUT_TERMINAL`, la table posée avec le domaine
 de `COMMANDE` : `Servie` sur place, `Livree` pour les deux autres types. La

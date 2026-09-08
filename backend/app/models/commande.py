@@ -166,6 +166,16 @@ class Commande(SoftDeleteMixin, Base):
     id_personnel: Mapped[int | None] = mapped_column(
         ForeignKey("personnel.id_personnel", ondelete="RESTRICT")
     )
+    #: Marqueur manuel posé par un administrateur — miroir direct de
+    #: `supprime_le` dans sa forme (`TIMESTAMPTZ NULL`), mais sans rapport
+    #: avec l'archivage : une commande remboursée reste active.
+    #:
+    #: **Geste manuel simplifié, pas une intégration avec `PAIEMENT`.** Ne
+    #: touche à aucune ligne de `PAIEMENT` ni à son domaine de statut, qui ne
+    #: porte délibérément aucune valeur `Rembourse` (cf. `docs/mld.md`,
+    #: section Paiement). Le remboursement réel se traite hors système —
+    #: espèces, virement — et ce marqueur ne fait qu'en garder la trace.
+    rembourse_le: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     client: Mapped[Client | None] = relationship(back_populates="commandes")
     reservation: Mapped[Reservation | None] = relationship(back_populates="commandes")

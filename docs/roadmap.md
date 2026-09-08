@@ -662,19 +662,33 @@ propre PR (backend et frontend séparés pour 10.1, comme pour 9.1/9.2).
       serveur réel : refus 409 sur une livraison `En_attente`, relance
       réussie depuis `Echouee` avec `id_personnel` remis à `NULL` en base,
       et rejeu refusé (409) une fois la livraison redevenue `En_attente`.
-- [ ] **10.5 — `COMMANDE` administration + actions (backend)** : `GET
+- [x] **10.5 — `COMMANDE` administration + actions (backend)** : `GET
       /commandes/administration` et `/administration/{id}`. **Annuler** :
-      transition admin vers `Annulee`, aucune propagation vers `LIVRAISON`
-      (synchronisation à sens unique, rappel ci-dessus). **Rembourser** :
-      **ne touche pas `PAIEMENT`** — nouvelle colonne
-      `COMMANDE.rembourse_le TIMESTAMPTZ NULL`, miroir direct de
-      `supprime_le`, posée par un endpoint admin dédié. Migration Alembic +
-      mise à jour `docs/mld.md` avec un paragraphe explicite : ce marqueur
-      est un geste manuel simplifié (remboursement traité hors système —
-      espèces, virement), **pas** une intégration réelle
+      `PUT /commandes/administration/{id}/statut`, schema
+      `CommandeAnnulationAdministration.statut: Literal[Annulee]` — même
+      garantie structurelle que `ReservationAnnulation` (10.2), Pydantic
+      refuse toute autre valeur en 422 avant même d'atteindre le service.
+      **409** si déjà `Annulee`, ou déjà au statut terminal de son type
+      (`Livree`/`Servie` via `STATUT_TERMINAL`). Aucune propagation vers
+      `LIVRAISON` (synchronisation à sens unique, rappel ci-dessus).
+      **Rembourser** : `POST
+      /commandes/administration/{id}/remboursement`, **ne touche pas
+      `PAIEMENT`** — nouvelle colonne `COMMANDE.rembourse_le TIMESTAMPTZ
+      NULL`, miroir direct de `supprime_le`. Idempotent, aucun statut exigé
+      en préalable. Migration Alembic + mise à jour `docs/mld.md` avec le
+      paragraphe explicite : geste manuel simplifié (remboursement traité
+      hors système — espèces, virement), **pas** une intégration réelle
       remboursement↔`PAIEMENT`. La question `type_operation` documentée dans
       `docs/mld.md` (section Paiement) reste une dette **distincte et non
       résolue** par ce geste.
+      — `docs/architecture.md` corrigé : l'invariant « `COMMANDE.statut`
+      n'est écrit qu'à deux endroits » n'est plus exact tel quel depuis ce
+      sprint — un troisième chemin existe désormais, mais délibérément
+      restreint à la seule valeur `Annulee`, un seul appelant
+      (`PersonnelAdministrateur`). Vérifié de bout en bout via un serveur
+      réel : 422 sur toute valeur hors `Annulee`, annulation réussie, rejeu
+      refusé en 409, remboursement posant l'horodatage sans créer ni
+      modifier aucune ligne `PAIEMENT`.
 - [ ] **10.6 — `COMMANDE` administration (frontend)** : vue administration
       dans `features/commande/` — liste, filtre par statut, fiche avec les
       trois actions (annuler, relancer la livraison via 10.4, marquer

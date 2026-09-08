@@ -1,6 +1,7 @@
 """Service métier de COMMANDE."""
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
@@ -13,7 +14,7 @@ from app.core.exceptions import (
     RessourceIntrouvable,
 )
 from app.models.client import Client
-from app.models.commande import Commande, StatutCommande, TypeCommande
+from app.models.commande import STATUT_TERMINAL, Commande, StatutCommande, TypeCommande
 from app.models.ligne_commande import LigneCommande
 from app.models.personnel import Personnel
 from app.models.produit import Produit
@@ -88,6 +89,12 @@ class CommandeService:
     def lister_du_client(self, client: Client) -> Sequence[Commande]:
         """Historique d'un client, les plus récentes d'abord."""
         return self.commandes.lister_par_client(client.id_client)
+
+    def lister(self) -> Sequence[Commande]:
+        """Toutes les commandes actives, tous clients confondus. Réservé à
+        l'administrateur — même patron que `AbonnementService.lister` et
+        `ReservationService.lister`."""
+        return self.commandes.list()
 
     def _verifier_demande_de_livraison(self, donnees: CommandeCreate) -> None:
         """Refuse une demande de livraison incohérente, en 422.
@@ -449,3 +456,67 @@ class CommandeService:
             self.lignes.delete(ligne)
         self.commandes.delete(commande)
         self.db.commit()
+
+    # --- Administration (10.5) -------------------------------------------------
+
+    def annuler(self, id_commande: int) -> Commande:
+        """Annule une commande, décision administrative. Réservé à
+        l'administrateur.
+
+        **Aucune propagation vers `LIVRAISON`** : la synchronisation entre les
+        deux entités reste à sens unique (`docs/architecture.md`, section
+        « Synchronisation LIVRAISON → COMMANDE ») — c'est cette action-ci qui
+        écrit `COMMANDE.statut` depuis une décision humaine, elle ne
+        rétablit pas de propagation automatique depuis la livraison.
+
+        **409** dans deux cas, tous deux des fins réelles qui ne se rouvrent
+        pas : la commande est déjà `Annulee`, ou elle a déjà atteint le
+        statut terminal de son type (`Livree` ou `Servie` selon
+        `STATUT_TERMINAL`) — la marchandise a été remise ou servie, annuler
+        n'aurait plus de sens.
+        """
+        commande = self.obtenir(id_commande)
+
+        if commande.statut is StatutCommande.ANNULEE:
+            raise ConflitMetier("Cette commande est déjà annulée.")
+
+        terminal = STATUT_TERMINAL[commande.type_commande]
+        if commande.statut is terminal:
+            raise ConflitMetier(
+                f"Cette commande est déjà « {terminal.value} » : "
+                "elle ne peut plus être annulée."
+            )
+
+        commande.statut = StatutCommande.ANNULEE
+        self.db.commit()
+        return commande
+
+    def rembourser(self, id_commande: int) -> Commande:
+        """Marque une commande comme remboursée. Réservé à l'administrateur.
+
+        **Geste manuel simplifié, pas une intégration avec `PAIEMENT`** — ne
+        touche à aucune ligne de paiement ni à son domaine de statut, qui ne
+        porte délibérément aucune valeur `Rembourse` (cf. `docs/mld.md`,
+        section Paiement). Le remboursement réel se traite hors système —
+        espèces, virement — et cette méthode ne fait qu'en garder la trace.
+
+        **Idempotent, sans erreur au rejeu** : rembourser une commande déjà
+        marquée ne fait qu'avancer l'horodatage, même traitement que
+        l'archivage (`SoftDeleteMixin.delete`). Aucun statut n'est exigé en
+        préalable — un remboursement peut suivre une annulation, un échec de
+        livraison, ou toute autre décision humaine que ce marqueur ne
+        cherche pas à qualifier.
+
+        **N'exige pas non plus qu'un paiement `Reussi` existe — décision
+        délibérée, pas un oubli de vérification.** `PAIEMENT` est une
+        intégration simulée et optionnelle, déclenchée séparément du tunnel
+        de commande (Sprint 9) : la majorité des commandes réelles — payées
+        en espèces au comptoir, par mobile money en personne — n'ont jamais
+        de ligne `PAIEMENT`, alors que de l'argent a bien été perçu. Exiger
+        un paiement `Reussi` bloquerait le remboursement pour ce cas
+        d'usage principal. L'administrateur reste seul juge.
+        """
+        commande = self.obtenir(id_commande)
+        commande.rembourse_le = datetime.now(UTC)
+        self.db.commit()
+        return commande

@@ -364,6 +364,28 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   lignes au moment où la commande est passée, et n'est jamais recalculé. Une
   ligne archivée ensuite ne le modifie pas — c'est une donnée d'archive, pas une
   vue dérivée de `LIGNE_COMMANDE`.
+
+- `COMMANDE.rembourse_le` est un `TIMESTAMPTZ NULL`, ajouté au Sprint 10.5.
+  **Miroir direct de `supprime_le` dans sa forme**, mais sans aucun rapport
+  avec l'archivage : une commande remboursée reste active, visible, et
+  continue de porter son historique normalement.
+
+  **C'est un geste manuel simplifié, et délibérément pas une intégration
+  réelle remboursement↔`PAIEMENT`.** Poser cette date ne touche à **aucune**
+  ligne de `PAIEMENT`, ni à son domaine de statut — qui ne porte
+  délibérément aucune valeur `Rembourse` (voir plus bas, section Paiement).
+  Le remboursement effectif se traite hors système — espèces, virement — et
+  ce marqueur n'en garde que la trace, posée par un administrateur depuis le
+  tableau de bord commandes.
+
+  La question `type_operation` documentée en attente dans la section
+  Paiement (distinguer `Paiement`/`Remboursement` sur la ligne `PAIEMENT`
+  elle-même) reste une dette **distincte et non résolue** par ce marqueur :
+  les deux ne se substituent pas l'un à l'autre. `rembourse_le` répond au
+  besoin immédiat d'un tableau de bord — savoir qu'un remboursement a eu
+  lieu — sans trancher la question, plus large, de comment le modéliser
+  proprement côté paiement.
+
 - `COMMANDE.#id_reservation` est NULL sauf si la commande découle d'une
   réservation de table. La colonne existait dès l'origine ; le chemin qui la
   renseigne date du sprint 6.
@@ -675,6 +697,11 @@ initial, pas la correction d'une omission comme `AVIS` ou `COMMANDE.date_command
   Sprint 9, pas oubliée — voir si une colonne `type_operation` distinguant
   `Paiement`/`Remboursement` est la meilleure réponse, plutôt que de
   réutiliser `statut`.
+
+  **Reste distincte de `COMMANDE.rembourse_le`** (Sprint 10.5, section
+  Transactions ci-dessus) : ce marqueur est un geste manuel simplifié posé
+  côté commande, sans écriture sur `PAIEMENT` — il ne répond pas à cette
+  question, il la contourne pour le besoin immédiat d'un tableau de bord.
 
 - `PAIEMENT.reference_externe` est l'identifiant de transaction attribué par
   le fournisseur — simulé pour ce sprint, `FournisseurPaiement` n'ayant pas
