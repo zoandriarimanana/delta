@@ -294,6 +294,86 @@ def test_livraison_terminee_retourne_409(
     assert reponse.status_code == 409
 
 
+def test_relancer_une_livraison_echouee(
+    client_http: TestClient, entete_admin: dict[str, str], id_livraison: int
+) -> None:
+    client_http.put(
+        f"{LIVRAISONS}/{id_livraison}/statut",
+        json={"statut": "Echouee"},
+        headers=entete_admin,
+    )
+
+    reponse = client_http.post(
+        f"{LIVRAISONS}/{id_livraison}/relance", headers=entete_admin
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["statut"] == "En_attente"
+    assert reponse.json()["id_personnel"] is None
+
+
+def test_relancer_remet_id_personnel_a_null(
+    client_http: TestClient,
+    entete_admin: dict[str, str],
+    id_livraison: int,
+    livreur: Personnel,
+) -> None:
+    client_http.put(
+        f"{LIVRAISONS}/{id_livraison}/livreur",
+        json={"id_personnel": livreur.id_personnel},
+        headers=entete_admin,
+    )
+    client_http.put(
+        f"{LIVRAISONS}/{id_livraison}/statut",
+        json={"statut": "Echouee"},
+        headers=entete_admin,
+    )
+
+    reponse = client_http.post(
+        f"{LIVRAISONS}/{id_livraison}/relance", headers=entete_admin
+    )
+
+    assert reponse.json()["id_personnel"] is None
+
+
+def test_relancer_une_livraison_non_echouee_retourne_409(
+    client_http: TestClient, entete_admin: dict[str, str], id_livraison: int
+) -> None:
+    """La livraison créée démarre `En_attente` — jamais `Echouee`."""
+    reponse = client_http.post(
+        f"{LIVRAISONS}/{id_livraison}/relance", headers=entete_admin
+    )
+
+    assert reponse.status_code == 409
+
+
+def test_relancer_refuse_a_un_salarie_sans_droit(
+    client_http: TestClient,
+    entete_admin: dict[str, str],
+    entete_agent: dict[str, str],
+    id_livraison: int,
+) -> None:
+    client_http.put(
+        f"{LIVRAISONS}/{id_livraison}/statut",
+        json={"statut": "Echouee"},
+        headers=entete_admin,
+    )
+
+    reponse = client_http.post(
+        f"{LIVRAISONS}/{id_livraison}/relance", headers=entete_agent
+    )
+
+    assert reponse.status_code == 403
+
+
+def test_relancer_sans_jeton_retourne_401(
+    client_http: TestClient, id_livraison: int
+) -> None:
+    reponse = client_http.post(f"{LIVRAISONS}/{id_livraison}/relance")
+
+    assert reponse.status_code == 401
+
+
 def test_planification(
     client_http: TestClient, entete_admin: dict[str, str], id_livraison: int
 ) -> None:

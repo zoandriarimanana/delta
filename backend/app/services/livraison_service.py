@@ -157,6 +157,46 @@ class LivraisonService:
         self.db.commit()
         return livraison
 
+    def relancer(self, id_livraison: int) -> Livraison:
+        """Relance une livraison **échouée**, transition dédiée et unique
+        `Echouee → En_attente`. Réservé aux administrateurs.
+
+        Contourne **délibérément** `_refuser_si_terminee` — `Echouee` fait
+        partie de `STATUTS_TERMINAUX`, et c'est exactement pour ça que cette
+        méthode existe plutôt que de réutiliser `changer_statut` : celle-ci
+        refuserait la transition. `STATUTS_TERMINAUX` reste inchangé, cette
+        méthode ne l'affaiblit pas — elle est le seul chemin qui la
+        contourne, et seulement depuis `Echouee`.
+
+        **409** si la livraison n'est pas `Echouee` : `Livree` et `Annulee`
+        restent des fins réelles, et une livraison encore en cours n'a rien
+        à relancer.
+
+        **`id_personnel` repasse à `NULL`.** Le livreur qui a échoué n'est
+        pas reconduit automatiquement — `NULL` signifie déjà « pas encore
+        affectée » (cf. `creer_pour_commande`), et le réutiliser ici force
+        une réaffectation explicite plutôt que de reconduire silencieusement
+        quelqu'un qui vient d'échouer.
+
+        Nommée à part de `changer_statut` : relancer n'est pas un point de
+        la progression normale d'une tournée, c'est une décision humaine qui
+        revient sur une fin — au même titre que « rembourser » ou « annuler
+        la commande », les deux autres actions laissées en suspens par #25
+        (Sprint 3) et portées par ce même tableau de bord (Sprint 10).
+        """
+        livraison = self.obtenir(id_livraison)
+
+        if livraison.statut is not StatutLivraison.ECHOUEE:
+            raise ConflitMetier(
+                f"Cette livraison est « {livraison.statut.value} » : "
+                "seule une livraison échouée peut être relancée."
+            )
+
+        livraison.statut = StatutLivraison.EN_ATTENTE
+        livraison.id_personnel = None
+        self.db.commit()
+        return livraison
+
     def _propager_sur_la_commande(self, livraison: Livraison) -> None:
         """Fait avancer `COMMANDE.statut` quand la livraison a été remise.
 
