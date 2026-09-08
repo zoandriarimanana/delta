@@ -61,9 +61,12 @@ class AuthService:
     """Orchestre les deux repositories du parcours d'inscription.
 
     L'inscription écrit dans `CLIENT` **et** `CLIENT_PARTICULIER` : les deux
-    écritures partagent une seule transaction, seule garantie actuelle qu'un
-    CLIENT ne reste pas orphelin de sa ligne fille. Le trigger d'exclusivité
-    prévu par `docs/mld.md` est reporté (dette technique T0.7).
+    écritures partagent une seule transaction — garantie de première ligne,
+    qui reste la façon normale dont ce service tient l'invariant. Le trigger
+    différé posé en base (`verifier_exclusivite_client`, Sprint 11) n'est
+    qu'un filet contre tout écrivain qui ne passe pas par ce service : import
+    SQL, script de seed, correction manuelle. Il ne devrait jamais se
+    déclencher sur ce chemin.
     """
 
     def __init__(self, db: Session) -> None:
@@ -135,9 +138,9 @@ class AuthService:
         volontairement neutre. Répondre « vous avez déjà un compte particulier »
         divulguerait l'existence d'un compte à qui saisit une adresse au hasard.
 
-        Les deux écritures partagent une seule transaction — c'est la garde
-        applicative qui tient l'invariant d'exclusivité en l'absence du trigger
-        reporté (T0.7).
+        Les deux écritures partagent une seule transaction — garde applicative
+        de première ligne, doublée depuis le Sprint 11 par le trigger différé
+        posé en base (voir `AuthService`, ci-dessus).
         """
         if self.clients.get_by_email(donnees.email) is not None:
             raise EmailDejaUtilise(MESSAGE_EMAIL_PRIS)

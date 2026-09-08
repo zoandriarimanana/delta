@@ -15,8 +15,47 @@ PERSONNEL(id_personnel, nom, prenom, fonction, est_administrateur, mot_de_passe,
 
 `CLIENT_PARTICULIER` et `CLIENT_ENTREPRISE` sont des sous-types exclusifs de `CLIENT`
 (class table inheritance : `id_client` est à la fois PK et FK vers `CLIENT`).
-Contrainte à porter au niveau applicatif ou trigger : un `CLIENT` a exactement une
-ligne dans l'une des deux tables filles, jamais les deux, jamais aucune.
+Un `CLIENT` a exactement une ligne dans l'une des deux tables filles, jamais les
+deux, jamais aucune.
+
+Garanti par un **trigger différé** (Sprint 11, dette technique T0.7 résorbée) :
+`verifier_exclusivite_client()`, attaché aux trois tables (`client`,
+`client_particulier`, `client_entreprise`) via `CREATE CONSTRAINT TRIGGER ...
+DEFERRABLE INITIALLY DEFERRED AFTER INSERT`, compte au **commit** de la
+transaction les lignes filles pour le `id_client` concerné et rejette si le
+total diffère de 1.
+
+Différé, et non immédiat : au moment précis où `CLIENT` est inséré, aucune
+ligne fille n'existe encore — l'application les insère juste après, dans la
+même transaction. Un trigger immédiat échouerait donc systématiquement, y
+compris sur le chemin normal de l'API. Attaché aux **trois** tables, et non à
+`CLIENT` seule : un trigger sur `CLIENT` seule couvrirait « aucune ligne
+fille » mais pas « les deux » ajoutées dans deux transactions distinctes après
+coup ; un trigger sur les deux tables filles seules couvrirait l'inverse.
+
+La fonction ouvre par `pg_advisory_xact_lock(id_client)`, indispensable et pas
+décoratif : sans lui, deux transactions concurrentes ajoutant chacune une
+ligne fille différente au même client (orphelin par exemple) peuvent chacune
+compter `0+1=1` avant que l'autre ne committe, laissant passer les deux — race
+empiriquement reproduite (deux connexions, deux transactions synchronisées) en
+construisant cette migration. Un `SELECT ... FOR UPDATE` sur la ligne `CLIENT`
+semblait une alternative plus simple, mais entre en **deadlock** avec le
+verrou `FOR KEY SHARE` que PostgreSQL pose déjà implicitement sur cette même
+ligne pour honorer les FK de `client_particulier`/`client_entreprise` au
+moment de l'`INSERT` — chaque transaction détient `KEY SHARE` et tente
+d'upgrader vers `UPDATE`, cycle classique, également confirmé empiriquement.
+Le verrou consultatif est indépendant de ce système de verrous de lignes/FK.
+
+La garantie applicative reste la première ligne de défense — `AuthService`
+crée toujours `CLIENT` et sa ligne fille dans une seule transaction, le
+trigger ne devrait jamais se déclencher sur ce chemin. C'est un filet contre
+tout écrivain qui ne passe pas par l'API : import SQL, script de seed,
+correction manuelle en base — la menace documentée depuis le Sprint 0.
+
+Hors périmètre, assumé : une suppression manuelle d'une ligne fille existante
+n'est pas couverte (seul `AFTER INSERT` est visé) — cohérent avec la menace
+ci-dessus, des écritures erronées, pas des suppressions, et `CLIENT` n'est de
+toute façon jamais soumis à `supprimer_definitivement()`.
 
 - `CLIENT.email` est **unique**. Présente au dictionnaire de données d'origine,
   omise ici par erreur de transcription ; rétablie. Règle métier associée :

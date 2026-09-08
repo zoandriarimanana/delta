@@ -46,11 +46,11 @@ Ordre d'implémentation contraint par les dépendances. Un arrêt de validation 
       importer `app.models`. Relire la migration générée à la main.
 - [x] **T0.6 — Auth JWT (`CLIENT_PARTICULIER` uniquement)** : `security.py`, schemas,
       `client_repository.py`, `auth_service.py`, `auth_router.py`. Après T0.4.
-- [ ] **T0.7 — Trigger d'exclusivité `CLIENT`** *(reporté — voir section Dette
+- [x] **T0.7 — Trigger d'exclusivité `CLIENT`** *(reporté — voir section Dette
       technique)* : **REPORTÉ pour ce sprint.** Garde
       uniquement la validation applicative dans `auth_service` (création `CLIENT` +
       ligne fille dans une seule transaction). Voir « Dette technique » en fin de
-      document.
+      document. — **Résorbé au Sprint 11**, voir ce sprint pour le détail.
 - [x] **T0.8 — `main.py`** : assemble uniquement les routers, CORS, `auth_router`
       seulement à ce stade. Après T0.6.
 - [x] **T0.9 — Structure frontend** : `package.json`, `vite.config.ts`, `tsconfig.json`
@@ -781,12 +781,41 @@ neuf sprints) :
       head) — la base et sa connexion applicative n'ont pas bougé ; et
       `docker/.env` absent fait échouer `docker compose up` bruyamment
       (`env file ... not found`), même garantie qu'avant sur `backend/.env`.
-- [ ] **T0.7 — Trigger PostgreSQL d'exclusivité `CLIENT`** (sécurité de base
-      de données). Durée estimée : 0,5 jour. Migration Alembic + tests.
-      Purement additif — `auth_service.py` documente déjà l'absence du
-      trigger et la garantie transactionnelle qui tient lieu de filet ;
-      même patron à deux niveaux que le chevauchement `ABONNEMENT` ou les
-      créneaux `SALLE`/`LOGEMENT`.
+- [x] **T0.7 — Trigger PostgreSQL d'exclusivité `CLIENT`** (sécurité de base
+      de données). Durée estimée : 0,5 jour. Migration `4cfa278b3371`.
+      Purement additif côté application — `auth_service.py` documentait déjà
+      l'absence du trigger et la garantie transactionnelle qui tient lieu de
+      filet ; même patron à deux niveaux que le chevauchement `ABONNEMENT`
+      ou les créneaux `SALLE`/`LOGEMENT`.
+      — **Race condition trouvée et fermée avant tout code**, sur demande
+      explicite de vérification empirique plutôt que sur le seul
+      raisonnement : un trigger différé naïf (`SELECT count(*)`, sans
+      verrou) laisse passer deux transactions concurrentes ajoutant chacune
+      une ligne fille différente à un même client orphelin — chacune compte
+      `0+1=1` avant de voir l'insertion, non commitée, de l'autre.
+      Reproduit à 5/5 avec deux connexions réelles synchronisées par
+      barrière. Un `SELECT ... FOR UPDATE` sur `client` ferme la race mais
+      entre en **deadlock** avec le verrou `FOR KEY SHARE` que PostgreSQL
+      pose déjà implicitement sur cette ligne pour les FK des tables filles
+      (confirmé empiriquement) — écarté au profit de
+      `pg_advisory_xact_lock(id_client)`, indépendant de ce système de
+      verrous, qui ferme la race proprement (0 violation sur 10+ runs,
+      aucun deadlock).
+      — Trois `CONSTRAINT TRIGGER ... DEFERRABLE INITIALLY DEFERRED`, sur
+      `client`, `client_particulier` **et** `client_entreprise` — pas une
+      seule table : sur `client` seule, « aucune ligne fille » serait
+      couvert mais pas « les deux » ajoutées dans deux transactions
+      distinctes après coup ; sur les deux tables filles seules, l'inverse.
+      Hors périmètre assumé : une suppression manuelle d'une ligne fille
+      existante (seul `AFTER INSERT` est visé) — cohérent avec la menace
+      documentée (écritures erronées, pas suppressions).
+      — Nouveau fichier `test_client_exclusivite_postgres.py` : les
+      scénarios simples utilisent `session_postgres` avec
+      `SET CONSTRAINTS ALL IMMEDIATE` pour forcer la vérification différée
+      sans vrai commit (le `commit()` de cette fixture n'est qu'un
+      `SAVEPOINT`) ; le test de course, lui, ouvre ses deux propres
+      connexions réelles — `session_postgres` ne peut structurellement pas
+      porter un scénario à deux transactions véritablement séparées.
 - [ ] **T0.6 — Rate limiting & verrouillage de compte** (`/auth/connexion`,
       `/auth/personnel/connexion`). Durée estimée : 1-2 jours. Prévient le
       credential stuffing et la force brute. Additif, isolé — reste à
@@ -867,7 +896,6 @@ nommer sa tâche d'origine et sa condition de résorption.
 | Sprint 2 (parcours invité) | Une commande passée en invité ne peut pas être rattachée à un compte créé ensuite : le client la perd de vue dès qu'il s'inscrit, alors qu'elle porte le même `contact_invite`. Écarté volontairement du sprint 2. | Le rattachement suppose de faire confiance à une adresse non vérifiée. À traiter avec un mécanisme de vérification d'e-mail, qui n'existe nulle part dans le projet — donc pas avant qu'il soit décidé. |
 | T0.10 (Sprint 0) | Les jetons d'accès **CLIENT et PERSONNEL** sont stockés ensemble en `localStorage` (`frontend/src/lib/tokenStorage.ts`) : lisibles par tout script de la page, donc exfiltrables en cas de faille XSS. La dette s'applique aux deux populations depuis l'ajout de PERSONNEL en #73. | Basculer sur un cookie `httpOnly` + `SameSite`, ce qui suppose de faire émettre le cookie par l'API et d'ajouter une protection CSRF. **À arbitrer avant mise en prod.** |
 | T0.6 (Sprint 0) | Aucune limitation de tentatives sur `/auth/connexion` : ni rate limiting par IP, ni verrouillage temporaire du compte après N échecs. Le hachage bcrypt ralentit une attaque par force brute sans l'empêcher, et rien ne freine le bourrage d'identifiants (credential stuffing). | Ajouter une limitation de débit et un verrouillage progressif. **À traiter avant mise en prod.** |
-| T0.7 (Sprint 0) | Exclusivité `CLIENT` (`CLIENT_PARTICULIER` xor `CLIENT_ENTREPRISE`) garantie uniquement au niveau applicatif, dans `auth_service`. L'invariant est contournable par tout écrivain qui ne passe pas par l'API : import SQL, script de seed, correction manuelle en base. | Ajouter le trigger PL/pgSQL prévu par `docs/mld.md` (contrainte n°1) dans une migration Alembic dédiée. **À durcir avant mise en prod.** |
 | PR #95 (Sprint 7) | `.github/workflows/ci.yml` utilise `actions/checkout@v4`, `actions/setup-python@v5` et `actions/setup-node@v4`, qui ciblent Node.js 20 — déprécié par GitHub Actions. Chaque run affiche désormais `##[warning] Node.js 20 is deprecated…` sur les deux jobs (Backend et Frontend), sans faire échouer la CI. Constaté en vérifiant les annotations de la PR #95, sans rapport avec le code applicatif. | Mettre à jour ces actions vers une version ciblant Node.js 24. Basse priorité, non bloquant : le warning n'affecte ni le résultat des checks ni le comportement de l'application — à traiter quand une PR touche de toute façon `ci.yml`, plutôt que d'ouvrir un chantier dédié. |
 | Sprint 9.5 | `POST /paiements/{id_paiement}/simuler-confirmation` déclenche, depuis l'écran de paiement, la confirmation qu'un vrai fournisseur enverrait normalement de lui-même par webhook. Fermé par défaut derrière `Settings.ENVIRONMENT` (défaut `production`, même 404 générique qu'un paiement introuvable hors `developpement`) — mais cette garde ne retire pas le code : si une vraie passerelle (Mvola, Stripe...) est un jour branchée en environnement `developpement`, l'endpoint continuerait d'y répondre à côté d'elle. | Retirer cet endpoint (backend et bouton frontend) dès qu'une vraie passerelle est branchée, quel que soit l'environnement — un vrai fournisseur confirme de lui-même, ce déclencheur manuel n'aurait alors plus de sens et deviendrait une porte dérobée pour confirmer un paiement sans jamais l'avoir réellement payé. `ENVIRONMENT` protège la production dès maintenant ; la suppression du code reste **à traiter avant mise en prod**. |
 | Sprint 10.3 | `GET /reservations/administration` (10.2) ne porte aucune pagination ni paramètre de filtre — toute la collection active est renvoyée en un seul appel, et le filtre type/statut de `AdministrationReservationsPage` s'applique côté navigateur sur ce tableau complet. Négligeable aujourd'hui (4 lignes actives en développement), mais même schéma que le filtre `id_abonnement` ajouté après coup en 7.1 (#98) : un trou qui ne coûte rien tant que le volume reste faible. | Ajouter la pagination et/ou des paramètres de filtre serveur (`type_reservation`, `statut`) à `GET /reservations/administration` **si le volume de réservations actives devient un point de lenteur réel** — pas avant : la correction déplacerait une décision d'affichage vers un endpoint qui sert potentiellement d'autres usages. |
