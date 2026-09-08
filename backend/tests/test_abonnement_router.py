@@ -13,11 +13,12 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, hacher_mot_de_passe
 from app.main import app
 from app.models.client import Client, TypeClient
 from app.models.client_entreprise import ClientEntreprise
 from app.models.personnel import FonctionPersonnel, Personnel
+from tests.conftest import authentifier
 
 ABONNEMENTS = f"{settings.API_V1_PREFIX}/abonnements"
 ADMIN_ABONNEMENTS = f"{ABONNEMENTS}/administration"
@@ -64,11 +65,6 @@ def _entreprise(db: Session, numero: str = "1111111111") -> Client:
     return client
 
 
-def _entete(compte: Client) -> dict[str, str]:
-    jeton = creer_jeton_acces(compte.id_client, TypeSujet.CLIENT)
-    return {"Authorization": f"Bearer {jeton}"}
-
-
 @pytest.fixture
 def entreprise(db: Session) -> Client:
     return _entreprise(db)
@@ -76,7 +72,7 @@ def entreprise(db: Session) -> Client:
 
 @pytest.fixture
 def entete_entreprise(entreprise: Client) -> dict[str, str]:
-    return _entete(entreprise)
+    return authentifier(entreprise.id_client, TypeSujet.CLIENT)
 
 
 @pytest.fixture
@@ -91,8 +87,7 @@ def entete_admin(db: Session) -> dict[str, str]:
     )
     db.add(admin)
     db.commit()
-    jeton = creer_jeton_acces(admin.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(admin.id_personnel, TypeSujet.PERSONNEL)
 
 
 def test_la_route_administration_n_est_pas_captee_par_la_route_parametree(
@@ -127,7 +122,9 @@ def test_l_abonnement_d_une_autre_entreprise_retourne_404(
 ) -> None:
     autre = _entreprise(db, "2222222222")
     autre_abonnement = client_http.post(
-        ABONNEMENTS, json=CHARGE_UTILE, headers=_entete(autre)
+        ABONNEMENTS,
+        json=CHARGE_UTILE,
+        headers=authentifier(autre.id_client, TypeSujet.CLIENT),
     ).json()
 
     reponse = client_http.get(

@@ -6,14 +6,19 @@ les dépendances réutilisées par plusieurs routers, à commencer par
 `get_current_client`.
 
 Voir `docs/architecture.md`, section « Authentification des endpoints protégés ».
+
+**Depuis T0.10, l'identité se lit dans le cookie `delta_session`, plus dans
+l'en-tête `Authorization`.** Le jeton reste le même JWT qu'avant ; seul son
+transport change — voir `core/cookies.py` pour l'émission et
+`docs/roadmap.md` (Sprint 11) pour la micro-conception complète.
 """
 
 from typing import Annotated
 
-from fastapi import Depends
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
+from app.core.cookies import NOM_COOKIE_SESSION
 from app.core.database import get_db
 from app.core.exceptions import AuthentificationInvalide, AutorisationInsuffisante
 from app.core.security import REVENDICATION_TYPE, TypeSujet, decoder_jeton_acces
@@ -22,23 +27,14 @@ from app.models.personnel import Personnel
 from app.repositories.client_repository import ClientRepository
 from app.repositories.personnel_repository import PersonnelRepository
 
-# `auto_error=False` : sans ça, HTTPBearer lève lui-même une HTTPException 403
-# quand l'en-tête est absent — un code erroné (l'absence d'authentification est
-# un 401, pas un 403) et court-circuitant nos gestionnaires globaux. On récupère
-# donc `None` et on lève `AuthentificationInvalide` nous-mêmes.
-schema_jeton = HTTPBearer(auto_error=False)
-
 MESSAGE_REFUS = "Jeton d'accès absent ou invalide."
 MESSAGE_DROITS = "Cette opération est réservée aux administrateurs."
 
 
-def _identifiant_du_sujet(
-    identifiants: HTTPAuthorizationCredentials | None,
-    type_attendu: TypeSujet,
-) -> int:
+def _identifiant_du_sujet(jeton: str | None, type_attendu: TypeSujet) -> int:
     """Valide le jeton et retourne l'identifiant qu'il désigne.
 
-    Facteur commun aux deux dépendances : en-tête présent, jeton lisible et non
+    Facteur commun aux deux dépendances : cookie présent, jeton lisible et non
     expiré, revendication `type` **égale à celle attendue**, `sub` entier.
 
     C'est cette égalité stricte qui cloisonne les deux populations. Un jeton de
@@ -56,10 +52,10 @@ def _identifiant_du_sujet(
     expiré » de « mauvais type de compte » renseignerait un attaquant sans servir
     l'utilisateur légitime.
     """
-    if identifiants is None:
+    if jeton is None:
         raise AuthentificationInvalide(MESSAGE_REFUS)
 
-    charge_utile = decoder_jeton_acces(identifiants.credentials)
+    charge_utile = decoder_jeton_acces(jeton)
     if charge_utile is None:
         raise AuthentificationInvalide(MESSAGE_REFUS)
 
@@ -78,14 +74,42 @@ def _identifiant_du_sujet(
         raise AuthentificationInvalide(MESSAGE_REFUS) from erreur
 
 
+def _charger_client(db: Session, identifiant: int) -> Client:
+    """Charge le CLIENT désigné, ou refuse.
+
+    Factorisé pour être partagé entre `get_current_client` (qui lève) et
+    `get_sujet_optionnel` (qui ne lève jamais) — une seule règle de
+    chargement, deux comportements d'échec.
+    """
+    client = ClientRepository(db).get_by_id(identifiant)
+    if client is None:
+        raise AuthentificationInvalide(MESSAGE_REFUS)
+    return client
+
+
+def _charger_personnel(db: Session, identifiant: int) -> Personnel:
+    """Charge le PERSONNEL désigné, ou refuse.
+
+    `mot_de_passe` étant nullable, un salarié peut n'avoir **aucun compte de
+    connexion** : `NULL` signifie « ne se connecte pas », pas « mot de passe
+    vide ». Le jeton d'un tel compte est refusé même s'il est
+    cryptographiquement valide — le mot de passe a pu être retiré après son
+    émission, exactement comme un compte peut être archivé après coup.
+    """
+    personnel = PersonnelRepository(db).get_by_id(identifiant)
+    if personnel is None or personnel.mot_de_passe is None:
+        raise AuthentificationInvalide(MESSAGE_REFUS)
+    return personnel
+
+
 def get_current_client(
-    identifiants: Annotated[HTTPAuthorizationCredentials | None, Depends(schema_jeton)],
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
 ) -> Client:
-    """Retourne le CLIENT authentifié par le jeton porté par la requête.
+    """Retourne le CLIENT authentifié par le cookie `delta_session`.
 
     Lève `AuthentificationInvalide` — traduite en 401 par les gestionnaires
-    globaux de `main.py` — dans cinq cas : en-tête absent, jeton illisible ou
+    globaux de `main.py` — dans cinq cas : cookie absent, jeton illisible ou
     signé avec une autre clé, jeton expiré, **jeton émis pour un salarié**, et
     compte disparu depuis l'émission du jeton. Ce dernier cas mérite d'être
     traité explicitement : un JWT reste cryptographiquement valide jusqu'à son
@@ -99,13 +123,9 @@ def get_current_client(
     client : tout client, particulier ou entreprise, est équivalent. Les
     opérations réservées passent par `get_current_personnel_administrateur`.
     """
-    identifiant = _identifiant_du_sujet(identifiants, TypeSujet.CLIENT)
-
-    client = ClientRepository(db).get_by_id(identifiant)
-    if client is None:
-        raise AuthentificationInvalide(MESSAGE_REFUS)
-
-    return client
+    jeton = request.cookies.get(NOM_COOKIE_SESSION)
+    identifiant = _identifiant_du_sujet(jeton, TypeSujet.CLIENT)
+    return _charger_client(db, identifiant)
 
 
 #: À utiliser dans les signatures d'endpoint : `client: ClientConnecte`.
@@ -113,31 +133,18 @@ ClientConnecte = Annotated[Client, Depends(get_current_client)]
 
 
 def get_current_personnel(
-    identifiants: Annotated[HTTPAuthorizationCredentials | None, Depends(schema_jeton)],
+    request: Request,
     db: Annotated[Session, Depends(get_db)],
 ) -> Personnel:
-    """Retourne le membre du PERSONNEL authentifié par le jeton de la requête.
+    """Retourne le membre du PERSONNEL authentifié par le cookie `delta_session`.
 
-    Symétrique de `get_current_client`, avec un refus supplémentaire :
-    `mot_de_passe` étant nullable, un salarié peut n'avoir **aucun compte de
-    connexion**. `NULL` ne signifie pas « mot de passe vide » mais « ne se
-    connecte pas » ; le jeton d'un tel compte est donc refusé même s'il est
-    cryptographiquement valide.
-
-    Ce cas n'est pas théorique : le mot de passe peut être retiré après
-    l'émission d'un jeton encore valable, exactement comme un compte peut être
-    archivé après coup.
-
-    **Authentifie, n'autorise pas.** Être salarié ne confère aucun droit
-    d'administration — voir `get_current_personnel_administrateur`.
+    Symétrique de `get_current_client`. **Authentifie, n'autorise pas.** Être
+    salarié ne confère aucun droit d'administration — voir
+    `get_current_personnel_administrateur`.
     """
-    identifiant = _identifiant_du_sujet(identifiants, TypeSujet.PERSONNEL)
-
-    personnel = PersonnelRepository(db).get_by_id(identifiant)
-    if personnel is None or personnel.mot_de_passe is None:
-        raise AuthentificationInvalide(MESSAGE_REFUS)
-
-    return personnel
+    jeton = request.cookies.get(NOM_COOKIE_SESSION)
+    identifiant = _identifiant_du_sujet(jeton, TypeSujet.PERSONNEL)
+    return _charger_personnel(db, identifiant)
 
 
 def get_current_personnel_administrateur(
@@ -170,3 +177,46 @@ PersonnelConnecte = Annotated[Personnel, Depends(get_current_personnel)]
 PersonnelAdministrateur = Annotated[
     Personnel, Depends(get_current_personnel_administrateur)
 ]
+
+
+def get_sujet_optionnel(
+    request: Request,
+    db: Annotated[Session, Depends(get_db)],
+) -> tuple[TypeSujet, Client | Personnel] | None:
+    """Retourne `(type, sujet)` si le cookie de session désigne un compte valide,
+    sinon `None` — jamais d'exception.
+
+    Réservé à `GET /auth/moi` : contrairement à `get_current_client` et
+    `get_current_personnel`, cet endpoint ne connaît pas d'avance la
+    population attendue, il la découvre depuis la revendication `type` du
+    jeton. Réutilise `_charger_client`/`_charger_personnel` — mêmes règles de
+    chargement que les deux dépendances qui authentifient réellement un
+    endpoint, pour qu'une correction faite à l'une ne diverge pas
+    silencieusement de l'autre.
+    """
+    jeton = request.cookies.get(NOM_COOKIE_SESSION)
+    if jeton is None:
+        return None
+
+    charge_utile = decoder_jeton_acces(jeton)
+    if charge_utile is None:
+        return None
+
+    sujet = charge_utile.get("sub")
+    if sujet is None:
+        return None
+    try:
+        identifiant = int(sujet)
+    except (TypeError, ValueError):
+        return None
+
+    type_valeur = charge_utile.get(REVENDICATION_TYPE)
+    try:
+        if type_valeur == TypeSujet.CLIENT.value:
+            return (TypeSujet.CLIENT, _charger_client(db, identifiant))
+        if type_valeur == TypeSujet.PERSONNEL.value:
+            return (TypeSujet.PERSONNEL, _charger_personnel(db, identifiant))
+    except AuthentificationInvalide:
+        return None
+
+    return None

@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, hacher_mot_de_passe
 from app.main import app
 from app.models.client import Client, TypeClient
 from app.models.client_particulier import ClientParticulier
@@ -33,6 +33,7 @@ from app.models.paiement import (
     StatutPaiement,
 )
 from app.services.passerelle_paiement_simulee import PasserelleSimulee
+from tests.conftest import authentifier
 
 pytestmark = pytest.mark.postgres
 
@@ -99,8 +100,7 @@ def _commande_avec_paiement(
 
 
 def _jeton(client: Client) -> dict[str, str]:
-    jeton = creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(client.id_client, TypeSujet.CLIENT)
 
 
 # --- Signature, avant tout traitement ---------------------------------------

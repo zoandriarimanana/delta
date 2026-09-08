@@ -5,6 +5,8 @@ et des dates. Toute la logique d'inscription/connexion vit dans
 `services/auth_service.py`.
 """
 
+import secrets
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any
@@ -22,6 +24,12 @@ LONGUEUR_MAX_MOT_DE_PASSE_OCTETS = 72
 
 #: Nom de la revendication qui porte la nature du sujet dans le jeton.
 REVENDICATION_TYPE = "type"
+
+#: Nom de la revendication qui porte le jeton anti-CSRF (dette T0.10).
+REVENDICATION_CSRF = "csrf"
+
+#: Longueur en octets du jeton anti-CSRF, avant encodage URL-safe base64.
+LONGUEUR_JETON_CSRF_OCTETS = 32
 
 
 class TypeSujet(StrEnum):
@@ -73,11 +81,26 @@ def verifier_mot_de_passe(mot_de_passe: str, hash_attendu: str) -> bool:
         return False
 
 
+@dataclass(frozen=True)
+class JetonEmis:
+    """Un jeton de session signé et son jeton anti-CSRF associé, en clair.
+
+    Les deux naissent **ensemble**, dans le même appel : c'est cette
+    simultanéité qui lie le second au premier — le jeton CSRF est aussi une
+    revendication signée à l'intérieur de `jeton`, donc infalsifiable
+    indépendamment de la signature du JWT. Un appelant qui les générerait
+    séparément pourrait les désynchroniser.
+    """
+
+    jeton: str
+    csrf: str
+
+
 def creer_jeton_acces(
     sujet: str | int,
     type_sujet: TypeSujet,
     duree: timedelta | None = None,
-) -> str:
+) -> JetonEmis:
     """Signe un JWT dont le `sub` identifie le compte et `type` sa nature.
 
     `sub` est converti en chaîne : la spécification JWT impose une chaîne, et
@@ -87,16 +110,26 @@ def creer_jeton_acces(
     C'est délibéré : un défaut ferait qu'un futur appelant émettrait un jeton
     client sans s'en rendre compte. Le compilateur pose ici la question à notre
     place, à chaque nouveau point d'émission.
+
+    Porte désormais aussi une revendication `csrf` (dette T0.10) : une valeur
+    aléatoire, générée à chaque émission, que l'appelant recopie dans un
+    cookie lisible en JS. Elle ne désigne ni le compte ni sa population — sa
+    fuite éventuelle (le cookie qui la porte n'est délibérément pas
+    `httpOnly`) ne renseigne donc rien sur qui est connecté, contrairement à
+    `type`.
     """
     expiration = datetime.now(UTC) + (
         duree or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
+    csrf = secrets.token_urlsafe(LONGUEUR_JETON_CSRF_OCTETS)
     charge_utile = {
         "sub": str(sujet),
         REVENDICATION_TYPE: TypeSujet(type_sujet).value,
+        REVENDICATION_CSRF: csrf,
         "exp": expiration,
     }
-    return jwt.encode(charge_utile, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    jeton = jwt.encode(charge_utile, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return JetonEmis(jeton=jeton, csrf=csrf)
 
 
 def decoder_jeton_acces(jeton: str) -> dict[str, Any] | None:

@@ -7,7 +7,7 @@ vivent donc ici plutôt que dans le schema d'une des deux entités.
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from app.core.security import LONGUEUR_MAX_MOT_DE_PASSE_OCTETS
+from app.core.security import LONGUEUR_MAX_MOT_DE_PASSE_OCTETS, TypeSujet
 from app.schemas.client_entreprise import ClientEntrepriseCreate
 from app.schemas.client_particulier import ClientParticulierCreate
 
@@ -70,8 +70,17 @@ class Connexion(BaseModel):
     mot_de_passe: str
 
 
-class Token(BaseModel):
-    """Jeton d'accès renvoyé après inscription ou connexion."""
+class SessionActive(BaseModel):
+    """Réponse d'une connexion réussie, et de `GET /auth/moi`.
 
-    access_token: str
-    token_type: str = "bearer"
+    Depuis T0.10, le jeton ne transite plus dans le corps de la réponse : il
+    est posé par le serveur en cookie `httpOnly`, invisible en JS. Ce schema
+    ne porte donc plus que ce que le frontend a réellement besoin de savoir —
+    quelle population vient de s'ouvrir une session.
+
+    Volontairement le **même** schema pour la connexion et pour `/auth/moi` :
+    les deux répondent à la même question, et deux schemas distincts
+    auraient pu diverger l'un de l'autre sans que rien ne le signale.
+    """
+
+    type: TypeSujet

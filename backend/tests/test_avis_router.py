@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, hacher_mot_de_passe
 from app.main import app
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
@@ -19,6 +19,7 @@ from app.models.commande import Commande, StatutCommande, TypeCommande
 from app.models.ligne_commande import LigneCommande
 from app.models.produit import Produit
 from app.models.reservation import Reservation, StatutReservation, TypeReservation
+from tests.conftest import authentifier
 
 AVIS = f"{settings.API_V1_PREFIX}/avis"
 MDP = "motdepasse123"
@@ -113,11 +114,6 @@ def _reservation(
     return reservation
 
 
-def _entete(compte: Client) -> dict[str, str]:
-    jeton = creer_jeton_acces(compte.id_client, TypeSujet.CLIENT)
-    return {"Authorization": f"Bearer {jeton}"}
-
-
 @pytest.fixture
 def client(db: Session) -> Client:
     return _client(db)
@@ -125,7 +121,7 @@ def client(db: Session) -> Client:
 
 @pytest.fixture
 def entete_client(client: Client) -> dict[str, str]:
-    return _entete(client)
+    return authentifier(client.id_client, TypeSujet.CLIENT)
 
 
 def test_creation_sans_jeton_est_refusee(client_http: TestClient) -> None:

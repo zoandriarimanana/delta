@@ -7,9 +7,10 @@ gestionnaires globaux de `app/main.py`.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.orm import Session
 
+from app.core.cookies import poser_cookies_session
 from app.core.database import get_db
 from app.core.rate_limit import LIMITE_CONNEXION, limiter
 from app.core.security import TypeSujet, creer_jeton_acces
@@ -17,7 +18,7 @@ from app.schemas.auth import (
     Connexion,
     InscriptionEntreprise,
     InscriptionParticulier,
-    Token,
+    SessionActive,
 )
 from app.schemas.client import ClientRead
 from app.services.auth_service import AuthService
@@ -66,10 +67,14 @@ def inscrire_entreprise(donnees: InscriptionEntreprise, db: SessionBase) -> Clie
     return ClientRead.model_validate(client)
 
 
-@router.post("/connexion", response_model=Token, summary="Obtenir un jeton d'accès")
+@router.post(
+    "/connexion", response_model=SessionActive, summary="Ouvrir une session client"
+)
 @limiter.limit(LIMITE_CONNEXION)
-def se_connecter(request: Request, identifiants: Connexion, db: SessionBase) -> Token:
-    """Vérifie les identifiants et retourne un JWT.
+def se_connecter(
+    request: Request, identifiants: Connexion, db: SessionBase, response: Response
+) -> SessionActive:
+    """Vérifie les identifiants et ouvre une session.
 
     Répond 401 sans préciser si c'est l'e-mail ou le mot de passe qui est en
     cause (`AuthentificationInvalide`, traduite globalement). Au-delà de
@@ -77,8 +82,16 @@ def se_connecter(request: Request, identifiants: Connexion, db: SessionBase) -> 
     T0.6) — le hachage bcrypt ralentit une attaque par force brute sans
     l'empêcher, et rien ne freinait jusqu'ici le bourrage d'identifiants.
 
+    **Depuis T0.10, le jeton ne transite plus dans le corps de la réponse** :
+    il est posé en cookie `httpOnly` par `poser_cookies_session`, avec son
+    cookie CSRF associé. Le corps ne porte plus que la population ouverte —
+    le frontend le sait déjà (c'est l'endpoint qu'il vient d'appeler), ce
+    champ ne fait que confirmer.
+
     `request: Request` est exigé par `@limiter.limit` pour identifier
     l'appelant, pas par la logique métier de cet endpoint.
     """
     client = AuthService(db).authentifier(identifiants)
-    return Token(access_token=creer_jeton_acces(client.id_client, TypeSujet.CLIENT))
+    jeton = creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
+    poser_cookies_session(response, jeton.jeton, jeton.csrf)
+    return SessionActive(type=TypeSujet.CLIENT)

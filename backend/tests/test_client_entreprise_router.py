@@ -8,12 +8,12 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, hacher_mot_de_passe
 from app.main import app
 from app.models.client import Client, TypeClient
 from app.models.client_entreprise import ClientEntreprise
 from app.models.personnel import FonctionPersonnel, Personnel
-from tests.conftest import creer_engine_sqlite
+from tests.conftest import authentifier, creer_engine_sqlite
 
 CLIENTS_ENTREPRISE_ADMIN = f"{settings.API_V1_PREFIX}/clients-entreprise/administration"
 MDP = "motdepasse123"
@@ -67,8 +67,7 @@ def entete_admin(db: Session) -> dict[str, str]:
     )
     db.add(admin)
     db.commit()
-    jeton = creer_jeton_acces(admin.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(admin.id_personnel, TypeSujet.PERSONNEL)
 
 
 @pytest.fixture
@@ -84,8 +83,7 @@ def entete_agent(db: Session) -> dict[str, str]:
     )
     db.add(agent)
     db.commit()
-    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(agent.id_personnel, TypeSujet.PERSONNEL)
 
 
 def test_endpoint_existe_et_repond(
@@ -122,10 +120,10 @@ def test_un_salarie_non_administrateur_est_refuse(
 def test_un_jeton_client_est_refuse(client_http: TestClient, db: Session) -> None:
     """Réservé au personnel : un jeton client, même valide, n'ouvre rien ici."""
     entreprise = _entreprise(db, "1111111111", "Société A")
-    jeton = creer_jeton_acces(entreprise.id_client, TypeSujet.CLIENT)
 
     reponse = client_http.get(
-        CLIENTS_ENTREPRISE_ADMIN, headers={"Authorization": f"Bearer {jeton}"}
+        CLIENTS_ENTREPRISE_ADMIN,
+        headers=authentifier(entreprise.id_client, TypeSujet.CLIENT),
     )
 
     assert reponse.status_code == 401

@@ -876,6 +876,48 @@ neuf sprints) :
       une reconnexion déjà attendue à plus ou moins brève échéance —
       cette migration ne fait qu'avancer ce moment pour tout le monde
       simultanément, une seule fois.
+      — **Backend livré** : `core/cookies.py` (émission/effacement des deux
+      cookies, `Secure` conditionné à `Settings.ENVIRONMENT` comme la garde
+      de simulation-paiement) ; `core/security.py` porte désormais une
+      revendication `csrf` dans le JWT (`JetonEmis`, générée à l'émission,
+      jamais séparément) ; `core/csrf.py` un middleware unique de
+      double-submit sur les méthodes mutantes, enregistré **avant**
+      `CORSMiddleware` (Starlette empile en ordre inverse d'enregistrement,
+      CORS doit envelopper CSRF pour que ses en-têtes atteignent aussi un
+      403 anti-CSRF) ; `get_current_client`/`get_current_personnel` lisent
+      désormais le cookie `delta_session` plutôt que l'en-tête
+      `Authorization` ; nouveau `session_router.py` (`GET /auth/moi`,
+      `POST /auth/deconnexion`), séparé des deux routers de connexion
+      existants parce qu'aucun des deux n'est le bon propriétaire d'un
+      endpoint qui ne connaît la population qu'après lecture du cookie.
+      `/auth/connexion` et `/auth/personnel/connexion` ne renvoient plus le
+      jeton dans le corps — `SessionActive{type}` remplace `Token`, **le
+      même schema** pour la connexion et pour `/auth/moi`, pour que les deux
+      ne divergent jamais l'un de l'autre.
+      — **Migration des tests, conforme au rayon d'impact mesuré** : les 17
+      fichiers de tests backend authentifiant par `Authorization: Bearer`
+      sont passés au cookie de session. `authentifier()` (nouveau,
+      `conftest.py`) pose `Cookie` comme un **en-tête de requête ordinaire**
+      plutôt que sur le cookie-jar partagé du `TestClient` — une première
+      version posait la session sur ce jar, qui s'est révélée fausse dès
+      qu'un test authentifie deux identités différentes dans le même corps
+      (comparer l'entreprise A à l'entreprise B, par exemple) : la seconde
+      authentification écrasait la première pour tout appel suivant. Un
+      en-tête par requête restaure exactement le modèle de l'ancien
+      `Authorization` — un jeton par requête, jamais une session partagée
+      entre elles — et rend chaque appel indépendant des autres, quel que
+      soit le nombre d'identités qu'un test juxtapose.
+      — Vérifié de bout en bout : suite complète verte (1106/1106) sur une
+      base fraîchement migrée (`alembic upgrade head` sur une base vierge,
+      comme en CI) — les échecs observés en cours de route sur la base de
+      développement se sont confirmés comme de la pollution de données
+      pré-existante, sans rapport avec cette branche, une fois rejoués sur
+      base neuve. `ruff`, `black --check`, `alembic check` propres.
+      — **Reste à faire** : le frontend (suppression de `tokenStorage.ts`,
+      réécriture de `axiosClient.ts` pour le double-submit et
+      `withCredentials`, hooks `useEstConnecte`/`useEstPersonnelConnecte`
+      asynchrones) — sujet d'une PR séparée, comme convenu (même découpage
+      que 9.1/9.2).
 - [ ] **Sprint 9.5 — décision sur `POST /paiements/{id}/simuler-confirmation`** :
       retirer l'endpoint (backend et bouton frontend) maintenant, ou
       confirmer qu'il reste dette active tant qu'aucune vraie passerelle

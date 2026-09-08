@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
+from app.core.csrf import middleware_csrf
 from app.core.exceptions import (
     AuthentificationInvalide,
     AutorisationInsuffisante,
@@ -43,6 +44,7 @@ from app.routers import (
     reservation_router,
     salle_router,
     session_formation_router,
+    session_router,
 )
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -50,6 +52,13 @@ app = FastAPI(title=settings.PROJECT_NAME)
 # Requis par `slowapi` : c'est ici qu'il va chercher le limiteur pour
 # appliquer les décorateurs `@limiter.limit(...)` posés sur les routers.
 app.state.limiter = limiter
+
+# Enregistré **avant** CORSMiddleware : Starlette empile les middlewares dans
+# l'ordre inverse d'enregistrement (le dernier ajouté devient le plus
+# extérieur). CORS doit envelopper le middleware CSRF, pas l'inverse — sinon
+# un 403 anti-CSRF, produit sans jamais atteindre CORSMiddleware, arriverait
+# au navigateur sans les en-têtes CORS attendus, illisible pour le frontend.
+app.middleware("http")(middleware_csrf)
 
 app.add_middleware(
     CORSMiddleware,
@@ -153,6 +162,7 @@ async def _gerer_erreur_metier(request: Request, exc: ErreurMetier) -> JSONRespo
 
 
 app.include_router(auth_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(session_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(categorie_produit_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(produit_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(commande_router.router, prefix=settings.API_V1_PREFIX)

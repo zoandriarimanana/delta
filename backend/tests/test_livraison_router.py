@@ -22,12 +22,13 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import TypeSujet, creer_jeton_acces, hacher_mot_de_passe
+from app.core.security import TypeSujet, hacher_mot_de_passe
 from app.main import app
 from app.models.categorie_produit import CategorieProduit
 from app.models.client import Client, TypeClient
 from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.produit import Produit
+from tests.conftest import authentifier
 
 pytestmark = pytest.mark.postgres
 
@@ -76,8 +77,7 @@ def _entete_personnel(
     )
     db.add(agent)
     db.commit()
-    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(agent.id_personnel, TypeSujet.PERSONNEL)
 
 
 @pytest.fixture
@@ -118,8 +118,7 @@ def compte(db: Session) -> Client:
 
 @pytest.fixture
 def entete_client(compte: Client) -> dict[str, str]:
-    jeton = creer_jeton_acces(compte.id_client, TypeSujet.CLIENT)
-    return {"Authorization": f"Bearer {jeton}"}
+    return authentifier(compte.id_client, TypeSujet.CLIENT)
 
 
 @pytest.fixture
@@ -497,11 +496,10 @@ def test_le_suivi_d_autrui_retourne_404(
     )
     db.add(autre)
     db.commit()
-    jeton = creer_jeton_acces(autre.id_client, TypeSujet.CLIENT)
 
     reponse = client_http.get(
         f"{COMMANDES}/{commande['id_commande']}/livraison",
-        headers={"Authorization": f"Bearer {jeton}"},
+        headers=authentifier(autre.id_client, TypeSujet.CLIENT),
     )
 
     assert reponse.status_code == 404

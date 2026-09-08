@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import settings
+from app.core.cookies import NOM_COOKIE_CSRF, NOM_COOKIE_SESSION
 from app.core.database import Base, get_db
 from app.core.security import decoder_jeton_acces
 from app.main import app
@@ -129,6 +130,12 @@ def test_inscription_mot_de_passe_trop_long_en_octets_retourne_422(
 
 
 def test_connexion_retourne_un_jeton_exploitable(client_http: TestClient) -> None:
+    """Depuis T0.10, le jeton est posé en cookie `httpOnly`, plus dans le corps.
+
+    Le corps ne confirme plus que la population ouverte ; le jeton lui-même
+    se lit dans le cookie que la réponse pose, exactement comme le
+    navigateur le ferait.
+    """
     inscrit = client_http.post(f"{AUTH}/inscription", json=INSCRIPTION).json()
 
     reponse = client_http.post(
@@ -140,9 +147,9 @@ def test_connexion_retourne_un_jeton_exploitable(client_http: TestClient) -> Non
     )
 
     assert reponse.status_code == 200
-    corps = reponse.json()
-    assert corps["token_type"] == "bearer"
-    charge_utile = decoder_jeton_acces(corps["access_token"])
+    assert reponse.json() == {"type": "client"}
+    assert NOM_COOKIE_CSRF in reponse.cookies
+    charge_utile = decoder_jeton_acces(reponse.cookies[NOM_COOKIE_SESSION])
     assert charge_utile is not None
     assert charge_utile["sub"] == str(inscrit["id_client"])
 
@@ -263,7 +270,7 @@ def test_entreprise_se_connecte_sur_le_meme_endpoint(client_http: TestClient) ->
     )
 
     assert reponse.status_code == 200
-    charge = decoder_jeton_acces(reponse.json()["access_token"])
+    charge = decoder_jeton_acces(reponse.cookies[NOM_COOKIE_SESSION])
     assert charge is not None
     assert charge["sub"] == str(inscrit["id_client"])
 
