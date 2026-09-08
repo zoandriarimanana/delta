@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: delta-postgres
+    restart: unless-stopped
+    # Source unique des identifiants : le .env du backend. Aucune valeur en dur
+    # ni valeur par défaut ici — si une clé manque, le conteneur doit échouer
+    # bruyamment plutôt que démarrer avec des identifiants inventés.
+    env_file:
+      - backend/.env
+    ports:
+      # 5433 côté hôte : le port 5432 est déjà occupé par le PostgreSQL système,
+      # qui héberge d'autres bases sans rapport avec Delta et ne doit pas être
+      # arrêté. DATABASE_URL pointe donc sur 5433.
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # `$$` échappe l'interpolation Compose : la variable est résolue par le
+      # shell DANS le conteneur, où les clés de l'env_file sont disponibles.
+      # Permet à `docker compose up -d --wait` de ne rendre la main qu'une fois
+      # la base réellement prête — utile avant d'enchaîner sur `alembic upgrade`.
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:

@@ -1,0 +1,121 @@
+/**
+ * Appels HTTP du module commande — et rien d'autre.
+ *
+ * L'instance axios est celle de `lib/axiosClient`, jamais une nouvelle : c'est
+ * elle qui porte l'URL de base et l'injection du jeton.
+ */
+
+import { axiosClient } from '@/lib/axiosClient';
+
+import type {
+  CommandePersonnelEnvoyee,
+  Commande,
+  CommandeEnvoyee,
+  CommandeInviteEnvoyee,
+} from './commande.types';
+
+const CHEMIN = '/commandes';
+const CHEMIN_ADMINISTRATION = '/commandes/administration';
+
+/**
+ * Crée une commande au nom du client connecté.
+ *
+ * Le jeton est ajouté par l'intercepteur. Sans lui, l'API répond 401 — elle ne
+ * bascule **pas** en mode invité, et c'est voulu : un jeton expiré donnerait
+ * sinon une commande anonyme introuvable dans l'historique.
+ */
+export async function creerCommande(donnees: CommandeEnvoyee): Promise<Commande> {
+  const reponse = await axiosClient.post<Commande>(CHEMIN, donnees);
+  return reponse.data;
+}
+
+/** Crée une commande sans compte. La réponse porte la référence publique. */
+export async function creerCommandeInvite(
+  donnees: CommandeInviteEnvoyee
+): Promise<Commande> {
+  const reponse = await axiosClient.post<Commande>(`${CHEMIN}/invite`, donnees);
+  return reponse.data;
+}
+
+/** Relit une commande invitée par sa référence. Endpoint public. */
+export async function recupererCommandeInvitee(reference: string): Promise<Commande> {
+  const reponse = await axiosClient.get<Commande>(`${CHEMIN}/invite/${reference}`);
+  return reponse.data;
+}
+
+/**
+ * Historique du client authentifié.
+ *
+ * Le filtre vient du jeton, jamais d'un paramètre : c'est ce qui empêche de
+ * lire l'historique d'autrui. Les commandes archivées n'y figurent pas, et les
+ * commandes invitées non plus — sans `id_client`, elles n'appartiennent à aucun
+ * historique par construction.
+ */
+export async function recupererHistorique(): Promise<Commande[]> {
+  const reponse = await axiosClient.get<Commande[]>(CHEMIN);
+  return reponse.data;
+}
+
+/**
+ * Saisit une commande pour un client, au comptoir ou à table.
+ *
+ * Réservé au personnel : l'API refuse un jeton client en 401. Le jeton
+ * **n'identifie jamais l'acheteur** — il identifie le salarié, que le serveur
+ * enregistre dans `id_personnel`.
+ */
+export async function creerCommandePersonnel(
+  donnees: CommandePersonnelEnvoyee
+): Promise<Commande> {
+  const reponse = await axiosClient.post<Commande>('/commandes/personnel', donnees);
+  return reponse.data;
+}
+
+/**
+ * Toutes les commandes, tous clients confondus. Réservé à l'administration.
+ *
+ * Ne porte aucun paramètre de filtre côté serveur — `GET
+ * /commandes/administration` n'en expose pas, même constat que pour
+ * RESERVATION en 10.2 (cf. `reservation.api.ts`). Le filtre par statut de
+ * `AdministrationCommandesPage` s'applique donc côté client.
+ */
+export async function recupererCommandesAdministration(): Promise<Commande[]> {
+  const reponse = await axiosClient.get<Commande[]>(CHEMIN_ADMINISTRATION);
+  return reponse.data;
+}
+
+/** Fiche d'une commande, administration. 404 si inconnue ou archivée. */
+export async function obtenirCommandeAdministration(
+  idCommande: number
+): Promise<Commande> {
+  const reponse = await axiosClient.get<Commande>(
+    `${CHEMIN_ADMINISTRATION}/${idCommande}`
+  );
+  return reponse.data;
+}
+
+/**
+ * Annule une commande — administration. Aucune propagation vers `LIVRAISON`
+ * (cf. `docs/architecture.md`, synchronisation à sens unique).
+ */
+export async function annulerCommandeAdministration(
+  idCommande: number
+): Promise<Commande> {
+  const reponse = await axiosClient.put<Commande>(
+    `${CHEMIN_ADMINISTRATION}/${idCommande}/statut`,
+    { statut: 'Annulee' }
+  );
+  return reponse.data;
+}
+
+/**
+ * Marque une commande remboursée — geste manuel simplifié, ne touche à
+ * aucune ligne de `PAIEMENT` (cf. `docs/mld.md`). Idempotent côté serveur.
+ */
+export async function rembourserCommandeAdministration(
+  idCommande: number
+): Promise<Commande> {
+  const reponse = await axiosClient.post<Commande>(
+    `${CHEMIN_ADMINISTRATION}/${idCommande}/remboursement`
+  );
+  return reponse.data;
+}

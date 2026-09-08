@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+
+    /* Vite transpile sans typer : tsc ne sert qu'à la vérification. */
+    "noEmit": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+
+    /* Exigé par CONTRIBUTING.md. `strict` couvre notamment strictNullChecks,
+       qui est ce qui empêche un `undefined` de traverser silencieusement. */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+
+    /* Alias d'import. Doit rester synchronisé avec `resolve.alias` de
+       vite.config.ts : ici pour le typage, là-bas pour la résolution réelle.
+       Pas de `baseUrl` — déprécié en TS 7 ; depuis TS 4.4 les chemins de
+       `paths` se résolvent relativement à ce fichier. */
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}

@@ -11,6 +11,38 @@ concerne-t-il une seule entité métier, ou plusieurs ?" Si plusieurs : c'est un
 signe qu'il faut soit un fichier par entité avec une couche d'orchestration à part,
 soit repenser le découpage.
 
+## Base de données locale (Docker)
+
+Le `docker-compose.yml` à la racine fournit un PostgreSQL 16 de développement,
+exposé sur **`localhost:5433`** — l'adresse attendue par le `DATABASE_URL` de
+`backend/.env.example`. Le port 5433 et non 5432 : un PostgreSQL installé sur la
+machine occupe généralement 5432, et il n'a pas à être arrêté pour Delta.
+
+```bash
+docker compose up -d --wait   # démarre postgres et attend qu'il soit prêt
+docker compose logs -f postgres
+docker compose down           # arrête (les données survivent)
+docker compose down -v        # arrête ET efface le volume de données
+```
+
+Le `--wait` s'appuie sur le healthcheck `pg_isready` du service : la commande ne
+rend la main qu'une fois la base réellement en état d'accepter des connexions,
+ce qui évite un `alembic upgrade head` lancé trop tôt.
+
+Le compose lit ses identifiants dans `backend/.env` via `env_file` : les clés
+`POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` y vivent à côté de
+`DATABASE_URL`, et doivent rester cohérentes avec lui — c'est la même base. Aucune
+valeur par défaut n'est codée dans le compose : si une clé manque, le conteneur
+échoue bruyamment au lieu de démarrer avec des identifiants inventés.
+
+Avant tout démarrage, copier le gabarit : `cp backend/.env.example backend/.env`.
+
+Ces trois clés sont déclarées dans `Settings` (`core/config.py`) bien que
+l'application ne les utilise pas — elle passe exclusivement par `DATABASE_URL`.
+C'est volontaire : le `.env` reste ainsi intégralement validé, et une clé mal
+orthographiée échoue au démarrage de l'API avec un message clair plutôt que
+silencieusement au `docker compose up`.
+
 ## Backend — arborescence
 
 ```
@@ -73,6 +105,51 @@ dépassent le CRUD générique** :
 Ne jamais réécrire `create`/`get_by_id`/`list`/`update`/`delete` dans un repository
 spécifique — c'est le signe que l'héritage n'est pas utilisé correctement.
 
+### Suppression logique, suppression réelle, anonymisation
+
+Les 21 entités portent `supprime_le` via `SoftDeleteMixin` (`core/database.py`).
+`BaseRepository` en tire trois opérations qu'il ne faut pas confondre.
+
+**`delete()` archive.** Aucun `DELETE` SQL n'est émis : la ligne reste,
+horodatée. C'est le seul chemin que doivent emprunter les règles métier.
+
+**`get_by_id()` et `list()` filtrent par défaut.** Une entité archivée est
+invisible, exactement comme une entité qui n'a jamais existé.
+`inclure_supprimes=True` lève le filtre — paramètre explicite, jamais implicite,
+pour que la consultation d'archives se lise dans le code appelant.
+
+**`restaurer()` peut échouer légitimement.** Les index uniques étant partiels, la
+valeur libérée par l'archivage a pu être réattribuée ; la restauration créerait
+alors un doublon actif, et la base la refuse. Le service traduit — voir
+`ClientService.restaurer`.
+
+**`supprimer_definitivement()` est le vrai `DELETE`.** Il reste nécessaire parce
+que l'archivage, à lui seul, ne satisfait aucun droit à l'effacement : la donnée
+est toujours là. Il est réservé aux entités **sans valeur probante** — le
+catalogue, pour l'essentiel — et ne doit jamais être exposé sur un endpoint sans
+une protection explicite et tracée.
+
+**Pour `CLIENT`, c'est `ClientService.anonymiser()` et rien d'autre.** Un client
+est référencé par des réservations et des avis en `ON DELETE RESTRICT` : le
+`DELETE` serait refusé, et il serait de toute façon la mauvaise réponse. Une
+réservation honorée est une preuve de transaction, généralement soumise à une
+obligation de conservation qui prime sur le droit à l'effacement.
+`anonymiser()` réécrit les données personnelles, conserve `id_client` et
+`type_client`, pose `supprime_le`, et ne touche à aucun enregistrement lié.
+
+L'adresse générée utilise le domaine `delta.invalid`, réservé par la RFC 2606.
+Deux conséquences voulues : elle n'est jamais routable, et `EmailStr` la refuse
+en entrée — personne ne peut donc la soumettre pour usurper un compte anonymisé.
+C'est aussi pourquoi `ClientRead.email` est typé `str` et non `EmailStr` : un
+schema de sortie n'a pas à revalider une valeur issue de notre propre base, et
+le faire ferait échouer en 500 toute lecture d'un compte anonymisé.
+
+**Conséquence transverse, la plus lourde** : un archivage étant un `UPDATE`, ni
+les `ON DELETE RESTRICT` ni les `ON DELETE CASCADE` du schéma ne se déclenchent.
+Refuser l'archivage d'un parent encore référencé, et propager l'archivage à ses
+enfants, deviennent des responsabilités de service. Voir la règle transverse de
+`docs/roadmap.md`.
+
 ### Couches et responsabilités
 
 | Couche | Responsabilité |
@@ -83,13 +160,187 @@ spécifique — c'est le signe que l'héritage n'est pas utilisé correctement.
 | `services/` | Logique métier, règles de gestion, orchestration de plusieurs repositories |
 | `routers/` | Endpoints HTTP, validation d'entrée, appel au service correspondant |
 
+### Codes d'erreur : 404 contre 422
+
+Une référence à une entité liée inexistante dans le corps d'une requête renvoie
+**422**, jamais 404 — réservé aux ressources absentes de l'URL.
+
+Autrement dit : `GET /produits/999` sur un produit inconnu donne 404, la
+ressource demandée par l'URL n'existe pas. `POST /produits` avec un
+`id_categorie` inconnu donne 422, la ressource visée par l'URL existe et c'est
+le contenu envoyé qui est invalide — au même titre qu'un prix négatif. La règle
+vaut pour toute FK traversée par une charge utile : `id_formation` d'une
+session, `id_salle` d'une réservation, `id_produit` d'une ligne de commande.
+
+### Authentification des endpoints protégés
+
+`core/deps.py` porte les dépendances FastAPI transverses. La première,
+`get_current_client`, est le **socle réutilisé par tous les endpoints protégés
+des sprints suivants** : elle lit l'en-tête `Authorization: Bearer`, valide le
+jeton via `decoder_jeton_acces`, charge le `CLIENT` correspondant au `sub` et le
+retourne. Elle lève `AuthentificationInvalide` — traduite en 401 par les
+gestionnaires globaux de `main.py` — si le jeton est absent, invalide, expiré,
+ou si le client qu'il désigne n'existe plus en base. Ce dernier cas compte : un
+jeton reste cryptographiquement valide jusqu'à son expiration, même après la
+suppression du compte.
+
+Un endpoint s'y branche ainsi :
+
+```python
+ClientConnecte = Annotated[Client, Depends(get_current_client)]
+
+@router.post("/produit")
+def creer(donnees: ProduitCreate, client: ClientConnecte, db: SessionBase): ...
+```
+
+**Pourquoi `core/deps.py` et non `core/security.py`.** `security.py` ne connaît
+ni FastAPI ni la base : il manipule des chaînes et des dates, et reste testable
+sans serveur ni session. `get_current_client` a besoin des trois — le framework
+pour la déclaration de dépendance, la session pour charger le client, le
+repository pour la requête. Les mélanger ferait de `security.py` un module
+couplé à toute la stack.
+
+### Lectures publiques, lectures protégées
+
+Le catalogue produit expose ses **lectures** publiquement : un visiteur doit
+pouvoir parcourir les produits sans compte ; ses **écritures** sont réservées aux
+administrateurs. `PERSONNEL` va plus loin — **toutes ses opérations exigent un
+jeton, lectures comprises**, la lecture étant ouverte à tout salarié et l'écriture
+aux seuls administrateurs. Un annuaire de salariés
+porte des noms, des adresses professionnelles, des téléphones et des dates
+d'embauche ; rien n'y a vocation à être lisible anonymement.
+
+Le critère n'est donc pas « lecture contre écriture » mais **la nature de la
+donnée**. Une entité dont la lecture publique n'a pas de sens métier ne doit pas
+hériter du réglage du catalogue par simple imitation.
+
+### Amorçage du premier administrateur
+
+`PERSONNEL.est_administrateur` n'est exposé par **aucun** endpoint : ni
+`PersonnelCreate` ni `PersonnelUpdate` ne le portent, et `PERSONNEL.mot_de_passe`
+non plus. Un champ qu'on n'expose pas est un champ qu'aucune faille
+d'autorisation ne peut atteindre — la protection est structurelle, elle ne dépend
+pas de la dépendance branchée sur l'endpoint.
+
+Reste la question de l'œuf et de la poule : créer le premier administrateur
+supposerait d'en être déjà un. Elle se résout **hors de l'API**, par
+`backend/scripts/creer_admin.py`, qui écrit directement en base :
+
+```bash
+cd backend
+.venv/bin/python -m scripts.creer_admin \
+    --email chef@delta.mg --nom Rakoto --prenom Jean --fonction Autre
+```
+
+Sans terminal interactif — conteneur, CI — le mot de passe se transmet par
+l'environnement :
+
+```bash
+DELTA_ADMIN_MOT_DE_PASSE='…' .venv/bin/python -m scripts.creer_admin \
+    --email chef@delta.mg --nom Rakoto --prenom Jean --fonction Autre
+```
+
+**Le mot de passe n'est jamais un argument de ligne de commande.** Il resterait
+en clair dans `~/.bash_history` et serait visible de tout utilisateur de la
+machine dans la sortie de `ps`. Le script ne propose donc pas l'option, et un
+test le vérifie — la commodité serait ici une régression de sécurité.
+
+Exécuter ce script suppose un accès au serveur et aux identifiants de la base,
+c'est-à-dire un niveau de privilège qui rend la question de l'élévation sans
+objet. C'est ce qui le distingue d'un endpoint, et pourquoi il passe par le
+repository plutôt que par `PersonnelService` : le service est consommé par le
+router, et y placer une opération qui accorde des droits inviterait tôt ou tard
+à l'exposer.
+
+`mot_de_passe` est **nullable** : certaines fonctions n'ont structurellement pas
+besoin d'un compte de connexion. `NULL` signifie « pas de compte » et non « mot
+de passe vide » — `get_current_personnel` refusera l'authentification, avec le
+même message uniforme que les autres refus.
+
+**Cette dépendance authentifie, elle n'autorise pas.** Aucun droit ne se dérive
+d'un compte client : tout client inscrit, particulier ou entreprise, est
+équivalent. Les opérations réservées passent par
+`get_current_personnel_administrateur`.
+
+### Deux populations, deux jetons
+
+`CLIENT` et `PERSONNEL` sont deux tables distinctes dont **les clés primaires se
+recouvrent** : le client n°5 et le salarié n°5 existent tous les deux. Un jeton
+ne portant que `sub` serait donc ambigu, et `get_current_client` chargerait un
+client à partir du jeton d'un salarié. Ce n'est pas un inconfort de typage, c'est
+une confusion d'identité.
+
+Le jeton porte donc une revendication **`type`**, valant `client` ou `personnel`,
+fixée à l'émission et vérifiée à chaque lecture. Chaque dépendance exige la
+sienne et **rejette celle de l'autre**, avec le message uniforme habituel.
+
+`creer_jeton_acces` prend le type en paramètre **obligatoire, sans valeur par
+défaut** : un défaut ferait qu'un futur point d'émission produirait un jeton
+client sans que personne s'en aperçoive.
+
+Un jeton **sans** revendication `type` est refusé. Il ne peut venir que d'une
+version antérieure à ce cloisonnement, et le lire par défaut comme un jeton
+client rouvrirait exactement la confusion qu'on ferme. Le coût est une
+reconnexion des sessions ouvertes — ce qu'une expiration aurait imposé de toute
+façon.
+
+| Dépendance | Exige | Refuse |
+|---|---|---|
+| `get_current_client` | `type = client`, compte actif | jeton personnel, compte archivé |
+| `get_current_personnel` | `type = personnel`, compte actif, `mot_de_passe` non nul | jeton client, compte sans connexion |
+| `get_current_personnel_administrateur` | ci-dessus **plus** `est_administrateur` | salarié sans droit → **403** |
+
+### Authentifier n'est pas autoriser : 401 contre 403
+
+Les deux premières dépendances **authentifient** : à leur échec, on ne sait pas
+qui appelle, c'est un **401**. La troisième **autorise** : l'appelant est
+identifié, il lui manque un droit, c'est un **403** (`AutorisationInsuffisante`).
+
+Les deux codes ne se substituent pas. Répondre 401 à un salarié non
+administrateur l'inviterait à se reconnecter pour un problème que sa reconnexion
+ne réglera pas. Le 403 ne porte pas d'en-tête `WWW-Authenticate`, qui réclame des
+identifiants alors que les siens sont valides.
+
+Le droit vient de `est_administrateur` et **jamais de `fonction`** : l'un porte un
+droit, l'autre un métier (cf. `docs/mld.md`). Un formateur peut administrer le
+catalogue, un cuisinier non.
+
+### Anonymisation du personnel
+
+`PersonnelService.anonymiser()` est à `PERSONNEL` ce que `ClientService.anonymiser()`
+est à `CLIENT` : le seul chemin de conformité au droit à l'effacement. L'archivage
+seul ne suffit pas — la ligne reste, et avec elle le nom, l'adresse
+professionnelle et le téléphone.
+
+Sont conservés `id_personnel`, `fonction` et `date_embauche` : ni la fonction ni
+l'ancienneté n'identifient quelqu'un, et les livraisons comme les sessions
+gardent leur `#id_personnel`, désormais anonyme. `est_administrateur` repasse à
+`false` — un compte anonymisé ne porte plus aucun droit.
+
 ## Frontend — arborescence
 
 ```
 src/
+├── main.tsx                  # point d'entree Vite/React
+├── index.css                 # entree Tailwind (@import "tailwindcss")
+├── vite-env.d.ts             # types Vite
+├── components/
+│   └── ui/                   # primitives strictement visuelles (voir plus bas)
+│       ├── Badge.tsx
+│       ├── Bouton.tsx
+│       └── Carte.tsx
 ├── lib/
-│   └── axiosClient.ts        # instance axios unique, intercepteurs
+│   ├── axiosClient.ts        # instance axios unique, intercepteurs
+│   ├── tokenStorage.ts       # jeton d'acces **et** population qu'il designe
+│   ├── useEstConnecte.ts     # etat de session, par population
+│   └── RoutePersonnel.tsx    # garde de route reservee au personnel
+├── layouts/
+│   └── MainLayout.tsx        # structure de page transverse (nav, pied de page)
+├── pages/                    # pages transverses, hors module metier
+│   ├── AccueilPage.tsx
+│   └── NonTrouveePage.tsx
 ├── features/
+│   ├── auth/                 # connexion, un dossier par population de compte
 │   ├── salle/
 │   │   ├── salle.types.ts    # interfaces TypeScript
 │   │   ├── salle.api.ts      # appels axios purs, rien d'autre
@@ -100,7 +351,22 @@ src/
 │   │       ├── SalleDetailPage.tsx
 │   │       └── SalleReservationForm.tsx   # composant separe, pas fondu dans la page
 │   ├── produit/
-│   │   └── ... (meme structure)
+│   │   ├── produit.types.ts
+│   │   ├── produit.api.ts
+│   │   ├── produit.service.ts
+│   │   ├── produit.hooks.ts
+│   │   ├── components/          # sous-composants locaux au module
+│   │   └── pages/
+│   │       ├── ProduitListPage.tsx
+│   │       └── ProduitDetailPage.tsx
+│   ├── commande/
+│   │   ├── commande.types.ts
+│   │   ├── commande.api.ts
+│   │   ├── commande.service.ts    # regles de panier, fonctions pures
+│   │   ├── commande.panier.ts     # persistance du panier + abonnement
+│   │   ├── commande.hooks.ts
+│   │   ├── components/
+│   │   └── pages/
 │   ├── formation/
 │   ├── abonnement/
 │   ├── reservation/
@@ -111,6 +377,601 @@ src/
 Règle de découpe : dès qu'une page approche ~500 lignes, extraire un sous-composant
 dans `pages/` ou un sous-dossier `components/` local au module — jamais dans un
 fichier partagé fourre-tout.
+
+### `src/layouts/`
+
+Contient la **structure de page transverse** : navigation, en-tête, pied de page,
+conteneur dans lequel le routeur injecte la page courante. C'est le seul endroit
+où un composant a le droit de ne se rattacher à aucun module métier — précisément
+parce qu'il les enveloppe tous.
+
+En contrepartie, un layout ne porte **jamais** la logique métier d'un module
+donné : pas d'appel à l'API produit, pas de calcul de panier. S'il faut afficher
+une donnée métier dans la navigation (nombre d'articles du panier, nom du client
+connecté), elle vient d'un hook exposé par le module concerné, que le layout
+consomme sans rien savoir de son implémentation.
+
+`src/layouts/` est au même niveau que `src/features/`, pas dedans : un layout
+n'appartient à aucun module. Ce n'est pas non plus un `src/components/`
+fourre-tout — seule la structure de page y a sa place.
+
+### `src/components/ui/` — l'exception, et son critère
+
+Cette phrase interdisait un `src/components/` fourre-tout, et l'interdiction
+tient. **`src/components/ui/` en est l'exception explicite**, ouverte pour des
+primitives **strictement visuelles** : `Badge`, `Bouton`, `Carte`.
+
+Le critère d'admission tient en une question :
+
+> **Ce composant resterait-il identique si on retirait toutes les entités du
+> MLD ?**
+
+Si oui, il a sa place ici. Sinon, il appartient à un module.
+
+`Badge` passe le test : il reçoit une variante et un libellé, et ne sait pas
+s'il peint un logement, une livraison ou une réservation. Une `CarteSession`
+échouerait — elle connaît `SESSION_FORMATION` —, et elle vit d'ailleurs dans
+`features/formation/components/`.
+
+**Ce que l'exception refuse.** La première version de `Badge` portait une table
+de statuts couvrant `LOGEMENT`, `RESERVATION`, `LIVRAISON` et la rupture produit
+**à la fois**, alors que trois `*.service.ts` portaient déjà chacun son
+`libelleStatut`. C'était une duplication croisant quatre entités, exactement ce
+que la SRP interdit — et le genre de fichier qui devient le fourre-tout que la
+règle voulait éviter.
+
+Chaque module traduit donc son propre statut **et choisit sa variante** :
+`logement.service.ts` porte `libelleStatut` et `varianteStatut`, la primitive ne
+fait que peindre. Un test de conception vérifie que `Badge.tsx` ne contient
+aucune valeur de statut — il tombe si quelqu'un ramène une table métier dans la
+primitive.
+
+L'exception est écrite ici plutôt que laissée implicite : une règle contournée
+sans être réécrite est une règle qu'on ne peut plus opposer à personne.
+
+### Client HTTP et stockage du jeton
+
+`lib/axiosClient.ts` porte l'**unique** instance axios. Les fichiers `*.api.ts`
+des modules l'importent et ne créent jamais la leur : c'est ce qui garantit qu'un
+seul endroit détient l'URL de base (`VITE_API_URL`, préfixe `/api/v1` compris),
+l'injection du jeton et le traitement des erreurs d'authentification.
+
+Deux règles de comportement des intercepteurs :
+
+- Un **401** efface le jeton et émet l'événement `delta:non-authentifie`, auquel
+  le layout réagit par une redirection. L'intercepteur ne connaît pas le routeur :
+  la couche HTTP ne doit pas dépendre de la navigation.
+- Un 401 venant de `/auth/connexion`, `/auth/personnel/connexion` ou
+  `/auth/inscription` est **exclu** de ce traitement : c'est une réponse métier
+  (« mot de passe faux »), pas une session expirée. Sans cette exception, un
+  utilisateur déjà connecté qui se trompe en saisissant un second compte se
+  ferait déconnecter.
+
+L'erreur continue de remonter dans tous les cas : l'intercepteur nettoie, il ne
+décide pas du message à afficher à la place du module appelant.
+
+L'événement porte la **population** dont la session vient d'être rejetée, lue
+avant l'effacement du jeton. Sans elle, l'écouteur ne saurait plus qui a été
+déconnecté et renverrait un salarié vers la connexion client. La couche HTTP ne
+décide toujours pas de la navigation : elle rapporte un fait, l'écouteur en tire
+une route.
+
+`lib/tokenStorage.ts` isole le support de stockage — actuellement `localStorage`.
+**Conséquence de sécurité** : le jeton est lisible par tout script exécuté dans la
+page, donc exposé en cas de faille XSS. Un cookie `httpOnly` supprimerait ce
+risque mais impose un travail côté API (émission du cookie, protection CSRF).
+Report inscrit en dette technique dans `docs/roadmap.md`.
+
+#### Un seul jeton, qui porte sa population
+
+`CLIENT` et `PERSONNEL` ont des **clés primaires qui se recouvrent** — c'est ce
+qui a imposé la revendication `type` dans le jeton côté serveur. Ranger les deux
+jetons au même endroit sans les distinguer rouvrirait côté navigateur la
+confusion d'identité que le backend a fermée.
+
+`tokenStorage` range donc le jeton **avec** son type, et les deux ne se séparent
+jamais. Une session dont le type est absent ou inconnu est traitée comme
+inexistante, exactement comme le serveur refuse un jeton sans revendication
+`type` : un tel enregistrement ne peut venir que d'une version antérieure, et le
+lire par défaut comme un jeton client rouvrirait la confusion qu'on ferme.
+
+**Un seul jeton et non deux coexistants.** Deux clés de stockage permettraient à
+un salarié d'être simultanément client, mais obligeraient l'intercepteur à
+savoir quelle population chaque requête vise — une notion métier dans la couche
+HTTP, qui lui est interdite au même titre que la connaissance du routeur. Le
+cumul est un confort, la règle d'architecture une contrainte.
+
+**Le remplacement n'a lieu qu'à la réussite.** Une connexion qui aboutit
+remplace la session en cours, quelle que soit sa population ; une connexion qui
+échoue **ne touche à rien**. La session appartient à quelqu'un de valablement
+connecté, et une tentative ratée sur un autre compte n'est pas une raison de la
+lui retirer — effacer par anticipation ferait payer une faute de frappe par une
+déconnexion. C'est la même règle que l'exception des chemins de connexion dans
+le traitement du 401, appliquée à l'autre bout de la chaîne.
+
+Le type est déduit de l'**endpoint appelé**, jamais lu dans le jeton : décoder un
+JWT côté client pour se fier à son contenu reviendrait à faire confiance à une
+valeur que le porteur peut réécrire. L'endpoint, lui, est un fait local.
+
+`lib/RoutePersonnel.tsx` réserve une route au personnel connecté. **Ce n'est pas
+une protection** : elle évite d'afficher une page inutilisable, tandis que ce qui
+protège réellement reste `get_current_personnel` côté serveur. Un frontend est du
+code exécuté chez l'utilisateur, il ne garantit rien. Elle n'autorise pas
+davantage : `est_administrateur` n'est lisible nulle part côté client, et c'est
+le serveur qui répond 403.
+
+### `src/pages/` — pages transverses
+
+Accueil, 404, mentions légales : des pages qui n'appartiennent à **aucun** module
+métier. Elles ne peuvent pas vivre dans `features/<module>/pages/`, qui reste
+réservé aux pages d'un module donné (`features/produit/pages/ProduitListPage.tsx`).
+
+Critère de placement, en une question : *cette page disparaîtrait-elle si on
+retirait un module du produit ?* Si oui, elle va dans `features/<module>/pages/`.
+Sinon, dans `src/pages/`.
+
+Ce dossier n'est pas une porte de sortie pour les pages qu'on ne sait pas classer :
+une page de connexion, par exemple, appartient à `features/auth/` dès que ce module
+existe — elle n'est en `src/pages/` au Sprint 0 que parce qu'aucun module n'est
+encore créé.
+
+`features/auth/` existe depuis le Sprint 6 et porte **les deux connexions**,
+client et personnel. `src/pages/ConnexionPage.tsx`, resté le gabarit du Sprint 0
+pendant cinq sprints, a été supprimé au profit de
+`features/auth/pages/ConnexionPage.tsx` : la règle énoncée ici dès l'origine est
+donc appliquée.
+
+**Deux pages et non une, parce que les endpoints sont deux.** C'est l'endpoint
+appelé qui détermine la population du jeton émis. Une page unique avec une case
+« je suis salarié » laisserait ce choix à l'utilisateur, alors qu'il découle de
+son compte — et rendrait possible d'ouvrir une session de la mauvaise population
+en cochant la mauvaise case.
+
+**Un seul hook derrière les deux.** `useConnexionClient` et
+`useConnexionPersonnel` habillent la même implémentation, qui ne diffère que par
+l'endpoint et le type. Deux copies divergeraient au jour où l'une serait
+corrigée sans l'autre — ce n'est pas théorique : la règle « un échec ne touche
+pas à la session en cours » a dû être corrigée après coup, et une seconde copie
+serait restée fausse. Même raisonnement que
+`PersonnelService.obtenir_avec_fonction` côté serveur.
+
+**L'inscription n'ouvre aucune session.** L'API ne renvoie pas de jeton — elle
+répond le client créé — et le frontend **n'enchaîne pas** sur la connexion : il
+redirige vers l'écran de connexion avec un message de confirmation. Enchaîner
+créerait un second point d'émission de jeton, implicite, déclenché par un écran
+plutôt que par une action de l'utilisateur. Le frontend ne rouvre pas par
+commodité ce que l'API a fermé par conception.
+
+**Une seule page d'inscription pour les deux sous-types**, alors que la
+connexion en a deux. Ce n'est pas une inconséquence : le choix
+client/personnel découle du compte et ne doit pas être laissé à l'utilisateur,
+tandis que le choix particulier/entreprise **est** une déclaration qui lui
+appartient. La page reflète l'API, où seul `identite` change — les champs de
+compte vivent sur `CLIENT`, communs aux deux.
+
+**Les refus d'inscription sont repris tels quels**, contrairement au message
+uniforme de la connexion. Il n'y a ici rien à protéger : dire qu'une adresse est
+déjà prise est la raison même du refus. Et le 409 sur `numero_id_fiscal` est
+distinct de celui sur l'e-mail — les deux ne se corrigent pas de la même façon.
+
+### La livraison naît avec la commande
+
+`LIVRAISON` est créée dans la transaction de `POST /commandes`, comme les lignes
+et les personnalisations. Une livraison ne doit pas survivre à une commande qui a
+échoué.
+
+**Le déclencheur est la présence de `COMMANDE.adresse_livraison`, et lui seul.**
+Ni `type_commande` ni `PRODUIT.est_livrable` ne décident à la place du client :
+ils servent uniquement à refuser une demande incohérente — une commande
+`Sur_place` qu'on voudrait livrer, ou un panier contenant un article non
+livrable. Les deux donnent un 422, la référence étant dans le corps.
+
+La livraison naît **sans livreur et sans date de tournée**. `NULL` y signifie
+« pas encore affectée » et « pas encore planifiée » — pas une donnée manquante.
+C'est ce qui a imposé de rendre `date_heure_prevue` nullable : la garder
+obligatoire forçait à inventer une date au moment de la commande, c'est-à-dire à
+écrire une promesse que rien ne garantit.
+
+L'adresse est **recopiée** et non partagée : la livraison est un fait
+logistique, la commande un fait commercial. Corriger l'adresse d'une tournée ne
+doit pas réécrire la commande.
+
+### Synchronisation LIVRAISON → COMMANDE
+
+Règle transverse : elle croise deux entités, elle est donc écrite **ici et une
+seule fois**, pas redécouverte par chaque module qui y touche — même esprit que
+la règle sur le soft delete et les clés étrangères dans `docs/roadmap.md`.
+
+**Le sens est unique et le déclencheur unique.**
+
+| Transition de `LIVRAISON.statut` | Effet sur `COMMANDE.statut` |
+|---|---|
+| → `Livree` | passe à `STATUT_TERMINAL[type_commande]`, dans la même transaction |
+| → `Echouee` | **aucun** |
+| → `Annulee`, `En_cours`, `En_attente` | **aucun** |
+| toute transition de `COMMANDE.statut` | **aucun effet sur la livraison** |
+
+Rien ne remonte jamais en sens inverse. Une commande n'a pas à piloter sa
+tournée : c'est la tournée qui constate la remise.
+
+**`Echouee` ne bascule pas la commande vers `Annulee`, et c'est délibéré.** Un
+échec de tournée n'est pas une annulation : la marchandise a été préparée, le
+montant reste dû, et ce qu'il convient de faire — relancer la livraison,
+rembourser, annuler — est une décision humaine. Basculer automatiquement
+trancherait à la place de l'administrateur et effacerait la distinction entre
+« n'a pas abouti » et « ne se fera pas », qui est précisément la raison d'être de
+deux statuts terminaux distincts.
+
+Ces trois actions **n'existent pas encore**, et c'est un manque volontaire, pas
+une dette : elles sont nommées au **Sprint 10**, sous « Tableau de bord
+commandes/réservations/abonnements », et sortent du périmètre du sprint 3. Ne
+rien faire ici, c'est ne pas casser la cohérence en l'attendant.
+
+Le rattachement est écrit noir sur blanc parce qu'il était jusqu'ici implicite :
+tant qu'aucune case ne les porte, « manque volontaire » et « dette oubliée » se
+ressemblent trop pour qu'on les distingue six mois plus tard.
+
+**Aucun autre chemin automatique ne fait cette transition.** Jusqu'au
+Sprint 10.5, `COMMANDE.statut` n'était écrit qu'à deux endroits dans toute
+l'application : à la création, où il vaut `En_attente`, et par cette
+propagation. Il n'apparaissait dans **aucun** schema d'entrée — ni
+`CommandeCreate` ni ailleurs —, donc aucune requête HTTP ne pouvait le
+fixer. La garantie était structurelle, pas conventionnelle.
+
+Le Sprint 10.5 ajoute un **troisième** chemin, délibérément : `PUT
+/commandes/administration/{id}/statut`, réservé `PersonnelAdministrateur`,
+qui écrit `Annulee` depuis une décision humaine — l'une des trois actions
+laissées en suspens par #25 sur une livraison `Echouee` (voir plus haut).
+`CommandeAnnulationAdministration.statut` reste un `Literal[Annulee]` : ce
+chemin n'ouvre donc que **cette seule** valeur, jamais les autres du
+domaine — la garantie structurelle se déplace du « aucune requête ne peut
+l'écrire » au « une seule requête, un seul administrateur, une seule
+valeur possible » ; elle ne disparaît pas, elle se resserre.
+
+Le statut d'arrivée est lu dans `STATUT_TERMINAL`, la table posée avec le domaine
+de `COMMANDE` : `Servie` sur place, `Livree` pour les deux autres types. La
+branche `Sur_place` est **inatteignable** par ce chemin — une commande sur place
+ne peut pas porter d'adresse de livraison, donc pas de livraison — mais on lit la
+table plutôt que d'écrire `Livree` en dur, pour que la règle garde un seul
+endroit où vivre.
+
+### Deux schemas de sortie pour une même livraison
+
+`LivraisonRead` porte l'identité du livreur ; `LivraisonPublique` ne porte que le
+statut et les dates. Ce n'est pas un filtrage à l'affichage mais **deux schemas
+distincts**, parce qu'un oubli de condition est invisible alors qu'un mauvais
+schema se voit dans la signature de l'endpoint.
+
+La raison est concrète : l'URL `/commandes/invite/{reference}/livraison` n'a
+**aucune authentification**, un UUID suffit à l'ouvrir. Y exposer le nom ou le
+téléphone du livreur reviendrait à publier la donnée personnelle d'un tiers qui
+n'y a pas consenti. L'adresse n'y figure pas davantage : le client la connaît
+déjà, et l'afficher la rendrait lisible par quiconque détient le lien.
+
+Le même schema restreint sert au client connecté : être identifié ne donne pas
+droit à connaître le nom de son livreur.
+
+### La cohérence de fonction est une affaire de service, et d'un seul endroit
+
+`LIVRAISON.#id_personnel` et `SESSION_FORMATION.#id_formateur` pointent vers
+`PERSONNEL` tout entier. **Rien en base n'empêche d'affecter un cuisinier à une
+tournée, ni un livreur à une session.**
+
+Les deux règles sont **la même**, à la fonction attendue près. Elles vivent donc
+dans **une seule méthode**, `PersonnelService.obtenir_avec_fonction`, que les deux
+services appellent :
+
+```python
+personnel = self.personnels.obtenir_avec_fonction(
+    id_personnel, FonctionPersonnel.LIVREUR, pour="une livraison"
+)
+```
+
+Elle est chez `PERSONNEL` parce qu'elle porte sur lui : c'est une propriété du
+salarié, pas une particularité de l'entité qui l'affecte. Deux implémentations
+parallèles ne divergeraient qu'au jour où l'une serait corrigée sans l'autre —
+c'est-à-dire trop tard pour s'en apercevoir.
+
+Elle refuse en **422** — l'identifiant vient du corps, pas de l'URL —, traite un
+salarié **archivé** comme inexistant, et nomme dans son message **la fonction
+constatée** et **l'affectation visée**. Sans ces deux mentions, l'administrateur
+doit aller lire la fiche du salarié pour comprendre son erreur.
+
+Un test paramétré couvre les quatre fonctions non conformes **pour chacun des
+deux appelants**, et un test de conception vérifie qu'aucun des deux services ne
+compare `fonction` directement — il tomberait si une seconde implémentation
+renaissait.
+
+C'est exactement ce que le domaine formel de `PERSONNEL.fonction` rend fiable :
+sur une chaîne libre, la comparaison aurait laissé passer « livreur » et
+« Livreur ».
+
+### Deux frontières de confidentialité, tracées différemment
+
+`LivraisonPublique` masque **toute** identité de livreur. `FormateurPublic`
+expose au contraire nom, prénom et spécialité. Ce n'est pas une incohérence.
+
+Le livreur apparaîtrait sur une URL ouverte par un simple UUID, sans
+authentification, et son nom n'apporte rien au client. Le formateur, lui, exerce
+publiquement devant ses stagiaires, et son expérience fait partie de ce qui
+décide un client à s'inscrire — le masquer appauvrirait la fiche sans rien
+protéger.
+
+Ce que les deux schemas partagent : **aucune coordonnée professionnelle**. Ni
+e-mail, ni téléphone, dans un cas comme dans l'autre. Les publier exposerait un
+salarié au démarchage direct sans qu'il l'ait choisi.
+
+Dans les deux cas la garantie est portée par un **schema de sortie distinct**, pas
+par un filtrage à l'affichage : un oubli de condition est invisible, un mauvais
+schema se voit dans la signature de l'endpoint.
+
+### Réserver n'est pas consulter
+
+`features/formation/` porte le catalogue ; `features/reservation/` porte
+l'écriture. Le premier n'appelle **jamais** l'API de réservation, ni l'inverse —
+ce sont deux entités distinctes dans la table « modules ↔ tables ».
+
+Concrètement, `FormationDetailPage` monte `FormulaireReservation`, un composant
+du module `reservation/`, sans rien savoir de son implémentation. C'est la même
+mécanique que le layout consommant `usePanier` : la page insère, elle n'orchestre
+pas.
+
+### Un refus métier n'est pas une panne
+
+Deux erreurs de l'API de réservation portent une information que le client peut
+**utiliser** :
+
+| Code | Message | Ce qu'il permet |
+|---|---|---|
+| **409** | « Il ne reste que 2 place(s)… » | corriger le nombre demandé |
+| **422** | « La formation « … » ne propose pas d'hébergement. » | retirer l'option |
+
+Ils sont repris **tels quels**. Les remplacer par « une erreur est survenue »
+ferait perdre exactement ce qui permet de corriger — même traitement que le
+« stock insuffisant » du tunnel de commande.
+
+La reprise n'est pas aveugle pour autant. FastAPI met une **liste d'objets** dans
+`detail` pour une erreur de validation de schema : la rendre telle quelle
+afficherait du JSON. Le message n'est donc repris que si c'est une **chaîne**,
+sinon on retombe sur un message générique.
+
+Une session complète reste **visible** mais non réservable : le client doit
+pouvoir constater qu'elle existe et attendre la suivante. Et l'option
+d'hébergement n'est proposée que si la formation l'offre — le serveur refuserait
+de toute façon, mais découvrir le refus après coup n'apprend rien.
+
+### Le suivi de livraison n'a pas de page à lui
+
+`features/livraison/` ne porte **aucune page**, seulement des composants. Le
+suivi n'est pas une destination : il s'insère dans l'historique du client et dans
+la page publique d'une commande invitée, à côté du récapitulatif. Lui donner une
+URL obligerait le client à naviguer pour une information qu'il attend là où il
+regarde déjà sa commande.
+
+Les deux insertions partagent le **même** composant de rendu, et ne diffèrent que
+par le hook qui charge — identifiant de commande d'un côté, référence publique de
+l'autre. Une seconde implémentation divergerait tôt ou tard, et c'est précisément
+sur la page sans authentification qu'une divulgation serait la plus grave.
+
+Le module ne déclare **pas** de type pour `LivraisonRead` : aucun endpoint
+consommé par le frontend ne le renvoie, et lui donner un type inviterait à en
+attendre les champs. L'absence d'identité du livreur est portée trois fois — par
+le schema de sortie du serveur, par le type TypeScript, et par un test qui injecte
+délibérément des champs interdits pour vérifier que le composant ne les rend pas.
+
+Un statut inconnu — API en avance sur le frontend — retombe sur un libellé neutre
+plutôt que sur un identifiant technique brut ou une page vide.
+
+### L'hébergement d'une formation est un second enregistrement
+
+Le `CHECK` d'exclusivité interdit qu'une même `RESERVATION` porte à la fois
+`#id_session` et `#id_logement`. Le couplage passe donc par **deux lignes**,
+reliées par `RESERVATION.#id_reservation_hebergement`, porté par celle de
+formation. Ce n'est pas un choix de confort : c'est la contrainte qui l'impose.
+
+**Le service choisit la chambre, le client ne la choisit pas.** La première
+`Disponible`, libre sur les dates de la session et assez grande. Lui laisser le
+choix supposerait de publier une vue de disponibilité qu'aucun endpoint n'expose
+— une API inventée pour un accessoire.
+
+**Aucune chambre libre n'est pas une erreur.** La réservation de formation est
+acceptée quand même, `avec_hebergement` reste un souhait non honoré, et
+`#id_reservation_hebergement` reste `NULL`. Refuser trancherait à la place de
+l'administrateur, et obligerait à rendre la place tout juste décrémentée : une
+écriture réussie défaite par l'échec d'une écriture accessoire. Même
+raisonnement que `LIVRAISON.Echouee`, qui ne bascule pas la commande vers
+`Annulee`.
+
+C'est aussi pourquoi l'attribution se fait dans un **point de reprise**
+(`SAVEPOINT`) : deux formations simultanées peuvent lire la même chambre libre,
+et c'est la contrainte d'exclusion qui tranche à l'écriture. Sans lui, le
+`rollback` emporterait la réservation de formation et son décrément.
+
+**La propagation d'annulation est unidirectionnelle** : annuler la formation
+annule l'hébergement, jamais l'inverse. Un stagiaire qui se loge ailleurs garde
+sa place. Même forme que la synchronisation `LIVRAISON → COMMANDE`.
+
+### Un compteur ne se lit pas avant de s'écrire
+
+`SESSION_FORMATION.places_restantes` et `PRODUIT.stock_disponible` posent le même
+problème et reçoivent la même réponse : un **`UPDATE` conditionnel atomique**.
+
+```sql
+UPDATE session_formation
+   SET places_restantes = places_restantes - :n
+ WHERE id_session = :id AND places_restantes >= :n
+```
+
+La condition est évaluée par PostgreSQL au moment de l'écriture, sous le verrou
+de ligne. Deux réservations simultanées sur la dernière place ne peuvent pas
+réussir toutes les deux. Une lecture suivie d'une écriture séparée laisserait au
+contraire passer les deux, et le compteur deviendrait négatif — un bogue qui ne
+se reproduit pas en développement et se voit en production un samedi.
+
+Le repository retourne `False` quand aucune ligne n'a été touchée ; le service
+traduit en 409 avec un message qui dit ce qui reste.
+
+**Le symétrique est une obligation, pas une commodité.** Annuler ou archiver une
+réservation rend ses places. Sans cela, chaque annulation en perd une
+définitivement : au bout de quelques cycles la session affiche complet alors que
+la salle est vide, et aucune donnée ne dit pourquoi.
+
+La restitution est **idempotente**, et la garde est portée par le **service** et
+non par le repository : seule la transition d'un statut occupant vers `Annulee`
+crédite. Mettre cette condition dans le repository l'obligerait à connaître le
+statut des réservations, qui ne le regarde pas.
+
+Une réservation `Annulee` ne peut plus changer de statut. Le permettre supposerait
+de re-décrémenter, donc de pouvoir échouer faute de places — une transition de
+statut qui échoue pour cause de capacité serait un piège pour l'appelant.
+
+### Deux compteurs, deux protections
+
+`places_restantes` et un calendrier de salle posent le même problème — deux
+requêtes simultanées ne doivent pas réussir toutes les deux — et reçoivent des
+réponses **différentes**, parce que ce sur quoi elles s'appuient diffère.
+
+| | Ce qui protège | Pourquoi |
+|---|---|---|
+| `SESSION_FORMATION.places_restantes` | `UPDATE` conditionnel atomique | il existe une ligne à verrouiller |
+| `PRODUIT.stock_disponible` | idem | idem |
+| `SALLE` / `LOGEMENT` sur un créneau | contrainte d'exclusion `EXCLUDE USING gist` | **il n'y a aucune ligne à verrouiller** |
+
+Le troisième cas est le plus instructif. Il n'y a pas de compteur : la
+disponibilité se déduit de l'ensemble des réservations existantes. Une
+vérification applicative devrait lire cet ensemble puis écrire — et deux requêtes
+simultanées liraient toutes deux « libre » avant que l'une n'écrive. Seule la
+base peut arbitrer, et elle le fait au moment de l'écriture.
+
+Le service fait quand même un pré-contrôle, mais pour une autre raison : produire
+un **409 lisible** — « cette salle est déjà réservée sur ce créneau » — plutôt
+qu'une erreur d'intégrité brute. Même architecture à deux niveaux que l'unicité
+d'e-mail depuis T0.6. Le pré-contrôle reproduit **exactement** le prédicat de la
+contrainte ; diverger donnerait un contrôle qui laisse passer ce que la base
+refuse, ou l'inverse.
+
+Bornes `[)` sur `tstzrange` : deux créneaux adjacents ne se chevauchent pas. Une
+salle libérée à midi est réservable à midi.
+
+### Deux règles nouvelles, décidées en construisant
+
+Elles ne corrigent **aucune omission** du dictionnaire de données d'origine —
+contrairement à l'unicité de `CLIENT.email`, aux bornes d'`AVIS.note` ou au
+`CHECK` des tarifs de `SALLE`, qui rétablissaient des règles écrites puis
+perdues. Celles-ci n'y ont jamais figuré : ce sont des décisions prises au
+sprint 5, en écrivant la réservation de biens.
+
+Elles ont chacune **un seul point d'application**, le service, et il faut savoir
+pourquoi.
+
+**Le nombre de personnes ne dépasse pas la capacité du bien** — 422.
+`RESERVATION.nombre_personnes` et `SALLE.capacite` vivent dans **deux tables
+différentes** : aucun `CHECK` ne peut les comparer, une contrainte de table ne
+voyant que ses propres colonnes. Un trigger le pourrait, au prix d'une logique
+métier écrite en PL/pgSQL, hors de la couche qui la porte partout ailleurs. Le
+service est donc le seul endroit — et il n'y a pas de redondance de défense ici,
+contrairement au `CHECK` des tarifs.
+
+**Un logement qui n'est pas `Disponible` n'est pas réservable** — 409.
+`En_maintenance` et `Hors_service` disent précisément qu'il n'est pas louable.
+La règle croise `RESERVATION` et `LOGEMENT.statut` : même raison, pas de `CHECK`
+possible.
+
+Un point mérite réflexion et n'est pas tranché : cette règle n'empêche pas de
+**mettre en maintenance un logement déjà réservé**. Rien ne l'interdit
+aujourd'hui, et il n'est pas évident que ce soit un défaut — un dégât des eaux ne
+demande pas la permission aux réservations existantes. Mais alors quelqu'un doit
+prévenir les clients concernés, et ce mécanisme n'existe pas. À reprendre si le
+besoin se manifeste.
+
+`SALLE` n'a pas d'équivalent : elle ne porte pas de statut.
+
+### La personnalisation naît avec sa ligne
+
+`DEMANDE_PERSONNALISATION` n'a **ni router ni service propres**, et ce n'est pas
+un oubli. Elle se crée uniquement dans le corps de `POST /commandes`, portée par
+`LigneCommandeCreate.personnalisation`, et son supplément entre dans le calcul
+unique de `montant_total`.
+
+Lui donner un endpoint reviendrait à permettre d'en ajouter une après coup, donc
+à choisir entre deux mauvaises options : un supplément que le client paie sans le
+voir dans son montant, ou un `montant_total` recalculé — alors que c'est une
+donnée d'archive figée à la création.
+
+Deux champs du modèle ne sont donc jamais acceptés depuis la requête.
+`supplement_prix`, pour la même raison que `prix_unitaire_applique` : l'accepter
+laisserait le client fixer ce qu'il paie. Et `id_produit_base`, déduit du produit
+de la ligne — le laisser saisir ouvrirait une incohérence qu'il faudrait ensuite
+détecter et refuser, alors que la déduire supprime le cas.
+
+Le supplément vient de `PRODUIT.supplement_personnalisation`, tarif fixé au
+catalogue par un administrateur — donc protégé par
+`get_current_personnel_administrateur`, comme le reste des écritures catalogue.
+Il est recopié à la commande puis figé, et multiplié par la quantité : le tarif
+est par unité, comme `prix_unitaire` dont il est le voisin.
+
+La cohérence « personnalisable ⇒ tarif renseigné » est vérifiée à **trois**
+niveaux, et ce n'est pas une redondance gratuite. Le `CHECK` en base est la
+garantie réelle, y compris hors API. `ProduitCreate` la répète pour produire un
+422 lisible. Et `ProduitService.modifier` la reprend parce qu'elle croise la
+charge utile et l'état courant : rendre un produit personnalisable sans fournir
+de tarif est légitime s'il en porte déjà un, ce qu'un schema d'entrée ne peut
+pas savoir.
+
+L'archivage se propage sur **deux** niveaux et non un seul : `COMMANDE` →
+`LIGNE_COMMANDE` → `DEMANDE_PERSONNALISATION`. Les deux `ON DELETE CASCADE` du
+schéma ne se déclenchent pas, un archivage étant un `UPDATE`.
+
+### Le panier du salarié n'est pas celui du client
+
+`features/commande/` porte **deux** paniers, et cette dualité est voulue.
+
+Celui du client vit dans `commande.panier.ts`, un magasin externe **persistant**
+qui survit au rechargement : c'est ce qui permet de composer une commande sur
+plusieurs visites. Celui du salarié vit dans un `useState` local à l'écran de
+prise de commande, et disparaît avec lui.
+
+**Un salarié qui enchaîne les commandes ne veut rien retrouver de la
+précédente** — un panier qui survit serait un défaut, pas un service. Et sur un
+poste partagé, écrire dans le magasin persistant écraserait le panier du client.
+
+Ce qui est partagé, ce sont les **fonctions pures** de `commande.service.ts` :
+elles opèrent sur un tableau, sans rien savoir d'où il est rangé. C'est
+exactement ce qui permet de partager le calcul sans partager la persistance, et
+de n'avoir qu'une implémentation du total.
+
+L'écran n'envoie **aucune adresse de livraison** : c'est sa présence, et elle
+seule, qui déclenche une `LIVRAISON`. Ne pas l'envoyer est donc la garantie
+qu'aucune n'est créée, et non un effet de bord du type `Sur_place`.
+
+**Le jeton du salarié n'identifie jamais l'acheteur.** Il identifie le salarié,
+que le serveur enregistre dans `COMMANDE.#id_personnel`. L'acheteur est déduit
+d'une réservation de table, ou nommé comme invité — et l'écran ne porte
+**aucun champ « identifiant client »**, ce qui rend la confusion inexprimable.
+
+### Le panier n'a pas d'entité serveur
+
+`docs/mld.md` ne comporte **aucune table panier** : il vit dans le navigateur
+jusqu'à la validation, qui crée la `COMMANDE` et ses `LIGNE_COMMANDE`. Deux
+conséquences assumées — le panier est perdu au changement d'appareil, et il est
+lisible par tout script de la page, comme le jeton.
+
+`commande.panier.ts` est un magasin externe minimal (`useSyncExternalStore`)
+plutôt qu'un contexte React : le compteur de la barre de navigation et la page
+panier doivent partager le même état sans qu'un fournisseur enveloppe toute
+l'application. C'est aussi ce qui permet au layout de n'afficher qu'une valeur
+issue d'un hook du module, sans logique métier propre.
+
+**Le total affiché par le panier est indicatif.** Le montant enregistré est
+calculé par le serveur à partir des prix du catalogue au moment de la commande :
+le panier est un brouillon, pas un engagement de prix.
+
+### Fichiers d'entrée
+
+`main.tsx`, `index.css`, `index.html` et `vite-env.d.ts` ne sont pas des choix
+d'architecture : ce sont les points d'entrée standard imposés par Vite et React.
+Ils sont listés ci-dessus pour que l'arborescence soit complète, pas parce qu'ils
+relèvent d'une décision de conception.
 
 ## Correspondance modules ↔ tables du MLD
 
@@ -127,6 +988,7 @@ fichier partagé fourre-tout.
 | `reservation` | RESERVATION |
 | `abonnement` | ABONNEMENT, BENEFICIAIRE, CONSOMMATION_REPAS |
 | `avis` | AVIS |
+| `paiement` | PAIEMENT |
 
 Voir `docs/mld.md` pour le détail des colonnes de chaque table.
 Voir `docs/roadmap.md` pour l'ordre de développement de ces modules.
