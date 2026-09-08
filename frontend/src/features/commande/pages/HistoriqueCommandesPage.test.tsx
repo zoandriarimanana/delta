@@ -40,6 +40,7 @@ function commande(surcharge: Partial<Commande> = {}): Commande {
         prix_unitaire_applique: '3500.00',
       },
     ],
+    rembourse_le: null,
     ...surcharge,
   };
 }

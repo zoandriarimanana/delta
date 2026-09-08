@@ -49,6 +49,7 @@ const COMMANDE: Commande = {
   nom_invite: null,
   contact_invite: null,
   lignes: [],
+  rembourse_le: null,
 };
 
 beforeEach(() => {
