@@ -424,6 +424,21 @@ def test_relancer_refuse_toute_provenance_hors_echouee(
         service.relancer(livraison.id_livraison)
 
 
+def test_relancer_refuse_le_rejeu_apres_une_premiere_relance_reussie(
+    service: LivraisonService, livraison
+) -> None:
+    """Distinct de `test_relancer_refuse_toute_provenance_hors_echouee` :
+    celui-ci couvre une livraison qui n'a **jamais** été `Echouee`, alors
+    qu'ici la livraison l'a été puis a déjà été relancée avec succès —
+    l'appelant qui rejoue l'action (double clic, requête renvoyée) ne doit
+    pas non plus réussir une seconde fois."""
+    service.changer_statut(livraison.id_livraison, StatutLivraison.ECHOUEE)
+    service.relancer(livraison.id_livraison)
+
+    with pytest.raises(ConflitMetier):
+        service.relancer(livraison.id_livraison)
+
+
 def test_relancer_ne_contourne_pas_terminee_pour_les_autres_methodes(
     service: LivraisonService, livraison, db: Session
 ) -> None:
