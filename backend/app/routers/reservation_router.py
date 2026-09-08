@@ -1,11 +1,18 @@
 """Endpoints de RESERVATION.
 
-**Toutes les opérations exigent un jeton client.** Une réservation est un
-engagement nominatif : il n'y a rien à y lire anonymement, et rien à y écrire au
-nom d'autrui.
+**Deux populations, deux portées** — même patron que `abonnement_router.py` :
+un client gère ses propres réservations (`/reservations`), un administrateur
+gère toutes les réservations (`/reservations/administration`).
 
-`id_client` vient toujours du jeton, jamais du corps ni de l'URL. C'est ce qui
-garantit qu'un client ne lit ni ne modifie les réservations d'un autre.
+**L'ordre de déclaration est significatif.** `/administration` et
+`/administration/{id_reservation}` sont déclarées avant `/{id_reservation}` :
+sinon, la route paramétrée du client capterait `administration` comme un
+identifiant — même piège que documenté pour `/produits/administration`
+(PR #90) et `/abonnements/administration` (Sprint 7).
+
+`id_client` vient toujours du jeton côté client, jamais du corps ni de l'URL.
+C'est ce qui garantit qu'un client ne lit ni ne modifie les réservations d'un
+autre.
 """
 
 from typing import Annotated
@@ -14,8 +21,9 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import ClientConnecte
+from app.core.deps import ClientConnecte, PersonnelAdministrateur
 from app.schemas.reservation import (
+    ReservationAnnulation,
     ReservationChangementStatut,
     ReservationCreate,
     ReservationRead,
@@ -25,6 +33,9 @@ from app.services.reservation_service import ReservationService
 router = APIRouter(prefix="/reservations", tags=["reservation"])
 
 SessionBase = Annotated[Session, Depends(get_db)]
+
+
+# --- Client (routes sans cible, avant toute route paramétrée) --------------
 
 
 @router.post(
@@ -57,6 +68,60 @@ def lister(client: ClientConnecte, db: SessionBase) -> list[ReservationRead]:
     return [ReservationRead.model_validate(r) for r in reservations]
 
 
+# --- Administration (segments littéraux : doivent précéder /{id_reservation}) --
+
+
+@router.get(
+    "/administration",
+    response_model=list[ReservationRead],
+    summary="Lister toutes les réservations",
+)
+def lister_administration(
+    admin: PersonnelAdministrateur, db: SessionBase
+) -> list[ReservationRead]:
+    """Les 4 types confondus (`Formation`, `Salle`, `Logement`, `Table`)."""
+    reservations = ReservationService(db).lister()
+    return [ReservationRead.model_validate(r) for r in reservations]
+
+
+@router.get(
+    "/administration/{id_reservation}",
+    response_model=ReservationRead,
+    summary="Obtenir une réservation (administration)",
+)
+def obtenir_administration(
+    id_reservation: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> ReservationRead:
+    """404 si l'identifiant ne désigne personne, ou une ligne archivée."""
+    reservation = ReservationService(db).obtenir(id_reservation)
+    return ReservationRead.model_validate(reservation)
+
+
+@router.put(
+    "/administration/{id_reservation}/statut",
+    response_model=ReservationRead,
+    summary="Changer le statut d'une réservation (administration)",
+)
+def changer_statut_administration(
+    id_reservation: int,
+    donnees: ReservationChangementStatut,
+    admin: PersonnelAdministrateur,
+    db: SessionBase,
+) -> ReservationRead:
+    """Seule route qui accepte `Honoree` — c'est l'administrateur qui constate
+    qu'une prestation a eu lieu, pas le client qui la reçoit (cf.
+    `ReservationAnnulation`, le seul chemin ouvert côté client).
+
+    **409** si la réservation est déjà annulée : son statut ne peut plus
+    changer.
+    """
+    reservation = ReservationService(db).changer_statut(id_reservation, donnees.statut)
+    return ReservationRead.model_validate(reservation)
+
+
+# --- Client (routes paramétrées, déclarées en dernier) ----------------------
+
+
 @router.get(
     "/{id_reservation}",
     response_model=ReservationRead,
@@ -75,19 +140,22 @@ def obtenir(
 @router.put(
     "/{id_reservation}/statut",
     response_model=ReservationRead,
-    summary="Changer le statut d'une de ses réservations",
+    summary="Annuler une de ses réservations",
 )
 def changer_statut(
     id_reservation: int,
-    donnees: ReservationChangementStatut,
+    donnees: ReservationAnnulation,
     client: ClientConnecte,
     db: SessionBase,
 ) -> ReservationRead:
-    """Passer à `Annulee` **restitue les places** à la session.
+    """**La seule transition ouverte au client est `Annulee`** — `donnees`
+    n'accepte structurellement pas d'autre valeur (cf. `ReservationAnnulation`) :
+    un client ne peut pas se déclarer lui-même « servi ».
 
-    **409** si la réservation est déjà annulée : son statut ne peut plus
-    changer, faute de quoi il faudrait re-décrémenter et l'opération pourrait
-    échouer par manque de places.
+    L'annulation **restitue les places** à la session. **409** si la
+    réservation est déjà annulée : son statut ne peut plus changer, faute de
+    quoi il faudrait re-décrémenter et l'opération pourrait échouer par
+    manque de places.
     """
     service = ReservationService(db)
     service.obtenir_du_client(id_reservation, client)

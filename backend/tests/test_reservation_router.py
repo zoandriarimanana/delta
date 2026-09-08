@@ -502,3 +502,179 @@ def test_une_table_avec_une_cible_retourne_422(
     )
 
     assert reponse.status_code == 422
+
+
+# --- Administration (10.2) -----------------------------------------------------
+
+
+def _entete_admin(db: Session) -> dict[str, str]:
+    admin = Personnel(
+        nom="Admin",
+        prenom="Test",
+        fonction=FonctionPersonnel.AUTRE,
+        email=f"admin_{uuid4().hex[:8]}@delta.mg",
+        est_administrateur=True,
+        mot_de_passe=hacher_mot_de_passe(MDP),
+    )
+    db.add(admin)
+    db.commit()
+    jeton = creer_jeton_acces(admin.id_personnel, TypeSujet.PERSONNEL)
+    return {"Authorization": f"Bearer {jeton}"}
+
+
+def _entete_agent(db: Session) -> dict[str, str]:
+    agent = Personnel(
+        nom="Agent",
+        prenom="Test",
+        fonction=FonctionPersonnel.AUTRE,
+        email=f"agent_{uuid4().hex[:8]}@delta.mg",
+        est_administrateur=False,
+        mot_de_passe=hacher_mot_de_passe(MDP),
+    )
+    db.add(agent)
+    db.commit()
+    jeton = creer_jeton_acces(agent.id_personnel, TypeSujet.PERSONNEL)
+    return {"Authorization": f"Bearer {jeton}"}
+
+
+def test_administration_liste_les_reservations_de_tous_les_clients(
+    client_http: TestClient, session_ouverte: SessionFormation, db: Session
+) -> None:
+    premier = _compte(db, "premier")
+    autre = _compte(db, "autre")
+    client_http.post(
+        RESERVATIONS, json=_corps(session_ouverte.id_session), headers=_entete(premier)
+    )
+    client_http.post(RESERVATIONS, json=_corps_table(), headers=_entete(autre))
+
+    reponse = client_http.get(
+        f"{RESERVATIONS}/administration", headers=_entete_admin(db)
+    )
+
+    assert reponse.status_code == 200
+    ids_clients = {r["id_client"] for r in reponse.json()}
+    assert {premier.id_client, autre.id_client} <= ids_clients
+
+
+def test_administration_liste_refusee_a_un_client(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    reponse = client_http.get(f"{RESERVATIONS}/administration", headers=entete)
+
+    assert reponse.status_code == 401
+
+
+def test_administration_liste_refusee_a_un_salarie_sans_droit(
+    client_http: TestClient, db: Session
+) -> None:
+    reponse = client_http.get(
+        f"{RESERVATIONS}/administration", headers=_entete_agent(db)
+    )
+
+    assert reponse.status_code == 403
+
+
+def test_administration_obtient_la_reservation_d_un_client_quelconque(
+    client_http: TestClient, session_ouverte: SessionFormation, db: Session
+) -> None:
+    """Contrairement à l'endpoint client, aucune vérification de propriété :
+    c'est le point même de l'administration."""
+    proprietaire = _compte(db, "proprietaire")
+    creee = client_http.post(
+        RESERVATIONS,
+        json=_corps(session_ouverte.id_session),
+        headers=_entete(proprietaire),
+    ).json()
+
+    reponse = client_http.get(
+        f"{RESERVATIONS}/administration/{creee['id_reservation']}",
+        headers=_entete_admin(db),
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["id_client"] == proprietaire.id_client
+
+
+def test_administration_obtenir_un_inconnu_retourne_404(
+    client_http: TestClient, db: Session
+) -> None:
+    reponse = client_http.get(
+        f"{RESERVATIONS}/administration/999999", headers=_entete_admin(db)
+    )
+
+    assert reponse.status_code == 404
+
+
+def test_administration_peut_marquer_honoree(
+    client_http: TestClient, session_ouverte: SessionFormation, db: Session
+) -> None:
+    proprietaire = _compte(db, "proprietaire")
+    creee = client_http.post(
+        RESERVATIONS,
+        json=_corps(session_ouverte.id_session),
+        headers=_entete(proprietaire),
+    ).json()
+
+    reponse = client_http.put(
+        f"{RESERVATIONS}/administration/{creee['id_reservation']}/statut",
+        json={"statut": "Honoree"},
+        headers=_entete_admin(db),
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["statut"] == "Honoree"
+
+
+def test_administration_statut_refuse_a_un_salarie_sans_droit(
+    client_http: TestClient, session_ouverte: SessionFormation, db: Session
+) -> None:
+    proprietaire = _compte(db, "proprietaire")
+    creee = client_http.post(
+        RESERVATIONS,
+        json=_corps(session_ouverte.id_session),
+        headers=_entete(proprietaire),
+    ).json()
+
+    reponse = client_http.put(
+        f"{RESERVATIONS}/administration/{creee['id_reservation']}/statut",
+        json={"statut": "Honoree"},
+        headers=_entete_agent(db),
+    )
+
+    assert reponse.status_code == 403
+
+
+def test_client_ne_peut_plus_se_declarer_lui_meme_honoree(
+    client_http: TestClient, session_ouverte: SessionFormation, entete: dict[str, str]
+) -> None:
+    """Le cœur du correctif 10.2 : c'était auparavant accepté, ce qui
+    débloquait un avis de service sans prestation réelle."""
+    creee = client_http.post(
+        RESERVATIONS, json=_corps(session_ouverte.id_session), headers=entete
+    ).json()
+
+    reponse = client_http.put(
+        f"{RESERVATIONS}/{creee['id_reservation']}/statut",
+        json={"statut": "Honoree"},
+        headers=entete,
+    )
+
+    assert reponse.status_code == 422
+
+
+def test_client_annuler_sans_statut_utilise_le_defaut(
+    client_http: TestClient, session_ouverte: SessionFormation, entete: dict[str, str]
+) -> None:
+    """`ReservationAnnulation.statut` a une valeur par défaut : un corps vide
+    annule quand même, la seule transition possible n'ayant pas besoin d'être
+    nommée."""
+    creee = client_http.post(
+        RESERVATIONS, json=_corps(session_ouverte.id_session), headers=entete
+    ).json()
+
+    reponse = client_http.put(
+        f"{RESERVATIONS}/{creee['id_reservation']}/statut", json={}, headers=entete
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json()["statut"] == "Annulee"
