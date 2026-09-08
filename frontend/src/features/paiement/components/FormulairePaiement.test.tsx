@@ -18,7 +18,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession } from '@/lib/session.store';
 
 import { initierPaiement, simulerConfirmation } from '../paiement.api';
 import type { Paiement } from '../paiement.types';
@@ -45,7 +45,7 @@ afterEach(() => {
   cleanup();
   vi.resetAllMocks();
   vi.unstubAllEnvs();
-  effacerJeton();
+  effacerSession();
 });
 
 describe('visiteur non connecté', () => {
@@ -59,7 +59,7 @@ describe('visiteur non connecté', () => {
 
 describe('client connecté', () => {
   beforeEach(() => {
-    enregistrerSession('jeton.de.test', 'client');
+    definirSession('client');
     // Explicite plutôt que de dépendre de frontend/.env : ces tests portent
     // sur le comportement en développement, indépendamment de l'ambiant.
     vi.stubEnv('VITE_ENVIRONMENT', 'developpement');
@@ -169,7 +169,7 @@ describe('client connecté', () => {
 
 describe('hors developpement (VITE_ENVIRONMENT=production)', () => {
   beforeEach(() => {
-    enregistrerSession('jeton.de.test', 'client');
+    definirSession('client');
     vi.stubEnv('VITE_ENVIRONMENT', 'production');
   });
 

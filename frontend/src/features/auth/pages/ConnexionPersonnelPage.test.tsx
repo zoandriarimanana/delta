@@ -14,7 +14,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerSession, lireSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession, lireSession } from '@/lib/session.store';
 
 import { connecterPersonnel } from '../auth.api';
 import ConnexionPersonnelPage from './ConnexionPersonnelPage';
@@ -36,17 +36,14 @@ async function soumettre(email = 'chef@delta.mg', motDePasse = 'motdepasse') {
 }
 
 beforeEach(() => {
-  effacerJeton();
-  vi.mocked(connecterPersonnel).mockResolvedValue({
-    access_token: 'jeton.personnel',
-    token_type: 'bearer',
-  });
+  effacerSession();
+  vi.mocked(connecterPersonnel).mockResolvedValue({ type: 'personnel' });
 });
 
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
-  effacerJeton();
+  effacerSession();
 });
 
 describe('connexion réussie', () => {
@@ -58,7 +55,7 @@ describe('connexion réussie', () => {
     await soumettre();
 
     await waitFor(() =>
-      expect(lireSession()).toEqual({ jeton: 'jeton.personnel', type: 'personnel' })
+      expect(lireSession()).toEqual({ type: 'personnel', chargement: false })
     );
   });
 
@@ -88,7 +85,7 @@ describe('refus', () => {
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toBeNull();
+    expect(lireSession()).toEqual({ type: null, chargement: false });
   });
 
   it('laisse intacte une session client déjà valide', async () => {
@@ -97,7 +94,7 @@ describe('refus', () => {
     // valablement connecté : effacer par anticipation ferait payer une faute de
     // frappe par une déconnexion — la même erreur que l'intercepteur HTTP évite
     // en excluant les chemins de connexion de son traitement du 401.
-    enregistrerSession('jeton.client', 'client');
+    definirSession('client');
     vi.mocked(connecterPersonnel).mockRejectedValue({
       response: { status: 401, data: { detail: 'Identifiants invalides.' } },
     });
@@ -106,13 +103,13 @@ describe('refus', () => {
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toEqual({ jeton: 'jeton.client', type: 'client' });
+    expect(lireSession()).toEqual({ type: 'client', chargement: false });
   });
 
   it('laisse intacte une session personnel déjà valide', async () => {
     // Même règle quand les deux populations coïncident : un salarié qui se
     // trompe en ressaisissant ses identifiants ne perd pas sa session.
-    enregistrerSession('jeton.personnel.valide', 'personnel');
+    definirSession('personnel');
     vi.mocked(connecterPersonnel).mockRejectedValue({
       response: { status: 401, data: { detail: 'Identifiants invalides.' } },
     });
@@ -121,22 +118,19 @@ describe('refus', () => {
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toEqual({
-      jeton: 'jeton.personnel.valide',
-      type: 'personnel',
-    });
+    expect(lireSession()).toEqual({ type: 'personnel', chargement: false });
   });
 
   it('remplace la session client au moment où la connexion réussit', async () => {
     // Contrôle positif du remplacement : sans lui, un hook qui n'écrirait
     // jamais rien passerait les deux tests ci-dessus.
-    enregistrerSession('jeton.client', 'client');
+    definirSession('client');
     afficher();
 
     await soumettre();
 
     await waitFor(() =>
-      expect(lireSession()).toEqual({ jeton: 'jeton.personnel', type: 'personnel' })
+      expect(lireSession()).toEqual({ type: 'personnel', chargement: false })
     );
   });
 

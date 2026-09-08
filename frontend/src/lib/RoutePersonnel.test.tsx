@@ -4,14 +4,26 @@
  * Elle n'est **pas** une protection : ce qui protège, ce sont les dépendances
  * FastAPI qui refusent la donnée. Elle évite d'afficher une page inutilisable —
  * et c'est cela qu'on vérifie ici.
+ *
+ * `useChargementSession`/`useEstPersonnelConnecte` sont mockés plutôt que
+ * pilotés via le vrai magasin de session : le cas « vérification encore en
+ * cours » (T0.10) n'est atteignable qu'une fois, avant la première résolution
+ * de `GET /auth/moi` — un module singleton partagé entre fichiers de test ne
+ * peut pas y revenir à volonté une fois résolu ailleurs dans la suite.
  */
 
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import RoutePersonnel from './RoutePersonnel';
-import { effacerJeton, enregistrerSession } from './tokenStorage';
+
+const { useChargementSession, useEstPersonnelConnecte } = vi.hoisted(() => ({
+  useChargementSession: vi.fn(),
+  useEstPersonnelConnecte: vi.fn(),
+}));
+
+vi.mock('./useEstConnecte', () => ({ useChargementSession, useEstPersonnelConnecte }));
 
 function afficher() {
   return render(
@@ -31,17 +43,17 @@ function afficher() {
   );
 }
 
-beforeEach(() => effacerJeton());
 afterEach(() => {
   cleanup();
-  effacerJeton();
+  vi.resetAllMocks();
 });
 
 describe('RoutePersonnel', () => {
   it('rend la page pour un salarié connecté', () => {
     // Contrôle positif : sans lui, une garde qui refuserait tout passerait les
-    // trois cas de refus ci-dessous.
-    enregistrerSession('jeton', 'personnel');
+    // cas de refus ci-dessous.
+    useChargementSession.mockReturnValue(false);
+    useEstPersonnelConnecte.mockReturnValue(true);
 
     afficher();
 
@@ -49,6 +61,9 @@ describe('RoutePersonnel', () => {
   });
 
   it('redirige un visiteur non connecté', () => {
+    useChargementSession.mockReturnValue(false);
+    useEstPersonnelConnecte.mockReturnValue(false);
+
     afficher();
 
     expect(screen.getByText('Connexion personnel')).toBeDefined();
@@ -56,10 +71,11 @@ describe('RoutePersonnel', () => {
   });
 
   it('redirige un client connecté', () => {
-    // Les clés primaires de `CLIENT` et `PERSONNEL` se recouvrent : un jeton
-    // client ne doit jamais ouvrir une page personnel, même si son porteur est
-    // authentifié.
-    enregistrerSession('jeton', 'client');
+    // Les clés primaires de `CLIENT` et `PERSONNEL` se recouvrent : une
+    // session client ne doit jamais ouvrir une page personnel, même pour un
+    // visiteur authentifié.
+    useChargementSession.mockReturnValue(false);
+    useEstPersonnelConnecte.mockReturnValue(false);
 
     afficher();
 
@@ -67,11 +83,15 @@ describe('RoutePersonnel', () => {
     expect(screen.queryByText('Contenu réservé')).toBeNull();
   });
 
-  it('redirige quand le type manque au stockage', () => {
-    localStorage.setItem('delta.access_token', 'jeton.orphelin');
+  it('n’affiche ni le contenu ni une redirection tant que la session se vérifie', () => {
+    // La vérification initiale (`GET /auth/moi`) est asynchrone : trancher
+    // avant sa résolution redirigerait à tort un salarié réellement connecté.
+    useChargementSession.mockReturnValue(true);
+    useEstPersonnelConnecte.mockReturnValue(false);
 
     afficher();
 
-    expect(screen.getByText('Connexion personnel')).toBeDefined();
+    expect(screen.queryByText('Contenu réservé')).toBeNull();
+    expect(screen.queryByText('Connexion personnel')).toBeNull();
   });
 });

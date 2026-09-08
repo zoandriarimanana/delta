@@ -7,17 +7,24 @@ import type {
   Identifiants,
   InscriptionEntreprise,
   InscriptionParticulier,
-  Jeton,
+  SessionActive,
 } from './auth.types';
 
 /**
  * Connecte un **client**.
  *
  * Endpoint distinct de `/auth/personnel/connexion` : c'est lui qui détermine la
- * population du jeton émis, et donc celle de la session ouverte.
+ * population du jeton émis, et donc celle de la session ouverte. Depuis
+ * T0.10, le jeton n'est plus dans le corps de la réponse — le serveur le pose
+ * en cookie `httpOnly` ; le corps ne confirme que la population.
  */
-export async function connecterClient(identifiants: Identifiants): Promise<Jeton> {
-  const reponse = await axiosClient.post<Jeton>('/auth/connexion', identifiants);
+export async function connecterClient(
+  identifiants: Identifiants
+): Promise<SessionActive> {
+  const reponse = await axiosClient.post<SessionActive>(
+    '/auth/connexion',
+    identifiants
+  );
   return reponse.data;
 }
 
@@ -27,8 +34,10 @@ export async function connecterClient(identifiants: Identifiants): Promise<Jeton
  * Endpoint distinct de `/auth/connexion` : c'est lui qui détermine la
  * population du jeton émis, et donc celle de la session ouverte.
  */
-export async function connecterPersonnel(identifiants: Identifiants): Promise<Jeton> {
-  const reponse = await axiosClient.post<Jeton>(
+export async function connecterPersonnel(
+  identifiants: Identifiants
+): Promise<SessionActive> {
+  const reponse = await axiosClient.post<SessionActive>(
     '/auth/personnel/connexion',
     identifiants
   );
@@ -59,4 +68,31 @@ export async function inscrireEntreprise(
     donnees
   );
   return reponse.data;
+}
+
+/**
+ * Interroge la session en cours, portée par le cookie `httpOnly` (invisible
+ * en JS). Utilisée au chargement de l'application — voir
+ * `useInitialiserSession` — pour savoir si une session existe déjà,
+ * puisqu'aucun script ne peut plus le lire directement.
+ *
+ * Rejette en 401 si aucune session valide n'est portée par la requête :
+ * laissé tel quel, l'appelant traduit ce refus en « pas connecté », pas en
+ * erreur applicative.
+ */
+export async function lireSessionCourante(): Promise<SessionActive> {
+  const reponse = await axiosClient.get<SessionActive>('/auth/moi');
+  return reponse.data;
+}
+
+/**
+ * Ferme la session côté serveur.
+ *
+ * Nécessaire : le cookie `delta_session` est `httpOnly`, aucun script ne peut
+ * l'effacer depuis le navigateur. Le frontend efface son propre magasin
+ * réactif (`effacerSession()`) une fois cet appel résolu — voir
+ * `MainLayout.seDeconnecter`.
+ */
+export async function deconnecter(): Promise<void> {
+  await axiosClient.post('/auth/deconnexion');
 }

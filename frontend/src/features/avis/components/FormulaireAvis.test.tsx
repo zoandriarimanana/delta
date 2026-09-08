@@ -15,7 +15,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession } from '@/lib/session.store';
 
 import { creerAvis } from '../avis.api';
 import type { Avis } from '../avis.types';
@@ -41,7 +41,7 @@ function erreurApi(status: number, detail: string) {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
-  effacerJeton();
+  effacerSession();
 });
 
 describe('visiteur non connecté', () => {
@@ -56,7 +56,7 @@ describe('visiteur non connecté', () => {
 });
 
 describe('client connecté', () => {
-  beforeEach(() => enregistrerSession('jeton.de.test', 'client'));
+  beforeEach(() => definirSession('client'));
 
   it('envoie id_ligne pour une cible Produit, jamais id_reservation', async () => {
     vi.mocked(creerAvis).mockResolvedValue(AVIS);

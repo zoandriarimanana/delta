@@ -13,18 +13,33 @@
  *
  * Elle n'autorise pas davantage qu'elle ne protège : `est_administrateur` n'est
  * lisible nulle part côté client, et c'est le serveur qui répond 403.
+ *
+ * **Attend la vérification initiale de session avant de trancher** (T0.10) :
+ * `GET /auth/moi` répond de façon asynchrone au chargement de l'application,
+ * le cookie de session étant `httpOnly`. Sans `useChargementSession`, un
+ * salarié réellement connecté qui recharge une page réservée verrait cette
+ * garde le rediriger vers la connexion avant que la vérification n'ait eu le
+ * temps de répondre.
  */
 
 import { Navigate } from 'react-router';
 
-import { useEstPersonnelConnecte } from './useEstConnecte';
+import { useChargementSession, useEstPersonnelConnecte } from './useEstConnecte';
 
 interface Proprietes {
   children: React.ReactNode;
 }
 
 export default function RoutePersonnel({ children }: Proprietes) {
-  if (!useEstPersonnelConnecte()) {
+  const chargement = useChargementSession();
+  const connecte = useEstPersonnelConnecte();
+
+  if (chargement) {
+    // Rien plutôt qu'une redirection prématurée : la vérification est en
+    // cours, trancher maintenant risquerait de rediriger un salarié connecté.
+    return null;
+  }
+  if (!connecte) {
     // `replace` : la page refusée ne doit pas rester dans l'historique, sans
     // quoi le retour arrière y ramènerait aussitôt.
     return <Navigate to="/personnel/connexion" replace />;

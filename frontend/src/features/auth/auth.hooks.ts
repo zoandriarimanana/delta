@@ -1,14 +1,16 @@
 /** Hooks du module d'authentification : état, effets, et rien de visuel. */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { enregistrerSession, type TypeSujet } from '@/lib/tokenStorage';
+import { definirSession, effacerSession } from '@/lib/session.store';
 
 import {
   connecterClient,
   connecterPersonnel,
+  deconnecter,
   inscrireEntreprise,
   inscrireParticulier,
+  lireSessionCourante,
 } from './auth.api';
 import { messageDeRefus, messageDInscription } from './auth.service';
 import type {
@@ -16,7 +18,8 @@ import type {
   Identifiants,
   InscriptionEntreprise,
   InscriptionParticulier,
-  Jeton,
+  SessionActive,
+  TypeSujet,
 } from './auth.types';
 
 export interface Connexion {
@@ -54,7 +57,7 @@ export interface Connexion {
  * chemins publics évite déjà côté intercepteur HTTP.
  */
 function useConnexion(
-  appeler: (identifiants: Identifiants) => Promise<Jeton>,
+  appeler: (identifiants: Identifiants) => Promise<SessionActive>,
   type: TypeSujet
 ): Connexion {
   const [envoi, setEnvoi] = useState(false);
@@ -65,8 +68,11 @@ function useConnexion(
       setEnvoi(true);
       setErreur(null);
       try {
-        const { access_token } = await appeler(identifiants);
-        enregistrerSession(access_token, type);
+        await appeler(identifiants);
+        // Le type est connu localement (c'est l'endpoint qu'on vient d'appeler),
+        // pas besoin de rappeler `/auth/moi` : le jeton lui-même est déjà posé
+        // en cookie par le serveur, cet appel n'a fait que le confirmer.
+        definirSession(type);
         return true;
       } catch (erreurAppel) {
         // Rien n'est écrit ni effacé : la session éventuellement en cours reste
@@ -152,4 +158,51 @@ export function useInscriptionParticulier(): Inscription<InscriptionParticulier>
 /** Inscrit un client **entreprise**. */
 export function useInscriptionEntreprise(): Inscription<InscriptionEntreprise> {
   return useInscription(inscrireEntreprise);
+}
+
+/**
+ * Vérifie, une fois au chargement de l'application, si une session est déjà
+ * ouverte — nécessaire depuis T0.10 : le cookie qui la porte est `httpOnly`,
+ * aucun script ne peut plus le lire directement pour le savoir.
+ *
+ * Monté une seule fois dans `App.tsx`, hors de `<Routes>`, comme
+ * `SessionExpiree` — même raisonnement : un effet transverse à toute
+ * l'application, pas un composant réservé à une route.
+ */
+export function useInitialiserSession(): void {
+  useEffect(() => {
+    let actif = true;
+    lireSessionCourante()
+      .then(({ type }) => {
+        if (actif) {
+          definirSession(type);
+        }
+      })
+      .catch(() => {
+        // 401 : aucune session — cas normal d'un visiteur non connecté, pas une
+        // erreur. `/auth/moi` est un chemin public de l'intercepteur, ce refus
+        // ne déclenche donc pas l'événement de session expirée.
+        if (actif) {
+          effacerSession();
+        }
+      });
+    return () => {
+      actif = false;
+    };
+  }, []);
+}
+
+/**
+ * Ferme la session, serveur puis magasin local.
+ *
+ * L'ordre compte : effacer le magasin avant que le serveur ait confirmé
+ * laisserait l'interface se croire déconnectée alors que le cookie
+ * `delta_session` serait, en cas d'échec réseau, toujours valide côté
+ * serveur.
+ */
+export function useDeconnexion(): () => Promise<void> {
+  return useCallback(async () => {
+    await deconnecter();
+    effacerSession();
+  }, []);
 }

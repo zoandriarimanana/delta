@@ -11,7 +11,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession } from '@/lib/session.store';
 
 import {
   archiverCategorie,
@@ -40,7 +40,7 @@ function afficher() {
 }
 
 beforeEach(() => {
-  enregistrerSession('jeton', 'personnel');
+  definirSession('personnel');
   vi.mocked(recupererCategoriesAdministration).mockResolvedValue([ACTIVE, ARCHIVEE]);
   vi.mocked(recupererProduitsAdministration).mockResolvedValue([]);
   vi.mocked(creerCategorie).mockResolvedValue(ACTIVE);
@@ -51,7 +51,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
-  effacerJeton();
+  effacerSession();
 });
 
 describe('liste', () => {

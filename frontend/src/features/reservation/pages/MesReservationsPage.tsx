@@ -4,6 +4,13 @@
  * L'isolation est garantie côté serveur : le filtre vient du jeton, et la
  * réservation d'un autre répond 404 — jamais 403, qui confirmerait son
  * existence. Aucun identifiant de client n'est envoyé d'ici.
+ *
+ * **Attend la vérification initiale de session** (T0.10, `useChargementSession`)
+ * avant de décider quoi afficher : sans elle, un client réellement connecté
+ * verrait, à chaque chargement de page, un message « connectez-vous » suivi
+ * d'un chargement tardif de ses réservations — la vérification de session
+ * étant asynchrone (`GET /auth/moi`), pas la lecture synchrone d'un jeton en
+ * `localStorage` comme avant.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -11,22 +18,24 @@ import { Link } from 'react-router';
 
 import { formaterDate } from '@/features/commande/commande.service';
 import FormulaireAvis from '@/features/avis/components/FormulaireAvis';
-import { useEstConnecte } from '@/lib/useEstConnecte';
+import { useChargementSession, useEstConnecte } from '@/lib/useEstConnecte';
 
 import { recupererReservations } from '../reservation.api';
 import { libelleCible, libelleStatut } from '../reservation.service';
 import type { Reservation } from '../reservation.types';
 
 export default function MesReservationsPage() {
+  const chargementSession = useChargementSession();
   const connecte = useEstConnecte();
   const [reservations, setReservations] = useState<Reservation[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
 
   const charger = useCallback(() => {
-    // Aucune requête sans jeton : elle reviendrait en 401, ce qui effacerait le
-    // jeton et déclencherait une redirection pour quelqu'un qui n'était
-    // simplement pas connecté.
-    if (!connecte) {
+    // Aucune requête avant que la session soit connue, ni si elle ne l'est
+    // pas : elle reviendrait en 401, ce qui effacerait la session et
+    // déclencherait une redirection pour quelqu'un qui n'était simplement pas
+    // connecté.
+    if (chargementSession || !connecte) {
       return undefined;
     }
     let actif = true;
@@ -36,9 +45,13 @@ export default function MesReservationsPage() {
     return () => {
       actif = false;
     };
-  }, [connecte]);
+  }, [chargementSession, connecte]);
 
   useEffect(charger, [charger]);
+
+  if (chargementSession) {
+    return null;
+  }
 
   if (!connecte) {
     return (

@@ -11,7 +11,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession } from '@/lib/session.store';
 
 import {
   creerCommande,
@@ -84,7 +84,7 @@ function afficher() {
 beforeEach(() => {
   localStorage.clear();
   resynchroniserPanier();
-  effacerJeton();
+  effacerSession();
   vi.mocked(creerCommande).mockResolvedValue(COMMANDE_CLIENT);
   vi.mocked(creerCommandeInvite).mockResolvedValue(COMMANDE_INVITEE);
   vi.mocked(recupererCommandeInvitee).mockResolvedValue(COMMANDE_INVITEE);
@@ -149,7 +149,7 @@ describe('parcours invité', () => {
 
 describe('parcours connecté', () => {
   it('ne demande pas d’identité', () => {
-    enregistrerSession('jeton.de.test', 'client');
+    definirSession('client');
     act(remplirLePanier);
 
     afficher();
@@ -158,7 +158,7 @@ describe('parcours connecté', () => {
   });
 
   it('confirme sans référence publique', async () => {
-    enregistrerSession('jeton.de.test', 'client');
+    definirSession('client');
     act(remplirLePanier);
     afficher();
 

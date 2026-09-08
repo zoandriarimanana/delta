@@ -15,10 +15,10 @@
 
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
-import { NavLink, Outlet } from 'react-router';
+import { NavLink, Outlet, useNavigate } from 'react-router';
 
+import { useDeconnexion } from '@/features/auth/auth.hooks';
 import { usePanier } from '@/features/commande/commande.hooks';
-import { effacerJeton } from '@/lib/tokenStorage';
 import { useEstConnecte, useEstPersonnelConnecte } from '@/lib/useEstConnecte';
 
 interface Lien {
@@ -70,6 +70,8 @@ export default function MainLayout() {
 
   const [menuOuvert, setMenuOuvert] = useState(false);
   const fermerMenu = () => setMenuOuvert(false);
+  const deconnecter = useDeconnexion();
+  const naviguer = useNavigate();
 
   const liens: Lien[] = [
     ...LIENS_PUBLICS,
@@ -97,11 +99,13 @@ export default function MainLayout() {
   ];
 
   function seDeconnecter() {
-    effacerJeton();
-    // Rechargement plutôt qu'une navigation : l'état de session est lu au
-    // rendu, et rien ne le rediffuse aux composants montés. Le remplacer par un
-    // magasin réactif est une amélioration à part entière, pas un préalable.
-    window.location.assign('/');
+    // Ni jeton ni magasin à effacer nous-mêmes ici : `useDeconnexion` appelle
+    // le serveur (seul capable d'effacer le cookie `httpOnly`) puis met à jour
+    // le magasin réactif de session — la navigation ci-dessous n'a plus qu'à
+    // suivre. Fini le rechargement complet : le magasin réactif (T0.10) rend
+    // désormais inutile le contournement que ce commentaire décrivait encore
+    // récemment ici.
+    void deconnecter().then(() => naviguer('/'));
   }
 
   return (
