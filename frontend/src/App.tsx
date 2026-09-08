@@ -27,6 +27,7 @@ import ProduitDetailPage from '@/features/produit/pages/ProduitDetailPage';
 import ProduitListPage from '@/features/produit/pages/ProduitListPage';
 import AdministrationPersonnelPage from '@/features/personnel/pages/AdministrationPersonnelPage';
 import PersonnelDetailAdministrationPage from '@/features/personnel/pages/PersonnelDetailAdministrationPage';
+import AdministrationReservationsPage from '@/features/reservation/pages/AdministrationReservationsPage';
 import MesReservationsPage from '@/features/reservation/pages/MesReservationsPage';
 import SalleDetailPage from '@/features/salle/pages/SalleDetailPage';
 import SalleListPage from '@/features/salle/pages/SalleListPage';
@@ -127,6 +128,14 @@ export default function App() {
             element={
               <RoutePersonnel>
                 <PersonnelDetailAdministrationPage />
+              </RoutePersonnel>
+            }
+          />
+          <Route
+            path="personnel/reservations"
+            element={
+              <RoutePersonnel>
+                <AdministrationReservationsPage />
               </RoutePersonnel>
             }
           />
