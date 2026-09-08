@@ -18,7 +18,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerSession, lireSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession, lireSession } from '@/lib/session.store';
 
 import { connecterClient, connecterPersonnel } from '../auth.api';
 import ConnexionPage from './ConnexionPage';
@@ -46,17 +46,14 @@ function refus() {
 }
 
 beforeEach(() => {
-  effacerJeton();
-  vi.mocked(connecterClient).mockResolvedValue({
-    access_token: 'jeton.client',
-    token_type: 'bearer',
-  });
+  effacerSession();
+  vi.mocked(connecterClient).mockResolvedValue({ type: 'client' });
 });
 
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
-  effacerJeton();
+  effacerSession();
 });
 
 describe('connexion réussie', () => {
@@ -66,7 +63,7 @@ describe('connexion réussie', () => {
     await soumettre();
 
     await waitFor(() =>
-      expect(lireSession()).toEqual({ jeton: 'jeton.client', type: 'client' })
+      expect(lireSession()).toEqual({ type: 'client', chargement: false })
     );
   });
 
@@ -95,32 +92,32 @@ describe('refus', () => {
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toBeNull();
+    expect(lireSession()).toEqual({ type: null, chargement: false });
   });
 
   it('laisse intacte une session personnel déjà valide', async () => {
     // La session n'est remplacée qu'au moment où une connexion réussit. Un
     // salarié qui tente une connexion client et se trompe ne perd pas sa
     // session de travail.
-    enregistrerSession('jeton.personnel', 'personnel');
+    definirSession('personnel');
     refus();
     afficher();
 
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toEqual({ jeton: 'jeton.personnel', type: 'personnel' });
+    expect(lireSession()).toEqual({ type: 'personnel', chargement: false });
   });
 
   it('laisse intacte une session client déjà valide', async () => {
-    enregistrerSession('jeton.client.valide', 'client');
+    definirSession('client');
     refus();
     afficher();
 
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toEqual({ jeton: 'jeton.client.valide', type: 'client' });
+    expect(lireSession()).toEqual({ type: 'client', chargement: false });
   });
 
   it('reprend le message uniforme du serveur', async () => {
@@ -165,13 +162,13 @@ describe('remplacement de session', () => {
   it('remplace une session personnel quand la connexion réussit', async () => {
     // Contrôle positif : sans lui, un hook qui n'écrirait jamais rien passerait
     // les trois tests de refus ci-dessus.
-    enregistrerSession('jeton.personnel', 'personnel');
+    definirSession('personnel');
     afficher();
 
     await soumettre();
 
     await waitFor(() =>
-      expect(lireSession()).toEqual({ jeton: 'jeton.client', type: 'client' })
+      expect(lireSession()).toEqual({ type: 'client', chargement: false })
     );
   });
 });

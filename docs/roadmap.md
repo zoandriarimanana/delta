@@ -849,7 +849,7 @@ neuf sprints) :
       décorateur par route), un compte inconnu au-delà de la limite répond
       429 avant même d'atteindre `AuthService`, et le message reste dans le
       vocabulaire `{"detail": ...}` du reste de l'API.
-- [ ] **T0.10 — Jeton en `httpOnly` + CSRF** (`localStorage` → cookie
+- [x] **T0.10 — Jeton en `httpOnly` + CSRF** (`localStorage` → cookie
       sécurisé). Durée estimée à revoir — 2-3 jours ne couvrait que
       l'émission du cookie. Affecte CLIENT et PERSONNEL des deux côtés.
       **Micro-conception écrite exigée avant tout découpage en tâches** :
@@ -913,11 +913,49 @@ neuf sprints) :
       développement se sont confirmés comme de la pollution de données
       pré-existante, sans rapport avec cette branche, une fois rejoués sur
       base neuve. `ruff`, `black --check`, `alembic check` propres.
-      — **Reste à faire** : le frontend (suppression de `tokenStorage.ts`,
-      réécriture de `axiosClient.ts` pour le double-submit et
-      `withCredentials`, hooks `useEstConnecte`/`useEstPersonnelConnecte`
-      asynchrones) — sujet d'une PR séparée, comme convenu (même découpage
-      que 9.1/9.2).
+      — **Frontend livré** (PR séparée, même découpage que 9.1/9.2) :
+      `lib/tokenStorage.ts` supprimé, remplacé par `lib/session.store.ts` —
+      magasin externe minimal (`useSyncExternalStore`), même patron que
+      `commande.panier.ts`, mais sans persistance `localStorage` : la source
+      de vérité est désormais le cookie, invisible en JS par construction, ce
+      magasin n'étant qu'un cache de la dernière réponse serveur.
+      `axiosClient.ts` pose `withCredentials: true` et un double-submit
+      (lecture du cookie `delta_csrf`, en-tête `X-CSRF-Token`) sur les
+      méthodes mutantes ; `/auth/moi` rejoint les chemins publics du 401 — un
+      visiteur jamais connecté y reçoit systématiquement 401 à chaque
+      chargement de page, ce n'est pas une session qui expire.
+      — **Un point d'ambiguïté non couvert par la micro-conception d'origine** :
+      celle-ci ne nommait `RoutePersonnel` comme ayant besoin de l'état de
+      chargement explicite. Un audit des 9 consommateurs métier de
+      `useEstConnecte` a montré que `MesReservationsPage.tsx` gate à la fois
+      son rendu et son effet de chargement sur ce booléen — sans traitement
+      particulier, un client réellement connecté y aurait vu, à chaque
+      chargement de page, un flash « connectez-vous » suivi d'un chargement
+      tardif de ses réservations. Décision actée : `useChargementSession()`
+      (nouveau) consulté seulement dans ces deux fichiers ; les 7 autres
+      consommateurs gardent le booléen simple, leur flash éventuel n'ayant
+      qu'un coût cosmétique.
+      — **Déconnexion sans rechargement complet**, décidé en construisant :
+      `MainLayout.seDeconnecter` portait un commentaire nommant explicitement
+      cette dette (« le remplacer par un magasin réactif est une amélioration
+      à part entière, pas un préalable ») — ce chantier construisant
+      justement ce magasin, le moment était le bon pour la traiter plutôt que
+      la reporter encore. `POST /auth/deconnexion` (nécessaire : le cookie
+      `httpOnly` ne peut être effacé que par le serveur) puis
+      `effacerSession()` puis `naviguer('/')` via React Router — le magasin
+      réactif et la navigation suffisent, sans plus jamais recharger la page.
+      — Vérifié empiriquement (Playwright, navigateur réel, serveurs de
+      développement réels) qu'aucun état résiduel ne survit visuellement à
+      cette déconnexion sans rechargement : un article ajouté au panier
+      avant la connexion traverse connexion → rechargement de page →
+      déconnexion sans en perdre le compte (1 → 1 → 1) — attendu, puisque
+      `commande.panier.ts` est un magasin indépendant de la session, jamais
+      vidé par elle ; la navigation (liens « Mes commandes », bouton
+      « Déconnexion ») se met à jour sans rechargement ; les deux cookies
+      disparaissent après déconnexion ; une reconnexion immédiate après
+      réussit sans blocage CSRF résiduel.
+      — Suite complète verte (439/439, 52 fichiers), `ruff`-équivalents
+      (`eslint`, `prettier --check`), `tsc --noEmit` et `vite build` propres.
 - [ ] **Sprint 9.5 — décision sur `POST /paiements/{id}/simuler-confirmation`** :
       retirer l'endpoint (backend et bouton frontend) maintenant, ou
       confirmer qu'il reste dette active tant qu'aucune vraie passerelle

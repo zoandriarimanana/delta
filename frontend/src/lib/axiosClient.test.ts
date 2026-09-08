@@ -4,15 +4,21 @@
  * L'adaptateur d'axios est remplacé par une fonction contrôlée : les
  * intercepteurs s'exécutent tout autour, ce qui permet de les exercer sans
  * serveur ni bibliothèque de mock HTTP supplémentaire.
+ *
+ * Depuis T0.10, l'identité ne transite plus par un en-tête `Authorization`
+ * (le cookie de session, `httpOnly`, part tout seul sur chaque requête grâce
+ * à `withCredentials`) : ce qui reste à la charge de ce module, c'est le
+ * double-submit anti-CSRF (`X-CSRF-Token`, recopié du cookie `delta_csrf`,
+ * lisible celui-là) et le traitement du 401.
  */
 
 import { AxiosError, type AxiosAdapter, type AxiosResponse } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EVENEMENT_NON_AUTHENTIFIE, axiosClient } from './axiosClient';
-import { effacerJeton, enregistrerSession, lireJeton } from './tokenStorage';
+import { definirSession, effacerSession, lireSession } from './session.store';
 
-const JETON = 'jeton.de.test';
+const CSRF = 'csrf.de.test';
 
 /** Adaptateur qui réussit et renvoie la configuration vue par la requête. */
 const adaptateurQuiReussit: AxiosAdapter = async (config) =>
@@ -37,52 +43,86 @@ function adaptateurQuiEchoue(statut: number): AxiosAdapter {
   };
 }
 
+function poserCookieCsrf(valeur: string | null): void {
+  if (valeur === null) {
+    document.cookie = 'delta_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+    return;
+  }
+  document.cookie = `delta_csrf=${valeur}; path=/`;
+}
+
 beforeEach(() => {
-  effacerJeton();
+  effacerSession();
+  poserCookieCsrf(null);
 });
 
 afterEach(() => {
-  effacerJeton();
+  effacerSession();
+  poserCookieCsrf(null);
   vi.restoreAllMocks();
 });
 
-describe('intercepteur de requête', () => {
-  it('injecte le jeton en en-tête Authorization quand il existe', async () => {
-    enregistrerSession(JETON, 'client');
+describe('intercepteur de requête — double-submit CSRF', () => {
+  it('pose X-CSRF-Token sur une requête mutante quand le cookie existe', async () => {
+    poserCookieCsrf(CSRF);
     axiosClient.defaults.adapter = adaptateurQuiReussit;
 
-    const reponse = await axiosClient.get('/salle');
+    const reponse = await axiosClient.post('/commandes', {});
 
-    expect(reponse.config.headers.Authorization).toBe(`Bearer ${JETON}`);
+    expect(reponse.config.headers['X-CSRF-Token']).toBe(CSRF);
   });
 
-  it("n'ajoute aucun en-tête Authorization en l'absence de jeton", async () => {
+  it("n'ajoute aucun en-tête sur une requête mutante sans cookie CSRF", async () => {
+    axiosClient.defaults.adapter = adaptateurQuiReussit;
+
+    const reponse = await axiosClient.post('/commandes', {});
+
+    expect(reponse.config.headers['X-CSRF-Token']).toBeUndefined();
+  });
+
+  it("n'ajoute aucun en-tête sur une requête GET, même avec le cookie présent", async () => {
+    // Le middleware serveur ne vérifie que les méthodes mutantes : l'envoyer
+    // sur un GET serait sans effet, autant ne pas l'envoyer.
+    poserCookieCsrf(CSRF);
     axiosClient.defaults.adapter = adaptateurQuiReussit;
 
     const reponse = await axiosClient.get('/salle');
 
-    expect(reponse.config.headers.Authorization).toBeUndefined();
+    expect(reponse.config.headers['X-CSRF-Token']).toBeUndefined();
+  });
+});
+
+describe('configuration', () => {
+  it("utilise l'URL de base issue de VITE_API_URL", () => {
+    expect(axiosClient.defaults.baseURL).toBe(import.meta.env.VITE_API_URL);
+    expect(axiosClient.defaults.baseURL).toContain('/api/v1');
+  });
+
+  it('envoie les cookies sur les requêtes cross-port (withCredentials)', () => {
+    // Frontend (5173) et backend (8000) sont deux origines distinctes : sans
+    // withCredentials, le cookie de session ne partirait jamais.
+    expect(axiosClient.defaults.withCredentials).toBe(true);
   });
 });
 
 describe('intercepteur de réponse — 401', () => {
-  it('efface le jeton et émet l’événement sur un chemin protégé', async () => {
-    enregistrerSession(JETON, 'client');
+  it('efface la session et émet l’événement sur un chemin protégé', async () => {
+    definirSession('client');
     axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
     const ecouteur = vi.fn();
     window.addEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
 
     await expect(axiosClient.get('/salle')).rejects.toBeInstanceOf(AxiosError);
 
-    expect(lireJeton()).toBeNull();
+    expect(lireSession().type).toBeNull();
     expect(ecouteur).toHaveBeenCalledOnce();
     window.removeEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
   });
 
-  it('laisse le jeton intact sur /auth/connexion', async () => {
+  it('laisse la session intacte sur /auth/connexion', async () => {
     // Un 401 de connexion signifie « mot de passe faux » : déconnecter
     // l'utilisateur déjà authentifié serait un effet de bord injustifié.
-    enregistrerSession(JETON, 'client');
+    definirSession('client');
     axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
     const ecouteur = vi.fn();
     window.addEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
@@ -91,17 +131,17 @@ describe('intercepteur de réponse — 401', () => {
       AxiosError
     );
 
-    expect(lireJeton()).toBe(JETON);
+    expect(lireSession().type).toBe('client');
     expect(ecouteur).not.toHaveBeenCalled();
     window.removeEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
   });
 
-  it('laisse le jeton intact sur /auth/personnel/connexion', async () => {
+  it('laisse la session intacte sur /auth/personnel/connexion', async () => {
     // Même raison que pour la connexion client : un salarié qui se trompe de
     // mot de passe ne doit pas perdre la session en cours. Sans cette entrée
     // dans les chemins publics, une faute de frappe se paierait d'une
     // déconnexion.
-    enregistrerSession(JETON, 'personnel');
+    definirSession('personnel');
     axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
     const ecouteur = vi.fn();
     window.addEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
@@ -110,15 +150,30 @@ describe('intercepteur de réponse — 401', () => {
       axiosClient.post('/auth/personnel/connexion', {})
     ).rejects.toBeInstanceOf(AxiosError);
 
-    expect(lireJeton()).toBe(JETON);
+    expect(lireSession().type).toBe('personnel');
+    expect(ecouteur).not.toHaveBeenCalled();
+    window.removeEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
+  });
+
+  it('laisse la session intacte sur /auth/moi', async () => {
+    // Un visiteur jamais connecté reçoit systématiquement 401 sur cet appel,
+    // au chargement de chaque page : c'est le cas normal, pas une session qui
+    // expire. Sans cette entrée, tout visiteur non connecté serait redirigé
+    // vers /connexion dès l'arrivée sur le site.
+    axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
+    const ecouteur = vi.fn();
+    window.addEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
+
+    await expect(axiosClient.get('/auth/moi')).rejects.toBeInstanceOf(AxiosError);
+
     expect(ecouteur).not.toHaveBeenCalled();
     window.removeEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
   });
 
   it('porte la population déconnectée dans l’événement', async () => {
-    // Le jeton est effacé avant l'émission : sans cette information, l'écouteur
-    // renverrait un salarié vers la connexion client.
-    enregistrerSession(JETON, 'personnel');
+    // La session est effacée avant l'émission : sans cette information,
+    // l'écouteur renverrait un salarié vers la connexion client.
+    definirSession('personnel');
     axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
     const ecouteur = vi.fn();
     window.addEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
@@ -142,13 +197,13 @@ describe('intercepteur de réponse — 401', () => {
     window.removeEventListener(EVENEMENT_NON_AUTHENTIFIE, ecouteur);
   });
 
-  it('laisse le jeton intact sur un statut autre que 401', async () => {
-    enregistrerSession(JETON, 'client');
+  it('laisse la session intacte sur un statut autre que 401', async () => {
+    definirSession('client');
     axiosClient.defaults.adapter = adaptateurQuiEchoue(500);
 
     await expect(axiosClient.get('/salle')).rejects.toBeInstanceOf(AxiosError);
 
-    expect(lireJeton()).toBe(JETON);
+    expect(lireSession().type).toBe('client');
   });
 
   it("propage l'erreur au lieu de l'absorber", async () => {
@@ -172,7 +227,7 @@ describe("nom de l'événement de déconnexion", () => {
   });
 
   it("est émis sous ce nom exact lors d'un 401", async () => {
-    enregistrerSession(JETON, 'client');
+    definirSession('client');
     axiosClient.defaults.adapter = adaptateurQuiEchoue(401);
     const recus: string[] = [];
     const ecouteur = (evenement: Event) => recus.push(evenement.type);
@@ -182,12 +237,5 @@ describe("nom de l'événement de déconnexion", () => {
 
     expect(recus).toEqual(['delta:non-authentifie']);
     window.removeEventListener('delta:non-authentifie', ecouteur);
-  });
-});
-
-describe('configuration', () => {
-  it("utilise l'URL de base issue de VITE_API_URL", () => {
-    expect(axiosClient.defaults.baseURL).toBe(import.meta.env.VITE_API_URL);
-    expect(axiosClient.defaults.baseURL).toContain('/api/v1');
   });
 });

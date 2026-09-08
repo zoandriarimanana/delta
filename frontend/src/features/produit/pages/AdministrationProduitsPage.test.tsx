@@ -16,7 +16,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import RoutePersonnel from '@/lib/RoutePersonnel';
-import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession } from '@/lib/session.store';
 
 import {
   archiverProduit,
@@ -80,7 +80,7 @@ function afficher() {
 }
 
 beforeEach(() => {
-  effacerJeton();
+  effacerSession();
   vi.mocked(recupererProduitsAdministration).mockResolvedValue([ACTIF, ARCHIVE]);
   vi.mocked(recupererCategoriesAdministration).mockResolvedValue([CATEGORIE]);
   vi.mocked(archiverProduit).mockResolvedValue(undefined);
@@ -90,12 +90,12 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
-  effacerJeton();
+  effacerSession();
 });
 
 describe('accès', () => {
   it('refuse un jeton client', () => {
-    enregistrerSession('jeton', 'client');
+    definirSession('client');
 
     afficherSousGarde();
 
@@ -112,7 +112,7 @@ describe('accès', () => {
   it('ouvre l’écran pour un salarié', () => {
     // Contrôle positif : sans lui, une garde refusant tout passerait les deux
     // tests ci-dessus.
-    enregistrerSession('jeton', 'personnel');
+    definirSession('personnel');
 
     afficherSousGarde();
 
@@ -123,7 +123,7 @@ describe('accès', () => {
 });
 
 describe('archives', () => {
-  beforeEach(() => enregistrerSession('jeton', 'personnel'));
+  beforeEach(() => definirSession('personnel'));
 
   it('les masque par défaut', async () => {
     // Elles ne font pas partie du travail courant : les afficher toujours
@@ -168,7 +168,7 @@ describe('archives', () => {
 });
 
 describe('vocabulaire', () => {
-  beforeEach(() => enregistrerSession('jeton', 'personnel'));
+  beforeEach(() => definirSession('personnel'));
 
   it('dit « archiver », jamais « supprimer »', async () => {
     // `DELETE` pose `supprime_le` : la ligne reste en base, et
@@ -192,7 +192,7 @@ describe('vocabulaire', () => {
 });
 
 describe('refus du serveur', () => {
-  beforeEach(() => enregistrerSession('jeton', 'personnel'));
+  beforeEach(() => definirSession('personnel'));
 
   it('rend le 403 lisible', async () => {
     // Un salarié sans droit voit l'écran — `est_administrateur` n'est lisible

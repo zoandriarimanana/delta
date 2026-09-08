@@ -9,7 +9,7 @@
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton } from '@/lib/tokenStorage';
+import { effacerSession } from '@/lib/session.store';
 
 import {
   creerCommande,
@@ -55,7 +55,7 @@ const COMMANDE: Commande = {
 beforeEach(() => {
   localStorage.clear();
   resynchroniserPanier();
-  effacerJeton();
+  effacerSession();
   vi.mocked(creerCommande).mockResolvedValue(COMMANDE);
   vi.mocked(creerCommandeInvite).mockResolvedValue({
     ...COMMANDE,

@@ -18,7 +18,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerSession, lireSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession, lireSession } from '@/lib/session.store';
 
 import { connecterClient, inscrireEntreprise, inscrireParticulier } from '../auth.api';
 import InscriptionPage from './InscriptionPage';
@@ -48,7 +48,7 @@ async function soumettre() {
 const CREE = { id_client: 1, type_client: 'Particulier' as const, email: 'x@y.mg' };
 
 beforeEach(() => {
-  effacerJeton();
+  effacerSession();
   vi.mocked(inscrireParticulier).mockResolvedValue(CREE);
   vi.mocked(inscrireEntreprise).mockResolvedValue({
     ...CREE,
@@ -59,7 +59,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
-  effacerJeton();
+  effacerSession();
 });
 
 describe('particulier', () => {
@@ -140,19 +140,19 @@ describe('après une inscription réussie', () => {
     await inscrire();
 
     await screen.findByText('page de connexion');
-    expect(lireSession()).toBeNull();
+    expect(lireSession()).toEqual({ type: null, chargement: false });
     expect(connecterClient).not.toHaveBeenCalled();
   });
 
   it('ne touche pas à une session déjà ouverte', async () => {
     // S'inscrire n'est pas se connecter : rien ne justifie de déconnecter
     // quelqu'un parce qu'il crée un second compte.
-    enregistrerSession('jeton.client', 'client');
+    definirSession('client');
 
     await inscrire();
 
     await screen.findByText('page de connexion');
-    expect(lireSession()).toEqual({ jeton: 'jeton.client', type: 'client' });
+    expect(lireSession()).toEqual({ type: 'client', chargement: false });
   });
 });
 
@@ -183,7 +183,7 @@ describe('refus', () => {
 
     await screen.findByRole('alert');
     expect(screen.queryByText('page de connexion')).toBeNull();
-    expect(lireSession()).toBeNull();
+    expect(lireSession()).toEqual({ type: null, chargement: false });
   });
 
   it('ne laisse pas fuir une trace technique', async () => {

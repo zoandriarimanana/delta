@@ -6,17 +6,21 @@
  * `layouts/` (cf. `docs/architecture.md`).
  */
 
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import {
   ecrirePanier,
   resynchroniserPanier,
 } from '@/features/commande/commande.panier';
-import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession, lireSession } from '@/lib/session.store';
 
 import MainLayout from './MainLayout';
+
+const { deconnecter } = vi.hoisted(() => ({ deconnecter: vi.fn() }));
+vi.mock('@/features/auth/auth.api', () => ({ deconnecter }));
 
 function afficher() {
   return render(
@@ -45,13 +49,15 @@ function remplir(quantite: number) {
 
 beforeEach(() => {
   localStorage.clear();
-  effacerJeton();
+  effacerSession();
   resynchroniserPanier();
+  deconnecter.mockReset();
 });
 
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  effacerSession();
   resynchroniserPanier();
 });
 
@@ -97,7 +103,7 @@ it('offre « Connexion » au visiteur, jamais « Déconnexion »', () => {
 it('offre la déconnexion au client connecté', () => {
   // Sans elle, un client ne pourrait pas fermer sa session autrement qu'en
   // vidant le stockage du navigateur.
-  enregistrerSession('jeton', 'client');
+  definirSession('client');
 
   afficher();
 
@@ -106,7 +112,7 @@ it('offre la déconnexion au client connecté', () => {
 });
 
 it('offre la déconnexion au personnel connecté', () => {
-  enregistrerSession('jeton', 'personnel');
+  definirSession('personnel');
 
   afficher();
 
@@ -116,10 +122,32 @@ it('offre la déconnexion au personnel connecté', () => {
 it('ne propose les pages client qu’au client', () => {
   // Un salarié qui ouvrirait « Mes commandes » recevrait un 401, ce qui
   // effacerait sa session de travail.
-  enregistrerSession('jeton', 'personnel');
+  definirSession('personnel');
 
   afficher();
 
   expect(screen.queryByRole('link', { name: /mes commandes/i })).toBeNull();
   expect(screen.queryByRole('link', { name: /mes réservations/i })).toBeNull();
+});
+
+it('se déconnecte sans rechargement : la nav se met à jour, le panier survit', async () => {
+  // T0.10 retire le rechargement complet — le magasin réactif doit à lui
+  // seul refléter la déconnexion. Le panier, lui, n'est **pas** une donnée de
+  // session (aucune entité serveur, cf. `docs/mld.md`) : il doit survivre
+  // intact, exactement comme il survit déjà à un rechargement de page.
+  deconnecter.mockResolvedValue(undefined);
+  definirSession('client');
+  act(() => remplir(2));
+
+  const utilisateur = userEvent.setup();
+  afficher();
+  await utilisateur.click(screen.getByRole('button', { name: /déconnexion/i }));
+
+  await waitFor(() => expect(deconnecter).toHaveBeenCalledOnce());
+  await waitFor(() => expect(lireSession().type).toBeNull());
+  expect(screen.getByRole('link', { name: /connexion/i })).toBeDefined();
+  expect(screen.queryByRole('button', { name: /déconnexion/i })).toBeNull();
+  // Le panier n'a pas été vidé : il vit dans un magasin distinct
+  // (`commande.panier.ts`), indépendant de la session.
+  expect(screen.getByTestId('compteur-panier').textContent).toBe('2');
 });

@@ -16,7 +16,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession } from '@/lib/session.store';
 
 import { creerReservation } from '../reservation.api';
 import type { Reservation } from '../reservation.types';
@@ -57,14 +57,14 @@ function afficher(proposeHebergement = false) {
 }
 
 beforeEach(() => {
-  effacerJeton();
+  effacerSession();
   vi.mocked(creerReservation).mockResolvedValue(RESERVATION);
 });
 
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
-  effacerJeton();
+  effacerSession();
 });
 
 describe('visiteur non connecté', () => {
@@ -80,7 +80,7 @@ describe('visiteur non connecté', () => {
 });
 
 describe('client connecté', () => {
-  beforeEach(() => enregistrerSession('jeton.de.test', 'client'));
+  beforeEach(() => definirSession('client'));
 
   it('envoie la réservation et confirme', async () => {
     afficher();
@@ -175,7 +175,7 @@ describe('client connecté', () => {
 });
 
 describe('option hébergement', () => {
-  beforeEach(() => enregistrerSession('jeton.de.test', 'client'));
+  beforeEach(() => definirSession('client'));
 
   it('n’est pas proposée si la formation ne l’offre pas', () => {
     // Le serveur refuserait en 422 de toute façon ; ne pas l'afficher évite au

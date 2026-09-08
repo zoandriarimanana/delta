@@ -11,7 +11,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession } from '@/lib/session.store';
 
 import { recupererHistorique } from '../commande.api';
 import type { Commande } from '../commande.types';
@@ -54,14 +54,14 @@ function afficher() {
 }
 
 beforeEach(() => {
-  effacerJeton();
+  effacerSession();
   vi.mocked(recupererHistorique).mockResolvedValue([commande()]);
 });
 
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
-  effacerJeton();
+  effacerSession();
 });
 
 describe('visiteur non connecté', () => {
@@ -84,7 +84,7 @@ describe('visiteur non connecté', () => {
 });
 
 describe('client connecté', () => {
-  beforeEach(() => enregistrerSession('jeton.de.test', 'client'));
+  beforeEach(() => definirSession('client'));
 
   it('affiche un état de chargement puis les commandes', async () => {
     afficher();

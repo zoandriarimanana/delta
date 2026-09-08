@@ -17,7 +17,7 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { lirePanier, resynchroniserPanier } from '@/features/commande/commande.panier';
-import { effacerJeton, enregistrerSession } from '@/lib/tokenStorage';
+import { definirSession, effacerSession } from '@/lib/session.store';
 import RoutePersonnel from '@/lib/RoutePersonnel';
 
 import { creerCommandePersonnel } from '../commande.api';
@@ -87,7 +87,7 @@ async function ajouterUnArticle() {
 
 beforeEach(async () => {
   localStorage.clear();
-  effacerJeton();
+  effacerSession();
   resynchroniserPanier();
   const produitApi = await import('@/features/produit/produit.api');
   vi.mocked(produitApi.recupererProduits).mockResolvedValue([PRODUIT]);
@@ -106,7 +106,7 @@ describe('accès', () => {
     // **Pas un masquage de lien** : la route elle-même redirige. Les clés
     // primaires de CLIENT et PERSONNEL se recouvrent — un jeton client ne doit
     // jamais ouvrir un écran personnel.
-    enregistrerSession('jeton', 'client');
+    definirSession('client');
 
     afficherSousGarde();
 
@@ -123,7 +123,7 @@ describe('accès', () => {
   it('ouvre l’écran pour un salarié', () => {
     // Contrôle positif : sans lui, une garde refusant tout passerait les deux
     // tests ci-dessus.
-    enregistrerSession('jeton', 'personnel');
+    definirSession('personnel');
 
     afficherSousGarde();
 
@@ -132,7 +132,7 @@ describe('accès', () => {
 });
 
 describe('saisie', () => {
-  beforeEach(() => enregistrerSession('jeton', 'personnel'));
+  beforeEach(() => definirSession('personnel'));
 
   it('envoie une commande sur place, sans adresse de livraison', async () => {
     // **C'est la présence de l'adresse, et elle seule, qui déclenche une
@@ -193,7 +193,7 @@ describe('saisie', () => {
 });
 
 describe('isolation du parcours client', () => {
-  beforeEach(() => enregistrerSession('jeton', 'personnel'));
+  beforeEach(() => definirSession('personnel'));
 
   it('ne touche jamais au panier persistant du client', async () => {
     // `commande.panier.ts` est le magasin du tunnel client. Sur un poste
@@ -222,7 +222,7 @@ describe('isolation du parcours client', () => {
 });
 
 describe('refus du serveur', () => {
-  beforeEach(() => enregistrerSession('jeton', 'personnel'));
+  beforeEach(() => definirSession('personnel'));
 
   it('reprend le message tel quel', async () => {
     // « Stock insuffisant … » ou « Cette réservation est « En_attente » … »

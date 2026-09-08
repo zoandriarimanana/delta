@@ -34,6 +34,7 @@ import MesReservationsPage from '@/features/reservation/pages/MesReservationsPag
 import SalleDetailPage from '@/features/salle/pages/SalleDetailPage';
 import SalleListPage from '@/features/salle/pages/SalleListPage';
 import MainLayout from '@/layouts/MainLayout';
+import InitialisationSession from '@/lib/InitialisationSession';
 import RoutePersonnel from '@/lib/RoutePersonnel';
 import SessionExpiree from '@/lib/SessionExpiree';
 import AccueilPage from '@/pages/AccueilPage';
@@ -42,9 +43,11 @@ import NonTrouveePage from '@/pages/NonTrouveePage';
 export default function App() {
   return (
     <BrowserRouter>
-      {/* Hors <Routes> : l'écouteur de session expirée doit être actif quelle
-          que soit la route affichée. */}
+      {/* Hors <Routes> : ces deux effets doivent être actifs quelle que soit la
+          route affichée — l'écouteur de session expirée, et la vérification
+          initiale de session au chargement. */}
       <SessionExpiree />
+      <InitialisationSession />
       <Routes>
         <Route path="/" element={<MainLayout />}>
           <Route index element={<AccueilPage />} />

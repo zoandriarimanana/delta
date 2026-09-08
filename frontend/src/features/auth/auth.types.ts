@@ -6,12 +6,24 @@
  * pas lue depuis le jeton côté frontend — on ne décode pas un JWT pour se fier
  * à son contenu — mais déduite de l'endpoint interrogé, qui est le seul fait
  * dont le client soit sûr.
+ *
+ * Depuis T0.10, le jeton lui-même ne transite plus ici : il est posé par le
+ * serveur en cookie `httpOnly`, invisible en JS. `TypeSujet` reste le seul
+ * fait que le frontend a besoin de connaître — vit ici plutôt que dans
+ * `lib/tokenStorage.ts` (supprimé), qui n'a plus de raison d'exister.
  */
 
-/** Réponse de `/auth/connexion` et `/auth/personnel/connexion`. */
-export interface Jeton {
-  access_token: string;
-  token_type: string;
+/** Populations pouvant ouvrir une session. Miroir de `TypeSujet` côté serveur. */
+export type TypeSujet = 'client' | 'personnel';
+
+/**
+ * Réponse de `/auth/connexion`, `/auth/personnel/connexion` et
+ * `GET /auth/moi` — **le même schema partout**, pour que les trois ne
+ * puissent pas diverger l'un de l'autre (miroir de `SessionActive` côté
+ * serveur).
+ */
+export interface SessionActive {
+  type: TypeSujet;
 }
 
 /** Identifiants de connexion, communs aux deux populations. */
