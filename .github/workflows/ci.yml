@@ -1,4 +1,4 @@
-name: CI
+name: CI (develop)
 
 # Déclenchement : les deux branches durables. `main` doit y figurer, sinon une
 # PR vers `main` n'obtiendrait jamais les checks exigés par la protection de
