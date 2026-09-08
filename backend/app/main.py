@@ -11,6 +11,7 @@ service lève `ConflitMetier` sans jamais savoir que cela vaudra un 409.
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.core.exceptions import (
@@ -21,6 +22,7 @@ from app.core.exceptions import (
     ReferenceInvalide,
     RessourceIntrouvable,
 )
+from app.core.rate_limit import limiter
 from app.routers import (
     abonnement_router,
     auth_router,
@@ -44,6 +46,10 @@ from app.routers import (
 )
 
 app = FastAPI(title=settings.PROJECT_NAME)
+
+# Requis par `slowapi` : c'est ici qu'il va chercher le limiteur pour
+# appliquer les décorateurs `@limiter.limit(...)` posés sur les routers.
+app.state.limiter = limiter
 
 app.add_middleware(
     CORSMiddleware,
@@ -113,6 +119,23 @@ async def _gerer_reference_invalide(
     """
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(RateLimitExceeded)
+async def _gerer_limite_de_debit(
+    request: Request, exc: RateLimitExceeded
+) -> JSONResponse:
+    """Trop de tentatives → 429.
+
+    Traduit ici plutôt que de garder la réponse par défaut de `slowapi`
+    (`{"error": ...}`) : le reste de l'API répond toujours `{"detail": ...}`,
+    et ce n'est pas au client de connaître la bibliothèque qui applique la
+    limite.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={"detail": "Trop de tentatives. Réessayez dans un instant."},
     )
 
 

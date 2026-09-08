@@ -10,10 +10,11 @@ script d'amorçage, jamais en s'inscrivant lui-même.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.rate_limit import LIMITE_CONNEXION, limiter
 from app.core.security import TypeSujet, creer_jeton_acces
 from app.schemas.auth import Connexion, Token
 from app.services.personnel_auth_service import PersonnelAuthService
@@ -28,7 +29,8 @@ SessionBase = Annotated[Session, Depends(get_db)]
     response_model=Token,
     summary="Obtenir un jeton d'accès personnel",
 )
-def se_connecter(identifiants: Connexion, db: SessionBase) -> Token:
+@limiter.limit(LIMITE_CONNEXION)
+def se_connecter(request: Request, identifiants: Connexion, db: SessionBase) -> Token:
     """Vérifie les identifiants d'un membre du personnel et retourne un JWT.
 
     Le jeton porte `type = "personnel"` : présenté à un endpoint client, il est
@@ -36,7 +38,13 @@ def se_connecter(identifiants: Connexion, db: SessionBase) -> Token:
     n°5 d'être interchangeables.
 
     Répond 401 sans préciser si c'est l'adresse, le mot de passe ou l'absence de
-    compte de connexion qui est en cause.
+    compte de connexion qui est en cause. Au-delà de `LIMITE_CONNEXION`
+    tentatives par adresse IP, répond 429 — même garde que sur `/auth/connexion`
+    (dette technique T0.6), même constante partagée pour que les deux limites
+    évoluent ensemble.
+
+    `request: Request` est exigé par `@limiter.limit` pour identifier
+    l'appelant, pas par la logique métier de cet endpoint.
     """
     personnel = PersonnelAuthService(db).authentifier(identifiants)
     return Token(

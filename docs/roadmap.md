@@ -816,11 +816,39 @@ neuf sprints) :
       `SAVEPOINT`) ; le test de course, lui, ouvre ses deux propres
       connexions réelles — `session_postgres` ne peut structurellement pas
       porter un scénario à deux transactions véritablement séparées.
-- [ ] **T0.6 — Rate limiting & verrouillage de compte** (`/auth/connexion`,
-      `/auth/personnel/connexion`). Durée estimée : 1-2 jours. Prévient le
-      credential stuffing et la force brute. Additif, isolé — reste à
-      trancher : limiteur en mémoire (simple, ne survit pas à un
-      redémarrage ni à plusieurs workers) ou introduction de Redis.
+- [x] **T0.6 — Rate limiting** (`/auth/connexion`, `/auth/personnel/connexion`).
+      Durée estimée : 1-2 jours. Prévient le credential stuffing et la force
+      brute.
+      — **Le verrouillage de compte, nommé dans le titre d'origine, n'est
+      pas traité par cette tâche** : le périmètre confirmé avant codage
+      portait uniquement sur le rate limiting par IP. C'est une dette
+      distincte, non résorbée — voir la note dédiée ci-dessous.
+      — **Décision actée : limiteur en mémoire (`memory://`), pas Redis.**
+      Aucun plan de déploiement multi-workers/multi-instance n'existe à ce
+      jour (aucun `Dockerfile` backend, aucune commande `uvicorn --workers`,
+      aucune plateforme cible documentée) — introduire Redis maintenant
+      ajouterait un service d'infrastructure réel pour un besoin qui n'existe
+      pas encore. Le code (`slowapi`/`limits`) choisit son backend par URI
+      (`Settings.RATE_LIMIT_STORAGE_URI`) : passer à `redis://...` le jour
+      où le déploiement scale sera un changement de configuration, pas une
+      réécriture. Limite condition de résorption ci-dessous.
+      — `app/core/rate_limit.py` (nouveau module, même esprit que
+      `security.py`/`deps.py`) porte le `Limiter` et la constante
+      `LIMITE_CONNEXION = "5/minute"`, partagée par les deux endpoints pour
+      qu'ils évoluent ensemble. Traduction dédiée de `RateLimitExceeded` en
+      429 dans `main.py`, `{"detail": ...}` plutôt que le `{"error": ...}`
+      par défaut de `slowapi`.
+      — Piège trouvé en écrivant les tests : le limiteur est un singleton de
+      *process*, partagé par tous les tests pytest comme par l'application
+      réelle. Sans réinitialisation, un test sans rapport avec le rate
+      limiting aurait pu recevoir 429 simplement parce qu'un test antérieur
+      avait déjà consommé le budget de la même IP simulée. Autofixture
+      `_reinitialiser_le_limiteur` dans `conftest.py`, appliquée à toute la
+      suite.
+      — Vérifié : les deux endpoints ont des budgets **indépendants** (un
+      décorateur par route), un compte inconnu au-delà de la limite répond
+      429 avant même d'atteindre `AuthService`, et le message reste dans le
+      vocabulaire `{"detail": ...}` du reste de l'API.
 - [ ] **T0.10 — Jeton en `httpOnly` + CSRF** (`localStorage` → cookie
       sécurisé). Durée estimée à revoir — 2-3 jours ne couvrait que
       l'émission du cookie. Affecte CLIENT et PERSONNEL des deux côtés.
@@ -895,7 +923,8 @@ nommer sa tâche d'origine et sa condition de résorption.
 | Sprint 3 (#26) | L'historique émet **une requête de suivi par commande listée** : `HistoriqueCommandesPage` monte un `EncartSuiviCommande` par ligne, et chacun appelle `GET /commandes/{id}/livraison`. Trente commandes affichées font trente requêtes, dont la plupart répondent 404 pour des commandes à retirer. | Inclure le suivi de livraison dans la charge utile de `GET /commandes`, ce qui supprime les appels séparés. À faire **si l'historique devient un point de lenteur réel**, ou lors d'un futur sprint de performance — pas avant : la correction déplace une décision de confidentialité vers un schema qui sert aussi d'autres usages. |
 | Sprint 2 (parcours invité) | Une commande passée en invité ne peut pas être rattachée à un compte créé ensuite : le client la perd de vue dès qu'il s'inscrit, alors qu'elle porte le même `contact_invite`. Écarté volontairement du sprint 2. | Le rattachement suppose de faire confiance à une adresse non vérifiée. À traiter avec un mécanisme de vérification d'e-mail, qui n'existe nulle part dans le projet — donc pas avant qu'il soit décidé. |
 | T0.10 (Sprint 0) | Les jetons d'accès **CLIENT et PERSONNEL** sont stockés ensemble en `localStorage` (`frontend/src/lib/tokenStorage.ts`) : lisibles par tout script de la page, donc exfiltrables en cas de faille XSS. La dette s'applique aux deux populations depuis l'ajout de PERSONNEL en #73. | Basculer sur un cookie `httpOnly` + `SameSite`, ce qui suppose de faire émettre le cookie par l'API et d'ajouter une protection CSRF. **À arbitrer avant mise en prod.** |
-| T0.6 (Sprint 0) | Aucune limitation de tentatives sur `/auth/connexion` : ni rate limiting par IP, ni verrouillage temporaire du compte après N échecs. Le hachage bcrypt ralentit une attaque par force brute sans l'empêcher, et rien ne freine le bourrage d'identifiants (credential stuffing). | Ajouter une limitation de débit et un verrouillage progressif. **À traiter avant mise en prod.** |
+| T0.6 (Sprint 11) | **Conditionnellement critique.** Rate limiting fonctionnel en mémoire (`RATE_LIMIT_STORAGE_URI=memory://`), correct uniquement pour un déploiement mono-processus/mono-instance. Devient inefficace (limite multipliée par le nombre de workers) dès qu'une mise en production ajoute du scaling horizontal. Pas critique dans l'immédiat : aucun plan de déploiement multi-instance n'existe à ce jour. | Brancher Redis (`RATE_LIMIT_STORAGE_URI=redis://...`) **avant tout déploiement multi-workers** — le code applicatif n'a pas besoin de changer, seule la configuration. |
+| T0.6 (Sprint 0) | Le verrouillage temporaire de compte après N échecs — nommé dans le titre d'origine de T0.6 — reste absent : seul le rate limiting par IP a été traité (ci-dessus). Le hachage bcrypt ralentit une attaque par force brute ciblée sur un seul compte sans l'empêcher. | Ajouter un verrouillage progressif par compte, distinct du rate limiting par IP déjà en place. Pas encore planifié. |
 | PR #95 (Sprint 7) | `.github/workflows/ci.yml` utilise `actions/checkout@v4`, `actions/setup-python@v5` et `actions/setup-node@v4`, qui ciblent Node.js 20 — déprécié par GitHub Actions. Chaque run affiche désormais `##[warning] Node.js 20 is deprecated…` sur les deux jobs (Backend et Frontend), sans faire échouer la CI. Constaté en vérifiant les annotations de la PR #95, sans rapport avec le code applicatif. | Mettre à jour ces actions vers une version ciblant Node.js 24. Basse priorité, non bloquant : le warning n'affecte ni le résultat des checks ni le comportement de l'application — à traiter quand une PR touche de toute façon `ci.yml`, plutôt que d'ouvrir un chantier dédié. |
 | PR #123/#127 (Sprint 11) | Les checks GitHub d'une PR vers `develop` s'affichent sous le nom **« CI (main) »**, pas « CI (develop) » — alors que le fichier réel exécuté sur `develop` porte bien `name: CI (develop)` (vérifié). GitHub associe le nom affiché d'un workflow à son chemin de fichier à travers tout le dépôt, ancré sur la version du **default branch** (`main`) pour ce chemin, et non sur la branche qui déclenche le run. Purement cosmétique : le job réellement exécuté, ses durées et son contenu sont corrects et inchangés (confirmé via `gh api .../check-runs` et les logs de run). | Donner aux deux workflows des chemins de fichiers distincts (ex. `ci.yml` sur `develop`, `ci-main.yml` sur `main`) pour qu'ils deviennent deux entités « Workflow » GitHub réellement séparées. Basse priorité, non traité pour l'instant — aucun impact sur la fiabilité de la CI, seulement sur l'étiquette affichée. |
 | Sprint 9.5 | `POST /paiements/{id_paiement}/simuler-confirmation` déclenche, depuis l'écran de paiement, la confirmation qu'un vrai fournisseur enverrait normalement de lui-même par webhook. Fermé par défaut derrière `Settings.ENVIRONMENT` (défaut `production`, même 404 générique qu'un paiement introuvable hors `developpement`) — mais cette garde ne retire pas le code : si une vraie passerelle (Mvola, Stripe...) est un jour branchée en environnement `developpement`, l'endpoint continuerait d'y répondre à côté d'elle. | Retirer cet endpoint (backend et bouton frontend) dès qu'une vraie passerelle est branchée, quel que soit l'environnement — un vrai fournisseur confirme de lui-même, ce déclencheur manuel n'aurait alors plus de sens et deviendrait une porte dérobée pour confirmer un paiement sans jamais l'avoir réellement payé. `ENVIRONMENT` protège la production dès maintenant ; la suppression du code reste **à traiter avant mise en prod**. |
