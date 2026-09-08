@@ -121,6 +121,26 @@ def changer_statut(
     return LivraisonRead.model_validate(livraison)
 
 
+@router.post(
+    "/{id_livraison}/relance",
+    response_model=LivraisonRead,
+    summary="Relancer une livraison échouée",
+)
+def relancer(
+    id_livraison: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> LivraisonRead:
+    """Transition dédiée `Echouee → En_attente`. Réservé aux administrateurs.
+
+    **409** si la livraison n'est pas `Echouee` — `Livree` et `Annulee` sont
+    des fins réelles, une livraison encore en cours n'a rien à relancer.
+
+    `id_personnel` repasse à `NULL` : le livreur qui a échoué n'est pas
+    reconduit automatiquement, une réaffectation explicite est requise.
+    """
+    livraison = LivraisonService(db).relancer(id_livraison)
+    return LivraisonRead.model_validate(livraison)
+
+
 @router.delete(
     "/{id_livraison}",
     status_code=status.HTTP_204_NO_CONTENT,

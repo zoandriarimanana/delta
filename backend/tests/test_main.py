@@ -80,6 +80,7 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/livraisons/{{id_livraison}}/livreur",
         f"{prefixe}/livraisons/{{id_livraison}}/planification",
         f"{prefixe}/livraisons/{{id_livraison}}/statut",
+        f"{prefixe}/livraisons/{{id_livraison}}/relance",
         f"{prefixe}/personnel",
         f"{prefixe}/personnel/{{id_personnel}}",
         f"{prefixe}/personnel/{{id_personnel}}/restauration",

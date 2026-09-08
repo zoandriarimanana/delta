@@ -375,6 +375,90 @@ def test_une_livraison_terminee_n_accepte_plus_de_livreur(
         service.affecter_livreur(livraison.id_livraison, livreur.id_personnel)
 
 
+# --- Relance (10.4) -------------------------------------------------------------
+
+
+def test_relancer_une_livraison_echouee(service: LivraisonService, livraison) -> None:
+    service.changer_statut(livraison.id_livraison, StatutLivraison.ECHOUEE)
+
+    relancee = service.relancer(livraison.id_livraison)
+
+    assert relancee.statut is StatutLivraison.EN_ATTENTE
+
+
+def test_relancer_remet_id_personnel_a_null(
+    service: LivraisonService, livraison, db: Session
+) -> None:
+    """Le livreur qui a échoué n'est pas reconduit automatiquement — une
+    réaffectation explicite est requise."""
+    livreur = _salarie(db, FonctionPersonnel.LIVREUR)
+    service.affecter_livreur(livraison.id_livraison, livreur.id_personnel)
+    service.changer_statut(livraison.id_livraison, StatutLivraison.ECHOUEE)
+
+    relancee = service.relancer(livraison.id_livraison)
+
+    assert relancee.id_personnel is None
+
+
+@pytest.mark.parametrize(
+    "statut",
+    [
+        StatutLivraison.EN_ATTENTE,
+        StatutLivraison.EN_COURS,
+        StatutLivraison.LIVREE,
+        StatutLivraison.ANNULEE,
+    ],
+)
+def test_relancer_refuse_toute_provenance_hors_echouee(
+    service: LivraisonService, livraison, db: Session, statut: StatutLivraison
+) -> None:
+    """`Livree` et `Annulee` sont des fins réelles ; `En_cours` est une
+    livraison encore active — aucune des deux n'a de sens à « relancer »."""
+    if statut is StatutLivraison.EN_COURS:
+        livreur = _salarie(db, FonctionPersonnel.LIVREUR)
+        service.affecter_livreur(livraison.id_livraison, livreur.id_personnel)
+    if statut is not StatutLivraison.EN_ATTENTE:
+        service.changer_statut(livraison.id_livraison, statut)
+
+    with pytest.raises(ConflitMetier):
+        service.relancer(livraison.id_livraison)
+
+
+def test_relancer_refuse_le_rejeu_apres_une_premiere_relance_reussie(
+    service: LivraisonService, livraison
+) -> None:
+    """Distinct de `test_relancer_refuse_toute_provenance_hors_echouee` :
+    celui-ci couvre une livraison qui n'a **jamais** été `Echouee`, alors
+    qu'ici la livraison l'a été puis a déjà été relancée avec succès —
+    l'appelant qui rejoue l'action (double clic, requête renvoyée) ne doit
+    pas non plus réussir une seconde fois."""
+    service.changer_statut(livraison.id_livraison, StatutLivraison.ECHOUEE)
+    service.relancer(livraison.id_livraison)
+
+    with pytest.raises(ConflitMetier):
+        service.relancer(livraison.id_livraison)
+
+
+def test_relancer_ne_contourne_pas_terminee_pour_les_autres_methodes(
+    service: LivraisonService, livraison, db: Session
+) -> None:
+    """`STATUTS_TERMINAUX` reste inchangé : relancer ne rouvre que la
+    transition de statut, pas la garde générique des autres méthodes."""
+    service.changer_statut(livraison.id_livraison, StatutLivraison.ECHOUEE)
+    service.relancer(livraison.id_livraison)
+
+    livreur = _salarie(db, FonctionPersonnel.LIVREUR)
+    # `En_attente` n'est pas terminal : l'affectation doit fonctionner
+    # normalement après une relance, sans contournement supplémentaire.
+    affectee = service.affecter_livreur(livraison.id_livraison, livreur.id_personnel)
+    assert affectee.id_personnel == livreur.id_personnel
+
+
+def test_relancer_une_inconnue_leve_introuvable(service: LivraisonService) -> None:
+    with pytest.raises(RessourceIntrouvable):
+        service.relancer(999999)
+
+
 # --- Planification, lecture, archivage ----------------------------------------
 
 

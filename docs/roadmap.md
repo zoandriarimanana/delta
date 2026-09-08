@@ -650,14 +650,18 @@ propre PR (backend et frontend séparés pour 10.1, comme pour 9.1/9.2).
       seule « Annuler » reste) pour ne pas laisser l'utilisateur découvrir
       un refus 409 après coup. Vérifié de bout en bout via navigateur réel
       contre le backend réel.
-- [ ] **10.4 — `LIVRAISON.relancer()` (backend)** : transition dédiée et
+- [x] **10.4 — `LIVRAISON.relancer()` (backend)** : transition dédiée et
       **unique** `Echouee → En_attente`, `POST
       /livraisons/{id}/relance`, réservée `PersonnelAdministrateur`.
       `STATUTS_TERMINAUX` reste **inchangé** — cette méthode contourne
-      délibérément `_refuser_si_terminee`, elle ne l'affaiblit pas.
-      `id_personnel` repasse à `NULL` après relance : force une
-      réaffectation explicite, cohérence avec le sens déjà établi de `NULL`
-      (« pas encore affectée »).
+      délibérément `_refuser_si_terminee`, elle ne l'affaiblit pas : elle
+      refuse elle-même (409) toute provenance autre que `Echouee`, avec son
+      propre message. `id_personnel` repasse à `NULL` après relance : force
+      une réaffectation explicite, cohérence avec le sens déjà établi de
+      `NULL` (« pas encore affectée »). Vérifié de bout en bout via un
+      serveur réel : refus 409 sur une livraison `En_attente`, relance
+      réussie depuis `Echouee` avec `id_personnel` remis à `NULL` en base,
+      et rejeu refusé (409) une fois la livraison redevenue `En_attente`.
 - [ ] **10.5 — `COMMANDE` administration + actions (backend)** : `GET
       /commandes/administration` et `/administration/{id}`. **Annuler** :
       transition admin vers `Annulee`, aucune propagation vers `LIVRAISON`
