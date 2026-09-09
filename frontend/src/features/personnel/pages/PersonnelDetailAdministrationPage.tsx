@@ -21,6 +21,7 @@ import {
   anonymiserPersonnel,
   archiverPersonnel,
   modifierPersonnel,
+  obtenirBadgePersonnel,
   restaurerPersonnel,
   supprimerPhotoPersonnel,
   televerserPhotoPersonnel,
@@ -43,6 +44,9 @@ export default function PersonnelDetailAdministrationPage() {
   const [envoi, setEnvoi] = useState(false);
   const [erreurAction, setErreurAction] = useState<string | null>(null);
   const [photoChoisie, setPhotoChoisie] = useState<File | null>(null);
+  // Distinct de `envoi` : télécharger le badge ne doit pas désactiver les
+  // autres actions (Modifier/Archiver/Anonymiser), aucune écriture n'a lieu.
+  const [envoiBadge, setEnvoiBadge] = useState(false);
   // Change à chaque écriture réussie sur la photo, pour forcer `Avatar` à se
   // remonter (cf. sa docstring) — sans ça, l'ancien état d'erreur/l'ancienne
   // image resteraient affichés après un remplacement ou un retrait, l'URL
@@ -116,6 +120,29 @@ export default function PersonnelDetailAdministrationPage() {
       setErreurAction(messageDAdministration(erreur));
     } finally {
       setEnvoi(false);
+    }
+  }
+
+  async function telechargerBadge() {
+    setEnvoiBadge(true);
+    setErreurAction(null);
+    try {
+      const image = await obtenirBadgePersonnel(id);
+      const url = URL.createObjectURL(image);
+      // Même mécanique que l'aperçu de photo (`URL.createObjectURL`), mais
+      // pour déclencher un téléchargement plutôt qu'un affichage : un `<a
+      // download>` temporaire, jamais inséré dans le DOM visible, cliqué
+      // puis retiré. `revokeObjectURL` juste après — contrairement à
+      // l'aperçu, cette URL n'a besoin de vivre que le temps du clic.
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = `badge-${id}.png`;
+      lien.click();
+      URL.revokeObjectURL(url);
+    } catch (erreur) {
+      setErreurAction(messageDAdministration(erreur));
+    } finally {
+      setEnvoiBadge(false);
     }
   }
 
@@ -274,6 +301,13 @@ export default function PersonnelDetailAdministrationPage() {
                 disabled={envoi}
               >
                 Anonymiser
+              </Bouton>
+              <Bouton
+                variante="secondaire"
+                onClick={() => void telechargerBadge()}
+                disabled={envoiBadge}
+              >
+                Télécharger le badge
               </Bouton>
             </div>
           )}

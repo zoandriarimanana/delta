@@ -136,6 +136,7 @@ def _creer(client_http: TestClient, entete: dict[str, str], **extra: object) -> 
         ("get", "/1/photo"),
         ("post", "/1/photo"),
         ("delete", "/1/photo"),
+        ("get", "/1/badge"),
     ],
 )
 def test_tout_endpoint_exige_un_jeton(
@@ -824,3 +825,57 @@ def test_supprimer_photo_sans_photo_reste_un_succes(
     )
 
     assert reponse.status_code == 204
+
+
+# --- Badge -----------------------------------------------------------------
+
+
+def test_obtenir_badge_reussi(client_http: TestClient, entete: dict[str, str]) -> None:
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.get(
+        f"{PERSONNEL}/{cree['id_personnel']}/badge", headers=entete
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.headers["content-type"] == "image/png"
+    assert reponse.content.startswith(b"\x89PNG")
+    assert (
+        reponse.headers["content-disposition"]
+        == f'attachment; filename="badge-{cree["id_personnel"]}.png"'
+    )
+    assert reponse.headers["cache-control"] == "no-store"
+
+
+def test_obtenir_badge_inconnu_donne_404(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    reponse = client_http.get(f"{PERSONNEL}/999/badge", headers=entete)
+
+    assert reponse.status_code == 404
+
+
+def test_obtenir_badge_est_ouvert_a_tout_salarie(
+    client_http: TestClient, entete: dict[str, str], entete_agent: dict[str, str]
+) -> None:
+    """Lecture, pas écriture : même niveau que la photo et la fiche —
+    le badge ne fait que mettre en forme une donnée déjà lisible ici."""
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.get(
+        f"{PERSONNEL}/{cree['id_personnel']}/badge", headers=entete_agent
+    )
+
+    assert reponse.status_code == 200
+
+
+def test_obtenir_badge_refuse_un_jeton_client(
+    client_http: TestClient, entete: dict[str, str], entete_client: dict[str, str]
+) -> None:
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.get(
+        f"{PERSONNEL}/{cree['id_personnel']}/badge", headers=entete_client
+    )
+
+    assert reponse.status_code == 401

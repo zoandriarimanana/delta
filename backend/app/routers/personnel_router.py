@@ -17,7 +17,7 @@ jeton émis pour un client, la revendication `type` ne correspondant pas.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -207,3 +207,30 @@ def supprimer_photo(
     `NULL`. Idempotent : sans effet si aucune photo n'était déjà présente.
     """
     PersonnelService(db).supprimer_photo(id_personnel)
+
+
+@router.get(
+    "/{id_personnel}/badge",
+    summary="Télécharger le badge (photo, identité, QR code)",
+)
+def obtenir_badge(
+    id_personnel: int, agent: PersonnelConnecte, db: SessionBase
+) -> Response:
+    """Compose et renvoie un badge PNG à la volée — jamais stocké sur disque
+    ni en base, voir `PersonnelService.generer_badge`.
+
+    En `PersonnelConnecte`, comme la lecture de la fiche et de la photo : le
+    badge ne fait que mettre en forme des données déjà lisibles à ce niveau,
+    restreindre sa seule mise en forme n'aurait aucune justification métier
+    (cf. l'en-tête de ce module : le critère est la nature de la donnée, pas
+    l'écran qui l'affiche aujourd'hui).
+    """
+    contenu = PersonnelService(db).generer_badge(id_personnel)
+    return Response(
+        content=contenu,
+        media_type="image/png",
+        headers={
+            "Content-Disposition": f'attachment; filename="badge-{id_personnel}.png"',
+            "Cache-Control": "no-store",
+        },
+    )

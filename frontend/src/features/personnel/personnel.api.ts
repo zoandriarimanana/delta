@@ -118,3 +118,19 @@ export async function televerserPhotoPersonnel(
 export async function supprimerPhotoPersonnel(idPersonnel: number): Promise<void> {
   await axiosClient.delete(`${CHEMIN}/${idPersonnel}/photo`);
 }
+
+/**
+ * Télécharge le badge (PNG) — photo ou avatar générique, identité, fonction,
+ * QR code. Généré à la demande côté serveur, jamais stocké : cet appel
+ * déclenche donc une vraie composition d'image à chaque clic, pas une
+ * lecture de cache.
+ *
+ * `responseType: 'blob'` : la réponse est une image binaire, pas du JSON —
+ * axios ne doit pas tenter de la parser comme tel.
+ */
+export async function obtenirBadgePersonnel(idPersonnel: number): Promise<Blob> {
+  const reponse = await axiosClient.get<Blob>(`${CHEMIN}/${idPersonnel}/badge`, {
+    responseType: 'blob',
+  });
+  return reponse.data;
+}

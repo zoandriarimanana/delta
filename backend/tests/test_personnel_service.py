@@ -711,3 +711,40 @@ def test_archivage_simple_ne_touche_pas_a_la_photo(service: PersonnelService) ->
 
     assert personnel.photo_chemin == avec_photo.photo_chemin
     assert chemin_fichier.exists()
+
+
+# --- Badge ---------------------------------------------------------------------
+
+
+def test_generer_badge_sans_photo_produit_un_png(service: PersonnelService) -> None:
+    personnel = service.creer(_donnees())
+
+    badge = service.generer_badge(personnel.id_personnel)
+
+    assert badge.startswith(b"\x89PNG")
+
+
+def test_generer_badge_avec_photo_produit_un_png(service: PersonnelService) -> None:
+    personnel = service.creer(_donnees())
+    service.remplacer_photo(personnel.id_personnel, _octets_image("PNG"), "image/png")
+
+    badge = service.generer_badge(personnel.id_personnel)
+
+    assert badge.startswith(b"\x89PNG")
+
+
+def test_generer_badge_membre_inconnu_leve_introuvable(
+    service: PersonnelService,
+) -> None:
+    with pytest.raises(RessourceIntrouvable):
+        service.generer_badge(999)
+
+
+def test_generer_badge_membre_archive_leve_introuvable(
+    service: PersonnelService,
+) -> None:
+    personnel = service.creer(_donnees())
+    service.supprimer(personnel.id_personnel)
+
+    with pytest.raises(RessourceIntrouvable):
+        service.generer_badge(personnel.id_personnel)

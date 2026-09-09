@@ -6,7 +6,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from uuid import uuid4
 
-from PIL import Image
+import qrcode
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -50,6 +51,23 @@ MESSAGE_TYPE_PHOTO_INVALIDE = (
 )
 MESSAGE_PHOTO_TROP_VOLUMINEUSE = "L'image dépasse la taille maximale autorisée (2 Mio)."
 MESSAGE_PAS_DE_PHOTO = "Ce membre du personnel n'a pas de photo de profil."
+
+# --- Badge -------------------------------------------------------------------
+
+#: Dimensions du badge généré, en pixels — pas de gabarit d'impression exact
+#: (mm/points) visé pour l'instant, une image suffit. Ratio volontairement
+#: large (paysage) pour laisser la place au texte à côté de la photo.
+LARGEUR_BADGE = 640
+HAUTEUR_BADGE = 400
+MARGE_BADGE = 24
+TAILLE_PHOTO_BADGE = 180
+TAILLE_QR_BADGE = 140
+
+COULEUR_FOND_BADGE = "white"
+COULEUR_TEXTE_NOM = "black"
+COULEUR_TEXTE_FONCTION = (90, 90, 90)
+COULEUR_AVATAR_GENERIQUE = (222, 222, 222)
+COULEUR_SILHOUETTE_GENERIQUE = (160, 160, 160)
 
 
 class PersonnelService:
@@ -390,3 +408,99 @@ class PersonnelService:
         if personnel.photo_chemin is None:
             raise RessourceIntrouvable(MESSAGE_PAS_DE_PHOTO)
         return self._dossier_photos() / personnel.photo_chemin
+
+    def generer_badge(self, id_personnel: int) -> bytes:
+        """Compose un badge PNG : photo (ou avatar générique), nom, prénom,
+        fonction, et un QR code encodant `id_personnel`.
+
+        Généré **à la demande**, jamais stocké ni mis en cache — même
+        raisonnement que `calculer_solde()` ou `note_moyenne` : trois champs
+        indépendants peuvent changer (identité, fonction, photo), un cache
+        imposerait de l'invalider sur chacun pour un coût de génération de
+        toute façon négligeable (composition d'une image ~600×400 px).
+
+        Le QR code encode l'identifiant seul, jamais une URL de vérification :
+        construire une telle URL supposerait une route **publique**, alors
+        que ce module n'expose aucune lecture de `PERSONNEL` anonymement (cf.
+        l'en-tête de `personnel_router.py`) — et un ID lisible par un lecteur
+        QR n'est de toute façon pas moins falsifiable qu'une URL bâtie autour
+        du même ID. La vérification réelle d'un badge reste visuelle (photo +
+        nom comparés au porteur) ; le QR n'est qu'une commodité de lookup pour
+        un salarié déjà authentifié, via `GET /personnel/{id}`.
+        """
+        personnel = self.obtenir(id_personnel)
+
+        badge = Image.new("RGB", (LARGEUR_BADGE, HAUTEUR_BADGE), COULEUR_FOND_BADGE)
+        dessin = ImageDraw.Draw(badge)
+
+        badge.paste(self._photo_pour_badge(personnel), (MARGE_BADGE, MARGE_BADGE))
+
+        x_texte = MARGE_BADGE + TAILLE_PHOTO_BADGE + MARGE_BADGE
+        police_nom = ImageFont.load_default(size=28)
+        police_fonction = ImageFont.load_default(size=20)
+        dessin.text(
+            (x_texte, MARGE_BADGE + 20),
+            f"{personnel.prenom} {personnel.nom}",
+            fill=COULEUR_TEXTE_NOM,
+            font=police_nom,
+        )
+        dessin.text(
+            (x_texte, MARGE_BADGE + 60),
+            personnel.fonction.value,
+            fill=COULEUR_TEXTE_FONCTION,
+            font=police_fonction,
+        )
+
+        badge.paste(
+            self._qr_pour_badge(personnel.id_personnel),
+            (
+                LARGEUR_BADGE - MARGE_BADGE - TAILLE_QR_BADGE,
+                HAUTEUR_BADGE - MARGE_BADGE - TAILLE_QR_BADGE,
+            ),
+        )
+
+        tampon = io.BytesIO()
+        badge.save(tampon, format="PNG")
+        return tampon.getvalue()
+
+    def _photo_pour_badge(self, personnel: Personnel) -> Image.Image:
+        """Photo réelle recadrée en carré, ou avatar générique si absente."""
+        if personnel.photo_chemin is not None:
+            chemin = self._dossier_photos() / personnel.photo_chemin
+            with Image.open(chemin) as source:
+                return ImageOps.fit(
+                    source.convert("RGB"), (TAILLE_PHOTO_BADGE, TAILLE_PHOTO_BADGE)
+                )
+        return self._avatar_generique(TAILLE_PHOTO_BADGE)
+
+    def _avatar_generique(self, taille: int) -> Image.Image:
+        """Silhouette simple dessinée à la volée — pas de fichier image
+        statique ajouté au dépôt pour un simple repli, cohérent avec
+        l'absence de stockage inutile ailleurs dans ce service.
+        """
+        avatar = Image.new("RGB", (taille, taille), COULEUR_AVATAR_GENERIQUE)
+        dessin = ImageDraw.Draw(avatar)
+        centre_x = taille / 2
+        rayon_tete = taille * 0.18
+        centre_y_tete = taille * 0.22
+        dessin.ellipse(
+            [
+                centre_x - rayon_tete,
+                centre_y_tete - rayon_tete,
+                centre_x + rayon_tete,
+                centre_y_tete + rayon_tete,
+            ],
+            fill=COULEUR_SILHOUETTE_GENERIQUE,
+        )
+        dessin.ellipse(
+            [taille * 0.15, taille * 0.55, taille * 0.85, taille * 1.25],
+            fill=COULEUR_SILHOUETTE_GENERIQUE,
+        )
+        return avatar
+
+    def _qr_pour_badge(self, id_personnel: int) -> Image.Image:
+        code = qrcode.QRCode(border=1)
+        code.add_data(str(id_personnel))
+        code.make(fit=True)
+        image_qr = code.make_image(fill_color="black", back_color="white")
+        return image_qr.convert("RGB").resize((TAILLE_QR_BADGE, TAILLE_QR_BADGE))
