@@ -1,13 +1,19 @@
 """Service métier de PERSONNEL."""
 
+import io
 import secrets
 from collections.abc import Sequence
+from pathlib import Path
+from uuid import uuid4
 
+from PIL import Image
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.exceptions import (
     ConflitMetier,
+    ErreurMetier,
     ReferenceInvalide,
     RessourceIntrouvable,
 )
@@ -27,6 +33,23 @@ MESSAGE_EMAIL_PRIS = "Un membre du personnel actif utilise déjà cette adresse.
 # usurper le compte. Mêmes valeurs que `ClientService`, même raisonnement.
 DOMAINE_ANONYME = "delta.invalid"
 MENTION_ANONYME = "Anonymisé"
+
+# --- Photo de profil ---------------------------------------------------------
+
+#: 2 Mio, une photo de profil n'a pas besoin de plus — validé avant codage.
+TAILLE_MAX_PHOTO_OCTETS = 2 * 1024 * 1024
+
+#: Formats acceptés, associés à l'extension de fichier stockée. Restreint aux
+#: deux formats web courants pour une photo de profil — décidé avant codage,
+#: pas une limite technique de Pillow (qui en lit bien davantage).
+EXTENSIONS_PAR_FORMAT = {"JPEG": ".jpg", "PNG": ".png"}
+TYPES_MIME_ACCEPTES = {"image/jpeg", "image/png"}
+
+MESSAGE_TYPE_PHOTO_INVALIDE = (
+    "Seules les images JPEG et PNG sont acceptées pour une photo de profil."
+)
+MESSAGE_PHOTO_TROP_VOLUMINEUSE = "L'image dépasse la taille maximale autorisée (2 Mio)."
+MESSAGE_PAS_DE_PHOTO = "Ce membre du personnel n'a pas de photo de profil."
 
 
 class PersonnelService:
@@ -245,6 +268,125 @@ class PersonnelService:
         personnel.est_administrateur = False
         personnel.mot_de_passe = hacher_mot_de_passe(secrets.token_urlsafe(32))
 
+        # La photo est une donnée personnelle au même titre que le nom ou
+        # l'e-mail : l'effacer ici, et pas seulement à l'archivage simple
+        # (`supprimer()`, qui reste réversible via `restaurer()`), est ce qui
+        # fait de cette méthode le seul chemin de conformité complet.
+        ancienne_photo = personnel.photo_chemin
+        personnel.photo_chemin = None
+
         self.personnels.delete(personnel)
         self.db.commit()
+
+        if ancienne_photo is not None:
+            self._supprimer_fichier_photo(ancienne_photo)
+
         return personnel
+
+    # --- Photo de profil -----------------------------------------------------
+
+    def _dossier_photos(self) -> Path:
+        """Dossier de stockage, créé au premier besoin s'il n'existe pas encore."""
+        dossier = Path(settings.PHOTO_STORAGE_DIR)
+        dossier.mkdir(parents=True, exist_ok=True)
+        return dossier
+
+    def _supprimer_fichier_photo(self, nom_fichier: str) -> None:
+        """Supprime un fichier du disque, sans échouer s'il est déjà absent.
+
+        `missing_ok=True` : un fichier déjà manquant (suppression manuelle,
+        disque nettoyé) ne doit pas faire échouer une opération métier qui a
+        de toute façon atteint son but — la colonne pointant vers ce fichier
+        est de toute façon réécrite par l'appelant.
+        """
+        (self._dossier_photos() / nom_fichier).unlink(missing_ok=True)
+
+    def remplacer_photo(
+        self, id_personnel: int, contenu: bytes, type_mime: str | None
+    ) -> Personnel:
+        """Valide et stocke une nouvelle photo de profil, remplaçant l'ancienne.
+
+        Trois contrôles, dans cet ordre — du moins coûteux au plus coûteux :
+        `Content-Type` déclaré (rejet rapide, avant de lire le corps en
+        entier), taille réelle, puis contenu réel des octets via Pillow
+        (`Image.open(...).verify()`). Ne fait confiance ni à l'en-tête ni au
+        nom de fichier envoyés par le client — les deux peuvent mentir.
+
+        Le nom de fichier stocké est un UUID, avec l'extension déduite du
+        **format détecté**, jamais du nom d'origine : ferme à la fois les
+        collisions et toute tentative de traversée de chemin.
+
+        L'ancien fichier n'est supprimé qu'**après** que le nouveau soit
+        écrit et la base commitée — dans cet ordre, un échec à n'importe
+        quelle étape laisse au pire un fichier neuf orphelin sur disque,
+        jamais une colonne qui pointe vers un fichier absent.
+        """
+        personnel = self.obtenir(id_personnel)
+
+        if type_mime not in TYPES_MIME_ACCEPTES:
+            raise ErreurMetier(MESSAGE_TYPE_PHOTO_INVALIDE)
+        if len(contenu) > TAILLE_MAX_PHOTO_OCTETS:
+            raise ErreurMetier(MESSAGE_PHOTO_TROP_VOLUMINEUSE)
+
+        try:
+            image = Image.open(io.BytesIO(contenu))
+            # `.format` est lu **avant** `.verify()` : Pillow interdit tout
+            # nouvel accès à l'image une fois `verify()` appelé.
+            format_detecte = image.format
+            image.verify()
+        except OSError as erreur:
+            # `UnidentifiedImageError` (contenu qui n'est pas une image du
+            # tout) **hérite** de `OSError` — mais un fichier tronqué, dont
+            # l'en-tête reste reconnaissable, lève un `OSError` nu
+            # (« Truncated File Read ») directement depuis `verify()`, pas
+            # cette sous-classe. Ne capturer que `UnidentifiedImageError`
+            # laissait ce cas remonter en 500 au lieu du 400 attendu — trouvé
+            # empiriquement avec un vrai fichier tronqué, pas par lecture du
+            # code.
+            raise ErreurMetier(MESSAGE_TYPE_PHOTO_INVALIDE) from erreur
+
+        extension = EXTENSIONS_PAR_FORMAT.get(format_detecte or "")
+        if extension is None:
+            raise ErreurMetier(MESSAGE_TYPE_PHOTO_INVALIDE)
+
+        nom_fichier = f"{uuid4().hex}{extension}"
+        (self._dossier_photos() / nom_fichier).write_bytes(contenu)
+
+        ancienne_photo = personnel.photo_chemin
+        personnel.photo_chemin = nom_fichier
+        self.db.commit()
+
+        if ancienne_photo is not None:
+            self._supprimer_fichier_photo(ancienne_photo)
+
+        return personnel
+
+    def supprimer_photo(self, id_personnel: int) -> Personnel:
+        """Retire la photo de profil, sans rien archiver — symétrique de l'upload.
+
+        Sans effet si le membre n'en avait pas : l'opération est idempotente,
+        même traitement que `restaurer()` sur un membre déjà actif.
+        """
+        personnel = self.obtenir(id_personnel)
+        if personnel.photo_chemin is None:
+            return personnel
+
+        ancienne_photo = personnel.photo_chemin
+        personnel.photo_chemin = None
+        self.db.commit()
+
+        self._supprimer_fichier_photo(ancienne_photo)
+        return personnel
+
+    def chemin_photo(self, id_personnel: int) -> Path:
+        """Chemin disque de la photo active, ou lève `RessourceIntrouvable`.
+
+        Le même refus, qu'aucune photo n'ait jamais été téléversée ou que le
+        membre lui-même n'existe pas — `obtenir()` lève déjà ce cas. Rien ne
+        distingue les deux côté client : les deux se traduisent par
+        l'avatar générique côté frontend.
+        """
+        personnel = self.obtenir(id_personnel)
+        if personnel.photo_chemin is None:
+            raise RessourceIntrouvable(MESSAGE_PAS_DE_PHOTO)
+        return self._dossier_photos() / personnel.photo_chemin

@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     # applicatif n'a pas à changer. Voir docs/roadmap.md, Dette technique.
     RATE_LIMIT_STORAGE_URI: str = "memory://"
 
+    # --- Stockage des photos de profil PERSONNEL ---
+    # Dossier dédié sur disque, jamais un blob en base ni un stockage d'objets
+    # externe (scope volontairement réduit). Chemin relatif au répertoire de
+    # travail du process backend — configurable, jamais codé en dur dans le
+    # service qui l'utilise (`PersonnelService`).
+    PHOTO_STORAGE_DIR: str = "stockage/personnel_photos"
+
     # --- Environnement d'exécution ---
     # Défaut fermé (`production`) : un déploiement qui omet cette variable
     # reste protégé plutôt que de se retrouver exposé par omission. Seul

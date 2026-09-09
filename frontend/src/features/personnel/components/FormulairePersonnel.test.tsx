@@ -128,3 +128,43 @@ describe('erreur', () => {
     );
   });
 });
+
+describe('photo de profil', () => {
+  it('ne transite jamais par surEnvoi', async () => {
+    // La photo suit son propre chemin (upload séparé, cf. docs/architecture.md)
+    // — PersonnelEnvoye n'a jamais eu ce champ, ce test verrouille qu'il ne
+    // s'y glisse pas silencieusement un jour.
+    const surEnvoi = afficher();
+
+    await userEvent.type(screen.getByLabelText(/^nom$/i), 'Rabe');
+    await userEvent.type(screen.getByLabelText(/^prénom$/i), 'Marie');
+    await userEvent.type(
+      screen.getByLabelText(/e-mail professionnel/i),
+      'marie@delta.mg'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /créer/i }));
+
+    await waitFor(() => expect(surEnvoi).toHaveBeenCalled());
+    expect(Object.keys(surEnvoi.mock.calls[0]?.[0] ?? {})).not.toContain('photo');
+  });
+
+  it('rappelle surPhotoChoisie avec le fichier sélectionné', async () => {
+    const surPhotoChoisie = vi.fn();
+    afficher({ surPhotoChoisie });
+    const fichier = new File(['contenu'], 'photo.png', { type: 'image/png' });
+
+    const champFichier = screen.getByLabelText(/photo de profil/i);
+    await userEvent.upload(champFichier, fichier);
+
+    expect(surPhotoChoisie).toHaveBeenCalledWith(fichier);
+  });
+
+  it('accepte uniquement JPEG et PNG', () => {
+    afficher();
+
+    expect(screen.getByLabelText(/photo de profil/i)).toHaveProperty(
+      'accept',
+      'image/jpeg,image/png'
+    );
+  });
+});

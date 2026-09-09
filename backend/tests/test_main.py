@@ -91,6 +91,7 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/personnel/{{id_personnel}}",
         f"{prefixe}/personnel/{{id_personnel}}/restauration",
         f"{prefixe}/personnel/{{id_personnel}}/anonymisation",
+        f"{prefixe}/personnel/{{id_personnel}}/photo",
         f"{prefixe}/abonnements",
         f"{prefixe}/abonnements/{{id_abonnement}}",
         f"{prefixe}/abonnements/administration",

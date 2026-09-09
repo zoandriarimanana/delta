@@ -5,12 +5,21 @@
  * `est_administrateur` et le mot de passe ne figurent nulle part ici : ni le
  * type `PersonnelEnvoye` ni le formulaire ne les proposent, même absence que
  * côté serveur (`PersonnelCreate`/`PersonnelUpdate`).
+ *
+ * **La photo ne transite pas par `surEnvoi`** : `PersonnelEnvoye` reste un
+ * corps JSON, `POST /personnel` n'a pas changé (cf. `docs/architecture.md`).
+ * Le fichier choisi, s'il y en a un, est remonté séparément via
+ * `surPhotoChoisie` — c'est l'appelant (la page) qui l'envoie ensuite à
+ * `POST /personnel/{id}/photo`, une fois l'identifiant connu (immédiatement
+ * en modification, seulement après la création en... création).
  */
 
 import { useState } from 'react';
 
+import Avatar from '@/components/ui/Avatar';
 import Bouton from '@/components/ui/Bouton';
 
+import { urlPhotoPersonnel } from '../personnel.api';
 import type { FonctionPersonnel, Personnel, PersonnelEnvoye } from '../personnel.types';
 
 const FONCTIONS: FonctionPersonnel[] = [
@@ -21,6 +30,8 @@ const FONCTIONS: FonctionPersonnel[] = [
   'Autre',
 ];
 
+const TYPES_ACCEPTES = 'image/jpeg,image/png';
+
 interface Proprietes {
   /** Membre à modifier, ou `undefined` pour une création. */
   personnel?: Personnel;
@@ -28,6 +39,8 @@ interface Proprietes {
   erreur: string | null;
   surEnvoi: (donnees: PersonnelEnvoye) => void;
   surAnnulation: () => void;
+  /** Rappelé à chaque changement du champ fichier, `null` si vidé. */
+  surPhotoChoisie?: (fichier: File | null) => void;
 }
 
 function valeursInitiales(personnel: Personnel | undefined): PersonnelEnvoye {
@@ -49,16 +62,31 @@ export default function FormulairePersonnel({
   erreur,
   surEnvoi,
   surAnnulation,
+  surPhotoChoisie,
 }: Proprietes) {
   const [valeurs, setValeurs] = useState<PersonnelEnvoye>(() =>
     valeursInitiales(personnel)
   );
+  const [previsualisation, setPrevisualisation] = useState<string | null>(null);
 
   function modifier<C extends keyof PersonnelEnvoye>(
     champ: C,
     valeur: PersonnelEnvoye[C]
   ) {
     setValeurs((actuelles) => ({ ...actuelles, [champ]: valeur }));
+  }
+
+  function choisirPhoto(fichier: File | null) {
+    setPrevisualisation((precedente) => {
+      // Révoque l'URL objet précédente avant d'en créer une nouvelle — sans
+      // ça, chaque changement de fichier fuit la précédente jusqu'au
+      // rechargement de la page.
+      if (precedente !== null) {
+        URL.revokeObjectURL(precedente);
+      }
+      return fichier === null ? null : URL.createObjectURL(fichier);
+    });
+    surPhotoChoisie?.(fichier);
   }
 
   return (
@@ -75,6 +103,26 @@ export default function FormulairePersonnel({
         });
       }}
     >
+      <div className="flex items-center gap-4">
+        <Avatar
+          src={previsualisation ?? urlPhotoPersonnel(personnel?.id_personnel ?? 0)}
+          alt=""
+          taille="grande"
+        />
+        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+          Photo de profil <span className="text-warm-gray-500">(facultatif)</span>
+          <input
+            type="file"
+            accept={TYPES_ACCEPTES}
+            onChange={(e) => choisirPhoto(e.target.files?.[0] ?? null)}
+            className="text-sm"
+          />
+          <span className="text-xs text-warm-gray-500">
+            JPEG ou PNG, 2 Mio maximum.
+          </span>
+        </label>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
           Nom
