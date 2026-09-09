@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   anonymiserPersonnel,
   archiverPersonnel,
+  obtenirBadgePersonnel,
   obtenirPersonnel,
   restaurerPersonnel,
 } from '../personnel.api';
@@ -157,4 +158,50 @@ it('affiche le refus 403 tel quel sur une action réservée aux administrateurs'
   expect((await screen.findByRole('alert')).textContent).toContain(
     'Cette action est réservée aux administrateurs.'
   );
+});
+
+describe('badge', () => {
+  it('déclenche un téléchargement à partir du blob renvoyé par le serveur', async () => {
+    vi.mocked(obtenirPersonnel).mockResolvedValue(RAKOTO);
+    const image = new Blob(['contenu-png'], { type: 'image/png' });
+    vi.mocked(obtenirBadgePersonnel).mockResolvedValue(image);
+    const urlSimulee = 'blob:http://localhost/simulee';
+    const creerUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue(urlSimulee);
+    const revoquerUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    const clic = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
+
+    afficher();
+    await screen.findByRole('heading', { name: 'Jean Rakoto' });
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /télécharger le badge/i })
+    );
+
+    await waitFor(() => expect(obtenirBadgePersonnel).toHaveBeenCalledWith(7));
+    expect(creerUrl).toHaveBeenCalledWith(image);
+    expect(clic).toHaveBeenCalledOnce();
+    expect(revoquerUrl).toHaveBeenCalledWith(urlSimulee);
+  });
+
+  it("affiche l'erreur telle quelle si la génération échoue, sans bloquer les autres actions", async () => {
+    vi.mocked(obtenirPersonnel).mockResolvedValue(RAKOTO);
+    vi.mocked(obtenirBadgePersonnel).mockRejectedValue({
+      response: { status: 404, data: { detail: 'Membre du personnel introuvable.' } },
+    });
+    afficher();
+    await screen.findByRole('heading', { name: 'Jean Rakoto' });
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /télécharger le badge/i })
+    );
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Membre du personnel introuvable.'
+    );
+    expect(
+      screen.getByRole('button', { name: /^archiver$/i }).hasAttribute('disabled')
+    ).toBe(false);
+  });
 });

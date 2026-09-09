@@ -35,6 +35,9 @@ dependencies = [
     # réellement envoyés (Image.open(...).verify()), sans jamais faire
     # confiance au Content-Type déclaré ni au nom de fichier du client.
     "Pillow>=10.0",
+    # Génération du QR code du badge PERSONNEL : produit directement une
+    # image PIL, s'intègre à la composition Pillow sans conversion.
+    "qrcode[pil]>=7.4",
 ]
 
 [project.optional-dependencies]
