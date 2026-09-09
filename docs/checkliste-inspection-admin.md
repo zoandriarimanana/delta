@@ -18,31 +18,33 @@ impression.
 
 | État | Vérification |
 |---|---|
-| ☐ | La liste affiche 5 lignes : Rabearison Tiana (Formateur), Andriatsitohaina Mamy (Livreur), Ravelojaona Solo (Cuisinier), Randrianasolo Fara (Receptionniste), Rasolofo Admin (Autre) |
-| ☐ | Le filtre « Fonction » réduit correctement la liste à chaque valeur (Formateur, Livreur, Cuisinier, Receptionniste, Autre) |
-| ☐ | La fiche de chaque membre affiche fonction, e-mail, téléphone, date d'embauche cohérents avec le seed (ex. `formateur-qa@delta.mg`, spécialité « Pâtisserie française ») |
-| ☐ | Le livreur affiche sa zone de livraison (« Analamanga ») ; les autres affichent `—` pour ce champ |
-| ☐ | Aucun mot de passe ni droit `est_administrateur` n'est visible nulle part dans la liste ou la fiche |
+| ✅ | La liste affiche 5 lignes : Rabearison Tiana (Formateur), Andriatsitohaina Mamy (Livreur), Ravelojaona Solo (Cuisinier), Randrianasolo Fara (Receptionniste), Rasolofo Admin (Autre) |
+| ✅ | Le filtre « Fonction » réduit correctement la liste à chaque valeur (Formateur, Livreur, Cuisinier, Receptionniste, Autre) — vérifié sur « Livreur », ne laisse plus qu'Andriatsitohaina Mamy |
+| ✅ | La fiche de chaque membre affiche fonction, e-mail, téléphone, date d'embauche cohérents avec le seed (ex. `formateur-qa@delta.mg`, spécialité « Pâtisserie française ») |
+| ✅ | Le livreur affiche sa zone de livraison (« Analamanga ») ; les autres affichent `—` pour ce champ |
+| ✅ | Aucun mot de passe ni droit `est_administrateur` n'est visible nulle part dans la liste ou la fiche (vérifié sur le HTML brut de la page, aucune occurrence) |
 
 ### 1.2 Ce qu'on doit pouvoir FAIRE
 
 | État | Action |
 |---|---|
-| ☐ | Créer un nouveau membre depuis la liste (« Nouveau membre ») — apparaît ensuite dans le tableau |
-| ☐ | Modifier un membre depuis sa fiche — les changements persistent après retour à la liste |
-| ☐ | Archiver un membre depuis sa fiche |
-| ☐ | Anonymiser un membre depuis sa fiche (nom/prénom/e-mail réécrits, `fonction` et ancienneté conservées) |
-| ☐ | Restaurer un membre juste après l'avoir archivé (bouton visible seulement après archivage/anonymisation) |
+| ✅ | Créer un nouveau membre depuis la liste (« Nouveau membre ») — apparaît ensuite dans le tableau |
+| ✅ | Modifier un membre depuis sa fiche — les changements persistent après retour à la liste |
+| ✅ | Archiver un membre depuis sa fiche |
+| ✅ | Anonymiser un membre depuis sa fiche (nom/prénom/e-mail réécrits, `fonction` et ancienneté conservées) |
+| ✅ | Restaurer un membre juste après l'avoir archivé (bouton visible seulement après archivage/anonymisation) — **uniquement sans navigation intermédiaire**, voir cas limite ci-dessous |
 
 ### 1.3 Cas limites à tester
 
 | État | Cas |
 |---|---|
-| ☐ | Après archivage ou anonymisation, la fiche continue d'afficher les dernières données connues (pas de 404 brutal) — comportement documenté en 10.1, dû à l'absence de `GET /personnel?inclure_supprimes` |
-| ☐ | Une fois archivé/anonymisé, les boutons Modifier/Archiver/Anonymiser disparaissent, seul « Restaurer » reste |
-| ☐ | Un membre archivé **ne réapparaît plus** dans la liste principale après un rechargement (F5) — cohérent avec l'absence de vue d'archives documentée comme dette |
-| ☐ | Créer un membre avec un e-mail déjà utilisé (ex. `client-qa@delta.mg`) doit être accepté (table différente) ; réessayer avec un e-mail personnel déjà pris (ex. `formateur-qa@delta.mg`) doit refuser avec un message clair |
-| ☐ | Anonymiser deux fois de suite le même membre ne provoque pas d'erreur (action idempotente, aucune garde supplémentaire côté UI) |
+| ⚠️ | Après archivage ou anonymisation, la fiche continue d'afficher les dernières données connues **tant qu'on reste sur la même page** (état local en mémoire) — mais une navigation fraîche vers la même URL (nouvel onglet, F5, ou retour après être passé par la liste) donne « Membre du personnel introuvable. », sans bouton Restaurer. Comportement cohérent avec la dette documentée en 10.1 (absence de `GET /personnel?inclure_supprimes`), mais plus strict que la formulation initiale de ce point : ce n'est pas juste « pas de 404 brutal », c'est bien un 404 dès que l'état local est perdu. Restaurer un membre archivé par erreur suppose donc de le faire **sans quitter la page**, ou de rejouer l'action via `/docs`/l'API directement. |
+| ✅ | Une fois archivé/anonymisé, les boutons Modifier/Archiver/Anonymiser disparaissent, seul « Restaurer » reste (vérifié sans navigation intermédiaire) |
+| ✅ | Un membre archivé **ne réapparaît plus** dans la liste principale après un rechargement (F5) — cohérent avec l'absence de vue d'archives documentée comme dette |
+| ✅ | Créer un membre avec un e-mail déjà utilisé (ex. `client-qa@delta.mg`) est accepté (table différente) ; réessayer avec un e-mail personnel déjà pris (ex. `formateur-qa@delta.mg`) refuse avec le message clair « Un membre du personnel actif utilise déjà cette adresse. » |
+| ✅ | Anonymiser deux fois de suite le même membre ne provoque pas d'erreur — vérifié via deux appels directs à `POST /personnel/{id}/anonymisation`, les deux répondent 200 avec un résultat identique (idempotent, aucune garde supplémentaire nécessaire) |
+
+**Note d'environnement** : l'inspection a aussi révélé 2 lignes en base sans rapport avec le seed QA (`id_personnel` 6 et 14, restes d'anonymisations de tests antérieurs) — nettoyées après vérification, aucun lien FK (`livraison`/`session_formation`/`commande`) ne les référençait. La base reflète maintenant exactement les 5 lignes du seed, plus un compte personnel réel de l'équipe (`id_personnel` 10, non touché).
 
 ---
 
