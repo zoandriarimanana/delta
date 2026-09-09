@@ -956,17 +956,31 @@ neuf sprints) :
       réussit sans blocage CSRF résiduel.
       — Suite complète verte (439/439, 52 fichiers), `ruff`-équivalents
       (`eslint`, `prettier --check`), `tsc --noEmit` et `vite build` propres.
-- [ ] **Sprint 9.5 — décision sur `POST /paiements/{id}/simuler-confirmation`** :
+- [x] **Sprint 9.5 — décision sur `POST /paiements/{id}/simuler-confirmation`** :
       retirer l'endpoint (backend et bouton frontend) maintenant, ou
       confirmer qu'il reste dette active tant qu'aucune vraie passerelle
       n'est branchée. Pas une investigation de code — la garde
       `Settings.ENVIRONMENT` fonctionne comme documenté, c'est un arbitrage
       produit.
-- [ ] **Sprint 10.3 — évaluation du verrou de ligne sur `changer_statut()`** :
+      — **Décision actée en clôturant le Sprint 11** : gardé tel quel.
+      Aucune vraie passerelle (Mvola, Stripe...) n'est branchée à ce jour ;
+      l'endpoint reste le seul moyen de tester le parcours de paiement de
+      bout en bout en développement. Le retirer maintenant casserait ce
+      test sans rien gagner en sécurité — la garde `Settings.ENVIRONMENT`
+      ferme déjà la production. Reste dette active, condition de
+      résorption inchangée (voir tableau ci-dessous) : à retirer dès
+      qu'une vraie passerelle est branchée, quel que soit l'environnement.
+- [x] **Sprint 10.3 — évaluation du verrou de ligne sur `changer_statut()`** :
       traiter maintenant (`UPDATE` conditionnel ou verrou de ligne, même
       patron que le décrément de `places_restantes`) ou documenter
       explicitement comme non urgent selon la taille réelle de l'équipe
       d'administration.
+      — **Décision actée en clôturant le Sprint 11** : documenté comme non
+      urgent, non traité maintenant. Back-office à faible trafic, peu
+      d'administrateurs actifs simultanément — la course reste théorique,
+      pas justifiée par un usage observé. Reste dette active, condition de
+      résorption inchangée (voir tableau ci-dessous) : à traiter avant mise
+      en prod si l'équipe d'administration grossit.
 
 ---
 
