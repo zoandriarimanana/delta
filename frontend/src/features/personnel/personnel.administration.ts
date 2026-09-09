@@ -72,7 +72,9 @@ export function useAnnuairePersonnel(
 }
 
 export interface CreationPersonnel {
-  creerUnMembre: (donnees: PersonnelEnvoye) => Promise<boolean>;
+  /** `null` en cas d'échec — sinon le membre créé, dont l'identifiant sert à
+   * téléverser sa photo juste après (cf. `AdministrationPersonnelPage`). */
+  creerUnMembre: (donnees: PersonnelEnvoye) => Promise<Personnel | null>;
   envoi: boolean;
   erreur: string | null;
 }
@@ -93,16 +95,16 @@ export function useCreerPersonnel(surSucces: () => void): CreationPersonnel {
   const [erreur, setErreur] = useState<string | null>(null);
 
   const creerUnMembre = useCallback(
-    async (donnees: PersonnelEnvoye): Promise<boolean> => {
+    async (donnees: PersonnelEnvoye): Promise<Personnel | null> => {
       setEnvoi(true);
       setErreur(null);
       try {
-        await creerPersonnel(donnees);
+        const cree = await creerPersonnel(donnees);
         surSucces();
-        return true;
+        return cree;
       } catch (erreurAppel) {
         setErreur(messageDAdministration(erreurAppel));
-        return false;
+        return null;
       } finally {
         setEnvoi(false);
       }

@@ -17,9 +17,11 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
 
+import Avatar from '@/components/ui/Avatar';
 import Bouton from '@/components/ui/Bouton';
 
 import FormulairePersonnel from '../components/FormulairePersonnel';
+import { televerserPhotoPersonnel, urlPhotoPersonnel } from '../personnel.api';
 import { useAnnuairePersonnel, useCreerPersonnel } from '../personnel.administration';
 import type { FonctionPersonnel, PersonnelEnvoye } from '../personnel.types';
 
@@ -38,14 +40,39 @@ export default function AdministrationPersonnelPage() {
   const donnees = useAnnuairePersonnel(filtreFonction);
   const creation = useCreerPersonnel(donnees.recharger);
   const [edition, setEdition] = useState<Edition>({ mode: 'ferme' });
+  const [photoChoisie, setPhotoChoisie] = useState<File | null>(null);
+  const [erreurPhoto, setErreurPhoto] = useState<string | null>(null);
 
-  const fermer = useCallback(() => setEdition({ mode: 'ferme' }), []);
+  const fermer = useCallback(() => {
+    setEdition({ mode: 'ferme' });
+    setPhotoChoisie(null);
+    setErreurPhoto(null);
+  }, []);
 
   async function enregistrer(valeurs: PersonnelEnvoye) {
-    const ok = await creation.creerUnMembre(valeurs);
-    if (ok) {
-      fermer();
+    setErreurPhoto(null);
+    const cree = await creation.creerUnMembre(valeurs);
+    if (cree === null) {
+      return;
     }
+    // La création a réussi indépendamment de la photo : un échec ici ne
+    // doit pas empêcher de fermer le formulaire ni faire perdre le membre
+    // tout juste créé — il reste modifiable depuis sa fiche, photo comprise.
+    // `fermer()` n'est donc pas réutilisé ici : il effacerait `erreurPhoto`
+    // au moment même où on vient de la poser.
+    if (photoChoisie !== null) {
+      try {
+        await televerserPhotoPersonnel(cree.id_personnel, photoChoisie);
+        donnees.recharger();
+      } catch {
+        setErreurPhoto(
+          `${cree.prenom} ${cree.nom} a été créé(e), mais l'envoi de la photo a échoué. ` +
+            'Réessayez depuis sa fiche.'
+        );
+      }
+    }
+    setEdition({ mode: 'ferme' });
+    setPhotoChoisie(null);
   }
 
   return (
@@ -86,6 +113,15 @@ export default function AdministrationPersonnelPage() {
         </p>
       )}
 
+      {erreurPhoto !== null && (
+        <p
+          role="alert"
+          className="mt-4 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+        >
+          {erreurPhoto}
+        </p>
+      )}
+
       {edition.mode === 'creation' && (
         <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
           <h2 className="mb-4 text-lg font-medium text-warm-gray-700">
@@ -96,6 +132,7 @@ export default function AdministrationPersonnelPage() {
             erreur={creation.erreur}
             surEnvoi={(valeurs) => void enregistrer(valeurs)}
             surAnnulation={fermer}
+            surPhotoChoisie={setPhotoChoisie}
           />
         </div>
       )}
@@ -115,6 +152,7 @@ export default function AdministrationPersonnelPage() {
           <table className="w-full border-collapse rounded-xl bg-white shadow-sm">
             <thead>
               <tr className="border-b border-warm-gray-200 text-left">
+                <th className="px-3 py-2" />
                 <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
                   Nom
                 </th>
@@ -130,6 +168,13 @@ export default function AdministrationPersonnelPage() {
             <tbody className="divide-y divide-warm-gray-200">
               {donnees.personnels.map((personnel) => (
                 <tr key={personnel.id_personnel}>
+                  <td className="px-3 py-2">
+                    <Avatar
+                      src={urlPhotoPersonnel(personnel.id_personnel)}
+                      alt=""
+                      taille="petite"
+                    />
+                  </td>
                   <td className="px-3 py-2 text-sm text-warm-gray-700">
                     {personnel.prenom} {personnel.nom}
                   </td>
