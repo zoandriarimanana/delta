@@ -167,4 +167,39 @@ describe('photo de profil', () => {
       'image/jpeg,image/png'
     );
   });
+
+  describe('libellé distinguant photo actuelle et aperçu — non-régression', () => {
+    it('affiche "Photo actuelle" en modification, avant tout choix de fichier', () => {
+      afficher({ personnel: RAKOTO });
+
+      expect(screen.getByText('Photo actuelle')).toBeTruthy();
+      expect(screen.queryByText('Nouvel aperçu')).toBeNull();
+    });
+
+    it('bascule sur "Nouvel aperçu" dès qu\'un fichier est choisi en modification', async () => {
+      afficher({ personnel: RAKOTO });
+      const fichier = new File(['contenu'], 'photo.png', { type: 'image/png' });
+
+      await userEvent.upload(screen.getByLabelText(/photo de profil/i), fichier);
+
+      expect(screen.getByText('Nouvel aperçu')).toBeTruthy();
+      expect(screen.queryByText('Photo actuelle')).toBeNull();
+    });
+
+    it("n'affiche aucun libellé en création avant tout choix de fichier — rien à distinguer", () => {
+      afficher();
+
+      expect(screen.queryByText('Photo actuelle')).toBeNull();
+      expect(screen.queryByText('Nouvel aperçu')).toBeNull();
+    });
+
+    it('affiche "Nouvel aperçu" en création dès qu\'un fichier est choisi', async () => {
+      afficher();
+      const fichier = new File(['contenu'], 'photo.png', { type: 'image/png' });
+
+      await userEvent.upload(screen.getByLabelText(/photo de profil/i), fichier);
+
+      expect(screen.getByText('Nouvel aperçu')).toBeTruthy();
+    });
+  });
 });

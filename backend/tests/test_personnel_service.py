@@ -6,7 +6,7 @@ from datetime import date
 from pathlib import Path
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -18,6 +18,8 @@ from app.schemas.personnel import PersonnelCreate, PersonnelUpdate
 from app.services.personnel_service import (
     CONTRAINTE_EMAIL_UNIQUE,
     DOMAINE_ANONYME,
+    HAUTEUR_BADGE,
+    LARGEUR_BADGE,
     MENTION_ANONYME,
     PersonnelService,
 )
@@ -748,3 +750,118 @@ def test_generer_badge_membre_archive_leve_introuvable(
 
     with pytest.raises(RessourceIntrouvable):
         service.generer_badge(personnel.id_personnel)
+
+
+def test_generer_badge_a_les_dimensions_attendues(service: PersonnelService) -> None:
+    personnel = service.creer(_donnees())
+
+    badge_octets = service.generer_badge(personnel.id_personnel)
+    image = Image.open(io.BytesIO(badge_octets))
+
+    assert image.size == (LARGEUR_BADGE, HAUTEUR_BADGE)
+
+
+def test_generer_badge_avec_un_nom_tres_long_ne_leve_rien(
+    service: PersonnelService,
+) -> None:
+    """Régression : un nom composé réel débordait jusque dans la zone QR
+    avant l'ajustement de police/troncature — voir la docstring de
+    `_texte_ajuste_a_la_largeur`. Ce test ne vérifie pas le rendu pixel par
+    pixel, seulement que la génération reste robuste à une entrée libre très
+    longue, sans lever ni produire une image de mauvaise taille."""
+    personnel = service.creer(
+        PersonnelCreate(
+            nom="Razafindrakoto-Andriamampianina",
+            prenom="Marie-Christine",
+            fonction=FonctionPersonnel.RECEPTIONNISTE,
+            email="nom-long@delta.mg",
+        )
+    )
+
+    badge_octets = service.generer_badge(personnel.id_personnel)
+    image = Image.open(io.BytesIO(badge_octets))
+
+    assert image.size == (LARGEUR_BADGE, HAUTEUR_BADGE)
+
+
+def test_texte_ajuste_a_la_largeur_tronque_si_la_police_minimale_deborde_encore(
+    service: PersonnelService,
+) -> None:
+    dessin = ImageDraw.Draw(Image.new("RGB", (10, 10)))
+
+    texte, police = service._texte_ajuste_a_la_largeur(
+        dessin,
+        "Marie-Christine Razafindrakoto-Andriamampianina",
+        taille_depart=26,
+        largeur_max=150,
+    )
+
+    assert texte.endswith("…")
+    assert texte != "Marie-Christine Razafindrakoto-Andriamampianina"
+    boite = dessin.textbbox((0, 0), texte, font=police)
+    assert (boite[2] - boite[0]) <= 150
+
+
+def test_texte_ajuste_a_la_largeur_garde_le_texte_entier_si_ca_rentre(
+    service: PersonnelService,
+) -> None:
+    dessin = ImageDraw.Draw(Image.new("RGB", (10, 10)))
+
+    texte, police = service._texte_ajuste_a_la_largeur(
+        dessin, "Jean Rakoto", taille_depart=26, largeur_max=1000
+    )
+
+    assert texte == "Jean Rakoto"
+    assert police.size == 26
+
+
+@pytest.mark.parametrize(
+    ("entree", "attendu"),
+    [
+        ("André", "Andre"),
+        ("François-Xavier", "Francois-Xavier"),
+        ("Ranaïvo", "Ranaivo"),
+        ("Andrianarivo", "Andrianarivo"),  # sans accent : inchangé
+        ("Ça va", "Ca va"),
+    ],
+)
+def test_sans_diacritiques(
+    service: PersonnelService, entree: str, attendu: str
+) -> None:
+    """Régression : la police embarquée de Pillow ne dessine aucun glyphe
+    pour les caractères latins accentués — elle affiche un carré « glyphe
+    manquant » à la place, sans lever d'erreur. Trouvé empiriquement en
+    relisant un badge généré avec un nom composé réel, pas en lisant la
+    documentation Pillow."""
+    assert service._sans_diacritiques(entree) == attendu
+
+
+def test_generer_badge_avec_un_nom_accentue_ne_leve_rien(
+    service: PersonnelService,
+) -> None:
+    personnel = service.creer(
+        PersonnelCreate(
+            nom="André",
+            prenom="François-Xavier",
+            fonction=FonctionPersonnel.CUISINIER,
+            email="andre-francois@delta.mg",
+        )
+    )
+
+    badge_octets = service.generer_badge(personnel.id_personnel)
+    image = Image.open(io.BytesIO(badge_octets))
+
+    assert image.size == (LARGEUR_BADGE, HAUTEUR_BADGE)
+
+
+@pytest.mark.parametrize(
+    ("id_personnel", "attendu"), [(1, "N° 001"), (42, "N° 042"), (1234, "N° 1234")]
+)
+def test_libelle_numero_badge(
+    service: PersonnelService, id_personnel: int, attendu: str
+) -> None:
+    """`N° 001` plutôt qu'un identifiant technique nu (`ID 1`) — repli en
+    clair si le QR ne scanne pas, pensé pour se lire comme un vrai numéro de
+    badge. Un identifiant à 4 chiffres n'est pas tronqué : le remplissage de
+    zéros est un plancher, pas une largeur fixe."""
+    assert service._libelle_numero_badge(id_personnel) == attendu

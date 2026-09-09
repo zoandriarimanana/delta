@@ -2,7 +2,9 @@
 
 import io
 import secrets
+import unicodedata
 from collections.abc import Sequence
+from datetime import date
 from pathlib import Path
 from uuid import uuid4
 
@@ -54,20 +56,54 @@ MESSAGE_PAS_DE_PHOTO = "Ce membre du personnel n'a pas de photo de profil."
 
 # --- Badge -------------------------------------------------------------------
 
-#: Dimensions du badge généré, en pixels — pas de gabarit d'impression exact
-#: (mm/points) visé pour l'instant, une image suffit. Ratio volontairement
-#: large (paysage) pour laisser la place au texte à côté de la photo.
-LARGEUR_BADGE = 640
-HAUTEUR_BADGE = 400
-MARGE_BADGE = 24
-TAILLE_PHOTO_BADGE = 180
-TAILLE_QR_BADGE = 140
+#: Reprend la palette de `frontend/src/index.css` (`@theme`) — un badge est
+#: une extension de l'identité visuelle du site, pas un artefact à part.
+#: Valeurs dupliquées ici volontairement : Pillow ne peut pas lire un fichier
+#: CSS, et les deux ne changent de toute façon pas au même rythme qu'une
+#: palette de charte graphique.
+COULEUR_CREME = (250, 246, 240)
+COULEUR_TERRACOTTA = (156, 74, 60)
+COULEUR_BLANC = (255, 255, 255)
+COULEUR_GRIS_CHAUD_100 = (245, 243, 240)
+COULEUR_GRIS_CHAUD_200 = (232, 228, 223)
+COULEUR_GRIS_CHAUD_300 = (212, 207, 199)
+COULEUR_GRIS_CHAUD_500 = (125, 116, 112)
+COULEUR_GRIS_CHAUD_700 = (61, 53, 49)
 
-COULEUR_FOND_BADGE = "white"
-COULEUR_TEXTE_NOM = "black"
-COULEUR_TEXTE_FONCTION = (90, 90, 90)
-COULEUR_AVATAR_GENERIQUE = (222, 222, 222)
-COULEUR_SILHOUETTE_GENERIQUE = (160, 160, 160)
+#: Dimensions du badge, en pixels — pas de gabarit d'impression exact
+#: (mm/points) visé pour l'instant, une image suffit.
+LARGEUR_BADGE = 700
+HAUTEUR_BADGE = 440
+
+#: Carte : cadre blanc à coins arrondis flottant sur le fond crème, même
+#: recette que les cartes de l'application (`rounded-xl border
+#: border-warm-gray-200 bg-white`, cf. `PersonnelDetailAdministrationPage`).
+MARGE_CARTE = 16
+RAYON_CARTE = 18
+EPAISSEUR_BORDURE_CARTE = 2
+PADDING_CARTE = 28
+
+#: Repères verticaux du contenu, dérivés des constantes ci-dessus plutôt que
+#: recopiés en dur : un changement de `PADDING_CARTE` ou `MARGE_CARTE` doit se
+#: répercuter sans avoir à recalculer chaque zone à la main.
+X_GAUCHE = MARGE_CARTE + PADDING_CARTE
+X_DROITE = LARGEUR_BADGE - MARGE_CARTE - PADDING_CARTE
+Y_HAUT_CONTENU = MARGE_CARTE + PADDING_CARTE
+Y_BAS_CONTENU = HAUTEUR_BADGE - MARGE_CARTE - PADDING_CARTE
+Y_LIGNE_SEPARATION = Y_HAUT_CONTENU + 68
+
+#: Pied de carte : bande basse séparée par une ligne, sur toute la largeur.
+#: Ajoutée après un premier essai trop vide en bas à gauche (colonne
+#: identité plus courte que la colonne QR, qui remplit toute sa hauteur avec
+#: son propre fond) — un footer partagé referme la carte au lieu de laisser
+#: un blanc qui n'a rien à faire là.
+HAUTEUR_PIED = 40
+Y_LIGNE_PIED = Y_BAS_CONTENU - HAUTEUR_PIED
+
+TAILLE_PHOTO_BADGE = 160
+LARGEUR_ZONE_QR = 182
+GAP_ZONE_QR = 20
+TAILLE_QR_BADGE = 140
 
 
 class PersonnelService:
@@ -410,14 +446,16 @@ class PersonnelService:
         return self._dossier_photos() / personnel.photo_chemin
 
     def generer_badge(self, id_personnel: int) -> bytes:
-        """Compose un badge PNG : photo (ou avatar générique), nom, prénom,
-        fonction, et un QR code encodant `id_personnel`.
+        """Compose un badge PNG : en-tête « DELTA », photo (ou initiales sur
+        fond de marque), nom, prénom, fonction, et un QR code encodant
+        `id_personnel` — dans une carte à cadre reprenant la charte visuelle
+        du site (`frontend/src/index.css`, section « Badge » de ce module).
 
         Généré **à la demande**, jamais stocké ni mis en cache — même
-        raisonnement que `calculer_solde()` ou `note_moyenne` : trois champs
-        indépendants peuvent changer (identité, fonction, photo), un cache
-        imposerait de l'invalider sur chacun pour un coût de génération de
-        toute façon négligeable (composition d'une image ~600×400 px).
+        raisonnement que `calculer_solde()` ou `note_moyenne` : plusieurs
+        champs indépendants peuvent changer (identité, fonction, photo), un
+        cache imposerait de l'invalider sur chacun pour un coût de génération
+        de toute façon négligeable (composition d'une image ~700×440 px).
 
         Le QR code encode l'identifiant seul, jamais une URL de vérification :
         construire une telle URL supposerait une route **publique**, alors
@@ -426,81 +464,310 @@ class PersonnelService:
         QR n'est de toute façon pas moins falsifiable qu'une URL bâtie autour
         du même ID. La vérification réelle d'un badge reste visuelle (photo +
         nom comparés au porteur) ; le QR n'est qu'une commodité de lookup pour
-        un salarié déjà authentifié, via `GET /personnel/{id}`.
+        un salarié déjà authentifié, via `GET /personnel/{id}`. L'identifiant
+        est aussi affiché **en clair** sous le QR, pour rester utilisable si
+        le QR ne scanne pas (impression dégradée, lecteur absent).
         """
         personnel = self.obtenir(id_personnel)
 
-        badge = Image.new("RGB", (LARGEUR_BADGE, HAUTEUR_BADGE), COULEUR_FOND_BADGE)
+        badge = Image.new("RGB", (LARGEUR_BADGE, HAUTEUR_BADGE), COULEUR_CREME)
         dessin = ImageDraw.Draw(badge)
 
-        badge.paste(self._photo_pour_badge(personnel), (MARGE_BADGE, MARGE_BADGE))
-
-        x_texte = MARGE_BADGE + TAILLE_PHOTO_BADGE + MARGE_BADGE
-        police_nom = ImageFont.load_default(size=28)
-        police_fonction = ImageFont.load_default(size=20)
-        dessin.text(
-            (x_texte, MARGE_BADGE + 20),
-            f"{personnel.prenom} {personnel.nom}",
-            fill=COULEUR_TEXTE_NOM,
-            font=police_nom,
-        )
-        dessin.text(
-            (x_texte, MARGE_BADGE + 60),
-            personnel.fonction.value,
-            fill=COULEUR_TEXTE_FONCTION,
-            font=police_fonction,
+        dessin.rounded_rectangle(
+            [
+                MARGE_CARTE,
+                MARGE_CARTE,
+                LARGEUR_BADGE - MARGE_CARTE,
+                HAUTEUR_BADGE - MARGE_CARTE,
+            ],
+            radius=RAYON_CARTE,
+            fill=COULEUR_BLANC,
+            outline=COULEUR_GRIS_CHAUD_300,
+            width=EPAISSEUR_BORDURE_CARTE,
         )
 
-        badge.paste(
-            self._qr_pour_badge(personnel.id_personnel),
-            (
-                LARGEUR_BADGE - MARGE_BADGE - TAILLE_QR_BADGE,
-                HAUTEUR_BADGE - MARGE_BADGE - TAILLE_QR_BADGE,
-            ),
-        )
+        self._dessiner_entete(dessin)
+        self._dessiner_identite(badge, dessin, personnel)
+        self._dessiner_zone_qr(badge, dessin, personnel.id_personnel)
+        self._dessiner_pied(dessin)
 
         tampon = io.BytesIO()
         badge.save(tampon, format="PNG")
         return tampon.getvalue()
 
+    def _sans_diacritiques(self, texte: str) -> str:
+        """Retire accents et cédille (« é » → « e », « ç » → « c »...).
+
+        La police embarquée de Pillow (`ImageFont.load_default`) n'a **aucun**
+        glyphe pour les caractères latins accentués — elle ne lève aucune
+        erreur, elle dessine silencieusement un carré « glyphe manquant » à
+        la place. Trouvé empiriquement en relisant le badge généré (« Badge
+        valide pour l'année » affichait un carré à la place du « é »), pas en
+        lisant la documentation Pillow.
+
+        Nom et e-mail sont les deux seuls textes du badge à venir d'une
+        saisie libre — la fonction est un domaine fermé sans accent
+        (`docs/mld.md`), et les libellés fixes de ce fichier sont écrits pour
+        ne jamais en contenir. Une dégradation propre (« Andre » plutôt que
+        « André ») reste préférable à un carré illisible, et n'exige aucune
+        police à embarquer dans le dépôt.
+        """
+        decompose = unicodedata.normalize("NFKD", texte)
+        return "".join(c for c in decompose if not unicodedata.combining(c))
+
+    def _texte_gras(
+        self,
+        dessin: ImageDraw.ImageDraw,
+        position: tuple[int, int],
+        texte: str,
+        police: ImageFont.FreeTypeFont,
+        fill: tuple[int, int, int],
+    ) -> None:
+        """Simule un texte gras en dessinant un second tracé décalé d'1 px.
+
+        Pas de fichier de police à embarquer pour une seule graisse : Pillow
+        n'expose que `ImageFont.load_default`, toujours dans sa graisse
+        normale. Un procédé standard, pas une approximation risquée pour un
+        simple en-tête ou un nom en gros caractères.
+        """
+        x, y = position
+        dessin.text((x + 1, y), texte, fill=fill, font=police)
+        dessin.text((x, y), texte, fill=fill, font=police)
+
+    def _dessiner_entete(self, dessin: ImageDraw.ImageDraw) -> None:
+        self._texte_gras(
+            dessin,
+            (X_GAUCHE, Y_HAUT_CONTENU),
+            "DELTA",
+            ImageFont.load_default(size=32),
+            COULEUR_TERRACOTTA,
+        )
+        dessin.text(
+            (X_GAUCHE, Y_HAUT_CONTENU + 40),
+            "Badge professionnel",
+            fill=COULEUR_GRIS_CHAUD_500,
+            font=ImageFont.load_default(size=13),
+        )
+        dessin.line(
+            [(X_GAUCHE, Y_LIGNE_SEPARATION), (X_DROITE, Y_LIGNE_SEPARATION)],
+            fill=COULEUR_GRIS_CHAUD_200,
+            width=1,
+        )
+
+    def _dessiner_identite(
+        self, badge: Image.Image, dessin: ImageDraw.ImageDraw, personnel: Personnel
+    ) -> None:
+        y_zone = Y_LIGNE_SEPARATION + 20
+        hauteur_zone = Y_LIGNE_PIED - y_zone
+        y_photo = y_zone + (hauteur_zone - TAILLE_PHOTO_BADGE) // 2
+
+        masque = Image.new("L", (TAILLE_PHOTO_BADGE, TAILLE_PHOTO_BADGE), 0)
+        ImageDraw.Draw(masque).ellipse(
+            [0, 0, TAILLE_PHOTO_BADGE, TAILLE_PHOTO_BADGE], fill=255
+        )
+        badge.paste(self._photo_pour_badge(personnel), (X_GAUCHE, y_photo), mask=masque)
+
+        x_texte = X_GAUCHE + TAILLE_PHOTO_BADGE + 24
+        largeur_disponible = (X_DROITE - LARGEUR_ZONE_QR - GAP_ZONE_QR) - x_texte
+        nom_complet = self._sans_diacritiques(f"{personnel.prenom} {personnel.nom}")
+        nom_affiche, police_nom = self._texte_ajuste_a_la_largeur(
+            dessin, nom_complet, taille_depart=26, largeur_max=largeur_disponible
+        )
+        self._texte_gras(
+            dessin,
+            (x_texte, y_photo + 12),
+            nom_affiche,
+            police_nom,
+            COULEUR_GRIS_CHAUD_700,
+        )
+        self._dessiner_pilule_fonction(
+            dessin, x_texte, y_photo + 58, personnel.fonction.value
+        )
+
+        email_affiche, police_email = self._texte_ajuste_a_la_largeur(
+            dessin,
+            self._sans_diacritiques(personnel.email),
+            taille_depart=14,
+            largeur_max=largeur_disponible,
+            taille_min=11,
+        )
+        dessin.text(
+            (x_texte, y_photo + 100),
+            email_affiche,
+            fill=COULEUR_GRIS_CHAUD_500,
+            font=police_email,
+        )
+
+    def _dessiner_pied(self, dessin: ImageDraw.ImageDraw) -> None:
+        """Bande basse commune aux deux colonnes — referme la carte plutôt
+        que de laisser un vide, voir la note sur `HAUTEUR_PIED`.
+        """
+        dessin.line(
+            [(X_GAUCHE, Y_LIGNE_PIED), (X_DROITE, Y_LIGNE_PIED)],
+            fill=COULEUR_GRIS_CHAUD_200,
+            width=1,
+        )
+        dessin.text(
+            (X_GAUCHE, Y_LIGNE_PIED + 12),
+            f"Badge valide en {date.today().year}",
+            fill=COULEUR_GRIS_CHAUD_500,
+            font=ImageFont.load_default(size=12),
+        )
+
+    def _texte_ajuste_a_la_largeur(
+        self,
+        dessin: ImageDraw.ImageDraw,
+        texte: str,
+        *,
+        taille_depart: int,
+        largeur_max: float,
+        taille_min: int = 14,
+    ) -> tuple[str, ImageFont.FreeTypeFont]:
+        """Fait entrer `texte` dans `largeur_max`, d'abord en réduisant la
+        police par paliers de 2 px, puis — si `taille_min` ne suffit toujours
+        pas — en tronquant le texte lui-même avec une ellipse.
+
+        Nécessaire pour le nom complet : c'est le seul texte du badge à
+        provenir d'une saisie libre, sans borne de longueur — contrairement à
+        la fonction, dont le domaine fermé (`docs/mld.md`) garantit que
+        « Receptionniste », la plus longue valeur, tient toujours dans sa
+        pilule à taille fixe. Trouvé empiriquement avec un nom composé réel
+        (« Marie-Christine Razafindrakoto-Andriamampianina »), qui débordait
+        jusque dans la zone QR : la seule réduction de police ne suffisait
+        pas non plus, `taille_min` restant encore trop large pour un nom
+        aussi long — la troncature est donc une seconde ligne de défense, pas
+        un cas théorique.
+        """
+        taille = taille_depart
+        while taille > taille_min:
+            police = ImageFont.load_default(size=taille)
+            boite = dessin.textbbox((0, 0), texte, font=police)
+            if (boite[2] - boite[0]) <= largeur_max:
+                return texte, police
+            taille -= 2
+
+        police = ImageFont.load_default(size=taille_min)
+        tronque = texte
+        while len(tronque) > 1:
+            boite = dessin.textbbox((0, 0), f"{tronque}…", font=police)
+            if (boite[2] - boite[0]) <= largeur_max:
+                return f"{tronque}…", police
+            tronque = tronque[:-1]
+        return tronque, police
+
+    def _dessiner_pilule_fonction(
+        self, dessin: ImageDraw.ImageDraw, x: int, y: int, libelle: str
+    ) -> None:
+        """Pilule de fonction — même langage visuel que `Badge.tsx`/`Bouton.tsx`
+        côté frontend (fond terracotta plein, texte blanc), pas un simple
+        texte gris comme dans la première version du badge.
+        """
+        police = ImageFont.load_default(size=14)
+        boite = dessin.textbbox((0, 0), libelle, font=police)
+        largeur_texte = boite[2] - boite[0]
+        hauteur_texte = boite[3] - boite[1]
+        pad_x, pad_y = 14, 8
+        largeur_pilule = largeur_texte + 2 * pad_x
+        hauteur_pilule = hauteur_texte + 2 * pad_y
+
+        dessin.rounded_rectangle(
+            [x, y, x + largeur_pilule, y + hauteur_pilule],
+            radius=hauteur_pilule // 2,
+            fill=COULEUR_TERRACOTTA,
+        )
+        dessin.text(
+            (x + pad_x, y + pad_y - boite[1]),
+            libelle,
+            fill=COULEUR_BLANC,
+            font=police,
+        )
+
     def _photo_pour_badge(self, personnel: Personnel) -> Image.Image:
-        """Photo réelle recadrée en carré, ou avatar générique si absente."""
+        """Photo réelle recadrée en carré, ou initiales sur fond de marque.
+
+        Le carré est ensuite rendu circulaire **au collage**, via le masque
+        elliptique de l'appelant (`_dessiner_identite`) — pas ici : le même
+        mécanisme doit s'appliquer identiquement à une vraie photo comme à un
+        repli, sans dupliquer la découpe circulaire dans les deux branches.
+        """
         if personnel.photo_chemin is not None:
             chemin = self._dossier_photos() / personnel.photo_chemin
             with Image.open(chemin) as source:
                 return ImageOps.fit(
                     source.convert("RGB"), (TAILLE_PHOTO_BADGE, TAILLE_PHOTO_BADGE)
                 )
-        return self._avatar_generique(TAILLE_PHOTO_BADGE)
+        return self._avatar_initiales(personnel)
 
-    def _avatar_generique(self, taille: int) -> Image.Image:
-        """Silhouette simple dessinée à la volée — pas de fichier image
-        statique ajouté au dépôt pour un simple repli, cohérent avec
-        l'absence de stockage inutile ailleurs dans ce service.
+    def _avatar_initiales(self, personnel: Personnel) -> Image.Image:
+        """Repli quand aucune photo n'existe : initiales blanches sur fond
+        terracotta plein — convention courante d'un badge professionnel
+        imprimé, plus lisible et plus personnalisée qu'une silhouette
+        abstraite à la taille d'impression d'un badge. Délibérément distinct
+        du repli `Avatar.tsx` (icône générique) : celui-ci sert un espace de
+        saisie temporaire côté web, ce badge est un artefact physique fini où
+        « pas de photo » ne doit pas se lire comme « pas d'identité ».
         """
-        avatar = Image.new("RGB", (taille, taille), COULEUR_AVATAR_GENERIQUE)
+        initiales = (
+            self._sans_diacritiques(
+                f"{personnel.prenom[:1]}{personnel.nom[:1]}"
+            ).upper()
+            or "?"
+        )
+        avatar = Image.new(
+            "RGB", (TAILLE_PHOTO_BADGE, TAILLE_PHOTO_BADGE), COULEUR_TERRACOTTA
+        )
         dessin = ImageDraw.Draw(avatar)
-        centre_x = taille / 2
-        rayon_tete = taille * 0.18
-        centre_y_tete = taille * 0.22
-        dessin.ellipse(
-            [
-                centre_x - rayon_tete,
-                centre_y_tete - rayon_tete,
-                centre_x + rayon_tete,
-                centre_y_tete + rayon_tete,
-            ],
-            fill=COULEUR_SILHOUETTE_GENERIQUE,
-        )
-        dessin.ellipse(
-            [taille * 0.15, taille * 0.55, taille * 0.85, taille * 1.25],
-            fill=COULEUR_SILHOUETTE_GENERIQUE,
-        )
+        police = ImageFont.load_default(size=int(TAILLE_PHOTO_BADGE * 0.35))
+        boite = dessin.textbbox((0, 0), initiales, font=police)
+        x = (TAILLE_PHOTO_BADGE - (boite[2] - boite[0])) / 2 - boite[0]
+        y = (TAILLE_PHOTO_BADGE - (boite[3] - boite[1])) / 2 - boite[1]
+        dessin.text((x, y), initiales, fill=COULEUR_BLANC, font=police)
         return avatar
+
+    def _libelle_numero_badge(self, id_personnel: int) -> str:
+        """Repli lisible en clair sous le QR, si le QR ne scanne pas.
+
+        Un remplissage de zéros (« N° 001 ») se lit comme un vrai numéro de
+        badge, contrairement à un identifiant technique nu (« ID 1 »).
+        """
+        return f"N° {id_personnel:03d}"
+
+    def _dessiner_zone_qr(
+        self, badge: Image.Image, dessin: ImageDraw.ImageDraw, id_personnel: int
+    ) -> None:
+        """Zone dédiée au QR — fond gris chaud clair, sans le confondre avec
+        la carte blanche qui l'entoure : c'est ce fond, et non une bordure
+        supplémentaire, qui matérialise la séparation entre zone d'identité
+        et zone de vérification.
+        """
+        x_zone = X_DROITE - LARGEUR_ZONE_QR
+        y_zone = Y_LIGNE_SEPARATION + 20
+        dessin.rounded_rectangle(
+            [x_zone, y_zone, X_DROITE, Y_LIGNE_PIED],
+            radius=12,
+            fill=COULEUR_GRIS_CHAUD_100,
+        )
+
+        x_qr = x_zone + (LARGEUR_ZONE_QR - TAILLE_QR_BADGE) // 2
+        y_qr = y_zone + 16
+        badge.paste(self._qr_pour_badge(id_personnel), (x_qr, y_qr))
+
+        libelle_id = self._libelle_numero_badge(id_personnel)
+        police = ImageFont.load_default(size=13)
+        boite = dessin.textbbox((0, 0), libelle_id, font=police)
+        x_libelle = x_zone + (LARGEUR_ZONE_QR - (boite[2] - boite[0])) / 2 - boite[0]
+        dessin.text(
+            (x_libelle, y_qr + TAILLE_QR_BADGE + 10),
+            libelle_id,
+            fill=COULEUR_GRIS_CHAUD_500,
+            font=police,
+        )
 
     def _qr_pour_badge(self, id_personnel: int) -> Image.Image:
         code = qrcode.QRCode(border=1)
         code.add_data(str(id_personnel))
         code.make(fit=True)
-        image_qr = code.make_image(fill_color="black", back_color="white")
+        image_qr = code.make_image(
+            fill_color=COULEUR_GRIS_CHAUD_700, back_color=COULEUR_BLANC
+        )
         return image_qr.convert("RGB").resize((TAILLE_QR_BADGE, TAILLE_QR_BADGE))
