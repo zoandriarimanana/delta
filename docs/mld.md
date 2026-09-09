@@ -10,7 +10,7 @@ CLIENT(id_client, type_client, email, telephone, adresse, mot_de_passe, date_cre
 CLIENT_PARTICULIER(#id_client, nom, prenom, date_naissance)
 CLIENT_ENTREPRISE(#id_client, raison_sociale, numero_id_fiscal, secteur_activite, nom_contact_referent)
 BENEFICIAIRE(id_beneficiaire, nom, prenom, identifiant_badge, statut, #id_abonnement)
-PERSONNEL(id_personnel, nom, prenom, fonction, est_administrateur, mot_de_passe, email, telephone, date_embauche, specialite, zone_livraison)
+PERSONNEL(id_personnel, nom, prenom, fonction, est_administrateur, mot_de_passe, email, telephone, date_embauche, specialite, zone_livraison, photo_chemin)
 ```
 
 `CLIENT_PARTICULIER` et `CLIENT_ENTREPRISE` sont des sous-types exclusifs de `CLIENT`
@@ -106,6 +106,35 @@ toute façon jamais soumis à `supprimer_definitivement()`.
   Absente du dictionnaire de données d'origine, pour la même raison
   qu'`est_administrateur` : le MLD ne faisait de `PERSONNEL` qu'une entité
   référencée, jamais une identité de connexion.
+
+- `PERSONNEL.photo_chemin` est un `VARCHAR(255)` **nullable**, ajouté hors
+  sprint (chantier « photo de profil »). `NULL` signifie « pas de photo » —
+  l'avatar générique s'affiche côté frontend, jamais un espace vide.
+
+  Stocke un **nom de fichier généré** (UUID + extension déduite du format
+  d'image réellement détecté), jamais un chemin absolu ni le nom d'origine
+  envoyé par le client : ferme à la fois les collisions et toute tentative de
+  traversée de chemin. Le fichier lui-même vit sur disque, dans un dossier
+  dédié du backend (`Settings.PHOTO_STORAGE_DIR`) — **pas** en blob dans cette
+  colonne, et pas d'infrastructure de stockage d'objets externe pour
+  l'instant : scope volontairement réduit à ce que le besoin actuel demande.
+
+  **Jamais exposée par `PersonnelRead`.** La photo se lit via
+  `GET /personnel/{id}/photo`, une route authentifiée dédiée (même niveau que
+  `GET /personnel` — tout salarié connecté, pas seulement un administrateur) :
+  exposer le nom de fichier lui-même n'aurait aucun intérêt côté client, qui
+  ne peut de toute façon pas accéder au disque du serveur, et un montage de
+  fichiers statiques classique n'aurait pu passer par cette authentification
+  — la doctrine déjà écrite pour `PERSONNEL` (« rien n'y a vocation à être
+  exposé anonymement », cf. `docs/architecture.md`) l'interdit.
+
+  **Traitée comme donnée personnelle par `PersonnelService.anonymiser()`** :
+  au même titre que le nom, l'e-mail ou le téléphone, le fichier est supprimé
+  du disque et la colonne remise à `NULL` — une photo de profil identifie au
+  moins autant qu'un nom. Un archivage simple (`supprimer()`), en revanche,
+  ne touche pas à la photo : l'archivage reste réversible
+  (`restaurer()`), et une restauration qui ferait perdre la photo serait une
+  perte de donnée non voulue par la seule réversibilité de l'archivage.
 
 ## Catalogue formation
 
