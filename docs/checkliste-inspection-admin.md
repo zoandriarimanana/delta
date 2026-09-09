@@ -209,3 +209,16 @@ impression.
 | ☐ | Cliquer sur « Personnel » (`personnel/administration`) : vérifier si la lecture de la liste elle-même échoue en 403 (l'endpoint `GET /personnel` exige `PersonnelConnecte` seulement d'après le routeur — donc la liste devrait s'afficher) mais toute action d'écriture (créer/modifier/archiver/anonymiser) doit échouer en 403 |
 | ☐ | Cliquer sur « Abonnements », « Réservations », « Commandes » : la lecture (`GET .../administration`) exige `PersonnelAdministrateur` — vérifier que ces trois écrans échouent dès le **chargement de la liste**, pas seulement sur les actions, et que le message d'erreur affiché reste lisible (pas une page blanche ni une trace technique) |
 | ☐ | Confirmer qu'aucune des tentatives refusées en 403 ne déconnecte la session (contrairement à un 401) — la réceptionniste doit rester connectée après chaque refus |
+
+---
+
+## 8. Améliorations UX mineures relevées — pas urgent, pas bloquant
+
+Constats faits en dehors de cette checklist (pendant la vérification empirique
+du chantier « photo de profil »), consignés ici plutôt que perdus. Aucun n'est
+un défaut fonctionnel — le comportement observé reste correct — seulement une
+petite redondance d'affichage à nettoyer un jour.
+
+| État | Constat |
+|---|---|
+| ⚠️ | `PersonnelDetailAdministrationPage.tsx` affiche son propre message d'erreur (`erreurAction`) **et** le repasse en prop `erreur` à `FormulairePersonnel`, qui l'affiche aussi — tout refus lors d'une modification (texte ou photo) s'affiche donc **deux fois** dans le DOM. Constaté à l'étape « rejet d'un fichier photo invalide » de la vérification du chantier photo, mais le doublon est **préexistant** au chantier photo et concerne toute erreur de modification. Correctif suggéré : ne garder qu'un seul point d'affichage (probablement celui de `FormulairePersonnel`, déjà cohérent avec la création). |
