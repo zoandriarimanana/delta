@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from uuid import uuid4
 
-from PIL import Image, UnidentifiedImageError
+from PIL import Image
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -334,7 +334,15 @@ class PersonnelService:
             # nouvel accès à l'image une fois `verify()` appelé.
             format_detecte = image.format
             image.verify()
-        except UnidentifiedImageError as erreur:
+        except OSError as erreur:
+            # `UnidentifiedImageError` (contenu qui n'est pas une image du
+            # tout) **hérite** de `OSError` — mais un fichier tronqué, dont
+            # l'en-tête reste reconnaissable, lève un `OSError` nu
+            # (« Truncated File Read ») directement depuis `verify()`, pas
+            # cette sous-classe. Ne capturer que `UnidentifiedImageError`
+            # laissait ce cas remonter en 500 au lieu du 400 attendu — trouvé
+            # empiriquement avec un vrai fichier tronqué, pas par lecture du
+            # code.
             raise ErreurMetier(MESSAGE_TYPE_PHOTO_INVALIDE) from erreur
 
         extension = EXTENSIONS_PAR_FORMAT.get(format_detecte or "")

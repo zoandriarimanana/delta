@@ -567,6 +567,37 @@ def test_remplacer_photo_refuse_un_contenu_qui_n_est_pas_une_image(
     assert service.obtenir(personnel.id_personnel).photo_chemin is None
 
 
+def test_remplacer_photo_refuse_un_fichier_tronque(service: PersonnelService) -> None:
+    """Distinct du cas précédent : ici l'en-tête est reconnaissable comme
+    PNG, seul le contenu qui suit est incomplet. `Image.open(...).verify()`
+    lève alors un `OSError` **nu** (« Truncated File Read »), pas
+    `UnidentifiedImageError` — une sous-classe d'`OSError`, mais pas
+    l'inverse. Ne capturer que la sous-classe laissait ce cas précis
+    remonter en erreur non gérée (500) au lieu du refus attendu (400) —
+    trouvé empiriquement avec un vrai fichier tronqué, pas par lecture du
+    code, puis corrigé avant l'ouverture de la PR.
+    """
+    # Une image bruitée assez grande pour ne pas tenir dans la troncature :
+    # un aplat de couleur unique compresserait en quelques octets, et la
+    # coupure ci-dessous ne tronquerait alors rien du tout.
+    tampon = io.BytesIO()
+    image_complete = Image.effect_noise((200, 200), 60).convert("RGB")
+    image_complete.save(tampon, format="PNG")
+    contenu_complet = tampon.getvalue()
+    assert (
+        len(contenu_complet) > 1000
+    )  # Garde-fou : le test doit tronquer pour de vrai.
+    contenu_tronque = contenu_complet[:500]
+
+    personnel = service.creer(_donnees())
+
+    with pytest.raises(ErreurMetier):
+        service.remplacer_photo(personnel.id_personnel, contenu_tronque, "image/png")
+
+    assert list(Path(settings.PHOTO_STORAGE_DIR).iterdir()) == []
+    assert service.obtenir(personnel.id_personnel).photo_chemin is None
+
+
 def test_remplacer_photo_refuse_une_taille_excessive(service: PersonnelService) -> None:
     personnel = service.creer(_donnees())
     contenu_trop_gros = _octets_image("PNG") + b"\0" * (2 * 1024 * 1024)
