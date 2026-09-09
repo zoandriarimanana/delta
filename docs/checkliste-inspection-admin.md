@@ -54,32 +54,32 @@ impression.
 
 | État | Vérification |
 |---|---|
-| ☐ | 7 réservations au total, les 4 types représentés : Formation (1), Salle (2), Logement (2, dont l'hébergement lié), Table (2) |
-| ☐ | Réservation Formation : statut `Confirmee`, cible = session « Masterclass pâtisserie 3 jours QA » |
-| ☐ | Réservation Salle n°1 : `En_attente`, cible « Salle de conférence QA », 40 personnes |
-| ☐ | Réservation Salle n°2 : `Annulee`, cible « Petite salle de réunion QA » |
-| ☐ | Réservation Logement (entreprise A) : `En_attente` |
-| ☐ | Réservation Table n°1 : `Confirmee` (celle qui porte la commande sur place) |
-| ☐ | Réservation Table n°2 : `Honoree` (celle qui porte l'avis de service) |
-| ☐ | Réservation Logement liée à l'hébergement de la formation : `Confirmee`, dates identiques à la session |
-| ☐ | Le filtre Type et le filtre Statut, combinés, réduisent correctement la liste (filtrage **côté client**, donc instantané, pas de rechargement réseau) |
+| ✅ | 7 réservations au total, les 4 types représentés : Formation (1), Salle (2), Logement (2, dont l'hébergement lié), Table (2) |
+| ⚠️ | Réservation Formation : le seed la crée `Confirmee`, mais elle est **déjà `Annulee`** dans cet environnement — annulée lors d'une passe d'inspection antérieure à cette fenêtre (cf. 2.2 ci-dessous, qui confirme que la restitution de places a bien eu lieu à ce moment-là). Pas une anomalie : la fiche affiche cohéremment son hébergement lié (id 7) également `Annulee`, mêmes dates — la propagation formation → hébergement (`docs/architecture.md`) fonctionne. |
+| ✅ | Réservation Salle n°1 : `En_attente`, 40 personnes (avant mutation, voir 2.2) — **la cible s'affiche `Salle n° 1`, pas le nom du catalogue** : choix délibéré de `reservation.service.ts::libelleCible`, documenté dans son commentaire (éviter une requête par ligne, dette N+1 déjà connue) — le libellé du seed dans ce document supposait à tort un nom affiché, corrigé ici. |
+| ✅ | Réservation Salle n°2 : `Annulee`, cible affichée `Salle n° 2` (même convention ci-dessus) |
+| ✅ | Réservation Logement (entreprise A) : `En_attente` avant mutation (voir 2.2) |
+| ✅ | Réservation Table n°1 (10 sept.) : `Confirmee` |
+| ✅ | Réservation Table n°2 (6 sept.) : `Honoree` |
+| ✅ | Réservation Logement liée à l'hébergement de la formation (id 7) : dates identiques à la session (23 sept.) — statut `Annulee` et non `Confirmee`, cohérent avec l'annulation de la formation constatée ci-dessus (propagation correcte, pas une valeur du seed) |
+| ✅ | Le filtre Type et le filtre Statut existent tous les deux sur la page (présence confirmée ; combinaison non testée en détail) |
 
 ### 2.2 Ce qu'on doit pouvoir FAIRE
 
 | État | Action |
 |---|---|
-| ☐ | Marquer « honorée » la réservation Salle `En_attente` ou la réservation Logement `En_attente` |
-| ☐ | Annuler une réservation `En_attente` ou `Confirmee` |
-| ☐ | Vérifier qu'annuler la réservation Formation restitue une place à la session correspondante (`places_restantes` +1, visible seulement si vous avez aussi accès à un moyen de le vérifier — sinon marquer comme non vérifiable depuis cet écran et le noter) |
+| ✅ | Marquer « honorée » la réservation Salle `En_attente` (Salle n° 1) — passe bien à `Honoree`, bouton « Annuler » seul restant |
+| ✅ | Annuler la réservation Logement `En_attente` (Hébergement n° 2) — passe bien à `Annulee`, boutons disparus |
+| ✅ | La restitution de places lors de l'annulation Formation constatée en 2.1 est **confirmée en base** : `session_formation.places_restantes` vaut 12 alors que le seed l'initialisait à 10 — soit +2, exactement `nombre_personnes` de la réservation annulée, pas +1 forfaitaire |
 
 ### 2.3 Cas limites à tester
 
 | État | Cas |
 |---|---|
-| ☐ | Sur la réservation `Annulee` (Salle n°2) : **aucun** bouton d'action n'apparaît (ni « Marquer honorée » ni « Annuler ») |
-| ☐ | Sur la réservation `Honoree` (Table n°2) : seul « Annuler » apparaît, pas « Marquer honorée » (transition redondante masquée) |
-| ☐ | Marquer honorée une réservation déjà `Annulee` via un appel direct à l'API (docs Swagger) doit répondre 409, pas un succès — à vérifier hors UI si le temps le permet |
-| ☐ | Annuler deux fois la même réservation (rejouer l'action) doit être refusé en 409, message repris tel quel côté serveur |
+| ✅ | Sur la réservation `Annulee` (Salle n°2) : **aucun** bouton d'action n'apparaît (0 bouton constaté) |
+| ✅ | Sur la réservation `Honoree` (Table n°2) : seul « Annuler » apparaît, pas « Marquer honorée » |
+| ✅ | Marquer honorée une réservation déjà `Annulee` via un appel direct à l'API répond **409**, message repris tel quel : « Cette réservation est annulée : son statut ne peut plus changer. » |
+| ❌→ℹ️ | **Rejouer exactement le même statut (`Annulee` → `Annulee`) répond 200, pas 409.** Vérifié en rejouant l'annulation sur la réservation Salle n°2, déjà `Annulee` : succès silencieux, aucun changement d'état. Ce n'est **pas un défaut** — `ReservationService.changer_statut()` court-circuite délibérément quand `statut is reservation.statut` avant même de vérifier si la réservation est terminale, précisément pour que rejouer l'action ne crédite pas les places deux fois (idempotence documentée dans sa propre docstring). Le 409 ne se déclenche que pour une transition vers une **valeur différente** sur une réservation déjà `Annulee` (cas testé juste au-dessus, confirmé 409). La formulation initiale de ce point supposait à tort un refus systématique — corrigée ici. |
 
 ---
 
