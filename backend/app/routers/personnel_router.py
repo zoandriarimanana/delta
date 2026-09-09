@@ -17,7 +17,8 @@ jeton émis pour un client, la revendication `type` ne correspondant pas.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -149,3 +150,60 @@ def anonymiser(
     """
     personnel = PersonnelService(db).anonymiser(id_personnel)
     return PersonnelRead.model_validate(personnel)
+
+
+@router.get(
+    "/{id_personnel}/photo",
+    summary="Obtenir la photo de profil",
+    response_class=FileResponse,
+)
+def obtenir_photo(
+    id_personnel: int, agent: PersonnelConnecte, db: SessionBase
+) -> FileResponse:
+    """Sert le fichier stocké sur disque — jamais un montage de fichiers
+    statiques public, qui n'aurait aucun moyen de passer par `PersonnelConnecte`
+    (cf. le premier paragraphe de ce module : aucune lecture de `PERSONNEL`
+    n'est anonyme, une photo de profil ne fait pas exception).
+
+    404 aussi bien si le membre n'existe pas que s'il n'a pas de photo — les
+    deux cas se traduisent de la même façon côté frontend, l'avatar générique.
+
+    `Cache-Control: no-store` : un remplacement de photo doit être visible
+    immédiatement à la même URL, sans dépendre d'un contournement de cache
+    côté client.
+    """
+    chemin = PersonnelService(db).chemin_photo(id_personnel)
+    return FileResponse(chemin, headers={"Cache-Control": "no-store"})
+
+
+@router.post(
+    "/{id_personnel}/photo",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Téléverser ou remplacer la photo de profil",
+)
+def televerser_photo(
+    id_personnel: int,
+    admin: PersonnelAdministrateur,
+    db: SessionBase,
+    fichier: Annotated[UploadFile, File(description="Image JPEG ou PNG, 2 Mio max.")],
+) -> None:
+    """Valide puis stocke la photo — voir `PersonnelService.remplacer_photo`
+    pour le détail des trois contrôles appliqués (type déclaré, taille,
+    contenu réel des octets).
+    """
+    contenu = fichier.file.read()
+    PersonnelService(db).remplacer_photo(id_personnel, contenu, fichier.content_type)
+
+
+@router.delete(
+    "/{id_personnel}/photo",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Retirer la photo de profil",
+)
+def supprimer_photo(
+    id_personnel: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> None:
+    """Symétrique de l'upload — supprime le fichier disque, remet la colonne à
+    `NULL`. Idempotent : sans effet si aucune photo n'était déjà présente.
+    """
+    PersonnelService(db).supprimer_photo(id_personnel)

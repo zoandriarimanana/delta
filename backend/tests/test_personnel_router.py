@@ -11,10 +11,13 @@ Deux niveaux depuis #23 : lecture par tout salarié authentifié, écriture par 
 seuls administrateurs. Un jeton client n'ouvre plus rien ici.
 """
 
+import io
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -25,6 +28,19 @@ from app.main import app
 from app.models.client import Client, TypeClient
 from app.models.personnel import FonctionPersonnel, Personnel
 from tests.conftest import authentifier, creer_engine_sqlite
+
+
+def _octets_png() -> bytes:
+    tampon = io.BytesIO()
+    Image.new("RGB", (8, 8), color="blue").save(tampon, format="PNG")
+    return tampon.getvalue()
+
+
+@pytest.fixture(autouse=True)
+def _dossier_photos_isole(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Même isolation que `test_personnel_service.py` — voir sa docstring."""
+    monkeypatch.setattr(settings, "PHOTO_STORAGE_DIR", str(tmp_path))
+
 
 PERSONNEL = f"{settings.API_V1_PREFIX}/personnel"
 
@@ -117,6 +133,9 @@ def _creer(client_http: TestClient, entete: dict[str, str], **extra: object) -> 
         ("delete", "/1"),
         ("post", "/1/restauration"),
         ("post", "/1/anonymisation"),
+        ("get", "/1/photo"),
+        ("post", "/1/photo"),
+        ("delete", "/1/photo"),
     ],
 )
 def test_tout_endpoint_exige_un_jeton(
@@ -646,3 +665,162 @@ def test_aucune_inscription_au_personnel_n_est_exposee(client_http: TestClient) 
     )
 
     assert reponse.status_code == 404
+
+
+# --- Photo de profil -----------------------------------------------------------
+
+
+def test_obtenir_photo_absente_donne_404(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    """Un membre sans photo se traduit en 404 — comme s'il n'existait pas,
+    même refus pour les deux cas côté frontend (l'avatar générique)."""
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.get(
+        f"{PERSONNEL}/{cree['id_personnel']}/photo", headers=entete
+    )
+
+    assert reponse.status_code == 404
+
+
+def test_obtenir_photo_est_ouverte_a_tout_salarie(
+    client_http: TestClient, entete: dict[str, str], entete_agent: dict[str, str]
+) -> None:
+    """Lecture, pas écriture : même niveau que `GET /personnel`."""
+    cree = _creer(client_http, entete)
+    client_http.post(
+        f"{PERSONNEL}/{cree['id_personnel']}/photo",
+        files={"fichier": ("photo.png", _octets_png(), "image/png")},
+        headers=entete,
+    )
+
+    reponse = client_http.get(
+        f"{PERSONNEL}/{cree['id_personnel']}/photo", headers=entete_agent
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.headers["content-type"] == "image/png"
+    assert reponse.headers["cache-control"] == "no-store"
+
+
+def test_obtenir_photo_refuse_un_jeton_client(
+    client_http: TestClient, entete: dict[str, str], entete_client: dict[str, str]
+) -> None:
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.get(
+        f"{PERSONNEL}/{cree['id_personnel']}/photo", headers=entete_client
+    )
+
+    assert reponse.status_code == 401
+
+
+def test_televerser_photo_reussie_donne_204(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.post(
+        f"{PERSONNEL}/{cree['id_personnel']}/photo",
+        files={"fichier": ("photo.png", _octets_png(), "image/png")},
+        headers=entete,
+    )
+
+    assert reponse.status_code == 204
+    assert (
+        client_http.get(
+            f"{PERSONNEL}/{cree['id_personnel']}/photo", headers=entete
+        ).status_code
+        == 200
+    )
+
+
+def test_televerser_photo_refusee_a_un_salarie_sans_droit(
+    client_http: TestClient, entete: dict[str, str], entete_agent: dict[str, str]
+) -> None:
+    """Écriture, réservée aux administrateurs — même niveau que le reste des
+    écritures de cet annuaire."""
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.post(
+        f"{PERSONNEL}/{cree['id_personnel']}/photo",
+        files={"fichier": ("photo.png", _octets_png(), "image/png")},
+        headers=entete_agent,
+    )
+
+    assert reponse.status_code == 403
+
+
+def test_televerser_un_contenu_invalide_donne_400(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.post(
+        f"{PERSONNEL}/{cree['id_personnel']}/photo",
+        files={"fichier": ("photo.png", b"pas une image", "image/png")},
+        headers=entete,
+    )
+
+    assert reponse.status_code == 400
+
+
+def test_televerser_sur_un_inconnu_donne_404(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    reponse = client_http.post(
+        f"{PERSONNEL}/99999/photo",
+        files={"fichier": ("photo.png", _octets_png(), "image/png")},
+        headers=entete,
+    )
+
+    assert reponse.status_code == 404
+
+
+def test_supprimer_photo_reussie_donne_204_et_efface(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    cree = _creer(client_http, entete)
+    client_http.post(
+        f"{PERSONNEL}/{cree['id_personnel']}/photo",
+        files={"fichier": ("photo.png", _octets_png(), "image/png")},
+        headers=entete,
+    )
+
+    reponse = client_http.delete(
+        f"{PERSONNEL}/{cree['id_personnel']}/photo", headers=entete
+    )
+
+    assert reponse.status_code == 204
+    assert (
+        client_http.get(
+            f"{PERSONNEL}/{cree['id_personnel']}/photo", headers=entete
+        ).status_code
+        == 404
+    )
+
+
+def test_supprimer_photo_refusee_a_un_salarie_sans_droit(
+    client_http: TestClient, entete: dict[str, str], entete_agent: dict[str, str]
+) -> None:
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.delete(
+        f"{PERSONNEL}/{cree['id_personnel']}/photo", headers=entete_agent
+    )
+
+    assert reponse.status_code == 403
+
+
+def test_supprimer_photo_sans_photo_reste_un_succes(
+    client_http: TestClient, entete: dict[str, str]
+) -> None:
+    """Idempotent : pas d'erreur à retirer ce qui n'existe pas déjà."""
+    cree = _creer(client_http, entete)
+
+    reponse = client_http.delete(
+        f"{PERSONNEL}/{cree['id_personnel']}/photo", headers=entete
+    )
+
+    assert reponse.status_code == 204
