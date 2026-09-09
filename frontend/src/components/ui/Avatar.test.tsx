@@ -39,6 +39,25 @@ describe('rendu', () => {
     expect(screen.queryByAltText('Photo de Jean')).toBeNull();
   });
 
+  it('redonne sa chance à une nouvelle src après l’échec de la précédente', () => {
+    // Bug réel trouvé au test manuel : sans réinitialisation de l'échec au
+    // changement de `src`, un premier avatar en 404 (le cas courant avant
+    // tout choix de fichier, à la création) restait bloqué sur le repli pour
+    // toujours — y compris une fois `src` changé pour un aperçu local
+    // parfaitement valide (`URL.createObjectURL`).
+    const { rerender } = render(
+      <Avatar src="https://exemple.test/absente.png" alt="Photo de Jean" />
+    );
+    fireEvent.error(screen.getByAltText('Photo de Jean'));
+    expect(screen.queryByAltText('Photo de Jean')).toBeNull();
+
+    rerender(<Avatar src="blob:https://exemple.test/nouvelle" alt="Photo de Jean" />);
+
+    const image = screen.getByAltText('Photo de Jean');
+    expect(image.tagName).toBe('IMG');
+    expect(image.getAttribute('src')).toBe('blob:https://exemple.test/nouvelle');
+  });
+
   it('applique une dimension différente selon la taille demandée', () => {
     const { container: petite } = render(
       <Avatar src="https://exemple.test/p.png" alt="" taille="petite" />

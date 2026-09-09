@@ -8,13 +8,23 @@
  * aucune photo n'existe (cf. `docs/architecture.md`), ce que `<img onError>`
  * traduit ici en icône générique plutôt qu'en image cassée ou en espace vide.
  *
- * Pour forcer un rechargement après un remplacement de photo (même URL,
- * fichier différent), l'appelant change la `key` de l'élément — ce composant
- * n'a pas besoin de le savoir, un remontage suffit à réinitialiser l'état
- * d'erreur.
+ * **L'état d'échec se réinitialise à chaque changement de `src`** (bug trouvé
+ * lors du test manuel de l'aperçu de sélection : sans ce `useEffect`, une
+ * première URL en échec — le cas courant à la création, avant tout choix de
+ * fichier, `GET /personnel/0/photo` répondant 404 — verrouillait le repli
+ * pour de bon, y compris une fois `src` changé pour une URL locale
+ * (`URL.createObjectURL`) parfaitement valide). Un changement de `src` est
+ * un fait nouveau, jamais une raison de rester sur le refus précédent.
+ *
+ * Cas **distinct**, non couvert par ce qui précède : remplacer une photo
+ * *côté serveur* ne change **pas** l'URL (`/personnel/{id}/photo` reste la
+ * même chaîne) — sans changement de `src`, ce `useEffect` ne se déclenche
+ * pas, et le navigateur ne referait même pas la requête. C'est pour ce
+ * second cas, et lui seul, que l'appelant doit encore forcer un remontage en
+ * changeant la `key` de l'élément (voir `PersonnelDetailAdministrationPage`).
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { User } from 'lucide-react';
 
 export type TailleAvatar = 'petite' | 'grande';
@@ -37,6 +47,12 @@ const DIMENSIONS_ICONE: Record<TailleAvatar, string> = {
 
 export default function Avatar({ src, alt, taille = 'petite' }: Proprietes) {
   const [enEchec, setEnEchec] = useState(false);
+
+  // Un nouveau `src` mérite une nouvelle chance, quel que soit le sort du
+  // précédent — voir la docstring du fichier.
+  useEffect(() => {
+    setEnEchec(false);
+  }, [src]);
 
   if (enEchec) {
     return (
