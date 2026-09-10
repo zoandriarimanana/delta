@@ -211,28 +211,42 @@ par cette section. Les cases ci-dessous en tiennent compte.
 
 **Aucune interface d'administration n'existe** pour les modules suivants — le CRUD backend est complet et protégé, mais rien n'est cliquable dans le navigateur. À vérifier uniquement via `/docs` (Swagger, http://localhost:8000/docs) si tu veux les couvrir quand même ; sinon, marquer explicitement **hors périmètre** de cette passe d'inspection manuelle et ne pas chercher les écrans correspondants.
 
+**Reconfirmé** (`src/App.tsx`, liste exhaustive des routes) : les seules routes
+`personnel/*` existant dans l'application sont `connexion`, `commandes` (prise de
+commande), `catalogue`, `categories`, `abonnements` (+fiche), `administration`
+(personnel, +fiche), `reservations`, `commandes/administration` (+fiche) — la
+même liste qu'à l'inventaire d'origine. Aucune route `personnel/salles`,
+`personnel/logements`, `personnel/formations`, `personnel/paiements` ni
+`personnel/avis` n'a été ajoutée depuis (chantiers photo/badge inclus, qui ne
+touchent que `PERSONNEL`).
+
 | État | Module |
 |---|---|
-| ☐ | **SALLE** — hors périmètre (aucun écran ; CRUD via `/docs` uniquement) |
-| ☐ | **LOGEMENT** — hors périmètre (aucun écran ; CRUD via `/docs` uniquement) |
-| ☐ | **FORMATION** (+ DOMAINE_FORMATION + SESSION_FORMATION) — hors périmètre (aucun écran ; CRUD via `/docs` uniquement) |
-| ☐ | **PAIEMENT** — hors périmètre côté admin (le seul écran, `FormulairePaiement`, vit côté client sur l'historique de commandes — à tester séparément dans un parcours client, pas dans cette inspection admin) |
-| ☐ | **AVIS** — hors périmètre côté admin (dépôt uniquement côté client, aucune modération) |
+| ✅ | **SALLE** — toujours hors périmètre, aucune route ajoutée |
+| ✅ | **LOGEMENT** — toujours hors périmètre, aucune route ajoutée |
+| ✅ | **FORMATION** (+ DOMAINE_FORMATION + SESSION_FORMATION) — toujours hors périmètre, aucune route ajoutée |
+| ✅ | **PAIEMENT** — toujours hors périmètre côté admin, aucune route ajoutée |
+| ✅ | **AVIS** — toujours hors périmètre côté admin, aucune route ajoutée |
 
 ---
 
 ## 7. Test de séparation des droits — à faire en dernier
 
+**Le test le plus sensible de toute l'inspection** — vérifié de bout en bout via
+un vrai navigateur (Playwright), requêtes réseau et contenu de page capturés à
+chaque étape, pas seulement des captures d'écran. Une correction d'hypothèse
+importante ressort du point 4 ci-dessous — lire sa note avant de considérer ce
+point comme acquis pour une future passe.
+
 | État | Étape |
 |---|---|
-| ☐ | Se déconnecter du compte admin |
-| ☐ | Se connecter avec `receptionniste-qa@delta.mg` / `MotDePasseQA123!` (non-admin) |
-| ☐ | Confirmer que la nav affiche **tous** les liens `personnel/*` (Prise de commande, Catalogue, Abonnements, Personnel, Réservations, Commandes) — la nav se base sur `useEstPersonnelConnecte()`, pas sur le droit admin, donc **aucun lien n'est masqué** à ce niveau |
-| ☐ | Cliquer sur « Prise de commande » (`personnel/commandes`) : doit s'afficher normalement — seul endpoint qui n'exige que `PersonnelConnecte` |
-| ☐ | Cliquer sur « Catalogue » (`personnel/catalogue`) : la page se charge (lecture publique de `GET /produits`), mais tenter de créer/modifier/archiver un produit doit échouer en **403**, message affiché à l'écran |
-| ☐ | Cliquer sur « Personnel » (`personnel/administration`) : vérifier si la lecture de la liste elle-même échoue en 403 (l'endpoint `GET /personnel` exige `PersonnelConnecte` seulement d'après le routeur — donc la liste devrait s'afficher) mais toute action d'écriture (créer/modifier/archiver/anonymiser) doit échouer en 403 |
-| ☐ | Cliquer sur « Abonnements », « Réservations », « Commandes » : la lecture (`GET .../administration`) exige `PersonnelAdministrateur` — vérifier que ces trois écrans échouent dès le **chargement de la liste**, pas seulement sur les actions, et que le message d'erreur affiché reste lisible (pas une page blanche ni une trace technique) |
-| ☐ | Confirmer qu'aucune des tentatives refusées en 403 ne déconnecte la session (contrairement à un 401) — la réceptionniste doit rester connectée après chaque refus |
+| ✅ | Connexion `receptionniste-qa@delta.mg` / `MotDePasseQA123!` réussie (bouton « Déconnexion » visible juste après) |
+| ✅ | La nav affiche **tous** les liens `personnel/*` : Prise de commande, Catalogue, Abonnements, Personnel, Réservations, Commandes — aucun n'est masqué, confirmé un par un |
+| ✅ | « Prise de commande » (`personnel/commandes`) s'affiche normalement, aucune alerte — seul écran n'exigeant que `PersonnelConnecte` |
+| ❌→ℹ️ | **« Catalogue » et « Catégories » échouent dès le chargement de la liste, pas seulement à l'écriture** — l'hypothèse initiale de ce point (« lecture publique de `GET /produits` ») était fausse. `AdministrationProduitsPage`/`AdministrationCategoriesPage` appellent en réalité `GET /produits/administration` et `GET /categories-produit/administration`, tous deux réservés `PersonnelAdministrateur` (confirmé dans `produit_router.py`) — parce que ces vues doivent aussi montrer les archives, contrairement au catalogue public consulté par un client. Vérifié par les requêtes réseau réelles : les deux appels répondent 403 **au chargement**, avant toute tentative d'écriture. Le message reste malgré tout lisible et uniforme (« Cette action est réservée aux administrateurs. »), le tableau retombe proprement sur « Aucun produit à afficher. »/« Aucune catégorie à afficher. » plutôt qu'une page cassée — donc le comportement observé est correct, seule la description initiale du chemin de lecture était erronée. |
+| ✅ | « Personnel » (`personnel/administration`) : la liste se charge normalement (`GET /personnel` → 200, `PersonnelConnecte` suffit, confirmé par la requête réseau) ; tenter d'archiver un membre échoue en 403, message « Cette action est réservée aux administrateurs. » |
+| ✅ | « Abonnements », « Réservations », « Commandes » échouent bien dès le chargement de la liste (confirmé par les requêtes réseau : `GET .../administration` → 403 sur les trois, avant tout rendu de données) ; message identique et lisible sur les trois écrans, tableau vide affiché proprement (« Aucun(e) … à afficher »), aucune page blanche ni trace technique |
+| ✅ | Aucune des tentatives refusées en 403 ne déconnecte la session — confirmé de deux façons : le bouton « Déconnexion » reste visible après chaque refus (7 écrans testés), et un appel direct à `GET /auth/moi` **après tous les refus** répond toujours 200 avec `{"type":"personnel"}`, la session n'a jamais été invalidée |
 
 ---
 
