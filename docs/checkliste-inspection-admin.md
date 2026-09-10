@@ -85,37 +85,48 @@ impression.
 
 ## 3. COMMANDE (+ LIVRAISON) — `personnel/commandes/administration` (liste) + `.../:id` (fiche)
 
+**Note d'environnement (avant de lire les cases ci-dessous)** : l'inspection de cette
+section a lieu après les chantiers photo/badge personnel et après la section 2
+(RESERVATION). Vérifié explicitement qu'aucun personnel de test créé/supprimé
+pendant ces chantiers n'a laissé de trace dans `commande`/`livraison`/`paiement`
+(comptage des FK à zéro avant chaque suppression, tout au long de ces chantiers).
+En revanche, l'état des commandes a **dérivé** par rapport au seed d'origine, par
+un usage réel de l'écran (pas une pollution technique) : la commande #2, seed en
+`Confirmee`, est maintenant `Annulee` et remboursée ; une 8ᵉ commande (#8, invité
+« Andry », 1 000,00 Ar, 10× « Mofo Gasy ») a été créée après le seed — ce
+5ᵉ produit n'existait pas non plus au seed initial. Les cases ci-dessous reflètent
+l'état **actuel** de l'environnement, pas les valeurs d'origine.
+
 ### 3.1 Ce qu'on doit VOIR
 
 | État | Vérification |
 |---|---|
-| ☐ | 7 commandes, les 6 statuts représentés : `En_attente` (×2 : une client, une invité), `Confirmee`, `En_preparation`, `Livree`, `Annulee`, `Servie` |
-| ☐ | Montants cohérents : En_attente 10,50 ; Confirmee 25,00 ; En_preparation 5,00 ; Livree 7,00 ; Annulee 12,00 ; invitée 5,00 ; sur place 7,00 (2× éclair) |
-| ☐ | La commande invitée affiche bien le nom « Bob Martin », pas de client rattaché |
-| ☐ | La commande `Servie` affiche le vendeur : saisie par la réceptionniste (Randrianasolo Fara), liée à la réservation Table `Confirmee` |
-| ☐ | Le filtre par statut réduit correctement la liste (côté client) |
-| ☐ | Les liens « Voir les abonnements » et « Voir les réservations » en haut de la liste mènent bien aux bons écrans |
-| ☐ | Sur la fiche de la commande `Confirmee` : le récapitulatif affiche 1 gâteau d'anniversaire à 25,00 |
+| ✅ | 8 commandes (7 au seed + 1 créée depuis) ; statuts représentés : `En_attente` (×3), `Annulee` (×2, dont une remboursée), `En_preparation`, `Livree`, `Servie` — `Confirmee` n'est plus représenté, la commande qui le portait (#2) a été annulée depuis le seed |
+| ⚠️ | Montants : #1 En_attente 10,50 ✓, #2 **Annulee (remboursée)** 25,00 (portait `Confirmee` au seed), #3 En_preparation 5,00 ✓, #4 Livree 7,00 ✓, #5 Annulee 12,00 ✓, #6 En_attente (invitée) 5,00 ✓, #7 Servie (sur place) 7,00 ✓, #8 En_attente 1 000,00 (nouvelle, hors seed) |
+| ❌ | **La commande invitée n'affiche « Bob Martin » nulle part** — ni dans la liste, ni sur la fiche (`CommandeDetailAdministrationPage.tsx`). Vérifié dans le code : `nom_invite`/`contact_invite` sont bien exposés par `CommandeRead` (backend) et typés côté frontend (`commande.types.ts`), mais **aucun composant ne les affiche** sur cet écran admin. Un administrateur consultant une commande invitée ne peut donc pas savoir pour qui elle a été passée, ni comment la contacter, sans passer par `/docs`. |
+| ❌→ℹ️ | **La commande `Servie` n'affiche aucun vendeur.** Pas un oubli d'affichage cette fois : `CommandeRead` (backend, `app/schemas/commande.py`) **n'expose pas `id_personnel` du tout** — la donnée n'atteint jamais le frontend. Case reformulée : l'attente initiale (« affiche le vendeur ») ne correspond à aucun contrat d'API existant. |
+| ✅ | Le filtre par statut existe et réduit la liste (côté client) |
+| ✅ | Les liens « Voir les abonnements » et « Voir les réservations » sont présents en haut de la liste |
+| ⚠️ | Le récapitulatif « 1 gâteau d'anniversaire × 25,00 » est toujours visible sur la fiche de la commande #2 — mais celle-ci est maintenant `Annulee`, plus `Confirmee` (cf. note d'environnement). Le contenu de la ligne, lui, n'a pas bougé. |
 
 ### 3.2 Ce qu'on doit pouvoir FAIRE
 
 | État | Action |
 |---|---|
-| ☐ | Annuler une commande `En_attente` ou `En_preparation` depuis sa fiche |
-| ☐ | Relancer la livraison de la commande invitée (seule commande avec une livraison `Echouee`) |
-| ☐ | Marquer remboursée n'importe quelle commande, y compris une jamais payée (ex. la commande `En_attente` sans paiement associé) |
-| ☐ | Après relance, vérifier que la livraison repasse à `En_attente` et que le bouton « Relancer » disparaît de la fiche |
+| ✅ | Annuler une commande `En_preparation` (#3) depuis sa fiche — passe à `Annulee`, seul « Marquer remboursée » reste |
+| ✅ | Relancer la livraison de la commande invitée (#6, seule livraison `Echouee`) — passe à `En_attente`, bouton « Relancer » disparaît de la fiche |
+| ✅ | Marquer remboursée une commande jamais payée (#1, `En_attente`, aucun `PAIEMENT` associé) — acceptée sans condition, horodatage affiché (« Remboursée le … ») |
 
 ### 3.3 Cas limites à tester
 
 | État | Cas |
 |---|---|
-| ☐ | Sur la commande `Livree` ou `Servie` : le bouton « Annuler » est **absent** (statut terminal) |
-| ☐ | Sur la commande `Annulee` : le bouton « Annuler » est **absent** |
-| ☐ | Sur les commandes sans livraison `Echouee` (5 des 7) : le bouton « Relancer la livraison » est **absent** — en particulier sur `commande_sur_place`, qui n'a aucune livraison du tout (pas d'adresse) |
-| ☐ | « Marquer remboursée » reste toujours proposé, y compris après un « Annuler » — vérifier que le badge « (remboursée) » apparaît ensuite dans la liste |
-| ☐ | Rejouer « Relancer la livraison » une deuxième fois sur la même commande (après qu'elle soit repassée `En_attente`) doit être refusé en 409 |
-| ☐ | Tenter d'annuler une commande déjà `Annulee` par un appel direct (docs Swagger) doit répondre 409 |
+| ✅ | Sur la commande `Servie` (#7) : le bouton « Annuler » est **absent** |
+| ✅ | Sur la commande `Annulee` (#3, #5) : le bouton « Annuler » est **absent**, seul « Marquer remboursée » reste |
+| ✅ | Sur une commande sans livraison `Echouee` : le bouton « Relancer la livraison » est **absent** — confirmé sur #7 (`Sur_place`, aucune livraison du tout, pas d'adresse) |
+| ✅ | « Marquer remboursée » reste toujours proposé, y compris sur une commande déjà annulée — badge « (remboursée) » confirmé dans la liste après coup |
+| ✅ | Rejouer « Relancer la livraison » une deuxième fois (après repassage à `En_attente`) est refusé en 409, message repris tel quel : « Cette livraison est « En_attente » : seule une livraison échouée peut être relancée. » |
+| ✅ | Annuler une commande déjà `Annulee` via un appel direct à l'API répond 409 : « Cette commande est déjà annulée. » |
 
 ---
 
