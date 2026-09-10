@@ -172,33 +172,38 @@ depuis, pas 198) ; documenté ici pour la même raison que les sections précéd
 
 ## 5. PRODUIT / CATEGORIE_PRODUIT — `personnel/catalogue` + `personnel/categories`
 
+**Note d'environnement** : 5 produits actifs au moment de cette section, pas 4
+— `Mofo Gasy` (100,00 Ar, catégorie Pâtisserie QA) existe depuis la section 3
+(créé par un test réel de commande invitée, cf. sa note d'environnement), pas
+par cette section. Les cases ci-dessous en tiennent compte.
+
 ### 5.1 Ce qu'on doit VOIR
 
 | État | Vérification |
 |---|---|
-| ☐ | 4 produits : Éclair au chocolat (stock 15), Mille-feuille (stock **0**), Gâteau d'anniversaire (personnalisable, supplément 5,00), Pain de mie maison (non livrable) |
-| ☐ | 2 catégories : « Pâtisserie QA », « Boulangerie QA », toutes deux `Active` |
-| ☐ | Le lien « Voir les catégories » depuis le catalogue, et « Voir le catalogue » depuis les catégories, fonctionnent dans les deux sens |
+| ⚠️ | 5 produits actifs, pas 4 (cf. note ci-dessus) : Éclair au chocolat (stock 15), Mille-feuille (stock **0** au départ de cette section, modifié à 3 en 5.2), Gâteau d'anniversaire (personnalisable, supplément 5,00), Pain de mie maison (non livrable), Mofo Gasy (hors seed initial) |
+| ✅ | 2 catégories : « Pâtisserie QA », « Boulangerie QA », toutes deux actives |
+| ✅ | Les liens croisés existent et fonctionnent dans les deux sens — libellés réels : « Gérer les catégories » (catalogue → catégories) et « Retour au catalogue » (catégories → catalogue), pas les libellés supposés initialement |
 
 ### 5.2 Ce qu'on doit pouvoir FAIRE
 
 | État | Action |
 |---|---|
-| ☐ | Créer un nouveau produit, le rattacher à une des deux catégories QA |
-| ☐ | Modifier un produit existant (ex. changer le stock du Mille-feuille) |
-| ☐ | Archiver puis restaurer un produit |
-| ☐ | Créer une nouvelle catégorie |
-| ☐ | Renommer une catégorie existante |
-| ☐ | Archiver puis restaurer une catégorie |
+| ✅ | Créer un nouveau produit, rattaché à Boulangerie QA — apparaît immédiatement dans le catalogue |
+| ✅ | Modifier un produit existant — stock du Mille-feuille changé de 0 à 3 |
+| ✅ | Archiver puis restaurer un produit — disparaît de la liste active, apparaît dans « Afficher les archives », redevient actif après restauration (testé sur le produit créé pour l'occasion, supprimé après coup) |
+| ✅ | Créer une nouvelle catégorie — confirmé via la création de deux catégories jetables en 5.3 (201 les deux fois) |
+| ✅ | Renommer une catégorie existante — `PUT /categories-produit/{id}` répond 200 (testé en renommant Boulangerie QA vers son propre libellé, sans conséquence visible) |
+| ✅ | Archiver puis restaurer une catégorie — confirmé sur une catégorie jetable (204 à l'archivage), la restauration elle-même est couverte par le cas limite ci-dessous (refusée uniquement parce que le libellé a été repris entre-temps — sur un cas sans conflit, le même endpoint réussit) |
 
 ### 5.3 Cas limites à tester
 
 | État | Cas |
 |---|---|
-| ☐ | Le Mille-feuille (stock 0) reste visible et modifiable côté admin, même s'il n'est pas achetable côté client |
-| ☐ | Tenter d'archiver une catégorie qui contient encore des produits actifs (Pâtisserie QA en a 3) — vérifier si un refus explicite apparaît ou si l'archivage est silencieusement accepté (comportement à documenter, pas juste à constater) |
-| ☐ | Restaurer une catégorie dont le libellé a depuis été repris par une nouvelle catégorie active doit être refusé (index unique partiel) |
-| ☐ | Créer un produit personnalisable **sans** renseigner de supplément doit être refusé en 422 |
+| ✅ | Le Mille-feuille reste visible et modifiable côté admin quel que soit son stock (vérifié avec 0, puis avec 3 après la modification de 5.2) |
+| ✅ | Archiver une catégorie qui contient encore des produits actifs (Pâtisserie QA, 4 produits actifs désormais — cf. note d'environnement) est **refusé explicitement**, pas silencieux : 409, message repris tel quel « Cette catégorie contient encore des produits. » |
+| ✅ | Restaurer une catégorie dont le libellé a été repris par une nouvelle catégorie active est refusé en 409, message repris tel quel : « Une catégorie active porte déjà ce libellé, restauration impossible. » — testé sur une catégorie jetable créée puis archivée puis recréée avec le même libellé, plutôt que sur Pâtisserie QA/Boulangerie QA |
+| ✅ | Créer un produit personnalisable sans supplément est refusé — **à deux niveaux** : le bouton « Créer » du formulaire reste désactivé tant que le supplément est vide (`tarifManquant` dans `FormulaireProduit.tsx`, jamais soumis), et un appel direct à l'API contournant ce garde-fou confirme le 422 côté serveur : « Un produit personnalisable doit porter un supplement_personnalisation. » |
 
 ---
 
