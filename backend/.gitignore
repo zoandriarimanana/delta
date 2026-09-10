@@ -17,3 +17,7 @@ htmlcov/
 # Outils
 .ruff_cache/
 .mypy_cache/
+
+# Fichiers téléversés (photos de profil PERSONNEL, etc.) — jamais versionnés,
+# voir Settings.PHOTO_STORAGE_DIR.
+/stockage/

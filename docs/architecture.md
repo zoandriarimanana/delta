@@ -328,6 +328,48 @@ l'ancienneté n'identifient quelqu'un, et les livraisons comme les sessions
 gardent leur `#id_personnel`, désormais anonyme. `est_administrateur` repasse à
 `false` — un compte anonymisé ne porte plus aucun droit.
 
+Depuis l'ajout de la photo de profil, `anonymiser()` supprime aussi le fichier
+disque et remet `photo_chemin` à `NULL` — voir la section suivante.
+
+### Photo de profil : stockage disque et diffusion authentifiée
+
+`PERSONNEL.photo_chemin` (voir `docs/mld.md`) pointe vers un fichier stocké
+dans un dossier dédié du backend (`Settings.PHOTO_STORAGE_DIR`), jamais un
+blob en base ni un service de stockage d'objets externe — scope
+volontairement réduit à ce que le besoin actuel demande.
+
+**Upload séparé de la création, pas un seul appel multipart.** `POST
+/personnel` reste un corps JSON, inchangé : `PersonnelCreate` est un
+`BaseModel` Pydantic, et FastAPI ne sait pas le reconstruire depuis un
+formulaire multipart sans dupliquer chaque champ en paramètre `Form(...)`
+séparé — un coût disproportionné pour un champ nullable. La photo se
+téléverse via `POST /personnel/{id}/photo`, un endpoint **unique** qui sert
+aussi bien la création (juste après le `POST /personnel` initial) que le
+remplacement ultérieur : une seule implémentation du chemin d'écriture, pas
+deux qui divergeraient tôt ou tard — même raisonnement que
+`PersonnelService.obtenir_avec_fonction`.
+
+**Trois contrôles à l'upload**, jamais une confiance aveugle dans ce que le
+client déclare : `Content-Type` attendu (rejet rapide), taille réelle
+(2 Mio maximum), puis le contenu réel des octets via Pillow
+(`Image.open(...).verify()`) — un en-tête ou un nom de fichier peuvent
+mentir, le contenu ne ment pas. Le nom de fichier stocké est un UUID, avec
+l'extension déduite du **format détecté**, jamais du nom d'origine envoyé
+par le client : ferme à la fois les collisions et toute tentative de
+traversée de chemin.
+
+**Diffusion par une route authentifiée dédiée, jamais un montage de
+fichiers statiques.** `GET /personnel/{id}/photo` passe par
+`PersonnelConnecte`, le même niveau que le reste des lectures de
+`PERSONNEL` — un montage `StaticFiles` classique n'aurait eu aucun moyen de
+passer par cette dépendance, et ce module l'énonce déjà en tête de fichier :
+« Rien n'y a vocation à être exposé anonymement. » Une photo de profil
+identifie au moins autant qu'un nom ou un téléphone ; elle ne fait pas
+exception à cette règle sous prétexte que c'est une image. Réponse
+`Cache-Control: no-store` : un remplacement de photo doit être visible
+immédiatement à la même URL, sans dépendre d'un contournement de cache côté
+client.
+
 ## Frontend — arborescence
 
 ```

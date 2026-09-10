@@ -80,3 +80,57 @@ export async function anonymiserPersonnel(idPersonnel: number): Promise<Personne
   );
   return reponse.data;
 }
+
+/**
+ * URL de la photo de profil — jamais un chemin de fichier local, une route
+ * authentifiée (`GET /personnel/{id}/photo`, cf. `docs/architecture.md`).
+ *
+ * Une balise `<img>` qui pointe ici envoie le cookie de session comme toute
+ * requête `GET` same-site ; aucun code d'authentification à écrire ici.
+ * Répond 404 si le membre n'a pas de photo — `components/ui/Avatar`
+ * traduit ce cas en icône générique, jamais en image cassée.
+ */
+export function urlPhotoPersonnel(idPersonnel: number): string {
+  return `${axiosClient.defaults.baseURL}${CHEMIN}/${idPersonnel}/photo`;
+}
+
+/**
+ * Téléverse ou remplace la photo de profil. Un seul endpoint pour les deux
+ * cas — voir `docs/architecture.md`, section « Photo de profil ».
+ */
+export async function televerserPhotoPersonnel(
+  idPersonnel: number,
+  fichier: File
+): Promise<void> {
+  const corps = new FormData();
+  corps.append('fichier', fichier);
+  // `Content-Type` explicitement retiré : `axiosClient` le fixe par défaut à
+  // `application/json` pour toute requête, ce qui écraserait sinon la
+  // frontière (`boundary`) que le navigateur doit générer lui-même pour un
+  // `FormData` — sans elle, le serveur ne peut pas découper les parties du
+  // corps multipart.
+  await axiosClient.post(`${CHEMIN}/${idPersonnel}/photo`, corps, {
+    headers: { 'Content-Type': undefined },
+  });
+}
+
+/** Retire la photo de profil, sans rien archiver. Idempotent. */
+export async function supprimerPhotoPersonnel(idPersonnel: number): Promise<void> {
+  await axiosClient.delete(`${CHEMIN}/${idPersonnel}/photo`);
+}
+
+/**
+ * Télécharge le badge (PNG) — photo ou avatar générique, identité, fonction,
+ * QR code. Généré à la demande côté serveur, jamais stocké : cet appel
+ * déclenche donc une vraie composition d'image à chaque clic, pas une
+ * lecture de cache.
+ *
+ * `responseType: 'blob'` : la réponse est une image binaire, pas du JSON —
+ * axios ne doit pas tenter de la parser comme tel.
+ */
+export async function obtenirBadgePersonnel(idPersonnel: number): Promise<Blob> {
+  const reponse = await axiosClient.get<Blob>(`${CHEMIN}/${idPersonnel}/badge`, {
+    responseType: 'blob',
+  });
+  return reponse.data;
+}

@@ -128,3 +128,78 @@ describe('erreur', () => {
     );
   });
 });
+
+describe('photo de profil', () => {
+  it('ne transite jamais par surEnvoi', async () => {
+    // La photo suit son propre chemin (upload séparé, cf. docs/architecture.md)
+    // — PersonnelEnvoye n'a jamais eu ce champ, ce test verrouille qu'il ne
+    // s'y glisse pas silencieusement un jour.
+    const surEnvoi = afficher();
+
+    await userEvent.type(screen.getByLabelText(/^nom$/i), 'Rabe');
+    await userEvent.type(screen.getByLabelText(/^prénom$/i), 'Marie');
+    await userEvent.type(
+      screen.getByLabelText(/e-mail professionnel/i),
+      'marie@delta.mg'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /créer/i }));
+
+    await waitFor(() => expect(surEnvoi).toHaveBeenCalled());
+    expect(Object.keys(surEnvoi.mock.calls[0]?.[0] ?? {})).not.toContain('photo');
+  });
+
+  it('rappelle surPhotoChoisie avec le fichier sélectionné', async () => {
+    const surPhotoChoisie = vi.fn();
+    afficher({ surPhotoChoisie });
+    const fichier = new File(['contenu'], 'photo.png', { type: 'image/png' });
+
+    const champFichier = screen.getByLabelText(/photo de profil/i);
+    await userEvent.upload(champFichier, fichier);
+
+    expect(surPhotoChoisie).toHaveBeenCalledWith(fichier);
+  });
+
+  it('accepte uniquement JPEG et PNG', () => {
+    afficher();
+
+    expect(screen.getByLabelText(/photo de profil/i)).toHaveProperty(
+      'accept',
+      'image/jpeg,image/png'
+    );
+  });
+
+  describe('libellé distinguant photo actuelle et aperçu — non-régression', () => {
+    it('affiche "Photo actuelle" en modification, avant tout choix de fichier', () => {
+      afficher({ personnel: RAKOTO });
+
+      expect(screen.getByText('Photo actuelle')).toBeTruthy();
+      expect(screen.queryByText('Nouvel aperçu')).toBeNull();
+    });
+
+    it('bascule sur "Nouvel aperçu" dès qu\'un fichier est choisi en modification', async () => {
+      afficher({ personnel: RAKOTO });
+      const fichier = new File(['contenu'], 'photo.png', { type: 'image/png' });
+
+      await userEvent.upload(screen.getByLabelText(/photo de profil/i), fichier);
+
+      expect(screen.getByText('Nouvel aperçu')).toBeTruthy();
+      expect(screen.queryByText('Photo actuelle')).toBeNull();
+    });
+
+    it("n'affiche aucun libellé en création avant tout choix de fichier — rien à distinguer", () => {
+      afficher();
+
+      expect(screen.queryByText('Photo actuelle')).toBeNull();
+      expect(screen.queryByText('Nouvel aperçu')).toBeNull();
+    });
+
+    it('affiche "Nouvel aperçu" en création dès qu\'un fichier est choisi', async () => {
+      afficher();
+      const fichier = new File(['contenu'], 'photo.png', { type: 'image/png' });
+
+      await userEvent.upload(screen.getByLabelText(/photo de profil/i), fichier);
+
+      expect(screen.getByText('Nouvel aperçu')).toBeTruthy();
+    });
+  });
+});

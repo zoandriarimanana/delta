@@ -112,9 +112,9 @@ describe('useCreerPersonnel', () => {
     const surSucces = vi.fn();
     const { result } = renderHook(() => useCreerPersonnel(surSucces));
 
-    let ok = false;
+    let cree: Personnel | null = null;
     await act(async () => {
-      ok = await result.current.creerUnMembre({
+      cree = await result.current.creerUnMembre({
         nom: 'Rakoto',
         prenom: 'Jean',
         fonction: 'Livreur',
@@ -122,7 +122,7 @@ describe('useCreerPersonnel', () => {
       });
     });
 
-    expect(ok).toBe(true);
+    expect(cree).toEqual(RAKOTO);
     expect(surSucces).toHaveBeenCalledTimes(1);
   });
 
@@ -136,9 +136,9 @@ describe('useCreerPersonnel', () => {
     const surSucces = vi.fn();
     const { result } = renderHook(() => useCreerPersonnel(surSucces));
 
-    let ok = true;
+    let cree: Personnel | null = RAKOTO;
     await act(async () => {
-      ok = await result.current.creerUnMembre({
+      cree = await result.current.creerUnMembre({
         nom: 'Rakoto',
         prenom: 'Jean',
         fonction: 'Livreur',
@@ -146,7 +146,7 @@ describe('useCreerPersonnel', () => {
       });
     });
 
-    expect(ok).toBe(false);
+    expect(cree).toBeNull();
     expect(result.current.erreur).toBe(
       'Un membre du personnel actif utilise déjà cette adresse.'
     );

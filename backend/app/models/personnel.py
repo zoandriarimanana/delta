@@ -104,6 +104,14 @@ class Personnel(SoftDeleteMixin, Base):
     #: Jamais exposée par l'API, ni en lecture ni en écriture : absente de
     #: `PersonnelCreate`, `PersonnelUpdate` et `PersonnelRead`.
     mot_de_passe: Mapped[str | None] = mapped_column(String(255), default=None)
+    #: Nom de fichier généré (UUID + extension), jamais un chemin absolu ni le
+    #: nom d'origine envoyé par le client — la résolution en chemin disque
+    #: complet passe par `Settings.PHOTO_STORAGE_DIR`, côté service uniquement.
+    #: `NULL` signifie « pas de photo » : l'avatar générique s'affiche côté
+    #: frontend. Jamais exposée par `PersonnelRead` : la photo se lit via
+    #: `GET /personnel/{id}/photo`, une route authentifiée dédiée — pas via ce
+    #: nom de fichier, qui resterait sans intérêt côté client de toute façon.
+    photo_chemin: Mapped[str | None] = mapped_column(String(255), default=None)
 
     sessions_formation: Mapped[list[SessionFormation]] = relationship(
         back_populates="formateur"

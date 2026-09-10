@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 
+import Avatar from '@/components/ui/Avatar';
 import Bouton from '@/components/ui/Bouton';
 
 import FormulairePersonnel from '../components/FormulairePersonnel';
@@ -20,7 +21,11 @@ import {
   anonymiserPersonnel,
   archiverPersonnel,
   modifierPersonnel,
+  obtenirBadgePersonnel,
   restaurerPersonnel,
+  supprimerPhotoPersonnel,
+  televerserPhotoPersonnel,
+  urlPhotoPersonnel,
 } from '../personnel.api';
 import {
   messageDAdministration,
@@ -38,6 +43,16 @@ export default function PersonnelDetailAdministrationPage() {
   const [modeEdition, setModeEdition] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [erreurAction, setErreurAction] = useState<string | null>(null);
+  const [photoChoisie, setPhotoChoisie] = useState<File | null>(null);
+  // Distinct de `envoi` : télécharger le badge ne doit pas désactiver les
+  // autres actions (Modifier/Archiver/Anonymiser), aucune écriture n'a lieu.
+  const [envoiBadge, setEnvoiBadge] = useState(false);
+  // Change à chaque écriture réussie sur la photo, pour forcer `Avatar` à se
+  // remonter (cf. sa docstring) — sans ça, l'ancien état d'erreur/l'ancienne
+  // image resteraient affichés après un remplacement ou un retrait, l'URL
+  // étant identique et `Cache-Control: no-store` seul ne rafraîchit pas un
+  // composant déjà monté.
+  const [versionPhoto, setVersionPhoto] = useState(0);
 
   // Synchronise depuis le chargement serveur, sans jamais effacer une donnée
   // locale plus récente issue d'une action (cf. docstring du fichier).
@@ -47,14 +62,34 @@ export default function PersonnelDetailAdministrationPage() {
     }
   }, [detail.personnel]);
 
-  const fermerEdition = useCallback(() => setModeEdition(false), []);
+  const fermerEdition = useCallback(() => {
+    setModeEdition(false);
+    setPhotoChoisie(null);
+  }, []);
 
   async function enregistrer(valeurs: PersonnelEnvoye) {
     setEnvoi(true);
     setErreurAction(null);
     try {
       setAffichage(await modifierPersonnel(id, valeurs));
+      if (photoChoisie !== null) {
+        await televerserPhotoPersonnel(id, photoChoisie);
+        setVersionPhoto((v) => v + 1);
+      }
       fermerEdition();
+    } catch (erreur) {
+      setErreurAction(messageDAdministration(erreur));
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  async function retirerPhoto() {
+    setEnvoi(true);
+    setErreurAction(null);
+    try {
+      await supprimerPhotoPersonnel(id);
+      setVersionPhoto((v) => v + 1);
     } catch (erreur) {
       setErreurAction(messageDAdministration(erreur));
     } finally {
@@ -85,6 +120,29 @@ export default function PersonnelDetailAdministrationPage() {
       setErreurAction(messageDAdministration(erreur));
     } finally {
       setEnvoi(false);
+    }
+  }
+
+  async function telechargerBadge() {
+    setEnvoiBadge(true);
+    setErreurAction(null);
+    try {
+      const image = await obtenirBadgePersonnel(id);
+      const url = URL.createObjectURL(image);
+      // Même mécanique que l'aperçu de photo (`URL.createObjectURL`), mais
+      // pour déclencher un téléchargement plutôt qu'un affichage : un `<a
+      // download>` temporaire, jamais inséré dans le DOM visible, cliqué
+      // puis retiré. `revokeObjectURL` juste après — contrairement à
+      // l'aperçu, cette URL n'a besoin de vivre que le temps du clic.
+      const lien = document.createElement('a');
+      lien.href = url;
+      lien.download = `badge-${id}.png`;
+      lien.click();
+      URL.revokeObjectURL(url);
+    } catch (erreur) {
+      setErreurAction(messageDAdministration(erreur));
+    } finally {
+      setEnvoiBadge(false);
     }
   }
 
@@ -127,9 +185,17 @@ export default function PersonnelDetailAdministrationPage() {
   return (
     <section>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-warm-gray-700">
-          {affichage.prenom} {affichage.nom}
-        </h1>
+        <div className="flex items-center gap-4">
+          <Avatar
+            key={versionPhoto}
+            src={urlPhotoPersonnel(affichage.id_personnel)}
+            alt=""
+            taille="grande"
+          />
+          <h1 className="text-2xl font-semibold text-warm-gray-700">
+            {affichage.prenom} {affichage.nom}
+          </h1>
+        </div>
         <Link
           to="/personnel/administration"
           className="text-sm text-terracotta underline"
@@ -137,6 +203,17 @@ export default function PersonnelDetailAdministrationPage() {
           Retour à la liste
         </Link>
       </div>
+
+      {!archiveLocalement && !modeEdition && (
+        <Bouton
+          variante="secondaire"
+          onClick={() => void retirerPhoto()}
+          disabled={envoi}
+          className="mt-3"
+        >
+          Retirer la photo
+        </Bouton>
+      )}
 
       {erreurAction !== null && (
         <p
@@ -171,6 +248,7 @@ export default function PersonnelDetailAdministrationPage() {
             erreur={erreurAction}
             surEnvoi={(valeurs) => void enregistrer(valeurs)}
             surAnnulation={fermerEdition}
+            surPhotoChoisie={setPhotoChoisie}
           />
         </div>
       ) : (
@@ -223,6 +301,13 @@ export default function PersonnelDetailAdministrationPage() {
                 disabled={envoi}
               >
                 Anonymiser
+              </Bouton>
+              <Bouton
+                variante="secondaire"
+                onClick={() => void telechargerBadge()}
+                disabled={envoiBadge}
+              >
+                Télécharger le badge
               </Bouton>
             </div>
           )}
