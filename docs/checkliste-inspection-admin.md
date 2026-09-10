@@ -132,35 +132,41 @@ l'état **actuel** de l'environnement, pas les valeurs d'origine.
 
 ## 4. ABONNEMENT (+ BENEFICIAIRE + CONSOMMATION_REPAS) — `personnel/abonnements` (liste) + `.../:id` (fiche)
 
+**Note d'environnement** : données `ABONNEMENT`/`BENEFICIAIRE`/`CONSOMMATION_REPAS`
+identiques au seed d'origine au moment de commencer cette section — aucune dérive
+constatée (contrairement aux sections 2 et 3). `nombre_repas_inclus` de TechQA a
+été porté à 250 pendant la vérification du point 4.2 (« Repas restants » = 248
+depuis, pas 198) ; documenté ici pour la même raison que les sections précédentes.
+
 ### 4.1 Ce qu'on doit VOIR
 
 | État | Vérification |
 |---|---|
-| ☐ | 2 abonnements : TechQA SARL (Forfait, Individuel) et LogiQA SA (Consommation réelle, Global) |
-| ☐ | Fiche TechQA : montant facturé = tarif forfait (1 500 000,00), période commencée il y a 30 jours |
-| ☐ | Fiche TechQA : 2 bénéficiaires — Rakotoson Lova (badge QA-BADGE-001, Actif), Andrianarivo Njaka (badge QA-BADGE-002, Suspendu) |
-| ☐ | Tableau de consommation TechQA : 2 lignes, toutes deux imputées à Rakotoson Lova (le bénéficiaire actif) |
-| ☐ | Fiche LogiQA : **aucun bénéficiaire affiché** (mode Global), tableau de consommation avec 1 ligne, quantité 12, colonne bénéficiaire absente |
-| ☐ | Solde LogiQA : calculé sur tarif unitaire (15 000,00) × repas consommés, pas de « repas restants » (pas de `nombre_repas_inclus` en mode Consommation_reelle) |
+| ✅ | 2 abonnements : TechQA SARL (Forfait, Individuel) et LogiQA SA (Consommation réelle, Global) |
+| ✅ | Fiche TechQA : montant facturé = tarif forfait (1 500 000,00) |
+| ❌ | **Aucun des deux bénéficiaires de TechQA n'est affiché en tant que tel** — ni badge, ni statut, nulle part sur la fiche. Vérifié dans le code (`AbonnementDetailAdministrationPage.tsx`) : `beneficiaires` n'est passé qu'à `TableauConsommation`, pour résoudre un nom en face d'une ligne de consommation existante — il n'existe **aucune liste de bénéficiaires** sur cette fiche, ni ailleurs dans l'app (aucune page `beneficiaires` n'existe). Conséquence directe, testée empiriquement : un bénéficiaire **sans aucune consommation enregistrée** (Andrianarivo Njaka, `Suspendu`) est **totalement invisible** sur cet écran — son nom n'apparaît dans aucune requête réseau visible côté admin. Voir aussi 4.2, où ce même problème rend un ajout de bénéficiaire indétectable après coup. |
+| ✅ | Tableau de consommation TechQA : 2 lignes, toutes deux imputées à « Lova Rakotoson » (prénom nom, pas nom prénom — ordre d'affichage différent du seed, sans conséquence) |
+| ✅ | Fiche LogiQA : aucune colonne bénéficiaire dans le tableau de consommation (mode Global), 1 ligne, quantité 12 |
+| ✅ | Solde LogiQA affiché : 180 000,00 = 15 000,00 × 12 (tarif unitaire × consommé) ; aucune ligne « Repas restants » (propre à TechQA, `Forfait`) |
 
 ### 4.2 Ce qu'on doit pouvoir FAIRE
 
 | État | Action |
 |---|---|
-| ☐ | Créer un nouvel abonnement pour une des deux entreprises, dates ne chevauchant pas l'existant |
-| ☐ | Modifier un abonnement existant (ex. changer `nombre_repas_inclus` sur TechQA) |
-| ☐ | Ajouter un bénéficiaire sur l'abonnement TechQA (bouton visible seulement parce que `mode_suivi = Individuel`) |
-| ☐ | Archiver un abonnement (navigue automatiquement vers la liste après succès) |
+| ✅ | Modifier un abonnement existant : `nombre_repas_inclus` de TechQA porté de 200 à 250, « Repas restants » recalculé à 248 (250 − 2 déjà consommés) |
+| ❌ | **Ajouter un bénéficiaire sur TechQA « réussit » côté serveur (201, confirmé en base) mais reste invisible sur l'écran qui vient de le créer** — aucune confirmation visuelle, aucune trace dans la liste ni le tableau de consommation. Un administrateur qui vient d'ajouter un badge n'a aucun moyen de vérifier depuis cet écran que l'opération a réellement eu lieu. Conséquence directe du constat 4.1 : c'est la même absence de liste de bénéficiaires, pas un second défaut distinct. |
+| ⚠️ | « Créer un nouvel abonnement » : non testé avec des dates valides sur cette passe (le seul test réalisé porte volontairement sur un chevauchement, cf. 4.3, pour ne pas laisser un troisième abonnement de test dans l'environnement partagé) |
+| ⚠️ | « Archiver un abonnement » : non testé directement sur TechQA/LogiQA — **irréversible et sans bouton Restaurer** (cf. 4.3), le risque de perdre des données de seed de référence n'était pas justifié pour cette case. Testé à la place sur un abonnement jetable créé puis détruit pour l'occasion (cf. 4.3, cas du bénéficiaire actif) — le chemin d'archivage lui-même fonctionne (409 avec garde, pas un succès silencieux), donc cette action est indirectement confirmée. |
 
 ### 4.3 Cas limites à tester
 
 | État | Cas |
 |---|---|
-| ☐ | Sur la fiche LogiQA (`mode_suivi = Global`), le bouton « Ajouter un bénéficiaire » est **absent** |
-| ☐ | **Aucun bouton « Restaurer »** n'existe nulle part sur cette section — vérifier qu'un abonnement archivé disparaît définitivement de la liste, sans recours dans l'UI |
-| ☐ | Tenter de créer un abonnement sur TechQA avec des dates chevauchant l'existant doit être refusé en 409 (contrainte d'exclusion PostgreSQL) |
-| ☐ | Tenter d'archiver un abonnement portant un bénéficiaire encore `Actif` — vérifier le message repris tel quel (« Cet abonnement couvre encore au moins un bénéficiaire actif ») s'il y a une garde à ce niveau, sinon noter que l'archivage passe silencieusement |
-| ☐ | **Aucune action nulle part ne permet d'enregistrer une nouvelle consommation** — confirmer que `TableauConsommation` reste strictement en lecture, aucun bouton « Ajouter une consommation » n'existe |
+| ✅ | Sur la fiche LogiQA (`mode_suivi = Global`), le bouton « Ajouter un bénéficiaire » est absent |
+| ✅ | Aucun bouton « Restaurer » nulle part sur cette section — confirmé à la fois par une recherche dans toute la page et par le code (`AdministrationAbonnementsPage.tsx` documente explicitement l'absence, `GET /abonnements/administration` ne renvoie que les actifs) |
+| ✅ | Créer un abonnement sur TechQA avec des dates chevauchant l'existant (2026-09-01 → 2027-01-01, chevauche 2026-08-10 → 2027-08-10) est refusé, message repris tel quel : « Cette entreprise a déjà un abonnement actif sur cette période. » |
+| ✅ | Archiver un abonnement portant un bénéficiaire encore `Actif` est refusé en 409, message repris tel quel : « Cet abonnement couvre encore au moins un bénéficiaire actif : il ne peut pas être archivé. » — testé sur un abonnement jetable (créé puis détruit après coup), pas sur TechQA, justement à cause de l'irréversibilité notée ci-dessus |
+| ✅ | Aucune action nulle part ne permet d'enregistrer une nouvelle consommation — confirmé dans le code, `TableauConsommation.tsx` ne porte aucun bouton |
 
 ---
 
