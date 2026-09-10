@@ -104,11 +104,26 @@ export default function FormulairePersonnel({
       }}
     >
       <div className="flex items-center gap-4">
-        <Avatar
-          src={previsualisation ?? urlPhotoPersonnel(personnel?.id_personnel ?? 0)}
-          alt=""
-          taille="grande"
-        />
+        <div className="flex flex-col items-center gap-1">
+          {/* Sans ce libellé, rien ne distingue "voici la photo actuelle"
+              de "voici ce que sera la nouvelle photo si vous validez" — le
+              même <Avatar> affiche l'une puis l'autre selon qu'un fichier a
+              été choisi, et un admin qui modifie une fiche déjà pourvue
+              d'une photo peut confondre les deux états. Aucun libellé tant
+              qu'on est en création sans fichier choisi : il n'y a alors
+              aucune ambiguïté à lever, "Photo actuelle" serait même
+              trompeur (aucune photo n'existe encore). */}
+          {(previsualisation !== null || personnel !== undefined) && (
+            <span className="text-xs text-warm-gray-500">
+              {previsualisation !== null ? 'Nouvel aperçu' : 'Photo actuelle'}
+            </span>
+          )}
+          <Avatar
+            src={previsualisation ?? urlPhotoPersonnel(personnel?.id_personnel ?? 0)}
+            alt=""
+            taille="grande"
+          />
+        </div>
         <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
           Photo de profil <span className="text-warm-gray-500">(facultatif)</span>
           <input
