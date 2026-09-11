@@ -17,6 +17,7 @@ from app.core.database import get_db
 from app.core.deps import PersonnelAdministrateur
 from app.models.session_formation import StatutSessionFormation
 from app.schemas.session_formation import (
+    SessionFormationAdministrationRead,
     SessionFormationAffectation,
     SessionFormationChangementStatut,
     SessionFormationCreate,
@@ -50,6 +51,24 @@ def lister(
     """
     sessions = SessionFormationService(db).lister(id_formation, statut)
     return [SessionFormationRead.model_validate(s) for s in sessions]
+
+
+@router.get(
+    "/administration",
+    response_model=list[SessionFormationAdministrationRead],
+    summary="Lister les sessions pour l'administration, archives comprises",
+)
+def lister_pour_administration(
+    admin: PersonnelAdministrateur, db: SessionBase
+) -> list[SessionFormationAdministrationRead]:
+    """Toutes les sessions, actives **et** archivées. Réservé aux administrateurs.
+
+    **Déclarée avant `/{id_session}`, et l'ordre n'est pas cosmétique** : la
+    route paramétrée capterait `administration` pour l'interpréter comme un
+    identifiant. Même précaution que `GET /produits/administration`.
+    """
+    sessions = SessionFormationService(db).lister_pour_administration()
+    return [SessionFormationAdministrationRead.model_validate(s) for s in sessions]
 
 
 @router.get(

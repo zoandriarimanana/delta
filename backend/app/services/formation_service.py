@@ -121,3 +121,30 @@ class FormationService:
             raise ConflitMetier(MESSAGE_ENCORE_PEUPLEE)
         self.formations.delete(formation)
         self.db.commit()
+
+    def restaurer(self, id_formation: int) -> Formation:
+        """Réactive une formation archivée. Idempotent.
+
+        Aucune unicité ne peut la faire échouer — `FORMATION` n'en porte
+        aucune, contrairement à `DOMAINE_FORMATION.libelle` : deux formations
+        peuvent légitimement partager le même titre. Même raisonnement que
+        `SalleService.restaurer`.
+        """
+        formation = self.formations.get_by_id(id_formation, inclure_supprimes=True)
+        if formation is None:
+            raise RessourceIntrouvable("Formation introuvable.")
+        if formation.supprime_le is None:
+            return formation
+
+        self.formations.restaurer(formation)
+        self.db.commit()
+        return formation
+
+    def lister_pour_administration(self) -> Sequence[Formation]:
+        """Retourne **toutes** les formations, actives et archivées.
+
+        Réservé à l'administration, même raisonnement que
+        `SalleService.lister_pour_administration`. C'est aussi ce qui rend la
+        restauration ci-dessus atteignable.
+        """
+        return self.formations.list(inclure_supprimes=True)

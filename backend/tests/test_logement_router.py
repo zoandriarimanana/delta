@@ -268,3 +268,68 @@ def test_restauration(client_http: TestClient, entete_admin: dict[str, str]) -> 
 
 def test_obtenir_inconnu_retourne_404(client_http: TestClient) -> None:
     assert client_http.get(f"{LOGEMENTS}/99999").status_code == 404
+
+
+# --- Liste d'administration (archives comprises) -------------------------------
+
+ADMIN_LOGEMENTS = f"{LOGEMENTS}/administration"
+
+
+def test_administration_refuse_l_anonyme(client_http: TestClient) -> None:
+    assert client_http.get(ADMIN_LOGEMENTS).status_code == 401
+
+
+def test_administration_refuse_un_jeton_client(
+    client_http: TestClient, entete_client: dict[str, str]
+) -> None:
+    assert client_http.get(ADMIN_LOGEMENTS, headers=entete_client).status_code == 401
+
+
+def test_administration_refuse_un_salarie_sans_droit(
+    client_http: TestClient, entete_agent: dict[str, str]
+) -> None:
+    assert client_http.get(ADMIN_LOGEMENTS, headers=entete_agent).status_code == 403
+
+
+def test_administration_n_est_pas_captee_par_la_route_parametree(
+    client_http: TestClient, entete_admin: dict[str, str]
+) -> None:
+    reponse = client_http.get(ADMIN_LOGEMENTS, headers=entete_admin)
+
+    assert reponse.status_code == 200
+    assert reponse.status_code != 422
+
+
+def test_administration_montre_les_archives(
+    client_http: TestClient, entete_admin: dict[str, str]
+) -> None:
+    creee = client_http.post(LOGEMENTS, json=_corps(), headers=entete_admin).json()
+    client_http.delete(f"{LOGEMENTS}/{creee['id_logement']}", headers=entete_admin)
+
+    corps = client_http.get(ADMIN_LOGEMENTS, headers=entete_admin).json()
+
+    archive = next(log for log in corps if log["id_logement"] == creee["id_logement"])
+    assert archive["supprime_le"] is not None
+
+
+def test_administration_montre_aussi_les_actifs(
+    client_http: TestClient, entete_admin: dict[str, str]
+) -> None:
+    creee = client_http.post(LOGEMENTS, json=_corps(), headers=entete_admin).json()
+
+    corps = client_http.get(ADMIN_LOGEMENTS, headers=entete_admin).json()
+
+    actif = next(log for log in corps if log["id_logement"] == creee["id_logement"])
+    assert actif["supprime_le"] is None
+
+
+def test_liste_publique_ne_remonte_aucune_archive_ni_le_champ(
+    client_http: TestClient, entete_admin: dict[str, str]
+) -> None:
+    creee = client_http.post(LOGEMENTS, json=_corps(), headers=entete_admin).json()
+    client_http.delete(f"{LOGEMENTS}/{creee['id_logement']}", headers=entete_admin)
+
+    publique = client_http.get(LOGEMENTS).json()
+
+    assert creee["id_logement"] not in [log["id_logement"] for log in publique]
+    assert all("supprime_le" not in log for log in publique)

@@ -13,7 +13,12 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import PersonnelAdministrateur
-from app.schemas.salle import SalleCreate, SalleRead, SalleUpdate
+from app.schemas.salle import (
+    SalleAdministrationRead,
+    SalleCreate,
+    SalleRead,
+    SalleUpdate,
+)
 from app.services.avis_service import AvisService
 from app.services.salle_service import SalleService
 
@@ -37,6 +42,24 @@ def lister(
     """
     salles = SalleService(db).lister(capacite_minimale)
     return [SalleRead.model_validate(s) for s in salles]
+
+
+@router.get(
+    "/administration",
+    response_model=list[SalleAdministrationRead],
+    summary="Lister les salles pour l'administration, archives comprises",
+)
+def lister_pour_administration(
+    admin: PersonnelAdministrateur, db: SessionBase
+) -> list[SalleAdministrationRead]:
+    """Toutes les salles, actives **et** archivées. Réservé aux administrateurs.
+
+    **Déclarée avant `/{id_salle}`, et l'ordre n'est pas cosmétique** : la
+    route paramétrée capterait `administration` pour l'interpréter comme un
+    identifiant. Même précaution que `GET /produits/administration`.
+    """
+    salles = SalleService(db).lister_pour_administration()
+    return [SalleAdministrationRead.model_validate(s) for s in salles]
 
 
 @router.get("/{id_salle}", response_model=SalleRead, summary="Obtenir une salle")

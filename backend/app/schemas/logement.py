@@ -1,5 +1,6 @@
 """Schemas Pydantic de l'entité LOGEMENT."""
 
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -68,3 +69,14 @@ class LogementRead(BaseModel):
     #: avis actif n'existe, jamais `0` : ce serait une note valide.
     note_moyenne: Decimal | None = None
     nombre_avis: int = 0
+
+
+class LogementAdministrationRead(LogementRead):
+    """Logement en sortie des listes d'**administration**, archives comprises.
+
+    Schema distinct de `LogementRead` — même raisonnement que
+    `ProduitAdministrationRead`.
+    """
+
+    #: `None` si le logement est actif, horodatage de l'archivage sinon.
+    supprime_le: datetime | None = None

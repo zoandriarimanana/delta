@@ -239,3 +239,11 @@ class SessionFormationService:
         session = self.obtenir(id_session)
         self.sessions.delete(session)
         self.db.commit()
+
+    def lister_pour_administration(self) -> Sequence[SessionFormation]:
+        """Retourne **toutes** les sessions, actives et archivées.
+
+        Réservé à l'administration, même raisonnement que
+        `SalleService.lister_pour_administration`.
+        """
+        return self.sessions.list(inclure_supprimes=True)

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import PersonnelAdministrateur
 from app.schemas.domaine_formation import (
+    DomaineFormationAdministrationRead,
     DomaineFormationCreate,
     DomaineFormationRead,
     DomaineFormationUpdate,
@@ -35,6 +36,24 @@ def lister(db: SessionBase) -> list[DomaineFormationRead]:
     """Domaines de formation. Public."""
     domaines = DomaineFormationService(db).lister()
     return [DomaineFormationRead.model_validate(d) for d in domaines]
+
+
+@router.get(
+    "/administration",
+    response_model=list[DomaineFormationAdministrationRead],
+    summary="Lister les domaines pour l'administration, archives comprises",
+)
+def lister_pour_administration(
+    admin: PersonnelAdministrateur, db: SessionBase
+) -> list[DomaineFormationAdministrationRead]:
+    """Tous les domaines, actifs **et** archivés. Réservé aux administrateurs.
+
+    **Déclarée avant `/{id_domaine}`, et l'ordre n'est pas cosmétique** : la
+    route paramétrée capterait `administration` pour l'interpréter comme un
+    identifiant. Même précaution que `GET /produits/administration`.
+    """
+    domaines = DomaineFormationService(db).lister_pour_administration()
+    return [DomaineFormationAdministrationRead.model_validate(d) for d in domaines]
 
 
 @router.get(

@@ -11,7 +11,12 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import PersonnelAdministrateur
-from app.schemas.formation import FormationCreate, FormationRead, FormationUpdate
+from app.schemas.formation import (
+    FormationAdministrationRead,
+    FormationCreate,
+    FormationRead,
+    FormationUpdate,
+)
 from app.services.avis_service import AvisService
 from app.services.formation_service import FormationService
 
@@ -35,6 +40,24 @@ def lister(
     """
     formations = FormationService(db).lister(id_domaine)
     return [FormationRead.model_validate(f) for f in formations]
+
+
+@router.get(
+    "/administration",
+    response_model=list[FormationAdministrationRead],
+    summary="Lister les formations pour l'administration, archives comprises",
+)
+def lister_pour_administration(
+    admin: PersonnelAdministrateur, db: SessionBase
+) -> list[FormationAdministrationRead]:
+    """Toutes les formations, actives **et** archivées. Réservé aux administrateurs.
+
+    **Déclarée avant `/{id_formation}`, et l'ordre n'est pas cosmétique** : la
+    route paramétrée capterait `administration` pour l'interpréter comme un
+    identifiant. Même précaution que `GET /produits/administration`.
+    """
+    formations = FormationService(db).lister_pour_administration()
+    return [FormationAdministrationRead.model_validate(f) for f in formations]
 
 
 @router.get(
@@ -96,3 +119,19 @@ def supprimer(
 ) -> None:
     """Archive la ligne. Aucun `DELETE` SQL n'est émis."""
     FormationService(db).supprimer(id_formation)
+
+
+@router.post(
+    "/{id_formation}/restauration",
+    response_model=FormationRead,
+    summary="Restaurer une formation archivée",
+)
+def restaurer(
+    id_formation: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> FormationRead:
+    """Réactive une ligne archivée. Idempotent.
+
+    Manquait par rapport à `SALLE`/`LOGEMENT`/`DOMAINE_FORMATION` — aucune
+    unicité ne peut la faire échouer, `FORMATION` n'en porte aucune.
+    """
+    return FormationRead.model_validate(FormationService(db).restaurer(id_formation))

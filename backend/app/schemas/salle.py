@@ -1,5 +1,6 @@
 """Schemas Pydantic de l'entité SALLE."""
 
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -99,3 +100,15 @@ class SalleRead(BaseModel):
     #: actif n'existe, jamais `0` : ce serait une note valide.
     note_moyenne: Decimal | None = None
     nombre_avis: int = 0
+
+
+class SalleAdministrationRead(SalleRead):
+    """Salle en sortie des listes d'**administration**, archives comprises.
+
+    Schema distinct de `SalleRead`, et non un champ optionnel ajouté à
+    celui-ci : rien n'oblige à publier la date d'archivage d'une salle à un
+    visiteur anonyme. Même raisonnement que `ProduitAdministrationRead`.
+    """
+
+    #: `None` si la salle est active, horodatage de l'archivage sinon.
+    supprime_le: datetime | None = None

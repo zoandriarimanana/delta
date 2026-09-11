@@ -1,6 +1,6 @@
 """Schemas Pydantic de l'entité SESSION_FORMATION."""
 
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
@@ -88,3 +88,14 @@ class SessionFormationRead(BaseModel):
     id_formation: int
     #: `None` tant qu'aucun formateur n'est affecté.
     formateur: FormateurPublic | None = None
+
+
+class SessionFormationAdministrationRead(SessionFormationRead):
+    """Session en sortie des listes d'**administration**, archives comprises.
+
+    Schema distinct de `SessionFormationRead` — même raisonnement que
+    `ProduitAdministrationRead`.
+    """
+
+    #: `None` si la session est active, horodatage de l'archivage sinon.
+    supprime_le: datetime | None = None
