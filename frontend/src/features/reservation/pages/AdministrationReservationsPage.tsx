@@ -6,10 +6,14 @@
  * côté serveur.
  *
  * **Un tableau, pas des cartes** : on y compare des lignes, comme
- * `AdministrationPersonnelPage`. **Une seule page, actions en ligne** — pas
- * de fiche séparée : les deux actions (`Marquer honorée`, `Annuler`) sont de
- * simples transitions de statut, pas des écritures qui justifient un écran
- * dédié.
+ * `AdministrationPersonnelPage`. Les deux actions (`Marquer honorée`,
+ * `Annuler`) restent **aussi** disponibles en ligne, pour l'action rapide —
+ * une fiche existe désormais (`ReservationDetailAdministrationPage`, lien
+ * « Voir le détail ») pour le détail complet de la cible (image, capacité,
+ * tarifs…), qu'une cellule de tableau ne peut pas porter. Les deux vues
+ * partagent la même condition d'affichage des actions
+ * (`peutMarquerHonoree`/`peutAnnuler`, `reservation.service.ts`) — jamais
+ * recalculée deux fois.
  *
  * Le filtre type/statut est **côté client** : `GET
  * /reservations/administration` ne porte aucun paramètre de filtre
@@ -17,6 +21,7 @@
  */
 
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router';
 
 import Bouton from '@/components/ui/Bouton';
 import { formaterDate } from '@/features/commande/commande.service';
@@ -25,7 +30,13 @@ import {
   useActionsReservationAdministration,
   useReservationsAdministration,
 } from '../reservation.administration';
-import { libelleCible, libelleStatut } from '../reservation.service';
+import {
+  imageCible,
+  libelleCible,
+  libelleStatut,
+  peutAnnuler,
+  peutMarquerHonoree,
+} from '../reservation.service';
 import type {
   Reservation,
   StatutReservation,
@@ -124,6 +135,7 @@ export default function AdministrationReservationsPage() {
           <table className="w-full border-collapse rounded-xl bg-white shadow-sm">
             <thead>
               <tr className="border-b border-warm-gray-200 text-left">
+                <th className="px-3 py-2" />
                 <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
                   Client
                 </th>
@@ -173,15 +185,15 @@ function LigneReservation({
   marquerHonoree: () => void;
   annuler: () => void;
 }) {
-  // Une réservation annulée est un état terminal : aucune des deux actions
-  // ne s'applique (le serveur les refuserait en 409). Honorée peut encore
-  // être annulée — seule sa propre transition redondante n'a plus de sens.
-  const peutHonorer =
-    reservation.statut !== 'Honoree' && reservation.statut !== 'Annulee';
-  const peutAnnuler = reservation.statut !== 'Annulee';
+  const image = imageCible(reservation);
 
   return (
     <tr>
+      <td className="px-3 py-2">
+        {image !== null && (
+          <img src={image} alt="" className="h-10 w-10 rounded object-cover" />
+        )}
+      </td>
       <td className="px-3 py-2 text-sm text-warm-gray-700">
         Client n° {reservation.id_client}
       </td>
@@ -198,17 +210,23 @@ function LigneReservation({
         {libelleStatut(reservation.statut, reservation.type_reservation)}
       </td>
       <td className="px-3 py-2 text-right">
-        <div className="flex justify-end gap-2">
-          {peutHonorer && (
+        <div className="flex justify-end items-center gap-2">
+          {peutMarquerHonoree(reservation) && (
             <Bouton variante="secondaire" onClick={marquerHonoree} disabled={enCours}>
               Marquer honorée
             </Bouton>
           )}
-          {peutAnnuler && (
+          {peutAnnuler(reservation) && (
             <Bouton variante="secondaire" onClick={annuler} disabled={enCours}>
               Annuler
             </Bouton>
           )}
+          <Link
+            to={`/personnel/reservations/${reservation.id_reservation}`}
+            className="text-sm text-terracotta underline"
+          >
+            Voir le détail
+          </Link>
         </div>
       </td>
     </tr>

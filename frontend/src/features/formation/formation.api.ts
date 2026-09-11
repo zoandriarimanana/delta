@@ -37,3 +37,15 @@ export async function recupererSessions(
   });
   return reponse.data;
 }
+
+/**
+ * Une session par son identifiant — porte `id_formation`, nécessaire pour
+ * remonter à la formation depuis une réservation (qui ne porte que
+ * `id_session`, cf. `reservation.service.ts::imageCible`).
+ */
+export async function recupererSession(idSession: number): Promise<SessionFormation> {
+  const reponse = await axiosClient.get<SessionFormation>(
+    `/sessions-formation/${idSession}`
+  );
+  return reponse.data;
+}

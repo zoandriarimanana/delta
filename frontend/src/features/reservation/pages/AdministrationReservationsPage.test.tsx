@@ -9,6 +9,7 @@
 
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -17,6 +18,14 @@ import {
 } from '../reservation.api';
 import type { Reservation } from '../reservation.types';
 import AdministrationReservationsPage from './AdministrationReservationsPage';
+
+function afficher() {
+  return render(
+    <MemoryRouter>
+      <AdministrationReservationsPage />
+    </MemoryRouter>
+  );
+}
 
 vi.mock('../reservation.api');
 
@@ -32,6 +41,7 @@ const EN_ATTENTE: Reservation = {
   id_session: null,
   id_salle: null,
   id_logement: null,
+  id_reservation_hebergement: null,
 };
 
 const HONOREE: Reservation = {
@@ -69,7 +79,7 @@ it('affiche toutes les réservations une fois chargées', async () => {
     ANNULEE,
   ]);
 
-  render(<AdministrationReservationsPage />);
+  afficher();
 
   await screen.findByRole('table');
   // « Client n° {id} » est scindé en deux nœuds de texte par l'interpolation
@@ -89,7 +99,7 @@ describe('filtres côté client', () => {
       HONOREE,
       ANNULEE,
     ]);
-    render(<AdministrationReservationsPage />);
+    afficher();
     await screen.findByRole('table');
     expect(corpsDuTableau().getAllByText('Table').length).toBeGreaterThan(0);
 
@@ -105,7 +115,7 @@ describe('filtres côté client', () => {
       HONOREE,
       ANNULEE,
     ]);
-    render(<AdministrationReservationsPage />);
+    afficher();
     await screen.findByRole('table');
 
     await userEvent.selectOptions(screen.getByLabelText(/^statut$/i), 'Annulée');
@@ -118,7 +128,7 @@ describe('filtres côté client', () => {
 describe('visibilité des actions selon le statut', () => {
   it('propose les deux actions sur une réservation En_attente', async () => {
     vi.mocked(recupererReservationsAdministration).mockResolvedValue([EN_ATTENTE]);
-    render(<AdministrationReservationsPage />);
+    afficher();
 
     await screen.findByRole('table');
     expect(screen.getByRole('button', { name: /marquer honorée/i })).toBeTruthy();
@@ -127,7 +137,7 @@ describe('visibilité des actions selon le statut', () => {
 
   it('ne propose plus « Marquer honorée » sur une réservation déjà Honoree, mais garde Annuler', async () => {
     vi.mocked(recupererReservationsAdministration).mockResolvedValue([HONOREE]);
-    render(<AdministrationReservationsPage />);
+    afficher();
 
     await screen.findByRole('table');
     expect(screen.queryByRole('button', { name: /marquer honorée/i })).toBeNull();
@@ -136,7 +146,7 @@ describe('visibilité des actions selon le statut', () => {
 
   it('ne propose plus aucune action sur une réservation Annulee', async () => {
     vi.mocked(recupererReservationsAdministration).mockResolvedValue([ANNULEE]);
-    render(<AdministrationReservationsPage />);
+    afficher();
 
     await screen.findByRole('table');
     expect(screen.queryByRole('button', { name: /marquer honorée/i })).toBeNull();
@@ -152,7 +162,7 @@ it('clique « Marquer honorée » appelle l’API puis recharge la liste', async
     ...EN_ATTENTE,
     statut: 'Honoree',
   });
-  render(<AdministrationReservationsPage />);
+  afficher();
   await screen.findByRole('button', { name: /marquer honorée/i });
 
   await userEvent.click(screen.getByRole('button', { name: /marquer honorée/i }));
@@ -175,7 +185,7 @@ it('reprend le refus 409 tel quel', async () => {
       },
     },
   });
-  render(<AdministrationReservationsPage />);
+  afficher();
   await screen.findByRole('button', { name: /^annuler$/i });
 
   await userEvent.click(screen.getByRole('button', { name: /^annuler$/i }));

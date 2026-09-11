@@ -36,6 +36,7 @@ const RESERVATION: Reservation = {
   id_session: 12,
   id_salle: null,
   id_logement: null,
+  id_reservation_hebergement: null,
 };
 
 function erreurApi(status: number, detail: string) {

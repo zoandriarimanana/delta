@@ -22,6 +22,12 @@ export interface Reservation {
   id_session: number | null;
   id_salle: number | null;
   id_logement: number | null;
+  /**
+   * Réservation de logement liée à cette formation, `None` si l'hébergement
+   * n'a pas été honoré — aucune chambre n'était libre (cf. `docs/mld.md`).
+   * En sortie seulement : jamais soumis à la création.
+   */
+  id_reservation_hebergement: number | null;
 }
 
 /**

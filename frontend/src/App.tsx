@@ -31,6 +31,7 @@ import AdministrationPersonnelPage from '@/features/personnel/pages/Administrati
 import PersonnelDetailAdministrationPage from '@/features/personnel/pages/PersonnelDetailAdministrationPage';
 import AdministrationReservationsPage from '@/features/reservation/pages/AdministrationReservationsPage';
 import MesReservationsPage from '@/features/reservation/pages/MesReservationsPage';
+import ReservationDetailAdministrationPage from '@/features/reservation/pages/ReservationDetailAdministrationPage';
 import SalleDetailPage from '@/features/salle/pages/SalleDetailPage';
 import SalleListPage from '@/features/salle/pages/SalleListPage';
 import MainLayout from '@/layouts/MainLayout';
@@ -141,6 +142,14 @@ export default function App() {
             element={
               <RoutePersonnel>
                 <AdministrationReservationsPage />
+              </RoutePersonnel>
+            }
+          />
+          <Route
+            path="personnel/reservations/:idReservation"
+            element={
+              <RoutePersonnel>
+                <ReservationDetailAdministrationPage />
               </RoutePersonnel>
             }
           />
