@@ -342,3 +342,160 @@ def test_modification_partielle(
     assert reponse.status_code == 200
     assert reponse.json()["prix"] == "900000.00"
     assert reponse.json()["niveau"] == "Débutant"
+
+
+def test_formation_archivage_puis_invisibilite(
+    client_http: TestClient, entete_admin: dict[str, str], id_domaine: int
+) -> None:
+    creee = client_http.post(
+        FORMATIONS, json=_formation(id_domaine), headers=entete_admin
+    ).json()
+
+    assert (
+        client_http.delete(
+            f"{FORMATIONS}/{creee['id_formation']}", headers=entete_admin
+        ).status_code
+        == 204
+    )
+    assert client_http.get(f"{FORMATIONS}/{creee['id_formation']}").status_code == 404
+
+
+def test_formation_restauration(
+    client_http: TestClient, entete_admin: dict[str, str], id_domaine: int
+) -> None:
+    """Route ajoutée par ce chantier — manquait par rapport à `DOMAINES`."""
+    creee = client_http.post(
+        FORMATIONS, json=_formation(id_domaine), headers=entete_admin
+    ).json()
+    client_http.delete(f"{FORMATIONS}/{creee['id_formation']}", headers=entete_admin)
+
+    reponse = client_http.post(
+        f"{FORMATIONS}/{creee['id_formation']}/restauration", headers=entete_admin
+    )
+
+    assert reponse.status_code == 200
+    assert client_http.get(f"{FORMATIONS}/{creee['id_formation']}").status_code == 200
+
+
+def test_formation_restauration_est_idempotente(
+    client_http: TestClient, entete_admin: dict[str, str], id_domaine: int
+) -> None:
+    """Aucune unicité ne peut la faire échouer, contrairement à `DOMAINES`."""
+    creee = client_http.post(
+        FORMATIONS, json=_formation(id_domaine), headers=entete_admin
+    ).json()
+    client_http.delete(f"{FORMATIONS}/{creee['id_formation']}", headers=entete_admin)
+    client_http.post(
+        f"{FORMATIONS}/{creee['id_formation']}/restauration", headers=entete_admin
+    )
+
+    reponse = client_http.post(
+        f"{FORMATIONS}/{creee['id_formation']}/restauration", headers=entete_admin
+    )
+
+    assert reponse.status_code == 200
+
+
+def test_formation_restauration_refuse_un_salarie_sans_droit(
+    client_http: TestClient,
+    entete_admin: dict[str, str],
+    entete_agent: dict[str, str],
+    id_domaine: int,
+) -> None:
+    creee = client_http.post(
+        FORMATIONS, json=_formation(id_domaine), headers=entete_admin
+    ).json()
+    client_http.delete(f"{FORMATIONS}/{creee['id_formation']}", headers=entete_admin)
+
+    reponse = client_http.post(
+        f"{FORMATIONS}/{creee['id_formation']}/restauration", headers=entete_agent
+    )
+
+    assert reponse.status_code == 403
+
+
+# --- Listes d'administration (archives comprises) ------------------------------
+
+ADMIN_DOMAINES = f"{DOMAINES}/administration"
+ADMIN_FORMATIONS = f"{FORMATIONS}/administration"
+
+
+@pytest.mark.parametrize("chemin", [ADMIN_DOMAINES, ADMIN_FORMATIONS])
+def test_administration_refuse_l_anonyme(client_http: TestClient, chemin: str) -> None:
+    assert client_http.get(chemin).status_code == 401
+
+
+@pytest.mark.parametrize("chemin", [ADMIN_DOMAINES, ADMIN_FORMATIONS])
+def test_administration_refuse_un_jeton_client(
+    client_http: TestClient, entete_client: dict[str, str], chemin: str
+) -> None:
+    assert client_http.get(chemin, headers=entete_client).status_code == 401
+
+
+@pytest.mark.parametrize("chemin", [ADMIN_DOMAINES, ADMIN_FORMATIONS])
+def test_administration_refuse_un_salarie_sans_droit(
+    client_http: TestClient, entete_agent: dict[str, str], chemin: str
+) -> None:
+    assert client_http.get(chemin, headers=entete_agent).status_code == 403
+
+
+@pytest.mark.parametrize("chemin", [ADMIN_DOMAINES, ADMIN_FORMATIONS])
+def test_administration_n_est_pas_captee_par_la_route_parametree(
+    client_http: TestClient, entete_admin: dict[str, str], chemin: str
+) -> None:
+    reponse = client_http.get(chemin, headers=entete_admin)
+
+    assert reponse.status_code == 200
+    assert reponse.status_code != 422
+
+
+def test_administration_domaines_montre_les_archives(
+    client_http: TestClient, entete_admin: dict[str, str], id_domaine: int
+) -> None:
+    client_http.delete(f"{DOMAINES}/{id_domaine}", headers=entete_admin)
+
+    corps = client_http.get(ADMIN_DOMAINES, headers=entete_admin).json()
+
+    archive = next(d for d in corps if d["id_domaine"] == id_domaine)
+    assert archive["supprime_le"] is not None
+
+
+def test_administration_formations_montre_les_archives(
+    client_http: TestClient, entete_admin: dict[str, str], id_domaine: int
+) -> None:
+    creee = client_http.post(
+        FORMATIONS, json=_formation(id_domaine), headers=entete_admin
+    ).json()
+    client_http.delete(f"{FORMATIONS}/{creee['id_formation']}", headers=entete_admin)
+
+    corps = client_http.get(ADMIN_FORMATIONS, headers=entete_admin).json()
+
+    archivee = next(f for f in corps if f["id_formation"] == creee["id_formation"])
+    assert archivee["supprime_le"] is not None
+
+
+def test_administration_formations_montre_aussi_les_actives(
+    client_http: TestClient, entete_admin: dict[str, str], id_domaine: int
+) -> None:
+    creee = client_http.post(
+        FORMATIONS, json=_formation(id_domaine), headers=entete_admin
+    ).json()
+
+    corps = client_http.get(ADMIN_FORMATIONS, headers=entete_admin).json()
+
+    active = next(f for f in corps if f["id_formation"] == creee["id_formation"])
+    assert active["supprime_le"] is None
+
+
+def test_liste_publique_formations_ne_remonte_aucune_archive_ni_le_champ(
+    client_http: TestClient, entete_admin: dict[str, str], id_domaine: int
+) -> None:
+    creee = client_http.post(
+        FORMATIONS, json=_formation(id_domaine), headers=entete_admin
+    ).json()
+    client_http.delete(f"{FORMATIONS}/{creee['id_formation']}", headers=entete_admin)
+
+    publique = client_http.get(FORMATIONS).json()
+
+    assert creee["id_formation"] not in [f["id_formation"] for f in publique]
+    assert all("supprime_le" not in f for f in publique)

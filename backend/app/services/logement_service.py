@@ -107,3 +107,11 @@ class LogementService:
         self.logements.restaurer(logement)
         self.db.commit()
         return logement
+
+    def lister_pour_administration(self) -> Sequence[Logement]:
+        """Retourne **tous** les logements, actifs et archivés.
+
+        Réservé à l'administration, même raisonnement que
+        `SalleService.lister_pour_administration`.
+        """
+        return self.logements.list(inclure_supprimes=True)

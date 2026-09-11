@@ -81,6 +81,22 @@ def entete_admin(db: Session) -> dict[str, str]:
 
 
 @pytest.fixture
+def entete_agent(db: Session) -> dict[str, str]:
+    """Salarié authentifié, sans droit d'administration."""
+    agent = Personnel(
+        nom="Agent",
+        prenom="Test",
+        fonction=FonctionPersonnel.RECEPTIONNISTE,
+        email=f"agent_{uuid4().hex[:8]}@delta.mg",
+        est_administrateur=False,
+        mot_de_passe=hacher_mot_de_passe(MDP),
+    )
+    db.add(agent)
+    db.commit()
+    return authentifier(agent.id_personnel, TypeSujet.PERSONNEL)
+
+
+@pytest.fixture
 def entete_client(db: Session) -> dict[str, str]:
     client = Client(
         type_client=TypeClient.PARTICULIER,
@@ -383,3 +399,64 @@ def test_archiver_une_formation_avec_sessions_retourne_409(
     reponse = client_http.delete(f"{FORMATIONS}/{id_formation}", headers=entete_admin)
 
     assert reponse.status_code == 409
+
+
+# --- Liste d'administration (archives comprises) -------------------------------
+
+ADMIN_SESSIONS = f"{SESSIONS}/administration"
+
+
+def test_administration_refuse_l_anonyme(client_http: TestClient) -> None:
+    assert client_http.get(ADMIN_SESSIONS).status_code == 401
+
+
+def test_administration_refuse_un_jeton_client(
+    client_http: TestClient, entete_client: dict[str, str]
+) -> None:
+    assert client_http.get(ADMIN_SESSIONS, headers=entete_client).status_code == 401
+
+
+def test_administration_refuse_un_salarie_sans_droit(
+    client_http: TestClient, entete_agent: dict[str, str]
+) -> None:
+    assert client_http.get(ADMIN_SESSIONS, headers=entete_agent).status_code == 403
+
+
+def test_administration_n_est_pas_captee_par_la_route_parametree(
+    client_http: TestClient, entete_admin: dict[str, str], id_session: int
+) -> None:
+    reponse = client_http.get(ADMIN_SESSIONS, headers=entete_admin)
+
+    assert reponse.status_code == 200
+    assert reponse.status_code != 422
+
+
+def test_administration_montre_les_archives(
+    client_http: TestClient, entete_admin: dict[str, str], id_session: int
+) -> None:
+    client_http.delete(f"{SESSIONS}/{id_session}", headers=entete_admin)
+
+    corps = client_http.get(ADMIN_SESSIONS, headers=entete_admin).json()
+
+    archivee = next(s for s in corps if s["id_session"] == id_session)
+    assert archivee["supprime_le"] is not None
+
+
+def test_administration_montre_aussi_les_actives(
+    client_http: TestClient, entete_admin: dict[str, str], id_session: int
+) -> None:
+    corps = client_http.get(ADMIN_SESSIONS, headers=entete_admin).json()
+
+    active = next(s for s in corps if s["id_session"] == id_session)
+    assert active["supprime_le"] is None
+
+
+def test_liste_publique_ne_remonte_aucune_archive_ni_le_champ(
+    client_http: TestClient, entete_admin: dict[str, str], id_session: int
+) -> None:
+    client_http.delete(f"{SESSIONS}/{id_session}", headers=entete_admin)
+
+    publique = client_http.get(SESSIONS).json()
+
+    assert id_session not in [s["id_session"] for s in publique]
+    assert all("supprime_le" not in s for s in publique)

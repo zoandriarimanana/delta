@@ -1,5 +1,7 @@
 """Schemas Pydantic de l'entité DOMAINE_FORMATION."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 LONGUEUR_MAX_LIBELLE = 100
@@ -33,3 +35,14 @@ class DomaineFormationRead(BaseModel):
     id_domaine: int
     libelle: str
     description: str | None = None
+
+
+class DomaineFormationAdministrationRead(DomaineFormationRead):
+    """Domaine en sortie des listes d'**administration**, archives comprises.
+
+    Schema distinct de `DomaineFormationRead` — même raisonnement que
+    `ProduitAdministrationRead`.
+    """
+
+    #: `None` si le domaine est actif, horodatage de l'archivage sinon.
+    supprime_le: datetime | None = None

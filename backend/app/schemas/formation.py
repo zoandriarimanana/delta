@@ -1,5 +1,6 @@
 """Schemas Pydantic de l'entité FORMATION."""
 
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -70,3 +71,14 @@ class FormationRead(BaseModel):
     #: niveau de la formation, toutes sessions confondues.
     note_moyenne: Decimal | None = None
     nombre_avis: int = 0
+
+
+class FormationAdministrationRead(FormationRead):
+    """Formation en sortie des listes d'**administration**, archives comprises.
+
+    Schema distinct de `FormationRead` — même raisonnement que
+    `ProduitAdministrationRead`.
+    """
+
+    #: `None` si la formation est active, horodatage de l'archivage sinon.
+    supprime_le: datetime | None = None

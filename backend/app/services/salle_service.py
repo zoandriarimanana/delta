@@ -115,3 +115,14 @@ class SalleService:
         self.salles.restaurer(salle)
         self.db.commit()
         return salle
+
+    def lister_pour_administration(self) -> Sequence[Salle]:
+        """Retourne **toutes** les salles, actives et archivées.
+
+        Réservé à l'administration : les lectures publiques continuent de
+        filtrer les archives, et ce service ne les remplace pas. C'est ce qui
+        rend la restauration atteignable : sans cette lecture, une salle
+        archivée est invisible, et `restaurer` ne peut pas être appelé faute
+        de savoir sur quoi.
+        """
+        return self.salles.list(inclure_supprimes=True)

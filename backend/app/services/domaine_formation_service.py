@@ -123,3 +123,11 @@ class DomaineFormationService:
                 ) from erreur
             raise
         return domaine
+
+    def lister_pour_administration(self) -> Sequence[DomaineFormation]:
+        """Retourne **tous** les domaines, actifs et archivés.
+
+        Réservé à l'administration, même raisonnement que
+        `SalleService.lister_pour_administration`.
+        """
+        return self.domaines.list(inclure_supprimes=True)

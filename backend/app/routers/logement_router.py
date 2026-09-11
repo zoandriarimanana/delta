@@ -16,7 +16,12 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import PersonnelAdministrateur
 from app.models.logement import StatutLogement
-from app.schemas.logement import LogementCreate, LogementRead, LogementUpdate
+from app.schemas.logement import (
+    LogementAdministrationRead,
+    LogementCreate,
+    LogementRead,
+    LogementUpdate,
+)
 from app.services.avis_service import AvisService
 from app.services.logement_service import LogementService
 
@@ -44,6 +49,24 @@ def lister(
     """
     logements = LogementService(db).lister(statut, capacite_minimale)
     return [LogementRead.model_validate(item) for item in logements]
+
+
+@router.get(
+    "/administration",
+    response_model=list[LogementAdministrationRead],
+    summary="Lister les logements pour l'administration, archives comprises",
+)
+def lister_pour_administration(
+    admin: PersonnelAdministrateur, db: SessionBase
+) -> list[LogementAdministrationRead]:
+    """Tous les logements, actifs **et** archivés. Réservé aux administrateurs.
+
+    **Déclarée avant `/{id_logement}`, et l'ordre n'est pas cosmétique** : la
+    route paramétrée capterait `administration` pour l'interpréter comme un
+    identifiant. Même précaution que `GET /produits/administration`.
+    """
+    logements = LogementService(db).lister_pour_administration()
+    return [LogementAdministrationRead.model_validate(item) for item in logements]
 
 
 @router.get(

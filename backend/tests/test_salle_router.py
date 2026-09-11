@@ -256,3 +256,70 @@ def test_restauration(client_http: TestClient, entete_admin: dict[str, str]) -> 
 
 def test_obtenir_inconnue_retourne_404(client_http: TestClient) -> None:
     assert client_http.get(f"{SALLES}/99999").status_code == 404
+
+
+# --- Liste d'administration (archives comprises) -------------------------------
+
+ADMIN_SALLES = f"{SALLES}/administration"
+
+
+def test_administration_refuse_l_anonyme(client_http: TestClient) -> None:
+    assert client_http.get(ADMIN_SALLES).status_code == 401
+
+
+def test_administration_refuse_un_jeton_client(
+    client_http: TestClient, entete_client: dict[str, str]
+) -> None:
+    assert client_http.get(ADMIN_SALLES, headers=entete_client).status_code == 401
+
+
+def test_administration_refuse_un_salarie_sans_droit(
+    client_http: TestClient, entete_agent: dict[str, str]
+) -> None:
+    assert client_http.get(ADMIN_SALLES, headers=entete_agent).status_code == 403
+
+
+def test_administration_n_est_pas_captee_par_la_route_parametree(
+    client_http: TestClient, entete_admin: dict[str, str]
+) -> None:
+    """Si `/{id_salle}` était déclarée en premier, `administration` serait
+    interprété comme un identifiant et l'appel donnerait un 422."""
+    reponse = client_http.get(ADMIN_SALLES, headers=entete_admin)
+
+    assert reponse.status_code == 200
+    assert reponse.status_code != 422
+
+
+def test_administration_montre_les_archives(
+    client_http: TestClient, entete_admin: dict[str, str]
+) -> None:
+    creee = client_http.post(SALLES, json=_corps(), headers=entete_admin).json()
+    client_http.delete(f"{SALLES}/{creee['id_salle']}", headers=entete_admin)
+
+    corps = client_http.get(ADMIN_SALLES, headers=entete_admin).json()
+
+    archivee = next(s for s in corps if s["id_salle"] == creee["id_salle"])
+    assert archivee["supprime_le"] is not None
+
+
+def test_administration_montre_aussi_les_actives(
+    client_http: TestClient, entete_admin: dict[str, str]
+) -> None:
+    creee = client_http.post(SALLES, json=_corps(), headers=entete_admin).json()
+
+    corps = client_http.get(ADMIN_SALLES, headers=entete_admin).json()
+
+    active = next(s for s in corps if s["id_salle"] == creee["id_salle"])
+    assert active["supprime_le"] is None
+
+
+def test_liste_publique_ne_remonte_aucune_archive_ni_le_champ(
+    client_http: TestClient, entete_admin: dict[str, str]
+) -> None:
+    creee = client_http.post(SALLES, json=_corps(), headers=entete_admin).json()
+    client_http.delete(f"{SALLES}/{creee['id_salle']}", headers=entete_admin)
+
+    publique = client_http.get(SALLES).json()
+
+    assert creee["id_salle"] not in [s["id_salle"] for s in publique]
+    assert all("supprime_le" not in s for s in publique)
