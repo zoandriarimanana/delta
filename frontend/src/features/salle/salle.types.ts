@@ -26,3 +26,37 @@ export interface Salle {
   note_moyenne: string | null;
   nombre_avis: number;
 }
+
+/**
+ * Salle en sortie des listes d'**administration**, archives comprises.
+ *
+ * Type distinct de `Salle`, miroir des deux schemas de sortie du serveur :
+ * `supprime_le` n'est exposé que sur la route protégée, et le déclarer sur le
+ * type public inviterait à l'attendre là où il n'arrive jamais.
+ */
+export interface SalleAdministration extends Salle {
+  /** `null` si active, horodatage de l'archivage sinon. */
+  supprime_le: string | null;
+}
+
+/**
+ * Charge utile de création d'une salle.
+ *
+ * Ni `id_salle` ni `supprime_le` : le premier est attribué par la base, le
+ * second est un cycle de vie que seuls l'archivage et la restauration écrivent.
+ */
+export interface SalleEnvoyee {
+  nom: string;
+  capacite: number;
+  tarif_horaire?: string | null;
+  tarif_journee?: string | null;
+  equipements?: string | null;
+}
+
+/**
+ * Charge utile de modification — **partielle**.
+ *
+ * Le serveur n'écrit que les clés présentes : envoyer un objet complet
+ * écraserait des colonnes que l'utilisateur n'a pas touchées.
+ */
+export type SalleModifiee = Partial<SalleEnvoyee>;

@@ -32,6 +32,7 @@ import PersonnelDetailAdministrationPage from '@/features/personnel/pages/Person
 import AdministrationReservationsPage from '@/features/reservation/pages/AdministrationReservationsPage';
 import MesReservationsPage from '@/features/reservation/pages/MesReservationsPage';
 import ReservationDetailAdministrationPage from '@/features/reservation/pages/ReservationDetailAdministrationPage';
+import AdministrationSallesPage from '@/features/salle/pages/AdministrationSallesPage';
 import SalleDetailPage from '@/features/salle/pages/SalleDetailPage';
 import SalleListPage from '@/features/salle/pages/SalleListPage';
 import MainLayout from '@/layouts/MainLayout';
@@ -168,6 +169,16 @@ export default function App() {
             element={
               <RoutePersonnel>
                 <CommandeDetailAdministrationPage />
+              </RoutePersonnel>
+            }
+          />
+          {/* Aucune collision : premier segment `salles`, distinct de tous
+              les chemins `personnel/...` existants. */}
+          <Route
+            path="personnel/salles"
+            element={
+              <RoutePersonnel>
+                <AdministrationSallesPage />
               </RoutePersonnel>
             }
           />
