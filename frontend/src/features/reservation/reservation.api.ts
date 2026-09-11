@@ -39,6 +39,16 @@ export async function recupererReservationsAdministration(): Promise<Reservation
   return reponse.data;
 }
 
+/** Une réservation par son identifiant. Réservé à l'administration. */
+export async function recupererReservationAdministration(
+  idReservation: number
+): Promise<Reservation> {
+  const reponse = await axiosClient.get<Reservation>(
+    `${CHEMIN_ADMINISTRATION}/${idReservation}`
+  );
+  return reponse.data;
+}
+
 /**
  * Marque une réservation `Honoree` ou `Annulee` — réservé à l'administration.
  *

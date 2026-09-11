@@ -21,7 +21,7 @@ import FormulaireAvis from '@/features/avis/components/FormulaireAvis';
 import { useChargementSession, useEstConnecte } from '@/lib/useEstConnecte';
 
 import { recupererReservations } from '../reservation.api';
-import { libelleCible, libelleStatut } from '../reservation.service';
+import { imageCible, libelleCible, libelleStatut } from '../reservation.service';
 import type { Reservation } from '../reservation.types';
 
 export default function MesReservationsPage() {
@@ -119,40 +119,46 @@ function ReservationAvecAvis({ reservation }: { reservation: Reservation }) {
   // (cf. `docs/mld.md`) : ne pas proposer le bouton évite au client de
   // découvrir le refus après avoir rempli le formulaire.
   const proposerAvis = reservation.statut === 'Honoree';
+  const image = imageCible(reservation);
 
   return (
-    <li className="rounded border border-slate-200 bg-white p-4">
-      <h2 className="font-medium text-slate-900">{libelleCible(reservation)}</h2>
-      <p className="mt-1 text-xs text-slate-500">
-        Réservation n° {reservation.id_reservation}
-      </p>
-      <p className="mt-1 text-sm text-slate-600">
-        <time dateTime={reservation.date_debut}>
-          {formaterDate(reservation.date_debut)}
-        </time>
-        {' — '}
-        {reservation.nombre_personnes} personne(s)
-      </p>
-      <p className="mt-1 text-sm text-slate-700">
-        {libelleStatut(reservation.statut, reservation.type_reservation)}
-      </p>
-      {reservation.avec_hebergement && (
-        // Le drapeau dit un souhait, pas une chambre attribuée — la
-        // formulation le reflète (cf. `docs/mld.md`).
-        <p className="mt-1 text-sm text-slate-500">Hébergement demandé</p>
+    <li className="flex gap-4 rounded border border-slate-200 bg-white p-4">
+      {image !== null && (
+        <img src={image} alt="" className="h-16 w-16 shrink-0 rounded object-cover" />
       )}
-      {proposerAvis && !ouvert && (
-        <button
-          type="button"
-          onClick={() => setOuvert(true)}
-          className="mt-1 text-sm text-slate-900 underline"
-        >
-          Déposer un avis
-        </button>
-      )}
-      {ouvert && (
-        <FormulaireAvis cible="Service" idCible={reservation.id_reservation} />
-      )}
+      <div>
+        <h2 className="font-medium text-slate-900">{libelleCible(reservation)}</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          Réservation n° {reservation.id_reservation}
+        </p>
+        <p className="mt-1 text-sm text-slate-600">
+          <time dateTime={reservation.date_debut}>
+            {formaterDate(reservation.date_debut)}
+          </time>
+          {' — '}
+          {reservation.nombre_personnes} personne(s)
+        </p>
+        <p className="mt-1 text-sm text-slate-700">
+          {libelleStatut(reservation.statut, reservation.type_reservation)}
+        </p>
+        {reservation.avec_hebergement && (
+          // Le drapeau dit un souhait, pas une chambre attribuée — la
+          // formulation le reflète (cf. `docs/mld.md`).
+          <p className="mt-1 text-sm text-slate-500">Hébergement demandé</p>
+        )}
+        {proposerAvis && !ouvert && (
+          <button
+            type="button"
+            onClick={() => setOuvert(true)}
+            className="mt-1 text-sm text-slate-900 underline"
+          >
+            Déposer un avis
+          </button>
+        )}
+        {ouvert && (
+          <FormulaireAvis cible="Service" idCible={reservation.id_reservation} />
+        )}
+      </div>
     </li>
   );
 }

@@ -34,6 +34,7 @@ const RESERVATION: Reservation = {
   id_session: null,
   id_salle: null,
   id_logement: null,
+  id_reservation_hebergement: null,
 };
 
 afterEach(() => {

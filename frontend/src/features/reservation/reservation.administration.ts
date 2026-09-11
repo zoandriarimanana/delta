@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import {
   changerStatutAdministration,
+  recupererReservationAdministration,
   recupererReservationsAdministration,
 } from './reservation.api';
 import type { Reservation } from './reservation.types';
@@ -71,6 +72,42 @@ export function useReservationsAdministration(): ReservationsAdministration {
   }, [jeton]);
 
   return { reservations, chargement, erreur, recharger };
+}
+
+export interface ReservationDetailAdministration {
+  reservation: Reservation | null;
+  chargement: boolean;
+  erreur: string | null;
+  recharger: () => void;
+}
+
+/** Une réservation par son identifiant, pour la fiche d'administration. */
+export function useReservationDetailAdministration(
+  idReservation: number
+): ReservationDetailAdministration {
+  const [reservation, setReservation] = useState<Reservation | null>(null);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [jeton, setJeton] = useState(0);
+
+  const recharger = useCallback(() => setJeton((n) => n + 1), []);
+
+  useEffect(() => {
+    let actif = true;
+    setChargement(true);
+    setErreur(null);
+
+    recupererReservationAdministration(idReservation)
+      .then((donnees) => actif && setReservation(donnees))
+      .catch((erreurAppel) => actif && setErreur(messageDAdministration(erreurAppel)))
+      .finally(() => actif && setChargement(false));
+
+    return () => {
+      actif = false;
+    };
+  }, [idReservation, jeton]);
+
+  return { reservation, chargement, erreur, recharger };
 }
 
 export interface ActionsReservationAdministration {
