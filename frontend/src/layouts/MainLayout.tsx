@@ -81,18 +81,13 @@ export default function MainLayout() {
           { vers: '/reservations', libelle: 'Mes réservations' },
         ]
       : []),
+    // Un seul lien de repli, pas la navigation complète : depuis le chantier
+    // sidebar (#144, #145), c'est `LayoutPersonnel` qui porte tous les écrans
+    // personnel/*. Sans ce lien, un salarié connecté — `ConnexionPersonnelPage`
+    // redirige vers `/`, la page d'accueil publique — n'aurait aucun moyen de
+    // revenir dans son espace sans taper l'URL à la main.
     ...(personnel
-      ? [
-          // `exact` : sans lui, ce lien resterait actif sur
-          // `/personnel/commandes/administration...` — préfixe partagé
-          // depuis l'ajout du tableau de bord commandes (10.6).
-          { vers: '/personnel/commandes', libelle: 'Prise de commande', exact: true },
-          { vers: '/personnel/catalogue', libelle: 'Catalogue' },
-          { vers: '/personnel/abonnements', libelle: 'Abonnements' },
-          { vers: '/personnel/administration', libelle: 'Personnel' },
-          { vers: '/personnel/reservations', libelle: 'Réservations' },
-          { vers: '/personnel/commandes/administration', libelle: 'Commandes' },
-        ]
+      ? [{ vers: '/personnel/commandes', libelle: 'Espace personnel' }]
       : []),
     { vers: '/panier', libelle: 'Panier', compteur: nombre },
     ...(session ? [] : [{ vers: '/connexion', libelle: 'Connexion' }]),

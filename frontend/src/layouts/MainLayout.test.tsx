@@ -130,6 +130,80 @@ it('ne propose les pages client qu’au client', () => {
   expect(screen.queryByRole('link', { name: /mes réservations/i })).toBeNull();
 });
 
+const LIBELLES_PERSONNEL_OBSOLETES = [
+  'Personnel',
+  'Réservations',
+  'Commandes',
+  'Abonnements',
+  'Catalogue',
+  'Catégories',
+  'Prise de commande',
+];
+
+it('ne propose aucun lien personnel/* à un visiteur', () => {
+  // Régression : ces liens appartenaient à l'ancien header, avant que le
+  // chantier sidebar (#144, #145) ne les déplace dans `LayoutPersonnel` —
+  // jamais retirés d'ici, ils restaient visibles même hors session personnel.
+  afficher();
+
+  for (const libelle of LIBELLES_PERSONNEL_OBSOLETES) {
+    expect(screen.queryByRole('link', { name: libelle })).toBeNull();
+  }
+});
+
+it('ne propose aucun lien personnel/* à un client connecté', () => {
+  definirSession('client');
+
+  afficher();
+
+  for (const libelle of LIBELLES_PERSONNEL_OBSOLETES) {
+    expect(screen.queryByRole('link', { name: libelle })).toBeNull();
+  }
+});
+
+it('n’affiche plus la navigation personnel/* complète à un salarié', () => {
+  definirSession('personnel');
+
+  afficher();
+
+  for (const libelle of LIBELLES_PERSONNEL_OBSOLETES) {
+    expect(screen.queryByRole('link', { name: libelle })).toBeNull();
+  }
+});
+
+it('offre un unique lien « Espace personnel » au salarié connecté', () => {
+  // Sans lui, un salarié connecté — `ConnexionPersonnelPage` redirige vers
+  // `/`, la page d'accueil publique — n'aurait aucun moyen de revenir dans
+  // son espace sans taper l'URL à la main.
+  definirSession('personnel');
+
+  afficher();
+
+  const lien = screen.getByRole('link', { name: 'Espace personnel' });
+  expect(lien).toHaveProperty('href', expect.stringContaining('/personnel/commandes'));
+});
+
+it('ne propose « Espace personnel » ni au visiteur ni au client', () => {
+  afficher();
+  expect(screen.queryByRole('link', { name: 'Espace personnel' })).toBeNull();
+
+  definirSession('client');
+  cleanup();
+  afficher();
+  expect(screen.queryByRole('link', { name: 'Espace personnel' })).toBeNull();
+});
+
+it('garde le lien public « Salles » distinct de la route admin', () => {
+  // Attention de nommage explicitement signalée : `/salles` (catalogue
+  // public) ne doit jamais être confondu avec `personnel/salles`
+  // (administration), retiré par ce correctif.
+  afficher();
+
+  const lien = screen.getByRole('link', { name: 'Salles' });
+  expect(lien).toHaveProperty('href', expect.stringContaining('/salles'));
+  expect(lien).not.toHaveProperty('href', expect.stringContaining('/personnel/salles'));
+});
+
 it('se déconnecte sans rechargement : la nav se met à jour, le panier survit', async () => {
   // T0.10 retire le rechargement complet — le magasin réactif doit à lui
   // seul refléter la déconnexion. Le panier, lui, n'est **pas** une donnée de
