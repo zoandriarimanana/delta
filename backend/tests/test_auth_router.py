@@ -147,7 +147,9 @@ def test_connexion_retourne_un_jeton_exploitable(client_http: TestClient) -> Non
     )
 
     assert reponse.status_code == 200
-    assert reponse.json() == {"type": "client"}
+    # `est_administrateur` reste `None` : la notion n'existe pas pour un
+    # CLIENT — voir `SessionActive`.
+    assert reponse.json() == {"type": "client", "est_administrateur": None}
     assert NOM_COOKIE_CSRF in reponse.cookies
     charge_utile = decoder_jeton_acces(reponse.cookies[NOM_COOKIE_SESSION])
     assert charge_utile is not None
