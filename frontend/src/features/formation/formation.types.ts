@@ -14,6 +14,25 @@ export interface DomaineFormation {
   description: string | null;
 }
 
+/**
+ * Domaine en sortie des listes d'**administration**, archives comprises.
+ *
+ * Type distinct de `DomaineFormation`, miroir des deux schemas de sortie du
+ * serveur : `supprime_le` n'est exposé que sur la route protégée, et le
+ * déclarer sur le type public inviterait à l'attendre là où il n'arrive
+ * jamais.
+ */
+export interface DomaineFormationAdministration extends DomaineFormation {
+  /** `null` si actif, horodatage de l'archivage sinon. */
+  supprime_le: string | null;
+}
+
+/** Charge utile de création ou modification d'un domaine. */
+export interface DomaineFormationEnvoye {
+  libelle: string;
+  description?: string | null;
+}
+
 export interface Formation {
   id_formation: number;
   titre: string;
