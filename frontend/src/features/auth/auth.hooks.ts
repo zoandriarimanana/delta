@@ -68,11 +68,14 @@ function useConnexion(
       setEnvoi(true);
       setErreur(null);
       try {
-        await appeler(identifiants);
+        const session = await appeler(identifiants);
         // Le type est connu localement (c'est l'endpoint qu'on vient d'appeler),
         // pas besoin de rappeler `/auth/moi` : le jeton lui-même est déjà posé
         // en cookie par le serveur, cet appel n'a fait que le confirmer.
-        definirSession(type);
+        // `est_administrateur` vient en revanche bien de la réponse — un
+        // client n'en porte jamais (`null` ⇒ `false`), et c'est correct :
+        // la notion ne s'applique qu'au personnel.
+        definirSession(type, session.est_administrateur ?? false);
         return true;
       } catch (erreurAppel) {
         // Rien n'est écrit ni effacé : la session éventuellement en cours reste
@@ -173,9 +176,9 @@ export function useInitialiserSession(): void {
   useEffect(() => {
     let actif = true;
     lireSessionCourante()
-      .then(({ type }) => {
+      .then(({ type, est_administrateur }) => {
         if (actif) {
-          definirSession(type);
+          definirSession(type, est_administrateur ?? false);
         }
       })
       .catch(() => {

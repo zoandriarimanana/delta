@@ -35,6 +35,7 @@ import ReservationDetailAdministrationPage from '@/features/reservation/pages/Re
 import AdministrationSallesPage from '@/features/salle/pages/AdministrationSallesPage';
 import SalleDetailPage from '@/features/salle/pages/SalleDetailPage';
 import SalleListPage from '@/features/salle/pages/SalleListPage';
+import LayoutPersonnel from '@/layouts/LayoutPersonnel';
 import MainLayout from '@/layouts/MainLayout';
 import InitialisationSession from '@/lib/InitialisationSession';
 import RoutePersonnel from '@/lib/RoutePersonnel';
@@ -71,118 +72,61 @@ export default function App() {
           <Route path="reservations" element={<MesReservationsPage />} />
           <Route path="connexion" element={<ConnexionPage />} />
           <Route path="inscription" element={<InscriptionPage />} />
+          {/* Reste sur `MainLayout`, hors de la sidebar `personnel/*`
+              ci-dessous : c'est la porte d'entrée de cet espace, pas
+              l'espace lui-même — une sidebar n'a pas de sens avant qu'une
+              session existe (chantier sidebar, décision actée). */}
           <Route path="personnel/connexion" element={<ConnexionPersonnelPage />} />
-          {/* Garde d'affichage seulement : la protection réelle est
-              `get_current_personnel` côté serveur. */}
-          <Route
-            path="personnel/commandes"
-            element={
-              <RoutePersonnel>
-                <PriseDeCommandePage />
-              </RoutePersonnel>
-            }
-          />
-          <Route
-            path="personnel/catalogue"
-            element={
-              <RoutePersonnel>
-                <AdministrationProduitsPage />
-              </RoutePersonnel>
-            }
-          />
-          <Route
-            path="personnel/categories"
-            element={
-              <RoutePersonnel>
-                <AdministrationCategoriesPage />
-              </RoutePersonnel>
-            }
-          />
+          <Route path="*" element={<NonTrouveePage />} />
+        </Route>
+
+        {/* Route parente unique pour tout l'espace personnel/* (hors
+            connexion, ci-dessus) : une seule garde `RoutePersonnel` au lieu
+            d'une répétition par route, et `LayoutPersonnel` (sidebar) plutôt
+            que `MainLayout`. Les 11 routes suivantes sont déclarées en
+            chemins relatifs à `personnel`. */}
+        <Route
+          path="personnel"
+          element={
+            <RoutePersonnel>
+              <LayoutPersonnel />
+            </RoutePersonnel>
+          }
+        >
+          <Route path="commandes" element={<PriseDeCommandePage />} />
+          <Route path="catalogue" element={<AdministrationProduitsPage />} />
+          <Route path="categories" element={<AdministrationCategoriesPage />} />
           {/* Déclarée avant la route paramétrée : même précaution que
               `commandes/invite/:reference` avant `commandes` — ici les deux
               chemins n'ont de toute façon pas la même forme, mais la
               convention reste de lister du plus spécifique au plus général. */}
+          <Route path="abonnements" element={<AdministrationAbonnementsPage />} />
           <Route
-            path="personnel/abonnements"
-            element={
-              <RoutePersonnel>
-                <AdministrationAbonnementsPage />
-              </RoutePersonnel>
-            }
+            path="abonnements/:idAbonnement"
+            element={<AbonnementDetailAdministrationPage />}
+          />
+          {/* Même précaution : `/administration` avant la route paramétrée. */}
+          <Route path="administration" element={<AdministrationPersonnelPage />} />
+          <Route
+            path="administration/:idPersonnel"
+            element={<PersonnelDetailAdministrationPage />}
+          />
+          <Route path="reservations" element={<AdministrationReservationsPage />} />
+          <Route
+            path="reservations/:idReservation"
+            element={<ReservationDetailAdministrationPage />}
+          />
+          {/* Distincte de `commandes` (prise de commande, Sprint 6) : chemins
+              de longueurs différentes, aucune collision possible. */}
+          <Route
+            path="commandes/administration"
+            element={<AdministrationCommandesPage />}
           />
           <Route
-            path="personnel/abonnements/:idAbonnement"
-            element={
-              <RoutePersonnel>
-                <AbonnementDetailAdministrationPage />
-              </RoutePersonnel>
-            }
+            path="commandes/administration/:idCommande"
+            element={<CommandeDetailAdministrationPage />}
           />
-          {/* Même précaution : `/administration` avant la route paramétrée.
-              Aucune collision avec les routes personnel/ existantes
-              (commandes, catalogue, categories, abonnements) — vérifié avant
-              l'ouverture de cette tâche. */}
-          <Route
-            path="personnel/administration"
-            element={
-              <RoutePersonnel>
-                <AdministrationPersonnelPage />
-              </RoutePersonnel>
-            }
-          />
-          <Route
-            path="personnel/administration/:idPersonnel"
-            element={
-              <RoutePersonnel>
-                <PersonnelDetailAdministrationPage />
-              </RoutePersonnel>
-            }
-          />
-          <Route
-            path="personnel/reservations"
-            element={
-              <RoutePersonnel>
-                <AdministrationReservationsPage />
-              </RoutePersonnel>
-            }
-          />
-          <Route
-            path="personnel/reservations/:idReservation"
-            element={
-              <RoutePersonnel>
-                <ReservationDetailAdministrationPage />
-              </RoutePersonnel>
-            }
-          />
-          {/* Distincte de `personnel/commandes` (prise de commande, Sprint 6) :
-              chemins de longueurs différentes, aucune collision possible. */}
-          <Route
-            path="personnel/commandes/administration"
-            element={
-              <RoutePersonnel>
-                <AdministrationCommandesPage />
-              </RoutePersonnel>
-            }
-          />
-          <Route
-            path="personnel/commandes/administration/:idCommande"
-            element={
-              <RoutePersonnel>
-                <CommandeDetailAdministrationPage />
-              </RoutePersonnel>
-            }
-          />
-          {/* Aucune collision : premier segment `salles`, distinct de tous
-              les chemins `personnel/...` existants. */}
-          <Route
-            path="personnel/salles"
-            element={
-              <RoutePersonnel>
-                <AdministrationSallesPage />
-              </RoutePersonnel>
-            }
-          />
-          <Route path="*" element={<NonTrouveePage />} />
+          <Route path="salles" element={<AdministrationSallesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

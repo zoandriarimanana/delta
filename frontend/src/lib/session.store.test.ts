@@ -25,7 +25,11 @@ describe('lireSession', () => {
   it('definirSession pose le type et lève chargement', () => {
     definirSession('personnel');
 
-    expect(lireSession()).toEqual({ type: 'personnel', chargement: false });
+    expect(lireSession()).toEqual({
+      type: 'personnel',
+      chargement: false,
+      estAdministrateur: false,
+    });
   });
 
   it('effacerSession retire le type et lève chargement', () => {
@@ -33,7 +37,11 @@ describe('lireSession', () => {
 
     effacerSession();
 
-    expect(lireSession()).toEqual({ type: null, chargement: false });
+    expect(lireSession()).toEqual({
+      type: null,
+      chargement: false,
+      estAdministrateur: false,
+    });
   });
 
   it('definirSession remplace la session existante, y compris d’une autre population', () => {
@@ -42,7 +50,34 @@ describe('lireSession', () => {
     definirSession('client');
     definirSession('personnel');
 
-    expect(lireSession()).toEqual({ type: 'personnel', chargement: false });
+    expect(lireSession()).toEqual({
+      type: 'personnel',
+      chargement: false,
+      estAdministrateur: false,
+    });
+  });
+
+  it('definirSession pose estAdministrateur à false par défaut, sans le demander à l’appelant', () => {
+    // La très grande majorité des appelants — connexion client, la plupart
+    // des tests existants — n'ont jamais eu à connaître ce paramètre avant
+    // le chantier sidebar. Contrôle positif du paramètre optionnel.
+    definirSession('personnel');
+
+    expect(lireSession().estAdministrateur).toBe(false);
+  });
+
+  it('definirSession pose estAdministrateur à true quand demandé explicitement', () => {
+    definirSession('personnel', true);
+
+    expect(lireSession().estAdministrateur).toBe(true);
+  });
+
+  it('effacerSession remet toujours estAdministrateur à false', () => {
+    definirSession('personnel', true);
+
+    effacerSession();
+
+    expect(lireSession().estAdministrateur).toBe(false);
   });
 });
 

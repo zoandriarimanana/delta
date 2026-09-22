@@ -140,7 +140,11 @@ describe('après une inscription réussie', () => {
     await inscrire();
 
     await screen.findByText('page de connexion');
-    expect(lireSession()).toEqual({ type: null, chargement: false });
+    expect(lireSession()).toEqual({
+      type: null,
+      chargement: false,
+      estAdministrateur: false,
+    });
     expect(connecterClient).not.toHaveBeenCalled();
   });
 
@@ -152,7 +156,11 @@ describe('après une inscription réussie', () => {
     await inscrire();
 
     await screen.findByText('page de connexion');
-    expect(lireSession()).toEqual({ type: 'client', chargement: false });
+    expect(lireSession()).toEqual({
+      type: 'client',
+      chargement: false,
+      estAdministrateur: false,
+    });
   });
 });
 
@@ -183,7 +191,11 @@ describe('refus', () => {
 
     await screen.findByRole('alert');
     expect(screen.queryByText('page de connexion')).toBeNull();
-    expect(lireSession()).toEqual({ type: null, chargement: false });
+    expect(lireSession()).toEqual({
+      type: null,
+      chargement: false,
+      estAdministrateur: false,
+    });
   });
 
   it('ne laisse pas fuir une trace technique', async () => {

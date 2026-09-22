@@ -36,11 +36,19 @@ export interface Session {
    * vérification (voir `useChargementSession`, `lib/useEstConnecte.ts`).
    */
   chargement: boolean;
+  /**
+   * Miroir de `SessionActive.est_administrateur` (chantier sidebar) : `false`
+   * pour un client ou un salarié sans ce droit, `true` pour un salarié qui le
+   * porte. **Affichage uniquement** — sert à décider quels liens montrer dans
+   * `LayoutPersonnel`, ne protège rien. La garantie reste, comme partout
+   * ailleurs, le refus 403 du serveur (`get_current_personnel_administrateur`).
+   */
+  estAdministrateur: boolean;
 }
 
 const abonnes = new Set<() => void>();
 
-let instantane: Session = { type: null, chargement: true };
+let instantane: Session = { type: null, chargement: true, estAdministrateur: false };
 
 function notifier(): void {
   abonnes.forEach((f) => f());
@@ -50,15 +58,24 @@ export function lireSession(): Session {
   return instantane;
 }
 
-/** Ouvre une session, en remplaçant celle qui existait éventuellement. */
-export function definirSession(type: TypeSujet): void {
-  instantane = { type, chargement: false };
+/**
+ * Ouvre une session, en remplaçant celle qui existait éventuellement.
+ *
+ * `estAdministrateur` reste **optionnel** (défaut `false`) : la grande
+ * majorité des appelants — connexion client, la plupart des tests — n'ont
+ * jamais eu à s'en soucier avant ce chantier, et les obliger à le fournir
+ * aurait touché une vingtaine de fichiers sans rapport avec la sidebar. Seuls
+ * les appelants qui viennent réellement d'une réponse `SessionActive`
+ * personnel (`useInitialiserSession`, `useConnexionPersonnel`) le passent.
+ */
+export function definirSession(type: TypeSujet, estAdministrateur = false): void {
+  instantane = { type, chargement: false, estAdministrateur };
   notifier();
 }
 
 /** Ferme la session — ou constate qu'aucune n'était ouverte. */
 export function effacerSession(): void {
-  instantane = { type: null, chargement: false };
+  instantane = { type: null, chargement: false, estAdministrateur: false };
   notifier();
 }
 
