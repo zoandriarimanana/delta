@@ -47,6 +47,7 @@ const LIENS_GESTION: Lien[] = [
   { vers: '/personnel/catalogue', libelle: 'Catalogue' },
   { vers: '/personnel/categories', libelle: 'Catégories' },
   { vers: '/personnel/salles', libelle: 'Salles' },
+  { vers: '/personnel/logements', libelle: 'Logements' },
 ];
 
 function classeLien({ isActive }: { isActive: boolean }): string {

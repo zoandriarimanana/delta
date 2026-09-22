@@ -21,6 +21,7 @@ import PriseDeCommandePage from '@/features/commande/pages/PriseDeCommandePage';
 import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
 import FormationDetailPage from '@/features/formation/pages/FormationDetailPage';
 import FormationListPage from '@/features/formation/pages/FormationListPage';
+import AdministrationLogementsPage from '@/features/logement/pages/AdministrationLogementsPage';
 import LogementDetailPage from '@/features/logement/pages/LogementDetailPage';
 import LogementListPage from '@/features/logement/pages/LogementListPage';
 import AdministrationCategoriesPage from '@/features/produit/pages/AdministrationCategoriesPage';
@@ -127,6 +128,7 @@ export default function App() {
             element={<CommandeDetailAdministrationPage />}
           />
           <Route path="salles" element={<AdministrationSallesPage />} />
+          <Route path="logements" element={<AdministrationLogementsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
