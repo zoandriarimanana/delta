@@ -9,8 +9,8 @@
  * `FORMATION`, `SESSION_FORMATION`), comme `formation.types.ts` et
  * `formation.api.ts` le sont déjà : même découpage que le module `produit`
  * (`produit.administration.ts` couvre `PRODUIT` et `CATEGORIE_PRODUIT`). Ce
- * fichier grandit au fil des trois tâches du chantier ; pour l'instant, seule
- * la partie `DOMAINE_FORMATION` existe.
+ * fichier grandit au fil des trois tâches du chantier ; la partie
+ * `SESSION_FORMATION` reste à ajouter.
  *
  * **Aucun droit n'est vérifié ici.** `est_administrateur` n'est lisible nulle
  * part côté client : c'est le serveur qui refuse en 403, et l'écran se
@@ -21,10 +21,16 @@ import { useCallback, useEffect, useState } from 'react';
 
 import {
   archiverDomaine,
+  archiverFormation,
   recupererDomainesAdministration,
+  recupererFormationsAdministration,
   restaurerDomaine,
+  restaurerFormation,
 } from './formation.api';
-import type { DomaineFormationAdministration } from './formation.types';
+import type {
+  DomaineFormationAdministration,
+  FormationAdministration,
+} from './formation.types';
 
 const MESSAGE_PAR_DEFAUT = 'L’opération a échoué. Réessayez dans un instant.';
 
@@ -129,6 +135,113 @@ export function useActionsDomaines(surSucces: () => void): ActionsDomaines {
   return {
     archiverLeDomaine: (id) => executer(() => archiverDomaine(id)),
     restaurerLeDomaine: (id) => executer(() => restaurerDomaine(id)),
+    envoi,
+    erreur,
+  };
+}
+
+// --- FORMATION ------------------------------------------------------------
+
+export interface FormationsAdministration {
+  formations: FormationAdministration[];
+  chargement: boolean;
+  erreur: string | null;
+  /** Rejoue la lecture — après une écriture, la liste doit refléter la base. */
+  recharger: () => void;
+}
+
+/** Charge le catalogue complet des formations, actives **et** archivées. */
+export function useFormationsAdministration(): FormationsAdministration {
+  const [formations, setFormations] = useState<FormationAdministration[]>([]);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [jeton, setJeton] = useState(0);
+
+  const recharger = useCallback(() => setJeton((n) => n + 1), []);
+
+  useEffect(() => {
+    let actif = true;
+    setChargement(true);
+    setErreur(null);
+
+    recupererFormationsAdministration()
+      .then((donnees) => actif && setFormations(donnees))
+      .catch((erreurAppel) => actif && setErreur(messageDAdministration(erreurAppel)))
+      .finally(() => actif && setChargement(false));
+
+    return () => {
+      actif = false;
+    };
+  }, [jeton]);
+
+  return { formations, chargement, erreur, recharger };
+}
+
+export interface FormationDetailAdministration {
+  formation: FormationAdministration | null;
+  chargement: boolean;
+  erreur: string | null;
+  recharger: () => void;
+}
+
+/**
+ * Fiche d'une formation — dérivée de la liste d'administration.
+ *
+ * **Pas de `GET /formations/administration/{id}`** : contrairement à
+ * `ABONNEMENT`, cette route n'existe pas pour `FORMATION`. Appeler
+ * `GET /formations/{id}` (public) à la place échouerait en 404 sur une
+ * formation archivée — exactement le cas que la fiche doit pourtant savoir
+ * afficher (pour l'affordance « Restaurer »). Réutiliser la liste complète
+ * évite ce piège, au prix d'une lecture un peu plus large que nécessaire.
+ */
+export function useFormationDetailAdministration(
+  idFormation: number
+): FormationDetailAdministration {
+  const catalogue = useFormationsAdministration();
+  const formation =
+    catalogue.formations.find((f) => f.id_formation === idFormation) ?? null;
+
+  return {
+    formation,
+    chargement: catalogue.chargement,
+    erreur: catalogue.erreur,
+    recharger: catalogue.recharger,
+  };
+}
+
+export interface ActionsFormations {
+  archiverLaFormation: (idFormation: number) => Promise<boolean>;
+  restaurerLaFormation: (idFormation: number) => Promise<boolean>;
+  envoi: boolean;
+  erreur: string | null;
+}
+
+/** Archivage et restauration — voir `useActionsDomaines`, même patron. */
+export function useActionsFormations(surSucces: () => void): ActionsFormations {
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const executer = useCallback(
+    async (appel: () => Promise<unknown>): Promise<boolean> => {
+      setEnvoi(true);
+      setErreur(null);
+      try {
+        await appel();
+        surSucces();
+        return true;
+      } catch (erreurAppel) {
+        setErreur(messageDAdministration(erreurAppel));
+        return false;
+      } finally {
+        setEnvoi(false);
+      }
+    },
+    [surSucces]
+  );
+
+  return {
+    archiverLaFormation: (id) => executer(() => archiverFormation(id)),
+    restaurerLaFormation: (id) => executer(() => restaurerFormation(id)),
     envoi,
     erreur,
   };

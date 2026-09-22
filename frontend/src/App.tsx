@@ -20,6 +20,8 @@ import PanierPage from '@/features/commande/pages/PanierPage';
 import PriseDeCommandePage from '@/features/commande/pages/PriseDeCommandePage';
 import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
 import AdministrationDomainesPage from '@/features/formation/pages/AdministrationDomainesPage';
+import AdministrationFormationsPage from '@/features/formation/pages/AdministrationFormationsPage';
+import FormationDetailAdministrationPage from '@/features/formation/pages/FormationDetailAdministrationPage';
 import FormationDetailPage from '@/features/formation/pages/FormationDetailPage';
 import FormationListPage from '@/features/formation/pages/FormationListPage';
 import AdministrationLogementsPage from '@/features/logement/pages/AdministrationLogementsPage';
@@ -131,6 +133,11 @@ export default function App() {
           <Route path="salles" element={<AdministrationSallesPage />} />
           <Route path="logements" element={<AdministrationLogementsPage />} />
           <Route path="domaines-formation" element={<AdministrationDomainesPage />} />
+          <Route path="formations" element={<AdministrationFormationsPage />} />
+          <Route
+            path="formations/:idFormation"
+            element={<FormationDetailAdministrationPage />}
+          />
         </Route>
       </Routes>
     </BrowserRouter>
