@@ -639,12 +639,39 @@ def test_connexion_personnel_retourne_un_jeton_utilisable(
     )
 
     assert reponse.status_code == 200
-    assert reponse.json() == {"type": "personnel"}
+    assert reponse.json() == {"type": "personnel", "est_administrateur": True}
     # `client_http` gère les `Set-Cookie` comme un vrai navigateur : le cookie
     # de session est déjà posé. Seul le jeton anti-CSRF doit être relu et
     # renvoyé en en-tête — exactement le geste qu'un vrai frontend ferait.
     entete = {"X-CSRF-Token": client_http.cookies[NOM_COOKIE_CSRF]}
     assert client_http.post(PERSONNEL, json=VALIDE, headers=entete).status_code == 201
+
+
+def test_connexion_personnel_porte_est_administrateur_a_faux(
+    client_http: TestClient, db: Session
+) -> None:
+    """**Affichage seulement** (chantier sidebar) : un salarié non-administrateur
+    reçoit explicitement `false`, jamais une absence qui laisserait deviner.
+    Aucun droit ne se déduit de ce champ — voir `SessionActive`."""
+    db.add(
+        Personnel(
+            nom="Rakoto",
+            prenom="Jean",
+            fonction=FonctionPersonnel.RECEPTIONNISTE,
+            email="jean.receptionniste@delta.mg",
+            est_administrateur=False,
+            mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+        )
+    )
+    db.commit()
+
+    reponse = client_http.post(
+        CONNEXION_PERSONNEL,
+        json={"email": "jean.receptionniste@delta.mg", "mot_de_passe": "motdepasse123"},
+    )
+
+    assert reponse.status_code == 200
+    assert reponse.json() == {"type": "personnel", "est_administrateur": False}
 
 
 def test_connexion_personnel_refusee_donne_401(client_http: TestClient) -> None:

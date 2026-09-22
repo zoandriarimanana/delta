@@ -52,8 +52,14 @@ def se_connecter(
 
     `request: Request` est exigé par `@limiter.limit` pour identifier
     l'appelant, pas par la logique métier de cet endpoint.
+
+    **Porte `est_administrateur`, pour l'affichage seulement** (chantier
+    sidebar) — voir `SessionActive`. Ne change rien à l'autorisation : la
+    garantie reste `get_current_personnel_administrateur`.
     """
     personnel = PersonnelAuthService(db).authentifier(identifiants)
     jeton = creer_jeton_acces(personnel.id_personnel, TypeSujet.PERSONNEL)
     poser_cookies_session(response, jeton.jeton, jeton.csrf)
-    return SessionActive(type=TypeSujet.PERSONNEL)
+    return SessionActive(
+        type=TypeSujet.PERSONNEL, est_administrateur=personnel.est_administrateur
+    )

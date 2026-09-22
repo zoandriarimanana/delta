@@ -76,7 +76,8 @@ class SessionActive(BaseModel):
     Depuis T0.10, le jeton ne transite plus dans le corps de la réponse : il
     est posé par le serveur en cookie `httpOnly`, invisible en JS. Ce schema
     ne porte donc plus que ce que le frontend a réellement besoin de savoir —
-    quelle population vient de s'ouvrir une session.
+    quelle population vient de s'ouvrir une session, et depuis le chantier
+    sidebar, si elle porte le droit d'administration.
 
     Volontairement le **même** schema pour la connexion et pour `/auth/moi` :
     les deux répondent à la même question, et deux schemas distincts
@@ -84,3 +85,14 @@ class SessionActive(BaseModel):
     """
 
     type: TypeSujet
+    #: `None` pour un `CLIENT` — la notion n'existe pas pour cette population.
+    #: `True`/`False` pour un `PERSONNEL`.
+    #:
+    #: **Champ d'affichage uniquement, jamais une garde.** Il sert à décider
+    #: quels liens montrer dans l'interface (cf. la sidebar `personnel/*`) ;
+    #: il ne protège rien. La garantie reste, comme partout ailleurs,
+    #: `get_current_personnel_administrateur` côté serveur — un client qui
+    #: modifierait cette valeur dans sa requête (elle n'en fait d'ailleurs
+    #: partie sur aucun endpoint d'écriture) n'obtiendrait toujours qu'un 403
+    #: à la première tentative d'écriture réservée aux administrateurs.
+    est_administrateur: bool | None = None
