@@ -37,7 +37,10 @@ async function soumettre(email = 'chef@delta.mg', motDePasse = 'motdepasse') {
 
 beforeEach(() => {
   effacerSession();
-  vi.mocked(connecterPersonnel).mockResolvedValue({ type: 'personnel' });
+  vi.mocked(connecterPersonnel).mockResolvedValue({
+    type: 'personnel',
+    est_administrateur: false,
+  });
 });
 
 afterEach(() => {
@@ -55,7 +58,11 @@ describe('connexion réussie', () => {
     await soumettre();
 
     await waitFor(() =>
-      expect(lireSession()).toEqual({ type: 'personnel', chargement: false })
+      expect(lireSession()).toEqual({
+        type: 'personnel',
+        chargement: false,
+        estAdministrateur: false,
+      })
     );
   });
 
@@ -85,7 +92,11 @@ describe('refus', () => {
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toEqual({ type: null, chargement: false });
+    expect(lireSession()).toEqual({
+      type: null,
+      chargement: false,
+      estAdministrateur: false,
+    });
   });
 
   it('laisse intacte une session client déjà valide', async () => {
@@ -103,7 +114,11 @@ describe('refus', () => {
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toEqual({ type: 'client', chargement: false });
+    expect(lireSession()).toEqual({
+      type: 'client',
+      chargement: false,
+      estAdministrateur: false,
+    });
   });
 
   it('laisse intacte une session personnel déjà valide', async () => {
@@ -118,7 +133,11 @@ describe('refus', () => {
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toEqual({ type: 'personnel', chargement: false });
+    expect(lireSession()).toEqual({
+      type: 'personnel',
+      chargement: false,
+      estAdministrateur: false,
+    });
   });
 
   it('remplace la session client au moment où la connexion réussit', async () => {
@@ -130,7 +149,11 @@ describe('refus', () => {
     await soumettre();
 
     await waitFor(() =>
-      expect(lireSession()).toEqual({ type: 'personnel', chargement: false })
+      expect(lireSession()).toEqual({
+        type: 'personnel',
+        chargement: false,
+        estAdministrateur: false,
+      })
     );
   });
 

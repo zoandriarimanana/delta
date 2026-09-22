@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { definirSession, effacerSession } from './session.store';
 import {
   useChargementSession,
+  useEstAdministrateur,
   useEstConnecte,
   useEstPersonnelConnecte,
   useSession,
@@ -54,4 +55,16 @@ it('useChargementSession reflète l’état de chargement du magasin', () => {
 
   definirSession('client');
   expect(renderHook(() => useChargementSession()).result.current).toBe(false);
+});
+
+it('useEstAdministrateur est faux par défaut, y compris pour un salarié connecté', () => {
+  definirSession('personnel');
+
+  expect(renderHook(() => useEstAdministrateur()).result.current).toBe(false);
+});
+
+it('useEstAdministrateur reflète le droit porté par la session', () => {
+  definirSession('personnel', true);
+
+  expect(renderHook(() => useEstAdministrateur()).result.current).toBe(true);
 });

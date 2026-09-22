@@ -24,6 +24,16 @@ export type TypeSujet = 'client' | 'personnel';
  */
 export interface SessionActive {
   type: TypeSujet;
+  /**
+   * `null` pour un `CLIENT` — la notion n'existe pas pour cette population.
+   * `true`/`false` pour un `PERSONNEL`.
+   *
+   * **Affichage uniquement, jamais une garde.** Sert à décider quels liens
+   * montrer dans `LayoutPersonnel` (chantier sidebar) ; ne protège rien. La
+   * garantie reste, côté serveur, `get_current_personnel_administrateur` —
+   * ce champ n'est d'ailleurs accepté par aucun endpoint d'écriture.
+   */
+  est_administrateur: boolean | null;
 }
 
 /** Identifiants de connexion, communs aux deux populations. */

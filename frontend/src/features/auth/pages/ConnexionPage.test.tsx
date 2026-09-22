@@ -47,7 +47,10 @@ function refus() {
 
 beforeEach(() => {
   effacerSession();
-  vi.mocked(connecterClient).mockResolvedValue({ type: 'client' });
+  vi.mocked(connecterClient).mockResolvedValue({
+    type: 'client',
+    est_administrateur: null,
+  });
 });
 
 afterEach(() => {
@@ -63,7 +66,11 @@ describe('connexion réussie', () => {
     await soumettre();
 
     await waitFor(() =>
-      expect(lireSession()).toEqual({ type: 'client', chargement: false })
+      expect(lireSession()).toEqual({
+        type: 'client',
+        chargement: false,
+        estAdministrateur: false,
+      })
     );
   });
 
@@ -92,7 +99,11 @@ describe('refus', () => {
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toEqual({ type: null, chargement: false });
+    expect(lireSession()).toEqual({
+      type: null,
+      chargement: false,
+      estAdministrateur: false,
+    });
   });
 
   it('laisse intacte une session personnel déjà valide', async () => {
@@ -106,7 +117,11 @@ describe('refus', () => {
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toEqual({ type: 'personnel', chargement: false });
+    expect(lireSession()).toEqual({
+      type: 'personnel',
+      chargement: false,
+      estAdministrateur: false,
+    });
   });
 
   it('laisse intacte une session client déjà valide', async () => {
@@ -117,7 +132,11 @@ describe('refus', () => {
     await soumettre();
 
     await screen.findByRole('alert');
-    expect(lireSession()).toEqual({ type: 'client', chargement: false });
+    expect(lireSession()).toEqual({
+      type: 'client',
+      chargement: false,
+      estAdministrateur: false,
+    });
   });
 
   it('reprend le message uniforme du serveur', async () => {
@@ -168,7 +187,11 @@ describe('remplacement de session', () => {
     await soumettre();
 
     await waitFor(() =>
-      expect(lireSession()).toEqual({ type: 'client', chargement: false })
+      expect(lireSession()).toEqual({
+        type: 'client',
+        chargement: false,
+        estAdministrateur: false,
+      })
     );
   });
 });

@@ -23,10 +23,12 @@
  * appel refusé déclenche l'événement `delta:non-authentifie` de `axiosClient`,
  * auquel le routage réagit.
  *
- * **Ces hooks authentifient, ils n'autorisent pas.** Aucun droit ne se dérive
- * ici : `est_administrateur` n'est porté par aucune réponse de session lisible
- * ici, et le serveur refuse en 403 ce qui doit l'être. Masquer un bouton est
- * une commodité, jamais une garantie.
+ * **Ces hooks authentifient, ils n'autorisent pas.** Depuis le chantier
+ * sidebar, `useEstAdministrateur()` lit bien `est_administrateur` — mais
+ * cette valeur ne fait que décider quels liens **afficher**, jamais ce
+ * qu'une requête peut faire : le serveur refuse en 403 ce qui doit l'être,
+ * quoi que cette valeur vaille côté client. Masquer un lien est une
+ * commodité, jamais une garantie.
  */
 
 import { useSyncExternalStore } from 'react';
@@ -54,6 +56,21 @@ export function useEstConnecte(): boolean {
 /** Vrai si un membre du **personnel** est connecté. */
 export function useEstPersonnelConnecte(): boolean {
   return useSession() === 'personnel';
+}
+
+/**
+ * Vrai si le salarié connecté porte le droit d'administration.
+ *
+ * **Affichage uniquement, jamais une garde.** Sert à `LayoutPersonnel` pour
+ * décider quels liens montrer dans la sidebar — la section « Gestion » doit
+ * être **absente**, pas grisée, pour un salarié qui ne peut pas s'en servir.
+ * Ne protège rien : la garantie reste le refus 403 du serveur
+ * (`get_current_personnel_administrateur`), inchangée par ce champ. Un
+ * client (ou un salarié non connecté) rend systématiquement `false`, comme
+ * `lireSession().estAdministrateur` le vaut par défaut.
+ */
+export function useEstAdministrateur(): boolean {
+  return useSyncExternalStore(abonnerALaSession, () => lireSession().estAdministrateur);
 }
 
 /**
