@@ -19,6 +19,7 @@ import HistoriqueCommandesPage from '@/features/commande/pages/HistoriqueCommand
 import PanierPage from '@/features/commande/pages/PanierPage';
 import PriseDeCommandePage from '@/features/commande/pages/PriseDeCommandePage';
 import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
+import AdministrationDomainesPage from '@/features/formation/pages/AdministrationDomainesPage';
 import FormationDetailPage from '@/features/formation/pages/FormationDetailPage';
 import FormationListPage from '@/features/formation/pages/FormationListPage';
 import AdministrationLogementsPage from '@/features/logement/pages/AdministrationLogementsPage';
@@ -129,6 +130,7 @@ export default function App() {
           />
           <Route path="salles" element={<AdministrationSallesPage />} />
           <Route path="logements" element={<AdministrationLogementsPage />} />
+          <Route path="domaines-formation" element={<AdministrationDomainesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

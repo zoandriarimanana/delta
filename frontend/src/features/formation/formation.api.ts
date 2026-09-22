@@ -8,10 +8,18 @@
 
 import { axiosClient } from '@/lib/axiosClient';
 
-import type { DomaineFormation, Formation, SessionFormation } from './formation.types';
+import type {
+  DomaineFormation,
+  DomaineFormationAdministration,
+  DomaineFormationEnvoye,
+  Formation,
+  SessionFormation,
+} from './formation.types';
+
+const CHEMIN_DOMAINES = '/domaines-formation';
 
 export async function recupererDomaines(): Promise<DomaineFormation[]> {
-  const reponse = await axiosClient.get<DomaineFormation[]>('/domaines-formation');
+  const reponse = await axiosClient.get<DomaineFormation[]>(CHEMIN_DOMAINES);
   return reponse.data;
 }
 
@@ -46,6 +54,70 @@ export async function recupererSessions(
 export async function recupererSession(idSession: number): Promise<SessionFormation> {
   const reponse = await axiosClient.get<SessionFormation>(
     `/sessions-formation/${idSession}`
+  );
+  return reponse.data;
+}
+
+// --- Administration -----------------------------------------------------------
+//
+// Ces appels visent des routes **protégées** par `get_current_personnel_administrateur`.
+// Le frontend ne vérifie aucun droit : `est_administrateur` n'est lisible nulle
+// part côté client, et c'est le serveur qui refuse en 403.
+
+/**
+ * Domaines complets pour l'administration : actifs **et** archivés.
+ *
+ * Route distincte de la liste publique, et non un paramètre : celle-ci est
+ * ouverte à tous, et ne remonte jamais d'archive.
+ */
+export async function recupererDomainesAdministration(): Promise<
+  DomaineFormationAdministration[]
+> {
+  const reponse = await axiosClient.get<DomaineFormationAdministration[]>(
+    `${CHEMIN_DOMAINES}/administration`
+  );
+  return reponse.data;
+}
+
+export async function creerDomaine(
+  donnees: DomaineFormationEnvoye
+): Promise<DomaineFormation> {
+  const reponse = await axiosClient.post<DomaineFormation>(CHEMIN_DOMAINES, donnees);
+  return reponse.data;
+}
+
+export async function modifierDomaine(
+  idDomaine: number,
+  donnees: Partial<DomaineFormationEnvoye>
+): Promise<DomaineFormation> {
+  const reponse = await axiosClient.put<DomaineFormation>(
+    `${CHEMIN_DOMAINES}/${idDomaine}`,
+    donnees
+  );
+  return reponse.data;
+}
+
+/**
+ * **Archive** un domaine — aucun `DELETE` SQL n'est émis.
+ *
+ * Le nom de la fonction le dit, parce que l'écran doit le dire aussi :
+ * `supprimer_definitivement` n'est exposé par aucun endpoint, et promettre un
+ * effacement qui n'a pas lieu serait un mensonge d'interface. 409 si le
+ * domaine porte encore des formations actives.
+ */
+export async function archiverDomaine(idDomaine: number): Promise<void> {
+  await axiosClient.delete(`${CHEMIN_DOMAINES}/${idDomaine}`);
+}
+
+/**
+ * Réactive un domaine archivé.
+ *
+ * **Peut échouer en 409** : le libellé a pu être repris pendant l'archivage,
+ * l'index unique étant partiel — même situation que `restaurerCategorie`.
+ */
+export async function restaurerDomaine(idDomaine: number): Promise<DomaineFormation> {
+  const reponse = await axiosClient.post<DomaineFormation>(
+    `${CHEMIN_DOMAINES}/${idDomaine}/restauration`
   );
   return reponse.data;
 }
