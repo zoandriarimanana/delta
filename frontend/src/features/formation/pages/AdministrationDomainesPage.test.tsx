@@ -102,6 +102,19 @@ describe('accès', () => {
       screen.getByRole('heading', { name: /domaines de formation/i })
     ).toBeDefined();
   });
+
+  it('propose un lien réciproque vers les formations', () => {
+    // Ajouté avec la sous-tâche FORMATION (2/3 du chantier) : absent tant que
+    // cet écran n'existait pas, pour ne pas pointer vers une route morte.
+    definirSession('personnel');
+
+    afficherSousGarde();
+
+    expect(screen.getByRole('link', { name: /retour aux formations/i })).toHaveProperty(
+      'href',
+      expect.stringContaining('/personnel/formations')
+    );
+  });
 });
 
 describe('liste', () => {
