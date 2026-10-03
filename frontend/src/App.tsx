@@ -5,7 +5,7 @@
  * depuis `features/<module>/pages/`.
  */
 
-import { BrowserRouter, Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 
 import AbonnementDetailAdministrationPage from '@/features/abonnement/pages/AbonnementDetailAdministrationPage';
 import AdministrationAbonnementsPage from '@/features/abonnement/pages/AdministrationAbonnementsPage';
@@ -42,6 +42,7 @@ import SalleListPage from '@/features/salle/pages/SalleListPage';
 import LayoutPersonnel from '@/layouts/LayoutPersonnel';
 import MainLayout from '@/layouts/MainLayout';
 import InitialisationSession from '@/lib/InitialisationSession';
+import RouteClient from '@/lib/RouteClient';
 import RoutePersonnel from '@/lib/RoutePersonnel';
 import SessionExpiree from '@/lib/SessionExpiree';
 import AccueilPage from '@/pages/AccueilPage';
@@ -56,32 +57,42 @@ export default function App() {
       <SessionExpiree />
       <InitialisationSession />
       <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<AccueilPage />} />
-          <Route path="formations" element={<FormationListPage />} />
-          <Route path="formations/:idFormation" element={<FormationDetailPage />} />
-          <Route path="salles" element={<SalleListPage />} />
-          <Route path="salles/:idSalle" element={<SalleDetailPage />} />
-          <Route path="logements" element={<LogementListPage />} />
-          <Route path="logements/:idLogement" element={<LogementDetailPage />} />
-          <Route path="produits" element={<ProduitListPage />} />
-          <Route path="produits/:idProduit" element={<ProduitDetailPage />} />
-          <Route path="panier" element={<PanierPage />} />
-          <Route path="commande" element={<TunnelCommandePage />} />
-          {/* Déclarée avant `commandes` : sans quoi rien ne change ici, les
-              deux chemins n'ayant pas le même nombre de segments — mais l'ordre
-              reste plus lisible du plus spécifique au plus général. */}
-          <Route path="commandes/invite/:reference" element={<CommandeInviteePage />} />
-          <Route path="commandes" element={<HistoriqueCommandesPage />} />
-          <Route path="reservations" element={<MesReservationsPage />} />
-          <Route path="connexion" element={<ConnexionPage />} />
-          <Route path="inscription" element={<InscriptionPage />} />
-          {/* Reste sur `MainLayout`, hors de la sidebar `personnel/*`
-              ci-dessous : c'est la porte d'entrée de cet espace, pas
-              l'espace lui-même — une sidebar n'a pas de sens avant qu'une
-              session existe (chantier sidebar, décision actée). */}
-          <Route path="personnel/connexion" element={<ConnexionPersonnelPage />} />
-          <Route path="*" element={<NonTrouveePage />} />
+        {/* `RouteClient` enveloppe tout `MainLayout`, connexion personnel
+            comprise : un salarié connecté n'a plus sa place sur aucune de ces
+            routes, même tapée directement — c'est elle qui tranche, pas une
+            condition dans chaque page. Un client ou un visiteur ne voit aucun
+            changement. */}
+        <Route element={<RouteClient />}>
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<AccueilPage />} />
+            <Route path="formations" element={<FormationListPage />} />
+            <Route path="formations/:idFormation" element={<FormationDetailPage />} />
+            <Route path="salles" element={<SalleListPage />} />
+            <Route path="salles/:idSalle" element={<SalleDetailPage />} />
+            <Route path="logements" element={<LogementListPage />} />
+            <Route path="logements/:idLogement" element={<LogementDetailPage />} />
+            <Route path="produits" element={<ProduitListPage />} />
+            <Route path="produits/:idProduit" element={<ProduitDetailPage />} />
+            <Route path="panier" element={<PanierPage />} />
+            <Route path="commande" element={<TunnelCommandePage />} />
+            {/* Déclarée avant `commandes` : sans quoi rien ne change ici, les
+                deux chemins n'ayant pas le même nombre de segments — mais l'ordre
+                reste plus lisible du plus spécifique au plus général. */}
+            <Route
+              path="commandes/invite/:reference"
+              element={<CommandeInviteePage />}
+            />
+            <Route path="commandes" element={<HistoriqueCommandesPage />} />
+            <Route path="reservations" element={<MesReservationsPage />} />
+            <Route path="connexion" element={<ConnexionPage />} />
+            <Route path="inscription" element={<InscriptionPage />} />
+            {/* Reste sur `MainLayout`, hors de la sidebar `personnel/*`
+                ci-dessous : c'est la porte d'entrée de cet espace, pas
+                l'espace lui-même — une sidebar n'a pas de sens avant qu'une
+                session existe (chantier sidebar, décision actée). */}
+            <Route path="personnel/connexion" element={<ConnexionPersonnelPage />} />
+            <Route path="*" element={<NonTrouveePage />} />
+          </Route>
         </Route>
 
         {/* Route parente unique pour tout l'espace personnel/* (hors
@@ -97,6 +108,10 @@ export default function App() {
             </RoutePersonnel>
           }
         >
+          {/* Porte d'entrée de l'espace : `/personnel` seul (ex. juste après
+              la connexion, ou la redirection de `RouteClient`) atterrit sur
+              le seul lien de la section « Général » de `LayoutPersonnel`. */}
+          <Route index element={<Navigate to="commandes" replace />} />
           <Route path="commandes" element={<PriseDeCommandePage />} />
           <Route path="catalogue" element={<AdministrationProduitsPage />} />
           <Route path="categories" element={<AdministrationCategoriesPage />} />

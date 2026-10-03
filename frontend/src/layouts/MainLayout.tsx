@@ -3,9 +3,11 @@
  *
  * Le compteur de panier et les liens conditionnés à la session sont affichés
  * ici, mais aucune règle métier n'y est écrite : les valeurs viennent de hooks
- * — `usePanier` exposé par `features/commande/`, `useEstConnecte` et
- * `useEstPersonnelConnecte` par `lib/` — que ce layout consomme sans rien
- * savoir de leur implémentation (cf. `docs/architecture.md`).
+ * — `usePanier` exposé par `features/commande/`, `useEstConnecte` par `lib/`
+ * — que ce layout consomme sans rien savoir de leur implémentation (cf.
+ * `docs/architecture.md`). Un salarié connecté n'atteint plus ce layout du
+ * tout, `RouteClient` l'écartant avant qu'il ne soit monté — ce fichier n'a
+ * donc plus besoin de connaître `useEstPersonnelConnecte`.
  *
  * **Une seule source d'entrées pour les deux navigations.** La version large et
  * le menu mobile rendent la *même* liste, calculée une fois : deux listes
@@ -19,7 +21,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router';
 
 import { useDeconnexion } from '@/features/auth/auth.hooks';
 import { usePanier } from '@/features/commande/commande.hooks';
-import { useEstConnecte, useEstPersonnelConnecte } from '@/lib/useEstConnecte';
+import { useEstConnecte } from '@/lib/useEstConnecte';
 
 interface Lien {
   vers: string;
@@ -57,16 +59,11 @@ export default function MainLayout() {
   // l'affiche sans rien savoir de la façon dont le panier est tenu.
   const { nombre } = usePanier();
   // Proposer « Mes commandes » à un visiteur non connecté le mènerait à une
-  // page qu'il ne peut pas utiliser.
+  // page qu'il ne peut pas utiliser. Un salarié connecté n'atteint plus
+  // jamais ce layout — `RouteClient` l'écarte vers `/personnel` avant que
+  // `MainLayout` ne soit monté — donc ce booléen distingue, ici, « client
+  // connecté » de « personne », rien d'autre à exclure.
   const connecte = useEstConnecte();
-  // Un salarié connecté n'est pas un client : les pages client lui répondraient
-  // 401, ce qui effacerait sa session de travail. Les deux états s'excluent —
-  // il n'y a qu'un jeton, et il porte une seule population.
-  const personnel = useEstPersonnelConnecte();
-  // Une session est ouverte, sans préjuger de laquelle : c'est ce qui décide
-  // d'offrir « Connexion » ou « Déconnexion », les deux n'ayant jamais de sens
-  // en même temps.
-  const session = connecte || personnel;
 
   const [menuOuvert, setMenuOuvert] = useState(false);
   const fermerMenu = () => setMenuOuvert(false);
@@ -81,16 +78,8 @@ export default function MainLayout() {
           { vers: '/reservations', libelle: 'Mes réservations' },
         ]
       : []),
-    // Un seul lien de repli, pas la navigation complète : depuis le chantier
-    // sidebar (#144, #145), c'est `LayoutPersonnel` qui porte tous les écrans
-    // personnel/*. Sans ce lien, un salarié connecté — `ConnexionPersonnelPage`
-    // redirige vers `/`, la page d'accueil publique — n'aurait aucun moyen de
-    // revenir dans son espace sans taper l'URL à la main.
-    ...(personnel
-      ? [{ vers: '/personnel/commandes', libelle: 'Espace personnel' }]
-      : []),
     { vers: '/panier', libelle: 'Panier', compteur: nombre },
-    ...(session ? [] : [{ vers: '/connexion', libelle: 'Connexion' }]),
+    ...(connecte ? [] : [{ vers: '/connexion', libelle: 'Connexion' }]),
   ];
 
   function seDeconnecter() {
@@ -133,7 +122,7 @@ export default function MainLayout() {
                 )}
               </NavLink>
             ))}
-            {session && (
+            {connecte && (
               <button
                 type="button"
                 onClick={seDeconnecter}
@@ -173,7 +162,7 @@ export default function MainLayout() {
                 )}
               </NavLink>
             ))}
-            {session && (
+            {connecte && (
               <button
                 type="button"
                 onClick={() => {

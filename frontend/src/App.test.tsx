@@ -8,7 +8,7 @@
  */
 
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { definirSession, effacerSession } from '@/lib/session.store';
 
@@ -18,6 +18,14 @@ function afficherA(chemin: string) {
   window.history.pushState({}, '', chemin);
   return render(<App />);
 }
+
+beforeEach(() => {
+  // `RouteClient` (nouveau) attend la résolution de la vérification initiale
+  // de session avant de trancher — sans ce `beforeEach`, le premier test de
+  // ce fichier hérite de l'état initial du magasin (`chargement: true`,
+  // singleton de process) et resterait bloqué sur un rendu vide.
+  effacerSession();
+});
 
 afterEach(() => {
   cleanup();
@@ -106,5 +114,40 @@ describe('routage', () => {
 
     expect(screen.getByText('Gestion')).toBeDefined();
     expect(screen.getByRole('link', { name: 'Salles' })).toBeDefined();
+  });
+
+  it('un salarié connecté est écarté de la racine vers son espace', () => {
+    // `RouteClient` : un salarié n'a plus sa place sous `MainLayout`, même
+    // sur la page d'accueil publique.
+    definirSession('personnel', false);
+
+    afficherA('/');
+
+    expect(screen.getByRole('link', { name: /prise de commande/i })).toBeDefined();
+    expect(screen.queryByRole('heading', { name: /Bienvenue chez Delta/ })).toBeNull();
+  });
+
+  it('un salarié connecté est écarté d’une URL client tapée directement', () => {
+    definirSession('personnel', false);
+
+    afficherA('/produits');
+
+    expect(screen.getByRole('link', { name: /prise de commande/i })).toBeDefined();
+  });
+
+  it('/personnel seul retombe sur la prise de commande', () => {
+    definirSession('personnel', false);
+
+    afficherA('/personnel');
+
+    expect(screen.getByRole('link', { name: /prise de commande/i })).toBeDefined();
+  });
+
+  it('un client connecté n’est pas écarté de la racine', () => {
+    definirSession('client');
+
+    afficherA('/');
+
+    expect(screen.getByRole('heading', { name: /Bienvenue chez Delta/ })).toBeDefined();
   });
 });

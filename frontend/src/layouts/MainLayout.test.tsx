@@ -111,14 +111,6 @@ it('offre la déconnexion au client connecté', () => {
   expect(screen.queryByRole('link', { name: /^connexion$/i })).toBeNull();
 });
 
-it('offre la déconnexion au personnel connecté', () => {
-  definirSession('personnel');
-
-  afficher();
-
-  expect(screen.getByRole('button', { name: /déconnexion/i })).toBeDefined();
-});
-
 it('ne propose les pages client qu’au client', () => {
   // Un salarié qui ouvrirait « Mes commandes » recevrait un 401, ce qui
   // effacerait sa session de travail.
@@ -171,19 +163,13 @@ it('n’affiche plus la navigation personnel/* complète à un salarié', () => 
   }
 });
 
-it('offre un unique lien « Espace personnel » au salarié connecté', () => {
-  // Sans lui, un salarié connecté — `ConnexionPersonnelPage` redirige vers
-  // `/`, la page d'accueil publique — n'aurait aucun moyen de revenir dans
-  // son espace sans taper l'URL à la main.
-  definirSession('personnel');
-
-  afficher();
-
-  const lien = screen.getByRole('link', { name: 'Espace personnel' });
-  expect(lien).toHaveProperty('href', expect.stringContaining('/personnel/commandes'));
-});
-
-it('ne propose « Espace personnel » ni au visiteur ni au client', () => {
+it('n’affiche aucun lien « Espace personnel » (retiré, devenu mort)', () => {
+  // Le lien de repli posé par #147 n'a plus de raison d'être : `RouteClient`
+  // écarte désormais un salarié connecté vers `/personnel` avant même que ce
+  // layout ne soit monté, donc ce layout ne tourne jamais pour lui. Un
+  // salarié ne peut pas être simulé ici (la garde vit au-dessus, dans
+  // `App.tsx`) — ce test vérifie seulement que le lien a bien disparu du
+  // code, pour les populations qui atteignent réellement ce layout.
   afficher();
   expect(screen.queryByRole('link', { name: 'Espace personnel' })).toBeNull();
 
