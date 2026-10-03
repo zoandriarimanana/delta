@@ -7,6 +7,7 @@ doit être codé en dur ici.
 
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -63,11 +64,49 @@ class Settings(BaseSettings):
     # Sprint 9.5, docs/mld.md).
     ENVIRONMENT: Literal["developpement", "production"] = "production"
 
+    # --- Assistant IA générative (Sprint 12) ---
+    # Interrupteur général, défaut fermé : tant qu'il vaut `false`, aucune
+    # indexation ni aucun appel aux fournisseurs — la CI, qui n'a aucune clé
+    # d'API, tourne dans cet état. Les dépendances du module vivent à part,
+    # dans `requirements-ai.txt`.
+    AI_ENABLED: bool = False
+    # LLM — Groq, API distante. Modèle vérifié disponible sur le compte et
+    # capable d'appel d'outils (nécessaire à l'agentique, 12.7).
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    # Embeddings — API d'inférence Hugging Face, jamais un modèle local : pas
+    # de torch sur l'instance de déploiement. Modèle multilingue (contenu en
+    # français, parfois en malgache), 384 dimensions.
+    HF_API_TOKEN: str = ""
+    LC_EMBEDDING_MODEL: str = (
+        "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
     )
+
+    @model_validator(mode="after")
+    def _cles_ia_presentes_si_active(self) -> "Settings":
+        """Refuse de démarrer avec l'assistant activé mais sans ses clés.
+
+        Même principe que le reste de ce fichier : une configuration
+        incomplète échoue au démarrage, avec un message clair, plutôt qu'à la
+        première question d'un visiteur.
+        """
+        if self.AI_ENABLED:
+            manquantes = [
+                nom
+                for nom in ("GROQ_API_KEY", "HF_API_TOKEN")
+                if not getattr(self, nom).strip()
+            ]
+            if manquantes:
+                raise ValueError(
+                    "AI_ENABLED=true exige " + ", ".join(manquantes) + " dans .env."
+                )
+        return self
 
     @property
     def cors_origins(self) -> list[str]:

@@ -964,6 +964,34 @@ généralement soumise à une obligation de conservation qui prime sur le droit 
 l'effacement. L'anonymisation conserve `id_client` et `type_client`, et ne touche
 à aucun enregistrement lié : ceux-ci gardent leur `#id_client`, désormais anonyme.
 
+## Hors MLD — index vectoriel de l'assistant IA (Sprint 12)
+
+Deux tables existent en base **sans appartenir au MLD** :
+`langchain_pg_collection` et `langchain_pg_embedding`. Elles portent l'index
+vectoriel de l'assistant IA, et sont créées puis gérées par la bibliothèque
+`langchain-postgres` — leur schéma suit la version de cette bibliothèque, pas
+une décision métier. Exception **explicite** à la règle « toute modification du
+schéma passe par ce document et une migration », écrite ici pour qu'elle ne se
+confonde pas avec un oubli.
+
+Ce qui reste sous la règle commune : l'extension **`vector`** (pgvector) dont
+elles dépendent est créée par une migration Alembic (`5f032c8475f6`), jamais
+par la bibliothèque au premier appel. Et `alembic/env.py` exclut ces deux tables
+de la comparaison (`include_object`) — sans quoi `alembic check` conclurait
+qu'il faut les supprimer, vérifié empiriquement.
+
+Ce ne sont **pas des entités** : aucune clé étrangère vers ou depuis le MLD,
+pas de `supprime_le`, et elles ne comptent pas parmi les 21 tables. Elles ne
+contiennent **aucune donnée d'origine** — seulement des fragments de texte
+dérivés du catalogue public, et leurs vecteurs. Elles sont donc
+**reconstructibles à tout moment** depuis la base métier, et une perte de leur
+contenu n'est jamais une perte de donnée.
+
+Ce qu'elles ont le droit de contenir est fixé dans `docs/roadmap.md`, Sprint 12 :
+uniquement ce que l'API expose déjà anonymement, jamais une donnée personnelle,
+jamais une entité archivée, et jamais un prix, un stock ou un nombre de places
+présenté comme un fait — ces valeurs changent à chaque vente.
+
 ## Hypothèse de travail à surveiller
 
 `RESERVATION.#id_client` est actuellement NOT NULL (compte obligatoire pour réserver,

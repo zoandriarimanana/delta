@@ -1,6 +1,13 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    # pgvector/pgvector et non postgres:16-alpine : l'assistant IA (Sprint 12)
+    # exige l'extension `vector`, compilée dans le serveur — un `pip install`
+    # côté backend n'y peut rien. Même version majeure (16), même image qu'en
+    # CI et même version que la base Render visée.
+    # Image Debian (glibc) et non Alpine (musl) : sur un volume existant, les
+    # collations des index texte peuvent différer — lancer
+    # `REINDEX DATABASE delta;` après la bascule, ou recréer le volume.
+    image: pgvector/pgvector:pg16
     container_name: delta-postgres
     restart: unless-stopped
     # Fichier dédié au service (dette technique T0.5, docs/roadmap.md) :

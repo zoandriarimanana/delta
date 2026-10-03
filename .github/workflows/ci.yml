@@ -29,7 +29,10 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        # pgvector : l'extension `vector` de l'assistant IA (Sprint 12) est
+        # créée par une migration, qui échouerait sur `postgres:16-alpine`.
+        # Même image que docker-compose.yml.
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: delta_user
           POSTGRES_PASSWORD: delta_dev_pwd
@@ -61,6 +64,10 @@ jobs:
       # developpement : la CI doit exercer POST /paiements/{id}/simuler-confirmation
       # (fermé par défaut, voir docs/mld.md), pas seulement prouver qu'il refuse.
       ENVIRONMENT: developpement
+      # Assistant IA désactivé, et explicitement : la CI n'a aucune clé d'API
+      # et ne doit jamais appeler Groq ni Hugging Face. Les tests du module
+      # utilisent de faux modèles (Sprint 12, docs/roadmap.md).
+      AI_ENABLED: "false"
 
     defaults:
       run:
@@ -77,7 +84,7 @@ jobs:
       - name: Installer les dépendances
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev]" -r requirements-ai.txt
 
       - name: Lint (ruff)
         run: ruff check app tests alembic

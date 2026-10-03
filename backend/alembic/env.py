@@ -47,9 +47,26 @@ target_metadata = Base.metadata
 # dû être écrite à la main dans sa migration, avec un commentaire le disant.
 # Les contraintes CHECK restent donc, comme avant, la responsabilité de qui
 # écrit la migration.
+#
+# Tables du vector store de l'assistant IA (Sprint 12) : créées et gérées par
+# `langchain-postgres`, qui les fait évoluer avec sa propre version. Aucun
+# modèle ne les déclare — sans ce filtre, `alembic check` conclurait qu'il faut
+# les supprimer, et une autogénération proposerait de le faire. L'extension
+# `vector` dont elles dépendent, elle, est bien créée par une migration.
+PREFIXE_TABLES_HORS_MLD = "langchain_pg_"
+
+
+def inclure_objet(objet, nom, type_, reflete, compare_a) -> bool:
+    """Écarte de la comparaison les tables gérées hors d'Alembic."""
+    if type_ == "table" and reflete and compare_a is None:
+        return not (nom or "").startswith(PREFIXE_TABLES_HORS_MLD)
+    return True
+
+
 OPTIONS_COMPARAISON = {
     "compare_type": True,
     "compare_server_default": True,
+    "include_object": inclure_objet,
     "autogenerate_plugins": [
         "alembic.autogenerate.*",
         "~alembic.autogenerate.checkconstraint_byname",

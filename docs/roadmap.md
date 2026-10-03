@@ -1052,13 +1052,37 @@ nom de collection et modules importés (`app.utils.politesse`,
 Ordre contraint par les dépendances. Une PR par tâche, vers `develop`.
 
 - [ ] **12.0 — Plan** : cette section. Aucune ligne de code avant son merge.
-- [ ] **12.1 — Infrastructure** : image `pgvector/pgvector:pg16` (compose + CI),
+- [x] **12.1 — Infrastructure** : image `pgvector/pgvector:pg16` (compose + CI),
       migration `CREATE EXTENSION IF NOT EXISTS vector`, filtre
       `include_object` dans `alembic/env.py`, `requirements-ai.txt`,
       réglages `AI_ENABLED` (défaut `false`), `GROQ_API_KEY`, `GROQ_MODEL`,
-      `HF_API_TOKEN`, `LC_EMBEDDING_PROVIDER`, `LC_EMBEDDING_MODEL` dans
-      `core/config.py` et `.env.example`. Vérifié : `alembic upgrade head` +
-      `alembic check` sur base vierge.
+      `HF_API_TOKEN`, `LC_EMBEDDING_MODEL` dans `core/config.py` et
+      `.env.example`. Vérifié : `alembic upgrade head` + `alembic check` sur
+      base vierge.
+      — Migration `5f032c8475f6`. **`LC_EMBEDDING_PROVIDER` retiré** du plan :
+      le mode « local » du module d'origine exigeait `torch`, exclu de la cible
+      Render — un seul fournisseur, l'API Hugging Face, donc rien à choisir.
+      — `AI_ENABLED=true` sans `GROQ_API_KEY`/`HF_API_TOKEN` **refuse de
+      démarrer** (validateur de `Settings`), même principe que le reste de la
+      configuration. Modèle Groq par défaut `openai/gpt-oss-120b` : celui du
+      projet d'origine (`llama-3.3-70b-versatile`) n'est pas disponible sur le
+      compte, vérifié par l'API des modèles ; celui-ci répond en français et
+      gère l'appel d'outils (12.7).
+      — `requirements-ai.txt` vérifié par résolution à blanc avant écriture :
+      ni `torch` ni `sentence-transformers`, et aucune dépendance du socle
+      modifiée. Bornes majeures fermées.
+      — `vector` n'est **pas** *trusted*, contrairement à `btree_gist`
+      (`vector.control` 0.8.7) : il faut un rôle propriétaire de la base —
+      cas du conteneur, de la CI et de Render.
+      — Filtre `include_object` prouvé nécessaire : sans lui, `alembic check`
+      échoue sur `remove_table langchain_pg_collection` après création réelle
+      des tables par la bibliothèque ; avec lui, vert. Aller-retour
+      downgrade/upgrade rejoué : `DROP EXTENSION ... CASCADE` retire la
+      colonne `embedding`, pas les tables — sans conséquence, l'index se
+      reconstruit.
+      — Développé contre un **conteneur pgvector séparé** (port 5434), sans
+      toucher au conteneur de développement partagé. Suite complète verte
+      (1204/1204) sur base vierge, `ruff`/`black`/`alembic check` propres.
 - [ ] **12.2 — Socle du module** : création de `app/core/logging.py` et de la
       garde de politesse (`app/ai_langchain/politesse.py` — propre au module,
       pas de `app/utils/` fourre-tout), modèle d'embeddings multilingue,
