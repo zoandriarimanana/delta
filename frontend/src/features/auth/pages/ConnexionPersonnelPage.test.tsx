@@ -11,7 +11,7 @@
 
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { definirSession, effacerSession, lireSession } from '@/lib/session.store';
@@ -64,6 +64,23 @@ describe('connexion réussie', () => {
         estAdministrateur: false,
       })
     );
+  });
+
+  it('navigue vers /personnel, pas vers / (RouteClient l’y écarterait de toute façon)', async () => {
+    render(
+      <MemoryRouter initialEntries={['/personnel/connexion']}>
+        <Routes>
+          <Route path="/personnel/connexion" element={<ConnexionPersonnelPage />} />
+          <Route path="/personnel" element={<p>Espace personnel</p>} />
+          <Route path="/" element={<p>Accueil publique</p>} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await soumettre();
+
+    await waitFor(() => expect(screen.getByText('Espace personnel')).toBeDefined());
+    expect(screen.queryByText('Accueil publique')).toBeNull();
   });
 
   it('appelle l’endpoint personnel et non celui du client', async () => {
