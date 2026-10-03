@@ -4,7 +4,7 @@ Ordre de priorisation : dépendances techniques d'abord, puis cœur transactionn
 puis modules métier du plus généraliste au plus spécifique, paiement en ligne et
 back-office avancé en dernier.
 
-**Sprint courant : Sprint 11.** Mettre à jour cette ligne à chaque changement de sprint.
+**Sprint courant : Sprint 12.** Mettre à jour cette ligne à chaque changement de sprint.
 
 Avant de commencer une tâche : vérifier la Definition of Ready dans `CONTRIBUTING.md`.
 Avant de clore une tâche : vérifier la Definition of Done dans `CONTRIBUTING.md`.
@@ -981,6 +981,120 @@ neuf sprints) :
       pas justifiée par un usage observé. Reste dette active, condition de
       résorption inchangée (voir tableau ci-dessous) : à traiter avant mise
       en prod si l'équipe d'administration grossit.
+
+## Sprint 12 — Assistant IA générative (RAG), client et administration
+
+**Sprint hors roadmap métier initiale, ouvert explicitement** : aucune table du
+MLD n'attendait ce module, et CLAUDE.md interdit de commencer une tâche hors
+roadmap sans le signaler. Il est signalé ici, et décidé avant la première ligne
+de code. Échéance visée : **déploiement le mardi 6 octobre 2026**.
+
+**Point de départ** : `backend/app/ai_langchain/`, un module RAG LangChain déjà
+écrit et validé sur un autre projet du même auteur (EGSS, une faculté) —
+chaîne LCEL, streaming, indexation incrémentale qui ne fait jamais échouer
+l'action d'un administrateur. Le mécanisme est repris tel quel ; **le contenu
+ne l'est pas** : modèles (`Mention`, `Page`, `Actualite`...), prompt système,
+nom de collection et modules importés (`app.utils.politesse`,
+`app.core.logging`) sont propres à EGSS et n'existent pas dans Delta.
+
+### Décisions actées en ouvrant le sprint
+
+- **Frontière des données — la décision dont tout le reste découle.**
+  L'assistant **public** n'indexe que ce que l'API expose déjà anonymement : le
+  catalogue (`PRODUIT`, `CATEGORIE_PRODUIT`, `FORMATION`, `DOMAINE_FORMATION`,
+  `SESSION_FORMATION`, `SALLE`, `LOGEMENT`), avec les **mêmes champs que les
+  schemas de sortie publics** — le formateur au niveau de `FormateurPublic`,
+  jamais d'e-mail ni de téléphone. **Jamais** `CLIENT`, `PERSONNEL`,
+  `COMMANDE`, `PAIEMENT`, `RESERVATION`, ni un `AVIS` nominatif : un index
+  vectoriel public est une lecture anonyme, et `docs/architecture.md` fixe
+  déjà que le critère est la nature de la donnée. Une donnée entrée dans
+  l'index peut ressortir dans n'importe quelle réponse — le prompt système
+  n'est pas une protection.
+- **Les données qui bougent ne sont pas indexées comme des faits.** Prix,
+  `stock_disponible`, `places_restantes` et disponibilités de créneaux sont
+  des sources de vérité serveur (compteurs atomiques, contraintes
+  d'exclusion). Un chunk figé à l'indexation répondrait un prix ou un nombre
+  de places faux dès la première vente. Le texte indexé renvoie vers la fiche ;
+  la valeur exacte viendra d'outils appelant les services existants (12.7).
+- **Le RAG ne voit que l'actif.** Une entité archivée (`supprime_le`) est
+  retirée de l'index, une entité restaurée y revient — même règle que
+  `get_by_id()`/`list()`, qui traitent l'archivé comme inexistant.
+- **Dépendances dans un fichier dédié** `backend/requirements-ai.txt`, pas dans
+  le socle de `pyproject.toml` : le module reste désactivable
+  (`AI_ENABLED=false`) sans alourdir l'installation de base. La CI l'installe
+  aussi, les tests important LangChain (avec des faux modèles, voir 12.2).
+- **Fournisseurs** : LLM Groq (`langchain-groq`), embeddings via l'API
+  d'inférence Hugging Face. Aucun modèle local ni `torch` sur le serveur.
+  Modèle d'embeddings **multilingue** (`paraphrase-multilingual-MiniLM-L12-v2`,
+  384 dimensions) et non `all-MiniLM-L6-v2`, anglophone, pour un contenu en
+  français et parfois en malgache.
+- **Tables vectorielles hors MLD.** `langchain-postgres` crée et gère ses deux
+  tables (`langchain_pg_collection`, `langchain_pg_embedding`) ; leur schéma
+  suit la version de la bibliothèque, pas une décision métier. L'extension
+  `vector`, elle, est créée par une **migration Alembic** (`create_extension`
+  désactivé côté bibliothèque), et `alembic/env.py` exclut `langchain_pg_*` de
+  la comparaison — sans quoi `alembic check` échouerait en CI sur deux tables
+  qu'aucun modèle ne déclare. Documenté dans `docs/mld.md` comme exception
+  explicite.
+- **Image PostgreSQL** : `postgres:16-alpine` ne porte pas pgvector. Passage à
+  `pgvector/pgvector:pg16` (même version majeure), dans `docker-compose.yml`
+  **et** dans la CI. L'image est basée sur Debian (glibc) et non Alpine
+  (musl) : sur un volume de développement existant, les collations des index
+  texte peuvent différer — `REINDEX DATABASE` après bascule, ou recréer le
+  volume (données de seed uniquement).
+- **SRP** : `indexing.py` touche plusieurs entités par nature (il les
+  orchestre, comme un service). Les **constructeurs de texte**, eux, sont
+  propres à une entité : un fichier par entité indexée, sous
+  `app/ai_langchain/textes/`.
+
+### Découpage détaillé validé (12.0 → 12.7)
+
+Ordre contraint par les dépendances. Une PR par tâche, vers `develop`.
+
+- [ ] **12.0 — Plan** : cette section. Aucune ligne de code avant son merge.
+- [ ] **12.1 — Infrastructure** : image `pgvector/pgvector:pg16` (compose + CI),
+      migration `CREATE EXTENSION IF NOT EXISTS vector`, filtre
+      `include_object` dans `alembic/env.py`, `requirements-ai.txt`,
+      réglages `AI_ENABLED` (défaut `false`), `GROQ_API_KEY`, `GROQ_MODEL`,
+      `HF_API_TOKEN`, `LC_EMBEDDING_PROVIDER`, `LC_EMBEDDING_MODEL` dans
+      `core/config.py` et `.env.example`. Vérifié : `alembic upgrade head` +
+      `alembic check` sur base vierge.
+- [ ] **12.2 — Socle du module** : création de `app/core/logging.py` et de la
+      garde de politesse (`app/ai_langchain/politesse.py` — propre au module,
+      pas de `app/utils/` fourre-tout), modèle d'embeddings multilingue,
+      collection `delta_catalogue_v1`, prompt système Delta, code passé à
+      `ruff`/`black`. Tests avec `FakeEmbeddings`/`FakeListChatModel` : la CI
+      n'a aucune clé d'API et ne doit jamais appeler Groq ni Hugging Face.
+- [ ] **12.3 — Indexation Delta** : constructeurs de texte des sept entités du
+      catalogue public (sans prix ni compteurs), `reindex_all`, branchement de
+      l'indexation incrémentale dans les services (création, modification,
+      archivage, restauration, suppression définitive), script
+      `backend/scripts/reindexer_assistant.py`. Tests : une entité archivée
+      n'est jamais retournée par le retriever ; aucune donnée personnelle
+      dans l'index.
+- [ ] **12.4 — API** : `assistant_router.py`/`assistant_service.py`.
+      `POST /assistant/question` et `/assistant/question/flux` (SSE), publics,
+      **rate limités** (`slowapi`, déjà en place depuis T0.6 — chaque appel a
+      un coût chez Groq), longueur de question bornée par le schema, **503
+      lisible** si un fournisseur est indisponible. Côté administration :
+      réindexation complète et statistiques d'index, réservées
+      `PersonnelAdministrateur`. Ligne de dette ajoutée : quotas et coûts des
+      API, et données envoyées à des services tiers.
+- [ ] **12.5 — Frontend client** : module `features/assistant/`
+      (`*.api.ts`, `*.service.ts`, `*.hooks.ts`, `*.types.ts`,
+      `components/`), bulle de discussion montée par `MainLayout` via un hook
+      du module, réponse affichée au fil du flux avec ses sources.
+- [ ] **12.6 — Frontend administration** : page « Assistant IA » dans la
+      sidebar personnel — réindexation, statistiques par type de contenu.
+- [ ] **12.7 — Agentique (après le déploiement du 6 octobre)** : outils
+      LangChain **en lecture seule**, appelant les services existants et
+      jamais du SQL direct — places restantes d'une session, disponibilité
+      d'une salle sur un créneau, prix et stock d'un produit côté client ;
+      requêtes opérationnelles (livraisons `Echouee`, solde d'un abonnement)
+      côté administration, derrière `PersonnelAdministrateur`. **Un agent
+      n'écrit jamais lui-même** : une action se présente comme une
+      proposition que l'utilisateur confirme, puis passe par l'endpoint
+      normal et ses contrôles.
 
 ---
 
