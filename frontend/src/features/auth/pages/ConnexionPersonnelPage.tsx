@@ -31,7 +31,11 @@ export default function ConnexionPersonnelPage() {
           evenement.preventDefault();
           void connecter({ email, mot_de_passe: motDePasse }).then((reussi) => {
             if (reussi) {
-              naviguer('/');
+              // `replace` : cette page de connexion ne doit pas rester dans
+              // l'historique, sans quoi le retour arrière y ramènerait un
+              // salarié déjà connecté — `RouteClient` l'en écarterait de
+              // toute façon, mais autant ne pas l'y renvoyer.
+              naviguer('/personnel', { replace: true });
             }
           });
         }}
