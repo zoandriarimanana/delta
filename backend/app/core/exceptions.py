@@ -43,3 +43,13 @@ class ReferenceInvalide(ErreurMetier):
     envoyé qui ne l'est pas — au même titre qu'un prix négatif. Voir
     `docs/architecture.md`, section « Codes d'erreur : 404 contre 422 ».
     """
+
+
+class ServiceIndisponible(ErreurMetier):
+    """Un fournisseur externe ne répond pas, ou le service est désactivé (HTTP 503).
+
+    Introduite pour l'assistant IA (Sprint 12) : Groq ou Hugging Face peuvent
+    être en panne, hors quota, ou l'assistant désactivé (`AI_ENABLED=false`).
+    Ce n'est la faute ni de la requête (4xx) ni un bogue du serveur (500) :
+    l'appelant peut réessayer plus tard, et le message doit le lui dire.
+    """

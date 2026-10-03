@@ -1083,12 +1083,45 @@ Ordre contraint par les dépendances. Une PR par tâche, vers `develop`.
       — Développé contre un **conteneur pgvector séparé** (port 5434), sans
       toucher au conteneur de développement partagé. Suite complète verte
       (1204/1204) sur base vierge, `ruff`/`black`/`alembic check` propres.
-- [ ] **12.2 — Socle du module** : création de `app/core/logging.py` et de la
+- [x] **12.2 — Socle du module** : création de `app/core/logging.py` et de la
       garde de politesse (`app/ai_langchain/politesse.py` — propre au module,
       pas de `app/utils/` fourre-tout), modèle d'embeddings multilingue,
       collection `delta_catalogue_v1`, prompt système Delta, code passé à
       `ruff`/`black`. Tests avec `FakeEmbeddings`/`FakeListChatModel` : la CI
       n'a aucune clé d'API et ne doit jamais appeler Groq ni Hugging Face.
+      — **Repris du module d'origine** : `llm.py`, `embeddings.py`,
+      `vector_store.py`, la partie générique de l'indexation
+      (`indexation.py`) et la chaîne (`chaine.py`), renommés en français comme
+      le reste du code. **Non repris** : `loaders.py` (fichiers PDF/DOCX
+      téléversés, hors périmètre Delta) et `text_builders.py` (entités EGSS,
+      remplacées en 12.3). Le module d'origine reste intact hors du dépôt.
+      — **Bogue du module d'origine corrigé** : `vector_store` ne convertissait
+      que `postgresql://` vers le driver psycopg 3 ; l'URL de Delta
+      (`postgresql+psycopg2://`) lui serait arrivée inchangée. `postgres://`,
+      la forme fournie par Render, est couvert aussi.
+      — Suppression par **inclusion JSON** (`cmetadata @> ...`) et non par
+      extraction (`->>`), pour profiter de l'index GIN posé par la bibliothèque.
+      Métadonnées `type_contenu` / `id_contenu` : les sources rendues portent
+      désormais l'identifiant, et non le seul type, pour que le frontend puisse
+      renvoyer vers la fiche exacte.
+      — Toute panne d'un fournisseur ressort en **`ServiceIndisponible`**
+      (nouvelle `ErreurMetier`, futur 503 en 12.4) ; en flux, la recherche a
+      lieu avant le premier jeton, à temps pour un vrai 503. Délai maximal de
+      30 s et une seule nouvelle tentative côté Groq — facturé à l'appel.
+      — Garde de politesse en français, malgache et anglais, **stricte** : un
+      seul mot hors vocabulaire et le message part au RAG. Un test a trouvé un
+      vrai bogue au passage (« amin'ny » non reconnu après fusion de
+      l'apostrophe).
+      — Prompt système : réponse uniquement depuis le contexte, **jamais un
+      prix, un stock ou une disponibilité comme une certitude**, et le
+      contexte traité comme de l'information, jamais comme des instructions.
+      — 62 tests (faux modèles, collections de test jetables sur PostgreSQL
+      réel). Vérifié **avec les vraies clés** sur une collection d'essai
+      supprimée ensuite : réponse correcte en français et en malgache, refus
+      d'inventer un prix, flux fonctionnel, ~1,4 s par réponse. Constat
+      reporté en 12.3 : les sources listent tous les fragments remontés, même
+      peu pertinents — un seuil de pertinence sera calibré sur le vrai
+      catalogue. Suite complète verte (1266/1266) sur base vierge.
 - [ ] **12.3 — Indexation Delta** : constructeurs de texte des sept entités du
       catalogue public (sans prix ni compteurs), `reindex_all`, branchement de
       l'indexation incrémentale dans les services (création, modification,
