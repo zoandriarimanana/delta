@@ -370,6 +370,34 @@ exception à cette règle sous prétexte que c'est une image. Réponse
 immédiatement à la même URL, sans dépendre d'un contournement de cache côté
 client.
 
+### Galerie des salles et logements : octets en base, diffusion publique
+
+`PHOTO_BIEN` (voir `docs/mld.md`) suit la photo de profil sur les trois
+contrôles d'upload — type déclaré, taille, octets réels via Pillow — et s'en
+écarte sur deux points, délibérément.
+
+**Stockage en base, pas sur disque.** La photo de profil vit dans
+`Settings.PHOTO_STORAGE_DIR` ; une galerie de bien ne peut pas : le disque
+Render est effacé à chaque redéploiement, et un catalogue qui perd ses photos
+au premier déploiement serait une régression visible de tous les visiteurs.
+`contenu` est un `bytea` chargé en différé : seule la route de diffusion lit
+les octets, une photo à la fois.
+
+**Diffusion publique, en cache long.** Une salle se choisit sur photos avant
+tout compte : la lecture suit le catalogue (public), pas `PERSONNEL`
+(authentifié). `GET /photos-biens/{id}` répond `Cache-Control: public,
+max-age=31536000, immutable` — une photo ne se **remplace** jamais, elle se
+retire puis s'ajoute sous un nouvel identifiant, donc le contenu d'une URL ne
+change pas. La photo de profil, remplacée à URL constante, est au contraire en
+`no-store`.
+
+**Un module `features/galerie/`**, monté par les fiches salle et logement
+sans qu'elles en sachent davantage — même mécanique que
+`FormulaireReservationCreneau`. `GaleriePhotos` pour la fiche publique,
+`GestionGalerie` pour l'administration. Le bien visé est une union
+(`{ salle } | { logement }`) : une galerie à deux biens est inexprimable,
+comme côté base.
+
 ## Frontend — arborescence
 
 ```
@@ -1093,6 +1121,7 @@ chaque redéploiement. Format lu dans les octets, jamais dans le nom.
 | `avis` | AVIS |
 | `paiement` | PAIEMENT |
 | `assistant` | DOCUMENT_CONNAISSANCE (et l'index vectoriel, hors MLD) |
+| `galerie` | PHOTO_BIEN |
 
 Voir `docs/mld.md` pour le détail des colonnes de chaque table.
 Voir `docs/roadmap.md` pour l'ordre de développement de ces modules.

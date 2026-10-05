@@ -1461,6 +1461,47 @@ nommer sa tâche d'origine et sa condition de résorption.
 
 | Sprint 12 (12.4) | **Coûts, quotas et données confiées à des tiers.** Chaque question de l'assistant IA appelle deux services externes : Hugging Face (embeddings de la question) et Groq (génération). Le texte des questions des visiteurs et des extraits du catalogue public leur sont donc transmis. Les comptes actuels sont gratuits, avec des quotas : une fois épuisés, l'assistant répond 503 — proprement, mais sans plus servir personne. Le rate limiting par IP (`10/minute`) protège d'un abus isolé, pas d'un trafic légitime important. Aucune donnée personnelle n'est indexée, mais un visiteur peut en écrire une dans sa question. | **Mesuré en 12.8** : le compte Groq gratuit plafonne `openai/gpt-oss-120b` à **8 000 jetons par minute**, partagés par tous les visiteurs ; une réponse en consomme environ **1 400** (dont ~1 100 de contexte). Soit **5 à 6 réponses par minute pour tout le site** — au-delà, 503 propre (« momentanément indisponible »), constaté en test. Aucun réglage logiciel ne change cet ordre de grandeur. **Avant d'ouvrir l'assistant à un trafic réel** : passer à une offre Groq payante (« Dev Tier ») ou réduire le volume par conception ; suivre la consommation ; mentionner le traitement par des services tiers dans les mentions légales / la politique de confidentialité. |
 
+**Travaux hors sprint : fiches publiques produit, salle et logement (demandes du
+5 octobre 2026).** Deux demandes explicites, hors roadmap, réalisées à part du
+Sprint 12. La seconde **modifie le schéma** — signalé avant de coder.
+
+- [x] **Fiche produit** (`produit`) : grande illustration, description,
+      pastilles de statut (disponibilité, livraison, personnalisation),
+      caractéristiques dont le supplément de personnalisation, sélecteur de
+      quantité borné au stock, confirmation d'ajout avec lien vers le panier.
+      Boutons « Ajouter au panier » et « Retour au catalogue » redessinés.
+      Aucune modification d'API : `PRODUIT` n'a **pas** de photo propre,
+      l'image reste l'illustration de `lib/images.ts`.
+- [x] **Galerie et présentation des salles et logements** (`galerie`,
+      `salle`, `logement`) : plusieurs photos par bien, téléversées par
+      l'administration, et une description longue.
+      — **Schéma** : nouvelle entité `PHOTO_BIEN` et colonne `description` sur
+      `SALLE` et `LOGEMENT` — migration `e2cb623114f8`, `docs/mld.md` à jour.
+      **Octets en base**, pas sur disque : le disque Render est effacé au
+      redéploiement (même raison que `DOCUMENT_CONNAISSANCE`).
+      — **API** : `GET/POST /salles/{id}/photos`, `GET/POST
+      /logements/{id}/photos`, `GET/DELETE /photos-biens/{id}`. Lecture
+      publique, écriture administrateur. Trois contrôles à l'upload (type
+      déclaré, taille, octets via Pillow), 5 Mio et 10 photos par bien. Image
+      servie en cache long `immutable` : une photo ne se remplace jamais à URL
+      constante.
+      — **Fiches publiques** : galerie (flèches, miniatures, plein écran au
+      clavier), description complète, pastilles, et une **explication
+      détaillée du statut** d'un logement (ce que le visiteur peut faire) ou
+      des conditions de location d'une salle. Sans photo, une illustration
+      prend la place — jamais un cadre vide.
+      — **Administration** : champ « Description » dans les deux formulaires,
+      panneau « Photos » sur les deux fiches (ajout avec légende, retrait).
+      — `components/ui/BoutonRetour` partagé par les trois fiches publiques.
+      La description est aussi **indexée par l'assistant**.
+      — Vérifié dans un vrai navigateur sur les données réelles : photos
+      ajoutées par l'écran d'administration puis affichées sur la fiche
+      publique, plein écran, logement en maintenance, mobile. Backend
+      1385/1385 sur base vierge, frontend 692/692, build compris.
+      — **Non traité** : les cartes des listes publiques gardent leur
+      illustration — la liste ne renvoie pas la photo de couverture, et
+      l'ajouter appellerait une requête par carte ou une évolution de l'API.
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère
@@ -1468,3 +1509,5 @@ la roadmap close. Toute table ajoutée au MLD après coup doit immédiatement ê
 ajoutée à un sprint ici — ne jamais laisser une table orpheline.
 
 - `DOCUMENT_CONNAISSANCE` — ajoutée après coup, couverte par le Sprint 12 (12.9).
+- `PHOTO_BIEN` — ajoutée après coup, couverte par les travaux hors sprint du
+  5 octobre 2026 (galerie des salles et logements).

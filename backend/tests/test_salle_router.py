@@ -323,3 +323,29 @@ def test_liste_publique_ne_remonte_aucune_archive_ni_le_champ(
 
     assert creee["id_salle"] not in [s["id_salle"] for s in publique]
     assert all("supprime_le" not in s for s in publique)
+
+
+def test_la_description_se_cree_se_modifie_et_se_lit_publiquement(
+    client_http: TestClient, entete_admin: dict[str, str]
+) -> None:
+    creee = client_http.post(
+        SALLES, json=_corps(description="Lumineuse, vue jardin."), headers=entete_admin
+    ).json()
+    assert creee["description"] == "Lumineuse, vue jardin."
+
+    client_http.put(
+        f"{SALLES}/{creee['id_salle']}",
+        json={"description": "Rénovée en 2026."},
+        headers=entete_admin,
+    )
+    fiche = client_http.get(f"{SALLES}/{creee['id_salle']}").json()
+    assert fiche["description"] == "Rénovée en 2026."
+
+
+def test_une_description_trop_longue_retourne_422(
+    client_http: TestClient, entete_admin: dict[str, str]
+) -> None:
+    reponse = client_http.post(
+        SALLES, json=_corps(description="x" * 4001), headers=entete_admin
+    )
+    assert reponse.status_code == 422

@@ -24,6 +24,8 @@ def construire_texte(salle: Salle) -> str:
     ]
     if salle.equipements:
         lignes.append(f"Équipements : {salle.equipements}")
+    if salle.description:
+        lignes.append(f"Présentation : {salle.description}")
     # Le CHECK de SALLE garantit qu'au moins un tarif est renseigné ; `0.00`
     # est une gratuité décidée, pas une absence (docs/mld.md).
     tarifs = [

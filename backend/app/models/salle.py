@@ -47,5 +47,8 @@ class Salle(SoftDeleteMixin, Base):
     tarif_horaire: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     tarif_journee: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     equipements: Mapped[str | None] = mapped_column(Text)
+    #: Présentation libre, affichée sur la fiche publique. Nullable : une salle
+    #: se loue sans texte, la fiche annonce alors l'absence plutôt qu'un vide.
+    description: Mapped[str | None] = mapped_column(Text)
 
     reservations: Mapped[list[Reservation]] = relationship(back_populates="salle")

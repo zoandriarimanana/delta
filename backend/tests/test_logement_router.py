@@ -333,3 +333,20 @@ def test_liste_publique_ne_remonte_aucune_archive_ni_le_champ(
 
     assert creee["id_logement"] not in [log["id_logement"] for log in publique]
     assert all("supprime_le" not in log for log in publique)
+
+
+def test_la_description_se_cree_se_modifie_et_se_lit_publiquement(
+    client_http: TestClient, entete_admin: dict[str, str]
+) -> None:
+    creee = client_http.post(
+        LOGEMENTS, json=_corps(description="Salle d'eau privée."), headers=entete_admin
+    ).json()
+    assert creee["description"] == "Salle d'eau privée."
+
+    client_http.put(
+        f"{LOGEMENTS}/{creee['id_logement']}",
+        json={"description": "Vue sur le jardin."},
+        headers=entete_admin,
+    )
+    fiche = client_http.get(f"{LOGEMENTS}/{creee['id_logement']}").json()
+    assert fiche["description"] == "Vue sur le jardin."

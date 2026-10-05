@@ -11,6 +11,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 TARIF_MAX_CHIFFRES = 10
 TARIF_DECIMALES = 2
 LONGUEUR_NOM = 100
+#: Borne applicative seulement — la colonne est un `TEXT`. Une fiche se lit,
+#: elle ne doit pas devenir un document.
+LONGUEUR_DESCRIPTION = 4000
 
 
 class SalleCreate(BaseModel):
@@ -41,6 +44,7 @@ class SalleCreate(BaseModel):
         decimal_places=TARIF_DECIMALES,
     )
     equipements: str | None = None
+    description: str | None = Field(default=None, max_length=LONGUEUR_DESCRIPTION)
 
     @model_validator(mode="after")
     def _exiger_au_moins_un_tarif(self) -> "SalleCreate":
@@ -82,6 +86,7 @@ class SalleUpdate(BaseModel):
         decimal_places=TARIF_DECIMALES,
     )
     equipements: str | None = None
+    description: str | None = Field(default=None, max_length=LONGUEUR_DESCRIPTION)
 
 
 class SalleRead(BaseModel):
@@ -95,6 +100,7 @@ class SalleRead(BaseModel):
     tarif_horaire: Decimal | None = None
     tarif_journee: Decimal | None = None
     equipements: str | None = None
+    description: str | None = None
     #: Calculée à la demande sur la fiche salle (`GET /salles/{id}`), jamais
     #: sur la liste — cf. `docs/roadmap.md`, 8.3. `None` tant qu'aucun avis
     #: actif n'existe, jamais `0` : ce serait une note valide.

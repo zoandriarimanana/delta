@@ -247,6 +247,7 @@ def _salle(**kw):
         "equipements": "vidéoprojecteur",
         "tarif_horaire": Decimal("12345.00"),
         "tarif_journee": Decimal("98765.00"),
+        "description": None,
         "supprime_le": None,
     }
     return Objet(**valeurs | kw)
@@ -259,6 +260,14 @@ def test_salle_porte_capacite_equipements_et_tarifs() -> None:
     assert "40 personnes" in texte
     assert "vidéoprojecteur" in texte
     assert "Location à l'heure : 12 345 Ar ; à la journée : 98 765 Ar." in texte
+
+
+def test_la_description_d_une_salle_est_indexee() -> None:
+    """Elle répond aux questions sur l'ambiance ou l'usage, que ni la capacité
+    ni les équipements ne couvrent."""
+    texte = salle.construire_texte(_salle(description="Lumineuse, vue jardin."))
+    assert "Présentation : Lumineuse, vue jardin." in texte
+    assert "Présentation" not in salle.construire_texte(_salle())
 
 
 def test_salle_le_mode_de_location_suit_les_tarifs_renseignes() -> None:
@@ -288,9 +297,15 @@ def _logement(**kw):
         "capacite": 2,
         "tarif_nuitee": Decimal("12345.00"),
         "statut": StatutLogement.DISPONIBLE,
+        "description": None,
         "supprime_le": None,
     }
     return Objet(**valeurs | kw)
+
+
+def test_la_description_d_un_logement_est_indexee() -> None:
+    texte = logement.construire_texte(_logement(description="Salle d'eau privée."))
+    assert "Présentation : Salle d'eau privée." in texte
 
 
 def test_logement_porte_type_capacite_tarif_et_termes_malgaches() -> None:

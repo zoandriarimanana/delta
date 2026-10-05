@@ -43,6 +43,7 @@ from app.routers import (
     paiement_router,
     personnel_auth_router,
     personnel_router,
+    photo_bien_router,
     produit_router,
     reservation_router,
     salle_router,
@@ -194,6 +195,7 @@ app.include_router(session_formation_router.router, prefix=settings.API_V1_PREFI
 app.include_router(reservation_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(salle_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(logement_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(photo_bien_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(abonnement_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(beneficiaire_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(client_entreprise_router.router, prefix=settings.API_V1_PREFIX)

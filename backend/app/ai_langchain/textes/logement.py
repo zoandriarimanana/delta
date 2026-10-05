@@ -15,18 +15,19 @@ TYPE_CONTENU = "logement"
 
 
 def construire_texte(logement: Logement) -> str:
-    return "\n".join(
-        [
-            f"Hébergement : chambre {logement.type_chambre}",
-            # Termes malgaches : sans eux, une question posée en malgache
-            # (« Misy trano hatoriana ve ? ») ne retrouvait aucun logement —
-            # constaté en calibrant le retriever, 12.3.
-            "Trano fandraisam-bahiny, efitra fatoriana.",
-            f"Capacité : {logement.capacite} personne(s)",
-            f"Tarif : {formater_ariary(logement.tarif_nuitee)} la nuit",
-            "Réservable seul, ou en complément d'une formation qui le propose.",
-        ]
-    )
+    lignes = [
+        f"Hébergement : chambre {logement.type_chambre}",
+        # Termes malgaches : sans eux, une question posée en malgache
+        # (« Misy trano hatoriana ve ? ») ne retrouvait aucun logement —
+        # constaté en calibrant le retriever, 12.3.
+        "Trano fandraisam-bahiny, efitra fatoriana.",
+        f"Capacité : {logement.capacite} personne(s)",
+        f"Tarif : {formater_ariary(logement.tarif_nuitee)} la nuit",
+        "Réservable seul, ou en complément d'une formation qui le propose.",
+    ]
+    if logement.description:
+        lignes.append(f"Présentation : {logement.description}")
+    return "\n".join(lignes)
 
 
 def titre(logement: Logement) -> str:

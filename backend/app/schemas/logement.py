@@ -13,6 +13,8 @@ from app.models.logement import StatutLogement
 TARIF_MAX_CHIFFRES = 10
 TARIF_DECIMALES = 2
 LONGUEUR_TYPE = 50
+#: Même borne que `SALLE.description`.
+LONGUEUR_DESCRIPTION = 4000
 
 
 class LogementCreate(BaseModel):
@@ -32,6 +34,7 @@ class LogementCreate(BaseModel):
     tarif_nuitee: Decimal = Field(
         ge=0, max_digits=TARIF_MAX_CHIFFRES, decimal_places=TARIF_DECIMALES
     )
+    description: str | None = Field(default=None, max_length=LONGUEUR_DESCRIPTION)
 
 
 class LogementUpdate(BaseModel):
@@ -52,6 +55,7 @@ class LogementUpdate(BaseModel):
         decimal_places=TARIF_DECIMALES,
     )
     statut: StatutLogement | None = None
+    description: str | None = Field(default=None, max_length=LONGUEUR_DESCRIPTION)
 
 
 class LogementRead(BaseModel):
@@ -64,6 +68,7 @@ class LogementRead(BaseModel):
     capacite: int
     tarif_nuitee: Decimal
     statut: StatutLogement
+    description: str | None = None
     #: Calculée à la demande sur la fiche logement (`GET /logements/{id}`),
     #: jamais sur la liste — cf. `docs/roadmap.md`, 8.3. `None` tant qu'aucun
     #: avis actif n'existe, jamais `0` : ce serait une note valide.

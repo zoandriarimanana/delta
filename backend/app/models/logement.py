@@ -7,7 +7,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import Numeric, String
+from sqlalchemy import Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, SoftDeleteMixin
@@ -66,5 +66,8 @@ class Logement(SoftDeleteMixin, Base):
         ),
         nullable=False,
     )
+    #: Présentation libre, affichée sur la fiche publique — même rôle que
+    #: `SALLE.description`.
+    description: Mapped[str | None] = mapped_column(Text)
 
     reservations: Mapped[list[Reservation]] = relationship(back_populates="logement")
