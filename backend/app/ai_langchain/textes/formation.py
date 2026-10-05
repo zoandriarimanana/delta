@@ -5,8 +5,9 @@ de sa formation, c'est là que le client doit être renvoyé. Leurs dates et leu
 statut entrent donc dans le texte de la formation, qui est resynchronisé à
 chaque changement de session (`SessionFormationService`).
 
-Exclus : `prix`, `capacite_max` et `places_restantes` — valeurs commerciales ou
-compteurs —, et le **formateur**, même si `FormateurPublic` l'expose : un
+Inclus depuis 12.8 : `prix`, fixé par un administrateur. Exclus :
+`capacite_max` et `places_restantes` — la seconde est un compteur qui change à
+chaque réservation —, et le **formateur**, même si `FormateurPublic` l'expose : un
 salarié anonymisé resterait nommé dans l'index.
 """
 
@@ -17,6 +18,7 @@ from app.ai_langchain.synchronisation import (
     recharger_relation,
     synchroniser,
 )
+from app.ai_langchain.textes.montant import formater_ariary
 from app.models.formation import Formation
 from app.models.session_formation import SessionFormation, StatutSessionFormation
 
@@ -51,6 +53,7 @@ def construire_texte(formation: Formation, aujourd_hui: date | None = None) -> s
     if formation.niveau:
         lignes.append(f"Niveau : {formation.niveau}")
     lignes.append(f"Durée : {formation.duree_heures} heures")
+    lignes.append(f"Prix : {formater_ariary(formation.prix)} par personne")
     lignes.append(
         "Hébergement proposé pendant la formation."
         if formation.propose_hebergement

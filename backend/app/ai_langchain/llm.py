@@ -36,7 +36,15 @@ def obtenir_llm() -> BaseChatModel:
     return ChatGroq(
         model=settings.GROQ_MODEL,
         api_key=settings.GROQ_API_KEY,
-        temperature=0.3,
+        # 0,1 plutôt que 0,3, et raisonnement « low » (12.8) : la valeur basse
+        # colle davantage au contexte — un libellé de bouton inventé
+        # (« Passer la commande ») a disparu des réponses mesurées —, et le
+        # raisonnement réduit répond un peu plus vite pour un coût égal.
+        # **Pas de `max_tokens`** : Groq décompte le plafond réservé de son
+        # quota de jetons par minute, il réduirait le débit au lieu de
+        # l'augmenter.
+        temperature=0.1,
+        reasoning_effort="low",
         streaming=True,
         timeout=DELAI_MAXIMAL_SECONDES,
         max_retries=NOUVELLES_TENTATIVES,

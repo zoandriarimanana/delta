@@ -50,6 +50,7 @@ def synchroniser(
     indexable: bool,
     construire_texte: Callable[[], str],
     titre: str | None = None,
+    audience: str = "client",
 ) -> None:
     """Indexe l'entité si elle doit l'être, la retire de l'index sinon.
 
@@ -65,6 +66,6 @@ def synchroniser(
     )
 
     if indexable:
-        indexer_sans_echec(type_contenu, id_contenu, construire_texte, titre)
+        indexer_sans_echec(type_contenu, id_contenu, construire_texte, titre, audience)
     else:
         desindexer_sans_echec(type_contenu, id_contenu)

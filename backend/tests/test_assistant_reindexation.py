@@ -85,7 +85,7 @@ def _peupler(db: Session) -> dict[str, int]:
     }
 
 
-def test_reindexer_n_indexe_que_l_actif_et_jamais_un_montant(
+def test_reindexer_n_indexe_que_l_actif_et_jamais_le_stock(
     session_postgres: Session, store: PGVector
 ) -> None:
     ids = _peupler(session_postgres)
@@ -99,8 +99,7 @@ def test_reindexer_n_indexe_que_l_actif_et_jamais_un_montant(
     assert ("logement", ids["hors_service"]) not in indexes
     assert ("salle", ids["salle"]) in indexes
     for _, _, texte in contenus:
-        for montant in ("12345", "987", "98765"):
-            assert montant not in texte
+        assert "987" not in texte, "le stock n'est jamais indexé"
     assert set(resultats) == {
         "produit",
         "categorie_produit",
@@ -108,6 +107,7 @@ def test_reindexer_n_indexe_que_l_actif_et_jamais_un_montant(
         "domaine_formation",
         "salle",
         "logement",
+        "guide",
     }
     assert resultats["produit"]["elements"] >= 1
 

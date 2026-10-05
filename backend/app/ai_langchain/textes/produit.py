@@ -1,29 +1,38 @@
 """Texte indexable d'un PRODUIT.
 
-Exclus : `prix_unitaire`, `stock_disponible` et `supplement_personnalisation`
-— valeurs qui changent, que la fiche affiche à jour.
+Inclus depuis 12.8 : `prix_unitaire` et `supplement_personnalisation`, fixés
+par un administrateur — leur modification resynchronise l'index. Exclu :
+`stock_disponible`, qui change à chaque commande.
 """
 
 from app.ai_langchain.synchronisation import assistant_actif, synchroniser
+from app.ai_langchain.textes.montant import formater_ariary
 from app.models.produit import Produit
 
 TYPE_CONTENU = "produit"
 
 
 def construire_texte(produit: Produit) -> str:
-    """Nom, catégorie, description et modalités — rien de chiffré."""
+    """Nom, catégorie, description, prix et modalités — jamais le stock."""
     lignes = [
         f"Produit : {produit.nom}",
         f"Catégorie : {produit.categorie.libelle}",
     ]
     if produit.description:
         lignes.append(f"Description : {produit.description}")
-    lignes.append(f"Vendu par : {produit.unite_mesure}")
     lignes.append(
-        "Personnalisable sur demande."
-        if produit.est_personnalisable
-        else "Non personnalisable."
+        f"Prix : {formater_ariary(produit.prix_unitaire)} par {produit.unite_mesure}"
     )
+    if produit.est_personnalisable:
+        supplement = produit.supplement_personnalisation
+        detail = (
+            f", supplément de {formater_ariary(supplement)} par {produit.unite_mesure}"
+            if supplement is not None
+            else ""
+        )
+        lignes.append(f"Personnalisable{detail}.")
+    else:
+        lignes.append("Non personnalisable.")
     lignes.append(
         "Livrable."
         if produit.est_livrable

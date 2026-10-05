@@ -12,7 +12,7 @@ prend simplement du retard — et la panne est journalisée. L'inverse ferait
 dépendre la gestion du catalogue de la santé d'un service tiers.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from langchain_core.documents import Document
 from langchain_postgres import PGVector
@@ -26,6 +26,12 @@ from app.core.config import settings
 from app.core.logging import get_logger
 
 journal = get_logger(__name__)
+
+# Public d'un fragment (Sprint 12, 12.8/12.10). L'assistant du site ne
+# recherche que `AUDIENCE_CLIENT` : un fragment `AUDIENCE_PERSONNEL` ne peut
+# jamais ressortir dans la bulle publique. Le catalogue est `client`.
+AUDIENCE_CLIENT = "client"
+AUDIENCE_PERSONNEL = "personnel"
 
 TAILLE_FRAGMENT = 1000
 CHEVAUCHEMENT = 150
@@ -43,7 +49,11 @@ _decoupeur = RecursiveCharacterTextSplitter(
 
 
 def decouper(
-    texte: str, type_contenu: str, id_contenu: int, titre: str | None = None
+    texte: str,
+    type_contenu: str,
+    id_contenu: int,
+    titre: str | None = None,
+    audience: str = AUDIENCE_CLIENT,
 ) -> list[Document]:
     """Découpe un texte en fragments portant leur origine en métadonnées.
 
@@ -56,6 +66,7 @@ def decouper(
     metadonnees: dict[str, str | int] = {
         "type_contenu": type_contenu,
         "id_contenu": id_contenu,
+        "audience": audience,
     }
     if titre:
         metadonnees["titre"] = titre
@@ -69,9 +80,10 @@ def decouper(
 def indexer_texte(
     type_contenu: str,
     id_contenu: int,
-    texte: str,
+    texte: str | Sequence[str],
     store: PGVector | None = None,
     titre: str | None = None,
+    audience: str = AUDIENCE_CLIENT,
 ) -> int:
     """Remplace les fragments d'une entité par ceux de son texte actuel.
 
@@ -86,7 +98,15 @@ def indexer_texte(
     """
     store = store or obtenir_vector_store()
     supprimer_par_contenu(type_contenu, id_contenu, store.collection_name)
-    fragments = decouper(texte, type_contenu, id_contenu, titre)
+    # Une liste de textes : des sections découpées chacune pour soi (guides),
+    # pour qu'un fragment ne mêle jamais la fin d'une section au début d'une
+    # autre.
+    parties = [texte] if isinstance(texte, str) else list(texte)
+    fragments = [
+        fragment
+        for partie in parties
+        for fragment in decouper(partie, type_contenu, id_contenu, titre, audience)
+    ]
     if fragments:
         store.add_documents(fragments)
     return len(fragments)
@@ -97,6 +117,7 @@ def indexer_sans_echec(
     id_contenu: int,
     construire_texte: Callable[[], str],
     titre: str | None = None,
+    audience: str = AUDIENCE_CLIENT,
 ) -> int:
     """Indexe une entité ; journalise et rend 0 en cas d'échec, sans lever.
 
@@ -107,7 +128,9 @@ def indexer_sans_echec(
     if not settings.AI_ENABLED:
         return 0
     try:
-        return indexer_texte(type_contenu, id_contenu, construire_texte(), titre=titre)
+        return indexer_texte(
+            type_contenu, id_contenu, construire_texte(), titre=titre, audience=audience
+        )
     except Exception:
         journal.warning(
             "Indexation IA échouée pour %s#%s",

@@ -71,7 +71,11 @@ def test_decouper_porte_l_origine_et_ecarte_les_fragments_vides() -> None:
     fragments = decouper("Tarte au citron meringuée", "produit", 3)
 
     assert [f.page_content for f in fragments] == ["Tarte au citron meringuée"]
-    assert fragments[0].metadata == {"type_contenu": "produit", "id_contenu": 3}
+    assert fragments[0].metadata == {
+        "type_contenu": "produit",
+        "id_contenu": 3,
+        "audience": "client",
+    }
     assert decouper("   ", "produit", 3) == []
     assert decouper("Tarte", "produit", 3) == [], "moins de 3 mots : du bruit"
 
@@ -88,7 +92,11 @@ def test_indexer_puis_retrouver_par_similarite(store: PGVector) -> None:
 
     resultats = store.similarity_search("Tarte au citron meringuée", k=1)
 
-    assert resultats[0].metadata == {"type_contenu": "produit", "id_contenu": 3}
+    assert resultats[0].metadata == {
+        "type_contenu": "produit",
+        "id_contenu": 3,
+        "audience": "client",
+    }
 
 
 def test_le_titre_voyage_avec_les_fragments(store: PGVector) -> None:
@@ -183,3 +191,46 @@ def test_une_entite_mal_formee_ne_remonte_pas_non_plus(
         raise AttributeError("relation non chargée")
 
     assert indexer_sans_echec("produit", 3, construire) == 0
+
+
+def test_le_filtre_client_n_atteint_jamais_un_fragment_du_personnel(
+    store: PGVector,
+) -> None:
+    """La garantie de 12.10 : c'est le filtre, pas le prompt, qui protège."""
+    from app.ai_langchain.chaine import PROFIL_CLIENT, PROFIL_PERSONNEL, filtre_audience
+
+    indexer_texte("document", 1, "Procédure interne de caisse", store)
+    indexer_texte(
+        "document", 2, "Procédure interne de caisse", store, audience="personnel"
+    )
+
+    vus_client = store.similarity_search(
+        "Procédure interne de caisse", k=10, filter=filtre_audience(PROFIL_CLIENT)
+    )
+    vus_personnel = store.similarity_search(
+        "Procédure interne de caisse", k=10, filter=filtre_audience(PROFIL_PERSONNEL)
+    )
+
+    assert [d.metadata["id_contenu"] for d in vus_client] == [1]
+    assert sorted(d.metadata["id_contenu"] for d in vus_personnel) == [1, 2]
+
+
+def test_le_filtre_client_s_applique_aussi_avec_le_seuil_de_pertinence(
+    store: PGVector,
+) -> None:
+    """Le retriever de l'application combine filtre et seuil : les deux
+    doivent tenir ensemble, sans que le seuil fasse sauter le filtre."""
+    from app.ai_langchain.chaine import PROFIL_CLIENT, filtre_audience
+
+    indexer_texte("document", 2, "Code du coffre-fort", store, audience="personnel")
+
+    retriever = store.as_retriever(
+        search_type="similarity_score_threshold",
+        search_kwargs={
+            "k": 6,
+            "score_threshold": 0.0,
+            "filter": filtre_audience(PROFIL_CLIENT),
+        },
+    )
+
+    assert retriever.invoke("Code du coffre-fort") == []

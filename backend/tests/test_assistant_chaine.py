@@ -219,3 +219,35 @@ def test_un_fragment_sans_origine_n_apparait_pas_dans_les_sources() -> None:
     assert resultat["sources"] == [
         {"type_contenu": "produit", "id_contenu": 3, "titre": "Fiche produit 3"}
     ]
+
+
+def test_le_profil_client_ne_lit_que_l_audience_client() -> None:
+    from app.ai_langchain.chaine import PROFIL_CLIENT, PROFIL_PERSONNEL, filtre_audience
+
+    assert filtre_audience(PROFIL_CLIENT) == {"audience": {"$in": ["client"]}}
+    assert filtre_audience(PROFIL_PERSONNEL) is None
+
+
+def test_le_profil_personnel_a_son_propre_prompt() -> None:
+    from app.ai_langchain.chaine import PROFIL_PERSONNEL
+
+    llm = LlmEspion(responses=["Étapes."], recus=[])
+    repondre(
+        "Comment ajouter un produit ?",
+        retriever=FauxRetriever(fragments=FRAGMENTS),
+        llm=llm,
+        profil=PROFIL_PERSONNEL,
+    )
+
+    systeme = llm.recus[0][0].content
+    assert "personnel de Delta" in systeme
+    assert "mot pour mot" in systeme, "règle commune aux deux profils"
+
+
+def test_le_prompt_client_autorise_les_prix_mais_jamais_le_stock() -> None:
+    llm = LlmEspion(responses=["ok"], recus=[])
+    repondre("Prix ?", retriever=FauxRetriever(fragments=FRAGMENTS), llm=llm)
+
+    systeme = llm.recus[0][0].content
+    assert "Les prix du contexte sont ceux du catalogue" in systeme
+    assert "Ne donne jamais un stock" in systeme

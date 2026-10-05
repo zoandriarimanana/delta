@@ -15,6 +15,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.ai_langchain import guides
 from app.ai_langchain.indexation import indexer_texte
 from app.ai_langchain.textes import (
     categorie_produit,
@@ -74,11 +75,29 @@ def _indexer_type(
     return {"elements": elements, "fragments": fragments}
 
 
+def _indexer_guides() -> dict[str, int]:
+    """Vide puis réindexe les guides versionnés, section par section."""
+    store = obtenir_vector_store()
+    supprimer_par_contenu(guides.TYPE_CONTENU, collection=store.collection_name)
+    elements = fragments = 0
+    for guide in guides.guides_presents():
+        fragments += indexer_texte(
+            guides.TYPE_CONTENU,
+            guide.identifiant,
+            guides.sections(guide.chemin.read_text(encoding="utf-8")),
+            store,
+            titre=guide.titre,
+            audience=guide.audience,
+        )
+        elements += 1
+    return {"elements": elements, "fragments": fragments}
+
+
 def reindexer_tout(db: Session) -> dict[str, dict[str, int]]:
     """Reconstruit l'index entier depuis la base. Lève si l'assistant est coupé."""
     if not settings.AI_ENABLED:
         raise ServiceIndisponible("L'assistant IA est désactivé (AI_ENABLED=false).")
-    return {
+    resultats = {
         module.TYPE_CONTENU: _indexer_type(
             module.TYPE_CONTENU,
             # `supprime_le` filtré en SQL : inutile de charger les archives.
@@ -90,3 +109,5 @@ def reindexer_tout(db: Session) -> dict[str, dict[str, int]]:
         )
         for module, modele, cle in CONTENUS
     }
+    resultats[guides.TYPE_CONTENU] = _indexer_guides()
+    return resultats

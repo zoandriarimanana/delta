@@ -1,12 +1,14 @@
 """Texte indexable d'une SALLE.
 
-Exclus : `tarif_horaire` et `tarif_journee`. La capacité, propriété stable du
-bien, est gardée : c'est elle qui répond à « une salle pour 30 personnes ? ».
+Inclus depuis 12.8 : `tarif_horaire` et `tarif_journee`, fixés par un
+administrateur. La capacité, propriété stable du bien, est gardée : c'est
+elle qui répond à « une salle pour 30 personnes ? ».
 La disponibilité d'un créneau, elle, ne se déduit que des réservations — jamais
 de l'index.
 """
 
 from app.ai_langchain.synchronisation import assistant_actif, synchroniser
+from app.ai_langchain.textes.montant import formater_ariary
 from app.models.salle import Salle
 
 TYPE_CONTENU = "salle"
@@ -22,18 +24,18 @@ def construire_texte(salle: Salle) -> str:
     ]
     if salle.equipements:
         lignes.append(f"Équipements : {salle.equipements}")
-    # Le mode de location se déduit des tarifs renseignés — sans jamais en
-    # donner le montant. Le CHECK de SALLE garantit qu'il y en a au moins un.
-    modes = [
-        mode
+    # Le CHECK de SALLE garantit qu'au moins un tarif est renseigné ; `0.00`
+    # est une gratuité décidée, pas une absence (docs/mld.md).
+    tarifs = [
+        f"{mode} : {formater_ariary(tarif)}" if tarif > 0 else f"{mode} : gratuit"
         for mode, tarif in (
             ("à l'heure", salle.tarif_horaire),
             ("à la journée", salle.tarif_journee),
         )
         if tarif is not None
     ]
-    if modes:
-        lignes.append("Location " + " ou ".join(modes) + ".")
+    if tarifs:
+        lignes.append("Location " + " ; ".join(tarifs) + ".")
     return "\n".join(lignes)
 
 

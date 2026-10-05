@@ -1252,7 +1252,7 @@ personnel doit disposer de **son propre assistant**, qui le guide dans le
 back-office. Trois tâches, dans cet ordre (chacune s'appuie sur la
 précédente) :
 
-- [ ] **12.8 — Précision côté client : prix du catalogue et guide de la
+- [x] **12.8 — Précision côté client : prix du catalogue et guide de la
       plateforme.**
       — **Correction d'une décision de 12.0, pas un revirement de principe.**
       Les prix avaient été exclus de l'index au motif qu'ils « changent à
@@ -1269,6 +1269,27 @@ précédente) :
       créer un compte. Rédigé **à partir de l'interface réelle** (libellés
       relevés dans le code), jamais d'une fonctionnalité supposée. Indexé
       avec le catalogue, à chaque réindexation.
+      — Livré. Guide découpé **section par section** (une démarche = un
+      fragment, jamais deux mêlées). Trois manques de l'interface relevés en
+      l'écrivant, et dits tels quels par le guide plutôt que masqués : pas de
+      champ d'**adresse de livraison** au tunnel de commande (alors que c'est
+      elle seule qui crée une `LIVRAISON`), pas de **description de
+      personnalisation** côté client, pas d'**annulation de réservation** en
+      ligne. Les fournisseurs de paiement s'affichent sous leur nom technique
+      (« Orange_money ») : le guide les cite tels qu'à l'écran.
+      — Métadonnée **`audience`** et **profils** de chaîne posés dès 12.8,
+      avant que 12.9 permette de téléverser un document réservé au
+      personnel : le filtre client existe avant le premier contenu à filtrer.
+      Testé contre PostgreSQL, seuil de pertinence compris.
+      — Mesuré avec les vraies clés : un libellé de bouton **inventé** par le
+      modèle (« Passer la commande » pour « Valider la commande »). Règle
+      « libellés cités mot pour mot » dans le prompt, guide réécrit avec
+      **tous** les libellés exacts, température 0,1 et raisonnement réduit :
+      plus d'invention sur les réponses mesurées. Réponses vérifiées en
+      français et en malgache (création de compte).
+      — **Limite de débit Groq mesurée** : 8 000 jetons/minute sur le compte
+      gratuit, ~1 400 par réponse — 5 à 6 réponses par minute pour tout le
+      site. Voir la dette technique.
 - [ ] **12.9 — Base de connaissances téléversée par l'administration.**
       — Nouvelle table **`DOCUMENT_CONNAISSANCE`** (MLD + migration) :
       titre, nom et type du fichier, taille, **public cible**
@@ -1364,7 +1385,7 @@ nommer sa tâche d'origine et sa condition de résorption.
 | Inspection QA (`docs/checkliste-inspection-admin.md`, section 3) | **Priorité moyenne.** Sur `personnel/commandes/administration` (liste et fiche), le nom et le contact d'une commande invitée (`nom_invite`/`contact_invite`) ne s'affichent **nulle part** — ni `AdministrationCommandesPage.tsx` ni `CommandeDetailAdministrationPage.tsx` ne les rendent. Pas une absence structurelle comme le vendeur d'une commande `Servie` (`id_personnel`, absent de `CommandeRead` lui-même) : ici, `CommandeRead` (backend) expose bien les deux champs, et `commande.types.ts` les type déjà côté frontend — c'est un vrai trou d'affichage, pas un manque d'API. Un administrateur consultant une commande invitée n'a aujourd'hui aucun moyen de savoir pour qui elle a été passée ni comment la contacter, sans passer par `/docs`. Constaté en vérifiant empiriquement l'écran (pas en supposant), puis confirmé en lisant `app/schemas/commande.py` et `commande.types.ts`. | Ajouter le nom et le contact de l'invité à la fiche (et idéalement à la liste, en substitut du nom client absent sur ces lignes) — changement purement frontend, aucune modification d'API nécessaire. Pas critique avant mise en prod, mais un vrai trou fonctionnel pour la gestion courante des commandes invité : à traiter dès qu'une tâche touche de toute façon cet écran, plutôt que d'ouvrir un chantier dédié pour ce seul point. |
 | Sprint 10.1 | `GET /personnel` ne porte aucun paramètre `inclure_supprimes`, contrairement à `GET /produits/administration` — aucune route ne permet de lister ou consulter un membre du personnel archivé ou anonymisé. Pourtant `POST /personnel/{id}/restauration` existe et suppose de retrouver cet identifiant : la réversibilité est voulue, mais rien ne permet de la découvrir une fois l'écran quitté. Constaté en construisant le frontend (10.1) : un F5 après archivage/anonymisation fait disparaître la ligne de l'annuaire sans aucune trace, indiscernable d'un identifiant jamais créé ou supprimé définitivement. Ce n'est pas une décision — contrairement à `ABONNEMENT`, dont l'absence d'archives consultables est un choix assumé et documenté (7.1, « CRUD courant, pas d'historique »), cohérent avec l'absence de restauration pour cette entité. `PERSONNEL` a la moitié du mécanisme (restauration) sans l'autre (lecture des archives). Le frontend compense provisoirement par une restauration en « annulation immédiate » (état local, cf. `personnel.administration.ts`), pas une vraie consultation d'archives. | Ajouter `GET /personnel/administration` (archives comprises), miroir de `GET /produits/administration`, ce qui permettrait de remplacer l'« annulation immédiate » du frontend par une vraie vue d'archives consultable à tout moment. Petite tâche indépendante, pas bloquante pour clore 10.1 — mais à faire avant de considérer l'administration du personnel complètement alignée sur le patron déjà établi par PRODUIT. |
 
-| Sprint 12 (12.4) | **Coûts, quotas et données confiées à des tiers.** Chaque question de l'assistant IA appelle deux services externes : Hugging Face (embeddings de la question) et Groq (génération). Le texte des questions des visiteurs et des extraits du catalogue public leur sont donc transmis. Les comptes actuels sont gratuits, avec des quotas : une fois épuisés, l'assistant répond 503 — proprement, mais sans plus servir personne. Le rate limiting par IP (`10/minute`) protège d'un abus isolé, pas d'un trafic légitime important. Aucune donnée personnelle n'est indexée, mais un visiteur peut en écrire une dans sa question. | Avant mise en production à volume réel : choisir des offres payantes ou des quotas adaptés, suivre la consommation, et mentionner le traitement par des services tiers dans les mentions légales / la politique de confidentialité. |
+| Sprint 12 (12.4) | **Coûts, quotas et données confiées à des tiers.** Chaque question de l'assistant IA appelle deux services externes : Hugging Face (embeddings de la question) et Groq (génération). Le texte des questions des visiteurs et des extraits du catalogue public leur sont donc transmis. Les comptes actuels sont gratuits, avec des quotas : une fois épuisés, l'assistant répond 503 — proprement, mais sans plus servir personne. Le rate limiting par IP (`10/minute`) protège d'un abus isolé, pas d'un trafic légitime important. Aucune donnée personnelle n'est indexée, mais un visiteur peut en écrire une dans sa question. | **Mesuré en 12.8** : le compte Groq gratuit plafonne `openai/gpt-oss-120b` à **8 000 jetons par minute**, partagés par tous les visiteurs ; une réponse en consomme environ **1 400** (dont ~1 100 de contexte). Soit **5 à 6 réponses par minute pour tout le site** — au-delà, 503 propre (« momentanément indisponible »), constaté en test. Aucun réglage logiciel ne change cet ordre de grandeur. **Avant d'ouvrir l'assistant à un trafic réel** : passer à une offre Groq payante (« Dev Tier ») ou réduire le volume par conception ; suivre la consommation ; mentionner le traitement par des services tiers dans les mentions légales / la politique de confidentialité. |
 
 ## Traçabilité MLD → sprints (à retenir)
 

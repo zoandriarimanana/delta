@@ -40,7 +40,9 @@ class Journal:
         self.appels: list[tuple[str, str, int, str | None]] = []
         self.titres: dict[tuple[str, int], str | None] = {}
 
-    def indexer(self, type_contenu, id_contenu, construire_texte, titre=None) -> int:
+    def indexer(
+        self, type_contenu, id_contenu, construire_texte, titre=None, audience="client"
+    ) -> int:
         self.appels.append(("indexer", type_contenu, id_contenu, construire_texte()))
         self.titres[(type_contenu, id_contenu)] = titre
         return 1
@@ -142,7 +144,8 @@ def test_creer_un_produit_indexe_le_produit_et_sa_categorie(
     assert journal.pour("produit", id_produit)[0][0] == "indexer"
     texte_produit = journal.dernier_texte("produit", id_produit)
     assert "Tarte au citron" in texte_produit
-    assert "12345" not in texte_produit and "987" not in texte_produit
+    assert "12 345,67 Ar" in texte_produit, "le prix du catalogue est indexé"
+    assert "987" not in texte_produit, "le stock ne l'est jamais"
     assert "Tarte au citron" in journal.dernier_texte("categorie_produit", id_categorie)
 
 
@@ -291,7 +294,7 @@ def test_une_salle_est_indexee_puis_retiree_a_l_archivage(
     service.supprimer(id_salle)
 
     assert [a[0] for a in journal.pour("salle", id_salle)] == ["indexer", "desindexer"]
-    assert "98765" not in journal.pour("salle", id_salle)[0][3]
+    assert "98 765 Ar" in journal.pour("salle", id_salle)[0][3]
 
 
 def test_un_logement_hors_service_sort_de_l_index_et_y_revient(

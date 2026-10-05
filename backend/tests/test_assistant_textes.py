@@ -1,10 +1,10 @@
 """Textes indexés par l'assistant IA (Sprint 12, 12.3).
 
-Les règles vérifiées ici sont celles de `docs/roadmap.md` : jamais un prix, un
-stock, un tarif ni un nombre de places ; jamais le nom d'une personne ; jamais
-une entité archivée. Chaque montant interdit est une valeur **reconnaissable**
-(12345, 987...) : le test cherche sa trace dans le texte produit, ce qui
-attrape aussi un formatage inattendu (« 12 345 », « 12345.67 »).
+Les règles vérifiées ici sont celles de `docs/roadmap.md` (12.8) : les prix du
+catalogue **y figurent**, mais jamais un stock, un nombre de places ni le nom
+d'une personne, et jamais une entité archivée. Chaque valeur interdite est
+**reconnaissable** (987, 654...) : le test cherche sa trace dans le texte
+produit, ce qui attrape aussi un formatage inattendu.
 
 Objets factices (`SimpleNamespace`) plutôt que base de données : un
 constructeur de texte ne lit que des attributs, et ces tests restent
@@ -94,16 +94,24 @@ def test_produit_porte_nom_categorie_description_et_modalites() -> None:
     assert "Tarte au citron" in texte
     assert "Pâtisserie" in texte
     assert "Pâte sablée et meringue." in texte
-    assert "pièce" in texte
-    assert "Personnalisable sur demande." in texte
+    assert "Prix : 12 345,67 Ar par pièce" in texte
+    assert "Personnalisable, supplément de 4 321 Ar par pièce." in texte
     assert "retrait sur place" in texte
 
 
-def test_produit_n_expose_ni_prix_ni_stock_ni_supplement() -> None:
+def test_produit_n_expose_jamais_le_stock() -> None:
+    """Le stock change à chaque commande : un fragment figé répondrait faux."""
     texte = produit.construire_texte(_produit())
 
-    for valeur_interdite in ("12345", "987", "4321"):
-        assert valeur_interdite not in texte
+    assert "987" not in texte
+    assert "stock" not in texte.lower()
+
+
+def test_produit_non_personnalisable_n_annonce_aucun_supplement() -> None:
+    texte = produit.construire_texte(_produit(est_personnalisable=False))
+
+    assert "Non personnalisable." in texte
+    assert "4 321" not in texte, "un tarif dormant ne doit pas être annoncé"
 
 
 def test_produit_sans_description_reste_valide() -> None:
@@ -152,14 +160,15 @@ def test_formation_porte_ses_proprietes_stables() -> None:
     assert "Hébergement proposé" in texte
 
 
-def test_formation_n_expose_ni_prix_ni_capacite_ni_places_ni_formateur() -> None:
+def test_formation_porte_son_prix_mais_ni_capacite_ni_places_ni_formateur() -> None:
     session = _session(
         StatutSessionFormation.OUVERTE, date(2026, 11, 9), date(2026, 11, 13)
     )
 
     texte = formation.construire_texte(_formation([session]), AUJOURD_HUI)
 
-    for valeur_interdite in ("12345", "654", "987"):
+    assert "Prix : 12 345 Ar par personne" in texte
+    for valeur_interdite in ("654", "987"):
         assert valeur_interdite not in texte
     for nom in ("Rakotobe", "Haja", "Chocolat"):
         assert nom not in texte, "aucun nom de personne dans l'index"
@@ -243,21 +252,22 @@ def _salle(**kw):
     return Objet(**valeurs | kw)
 
 
-def test_salle_porte_capacite_equipements_et_mode_sans_tarif() -> None:
+def test_salle_porte_capacite_equipements_et_tarifs() -> None:
     texte = salle.construire_texte(_salle())
 
     assert "Salle Ravinala" in texte
     assert "40 personnes" in texte
     assert "vidéoprojecteur" in texte
-    assert "Location à l'heure ou à la journée." in texte
-    assert "12345" not in texte and "98765" not in texte
+    assert "Location à l'heure : 12 345 Ar ; à la journée : 98 765 Ar." in texte
 
 
 def test_salle_le_mode_de_location_suit_les_tarifs_renseignes() -> None:
-    assert "Location à la journée." in salle.construire_texte(
+    assert "Location à la journée : 98 765 Ar." in salle.construire_texte(
         _salle(tarif_horaire=None)
     )
-    assert "Location à l'heure." in salle.construire_texte(_salle(tarif_journee=None))
+    assert "Location à l'heure : 12 345 Ar." in salle.construire_texte(
+        _salle(tarif_journee=None)
+    )
 
 
 def test_une_salle_gratuite_reste_une_location() -> None:
@@ -265,7 +275,7 @@ def test_une_salle_gratuite_reste_une_location() -> None:
     texte = salle.construire_texte(
         _salle(tarif_horaire=Decimal("0.00"), tarif_journee=None)
     )
-    assert "Location à l'heure." in texte
+    assert "Location à l'heure : gratuit." in texte
 
 
 # --- LOGEMENT ---------------------------------------------------------------
@@ -283,13 +293,13 @@ def _logement(**kw):
     return Objet(**valeurs | kw)
 
 
-def test_logement_porte_type_capacite_et_termes_malgaches_sans_tarif() -> None:
+def test_logement_porte_type_capacite_tarif_et_termes_malgaches() -> None:
     texte = logement.construire_texte(_logement())
 
     assert "chambre double" in texte
     assert "2 personne(s)" in texte
     assert "efitra fatoriana" in texte
-    assert "12345" not in texte
+    assert "12 345 Ar la nuit" in texte
     assert "Disponible" not in texte, "le statut décrit un état, il n'est pas figé"
 
 
