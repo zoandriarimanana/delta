@@ -26,6 +26,7 @@ import FormationDetailAdministrationPage from '@/features/formation/pages/Format
 import FormationDetailPage from '@/features/formation/pages/FormationDetailPage';
 import FormationListPage from '@/features/formation/pages/FormationListPage';
 import AdministrationLogementsPage from '@/features/logement/pages/AdministrationLogementsPage';
+import LogementDetailAdministrationPage from '@/features/logement/pages/LogementDetailAdministrationPage';
 import LogementDetailPage from '@/features/logement/pages/LogementDetailPage';
 import LogementListPage from '@/features/logement/pages/LogementListPage';
 import AdministrationCategoriesPage from '@/features/produit/pages/AdministrationCategoriesPage';
@@ -40,6 +41,7 @@ import AdministrationReservationsPage from '@/features/reservation/pages/Adminis
 import MesReservationsPage from '@/features/reservation/pages/MesReservationsPage';
 import ReservationDetailAdministrationPage from '@/features/reservation/pages/ReservationDetailAdministrationPage';
 import AdministrationSallesPage from '@/features/salle/pages/AdministrationSallesPage';
+import SalleDetailAdministrationPage from '@/features/salle/pages/SalleDetailAdministrationPage';
 import SalleDetailPage from '@/features/salle/pages/SalleDetailPage';
 import SalleListPage from '@/features/salle/pages/SalleListPage';
 import LayoutPersonnel from '@/layouts/LayoutPersonnel';
@@ -157,7 +159,12 @@ export default function App() {
             element={<CommandeDetailAdministrationPage />}
           />
           <Route path="salles" element={<AdministrationSallesPage />} />
+          <Route path="salles/:idSalle" element={<SalleDetailAdministrationPage />} />
           <Route path="logements" element={<AdministrationLogementsPage />} />
+          <Route
+            path="logements/:idLogement"
+            element={<LogementDetailAdministrationPage />}
+          />
           <Route path="domaines-formation" element={<AdministrationDomainesPage />} />
           <Route path="formations" element={<AdministrationFormationsPage />} />
           <Route

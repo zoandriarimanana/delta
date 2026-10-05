@@ -6,9 +6,15 @@
  * `LigneProduitAdministration`.
  */
 
+import { Link } from 'react-router';
+
 import Badge from '@/components/ui/Badge';
 import Bouton from '@/components/ui/Bouton';
 import { imagePour } from '@/lib/images';
+import {
+  CLASSES_LIGNE_CLIQUABLE,
+  useNavigationAuClic,
+} from '@/lib/useNavigationAuClic';
 
 import { estArchive } from '../salle.administration';
 import { libelleTarif } from '../salle.service';
@@ -30,9 +36,14 @@ export default function LigneSalleAdministration({
   surRestauration,
 }: Proprietes) {
   const archive = estArchive(salle);
+  const naviguerAuClic = useNavigationAuClic();
+  const fiche = `/personnel/salles/${salle.id_salle}`;
 
   return (
-    <tr className={archive ? 'bg-warm-gray-100/60' : undefined}>
+    <tr
+      onClick={naviguerAuClic(fiche)}
+      className={`${archive ? 'bg-warm-gray-100/60' : ''} ${CLASSES_LIGNE_CLIQUABLE}`}
+    >
       <td className="px-3 py-2">
         <img
           src={imagePour('salle', salle.id_salle)}
@@ -40,7 +51,11 @@ export default function LigneSalleAdministration({
           className="h-12 w-12 rounded object-cover"
         />
       </td>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">{salle.nom}</td>
+      <td className="px-3 py-2 text-sm">
+        <Link to={fiche} className="text-warm-gray-700 hover:underline">
+          {salle.nom}
+        </Link>
+      </td>
       <td className="px-3 py-2 text-sm text-warm-gray-600">{salle.capacite} pers.</td>
       <td className="px-3 py-2 text-sm text-warm-gray-700">{libelleTarif(salle)}</td>
       <td className="px-3 py-2">

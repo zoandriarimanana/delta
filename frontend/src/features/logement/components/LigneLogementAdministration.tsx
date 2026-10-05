@@ -12,9 +12,15 @@
  */
 
 import { formaterMontant } from '@/features/commande/commande.service';
+import { Link } from 'react-router';
+
 import Badge from '@/components/ui/Badge';
 import Bouton from '@/components/ui/Bouton';
 import { imagePour } from '@/lib/images';
+import {
+  CLASSES_LIGNE_CLIQUABLE,
+  useNavigationAuClic,
+} from '@/lib/useNavigationAuClic';
 
 import { estArchive } from '../logement.administration';
 import { libelleStatut, varianteStatut } from '../logement.service';
@@ -36,9 +42,14 @@ export default function LigneLogementAdministration({
   surRestauration,
 }: Proprietes) {
   const archive = estArchive(logement);
+  const naviguerAuClic = useNavigationAuClic();
+  const fiche = `/personnel/logements/${logement.id_logement}`;
 
   return (
-    <tr className={archive ? 'bg-warm-gray-100/60' : undefined}>
+    <tr
+      onClick={naviguerAuClic(fiche)}
+      className={`${archive ? 'bg-warm-gray-100/60' : ''} ${CLASSES_LIGNE_CLIQUABLE}`}
+    >
       <td className="px-3 py-2">
         <img
           src={imagePour('logement', logement.id_logement)}
@@ -46,7 +57,11 @@ export default function LigneLogementAdministration({
           className="h-12 w-12 rounded object-cover"
         />
       </td>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">{logement.type_chambre}</td>
+      <td className="px-3 py-2 text-sm">
+        <Link to={fiche} className="text-warm-gray-700 hover:underline">
+          {logement.type_chambre}
+        </Link>
+      </td>
       <td className="px-3 py-2 text-sm text-warm-gray-600">
         {logement.capacite} pers.
       </td>
