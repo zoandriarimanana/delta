@@ -17,6 +17,8 @@ import { formaterMontant } from '@/features/commande/commande.service';
 import { imageProduit } from '@/lib/images';
 
 import ChampFiche from '@/components/ui/ChampFiche';
+import GestionGalerie from '@/features/galerie/components/GestionGalerie';
+
 import FormulaireProduit from '../components/FormulaireProduit';
 import {
   estArchive,
@@ -192,6 +194,15 @@ export default function ProduitDetailAdministrationPage() {
             )}
           </div>
         </div>
+      )}
+
+      {archive ? (
+        <p className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm text-warm-gray-500">
+          Les photos d’un produit archivé sont conservées, mais ne se gèrent qu’une fois
+          restauré.
+        </p>
+      ) : (
+        <GestionGalerie bien={{ produit: id }} />
       )}
     </section>
   );

@@ -7,6 +7,8 @@ import Badge from '@/components/ui/Badge';
 import BoutonRetour from '@/components/ui/BoutonRetour';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
 import { formaterMontant } from '@/features/commande/commande.service';
+import GaleriePhotos from '@/features/galerie/components/GaleriePhotos';
+import { useGalerie } from '@/features/galerie/galerie.hooks';
 import { imageProduit } from '@/lib/images';
 
 import AjoutPanierProduit from '../components/AjoutPanierProduit';
@@ -73,18 +75,16 @@ function Fiche({
   categorie: string | undefined;
 }) {
   const disponible = estDisponible(produit);
+  const galerie = useGalerie({ produit: produit.id_produit });
 
   return (
     <article className="mt-6 grid gap-8 md:grid-cols-2">
-      <div className="overflow-hidden rounded-2xl bg-warm-gray-200 shadow-md">
-        {/* Illustration d'ambiance (cf. `lib/images.ts`), pas une photo
-            propre au produit : `alt` vide, le nom est lu juste à côté. */}
-        <img
-          src={imageProduit(produit.id_produit, produit.nom, 900)}
-          alt=""
-          className="aspect-[4/3] h-full w-full object-cover"
-        />
-      </div>
+      <GaleriePhotos
+        bien={{ produit: produit.id_produit }}
+        photos={galerie.photos}
+        repli={imageProduit(produit.id_produit, produit.nom, 900)}
+        nomBien={produit.nom}
+      />
 
       <div className="flex flex-col gap-5">
         <div>

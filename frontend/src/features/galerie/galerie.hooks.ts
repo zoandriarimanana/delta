@@ -16,13 +16,15 @@ export interface Galerie {
 /**
  * Galerie d'un bien. `null` désactive la requête.
  *
- * Le bien est décomposé (`salle`, `logement`, `formation`) avant l'effet :
+ * L'élément est décomposé (`salle`, `logement`, `formation`, `produit`)
+ * avant l'effet :
  * un objet recréé à chaque rendu relancerait la requête en boucle.
  */
 export function useGalerie(bien: BienPhotographie | null): Galerie {
   const idSalle = bien !== null && 'salle' in bien ? bien.salle : null;
   const idLogement = bien !== null && 'logement' in bien ? bien.logement : null;
   const idFormation = bien !== null && 'formation' in bien ? bien.formation : null;
+  const idProduit = bien !== null && 'produit' in bien ? bien.produit : null;
   const [photos, setPhotos] = useState<PhotoBien[]>([]);
   const [chargement, setChargement] = useState(bien !== null);
   const [erreur, setErreur] = useState(false);
@@ -36,7 +38,9 @@ export function useGalerie(bien: BienPhotographie | null): Galerie {
           ? { logement: idLogement }
           : idFormation !== null
             ? { formation: idFormation }
-            : null;
+            : idProduit !== null
+              ? { produit: idProduit }
+              : null;
     if (cible === null) {
       setPhotos([]);
       setChargement(false);
@@ -57,7 +61,7 @@ export function useGalerie(bien: BienPhotographie | null): Galerie {
     return () => {
       actif = false;
     };
-  }, [idSalle, idLogement, idFormation, version]);
+  }, [idSalle, idLogement, idFormation, idProduit, version]);
 
   const recharger = useCallback(() => setVersion((v) => v + 1), []);
   return { photos, chargement, erreur, recharger };
@@ -81,8 +85,8 @@ function message(erreurCapturee: unknown): string {
 }
 
 export interface GestionGalerie {
-  ajouter: (fichier: File, legende: string) => Promise<boolean>;
-  retirer: (idPhoto: number) => Promise<void>;
+  ajouter: (fichier: File) => Promise<boolean>;
+  retirer: (nomFichier: string) => Promise<void>;
   envoi: boolean;
   erreur: string | null;
 }
@@ -111,9 +115,9 @@ export function useGestionGalerie(
   }
 
   return {
-    ajouter: (fichier, legende) => executer(() => ajouterPhoto(bien, fichier, legende)),
-    retirer: async (idPhoto) => {
-      await executer(() => supprimerPhoto(idPhoto));
+    ajouter: (fichier) => executer(() => ajouterPhoto(bien, fichier)),
+    retirer: async (nomFichier) => {
+      await executer(() => supprimerPhoto(bien, nomFichier));
     },
     envoi,
     erreur,

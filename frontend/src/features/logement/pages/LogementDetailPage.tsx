@@ -63,6 +63,7 @@ export default function LogementDetailPage() {
 
       <article className="mt-6 grid gap-8 md:grid-cols-2">
         <GaleriePhotos
+          bien={{ logement: donnees.id_logement }}
           photos={galerie.photos}
           repli={imagePour('logement', donnees.id_logement, 900)}
           nomBien={`Chambre ${donnees.type_chambre}`}

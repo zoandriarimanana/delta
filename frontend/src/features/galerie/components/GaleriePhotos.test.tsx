@@ -1,4 +1,4 @@
-/** Tests de la galerie publique d'un bien. */
+/** Tests de la galerie publique d'un élément du catalogue. */
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
@@ -6,9 +6,9 @@ import { afterEach, expect, it } from 'vitest';
 import GaleriePhotos from './GaleriePhotos';
 
 const PHOTOS = [
-  { id_photo: 11, legende: 'Vue depuis l’entrée' },
-  { id_photo: 12, legende: null },
-  { id_photo: 13, legende: 'Coin lecture' },
+  { fichier: '3-1.jpg' },
+  { fichier: '3-2.png' },
+  { fichier: '3-5.webp' },
 ];
 
 afterEach(cleanup);
@@ -16,6 +16,7 @@ afterEach(cleanup);
 function afficher(photos = PHOTOS) {
   return render(
     <GaleriePhotos
+      bien={{ salle: 3 }}
       photos={photos}
       repli="https://exemple.test/repli.jpg"
       nomBien="Salle A"
@@ -29,15 +30,14 @@ it('affiche l’illustration de repli, sans compteur, quand il n’y a aucune ph
   expect(container.querySelector('img')?.getAttribute('src')).toBe(
     'https://exemple.test/repli.jpg'
   );
-  expect(screen.queryByText(/\/ /)).toBeNull();
   expect(screen.queryByRole('button', { name: 'Agrandir la photo' })).toBeNull();
 });
 
-it('montre la première photo, sa légende et le compteur', () => {
+it('lit la photo dans le dossier de sa partie', () => {
   afficher();
 
-  const principale = screen.getByRole('img', { name: 'Vue depuis l’entrée' });
-  expect(principale.getAttribute('src')).toMatch(/\/photos-biens\/11$/);
+  const principale = screen.getByRole('img', { name: 'Salle A, photo 1 sur 3' });
+  expect(principale.getAttribute('src')).toMatch(/\/photos\/salles\/3-1\.jpg$/);
   expect(screen.getByText('1 / 3')).toBeDefined();
 });
 
@@ -50,11 +50,13 @@ it('passe d’une photo à l’autre, en boucle', () => {
   expect(screen.getByText('1 / 3')).toBeDefined();
 });
 
-it('une photo sans légende reçoit un texte alternatif tiré du nom du bien', () => {
+it('une miniature affiche la photo choisie', () => {
   afficher();
 
   fireEvent.click(screen.getByRole('button', { name: 'Afficher la photo 2' }));
-  expect(screen.getByRole('img', { name: 'Salle A, photo 2' })).toBeDefined();
+  expect(
+    screen.getByRole('img', { name: 'Salle A, photo 2 sur 3' }).getAttribute('src')
+  ).toMatch(/3-2\.png$/);
 });
 
 it('ouvre le plein écran et le referme avec Échap', () => {
@@ -65,7 +67,7 @@ it('ouvre le plein écran et le referme avec Échap', () => {
 
   fireEvent.keyDown(window, { key: 'ArrowRight' });
   expect(
-    screen.getAllByRole('img', { name: 'Salle A, photo 2' }).length
+    screen.getAllByRole('img', { name: 'Salle A, photo 2 sur 3' }).length
   ).toBeGreaterThan(0);
 
   fireEvent.keyDown(window, { key: 'Escape' });

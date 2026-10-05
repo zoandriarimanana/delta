@@ -60,6 +60,7 @@ export default function SalleDetailPage() {
 
       <article className="mt-6 grid gap-8 md:grid-cols-2">
         <GaleriePhotos
+          bien={{ salle: donnees.id_salle }}
           photos={galerie.photos}
           repli={imagePour('salle', donnees.id_salle, 900)}
           nomBien={donnees.nom}

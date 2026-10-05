@@ -62,6 +62,7 @@ export default function FormationDetailPage() {
 
       <article className="mt-6 grid gap-8 md:grid-cols-2">
         <GaleriePhotos
+          bien={{ formation: fiche.id_formation }}
           photos={galerie.photos}
           repli={imagePour('formation', fiche.id_formation, 900)}
           nomBien={fiche.titre}

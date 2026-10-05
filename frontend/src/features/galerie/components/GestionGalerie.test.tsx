@@ -1,4 +1,4 @@
-/** Tests de la gestion de galerie, côté administration. */
+/** Tests de la gestion des photos, côté administration. */
 
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -15,8 +15,8 @@ vi.mock('../galerie.api', async (original) => ({
 
 beforeEach(() => {
   vi.mocked(recupererPhotos).mockResolvedValue([
-    { id_photo: 1, legende: null },
-    { id_photo: 2, legende: 'Terrasse' },
+    { fichier: '7-1.jpg' },
+    { fichier: '7-2.png' },
   ]);
 });
 
@@ -29,29 +29,29 @@ function fichierImage(): File {
   return new File(['octets'], 'salle.png', { type: 'image/png' });
 }
 
-it('liste les photos du bien et nomme la couverture', async () => {
+it('liste les fichiers, nomme la couverture et le dossier de rangement', async () => {
   render(<GestionGalerie bien={{ salle: 7 }} />);
 
-  expect(await screen.findByText('Couverture')).toBeDefined();
-  expect(screen.getByText('Terrasse')).toBeDefined();
+  expect(await screen.findByText(/7-1\.jpg/)).toBeDefined();
+  expect(screen.getByText(/· couverture/)).toBeDefined();
+  expect(screen.getByText('static/upload/salles/')).toBeDefined();
   expect(screen.getByText('2 / 10')).toBeDefined();
   expect(recupererPhotos).toHaveBeenCalledWith({ salle: 7 });
 });
 
-it('téléverse le fichier choisi avec sa légende, puis recharge', async () => {
-  vi.mocked(ajouterPhoto).mockResolvedValue({ id_photo: 3, legende: 'Scène' });
-  const { container } = render(<GestionGalerie bien={{ logement: 4 }} />);
-  await screen.findByText('Couverture');
+it('téléverse le fichier choisi, puis recharge', async () => {
+  vi.mocked(ajouterPhoto).mockResolvedValue({ fichier: '4-1.png' });
+  const { container } = render(<GestionGalerie bien={{ produit: 4 }} />);
+  await screen.findByText(/7-1\.jpg/);
 
   const fichier = fichierImage();
   fireEvent.change(container.querySelector('input[type="file"]')!, {
     target: { files: [fichier] },
   });
-  fireEvent.change(screen.getByLabelText(/Légende/), { target: { value: 'Scène' } });
   fireEvent.click(screen.getByRole('button', { name: /Ajouter la photo/ }));
 
   await waitFor(() =>
-    expect(ajouterPhoto).toHaveBeenCalledWith({ logement: 4 }, fichier, 'Scène')
+    expect(ajouterPhoto).toHaveBeenCalledWith({ produit: 4 }, fichier)
   );
   await waitFor(() => expect(recupererPhotos).toHaveBeenCalledTimes(2));
 });
@@ -64,7 +64,7 @@ it('reprend tel quel le refus du serveur', async () => {
     },
   });
   const { container } = render(<GestionGalerie bien={{ salle: 7 }} />);
-  await screen.findByText('Couverture');
+  await screen.findByText(/7-1\.jpg/);
 
   fireEvent.change(container.querySelector('input[type="file"]')!, {
     target: { files: [fichierImage()] },
@@ -74,18 +74,20 @@ it('reprend tel quel le refus du serveur', async () => {
   expect((await screen.findByRole('alert')).textContent).toContain('JPEG, PNG et WebP');
 });
 
-it('retire une photo', async () => {
+it('retire une photo par son nom de fichier', async () => {
   vi.mocked(supprimerPhoto).mockResolvedValue(undefined);
   render(<GestionGalerie bien={{ salle: 7 }} />);
 
   fireEvent.click(await screen.findByRole('button', { name: 'Retirer la photo 2' }));
 
-  await waitFor(() => expect(supprimerPhoto).toHaveBeenCalledWith(2));
+  await waitFor(() =>
+    expect(supprimerPhoto).toHaveBeenCalledWith({ salle: 7 }, '7-2.png')
+  );
 });
 
 it('n’offre plus d’ajout quand la galerie est complète', async () => {
   vi.mocked(recupererPhotos).mockResolvedValue(
-    Array.from({ length: 10 }, (_, rang) => ({ id_photo: rang + 1, legende: null }))
+    Array.from({ length: 10 }, (_, rang) => ({ fichier: `7-${rang + 1}.jpg` }))
   );
   render(<GestionGalerie bien={{ salle: 7 }} />);
 

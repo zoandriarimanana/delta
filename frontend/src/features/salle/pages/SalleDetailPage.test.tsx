@@ -45,8 +45,8 @@ function afficher(chemin = '/salles/3') {
 beforeEach(() => {
   vi.mocked(recupererSalle).mockResolvedValue(SALLE);
   vi.mocked(recupererPhotos).mockResolvedValue([
-    { id_photo: 21, legende: 'Vue d’ensemble' },
-    { id_photo: 22, legende: null },
+    { fichier: '3-1.jpg' },
+    { fichier: '3-2.jpg' },
   ]);
 });
 
@@ -58,7 +58,9 @@ afterEach(() => {
 it('affiche la galerie de la salle', async () => {
   afficher();
 
-  expect(await screen.findByRole('img', { name: 'Vue d’ensemble' })).toBeDefined();
+  expect(
+    await screen.findByRole('img', { name: 'Salle Ravinala, photo 1 sur 2' })
+  ).toBeDefined();
   expect(recupererPhotos).toHaveBeenCalledWith({ salle: 3 });
   expect(screen.getByText('1 / 2')).toBeDefined();
 });

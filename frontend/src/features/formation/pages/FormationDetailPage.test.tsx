@@ -70,7 +70,7 @@ beforeEach(() => {
   vi.mocked(recupererDomaines).mockResolvedValue([
     { id_domaine: 1, libelle: 'Pâtisserie', description: 'Les classiques français.' },
   ]);
-  vi.mocked(recupererPhotos).mockResolvedValue([{ id_photo: 9, legende: 'L’atelier' }]);
+  vi.mocked(recupererPhotos).mockResolvedValue([{ fichier: '4-1.jpg' }]);
 });
 
 afterEach(() => {
@@ -81,7 +81,9 @@ afterEach(() => {
 it('affiche la galerie, le domaine et la description complète', async () => {
   afficher();
 
-  expect(await screen.findByRole('img', { name: 'L’atelier' })).toBeDefined();
+  expect(
+    await screen.findByRole('img', { name: 'Masterclass pâtisserie, photo 1 sur 1' })
+  ).toBeDefined();
   expect(recupererPhotos).toHaveBeenCalledWith({ formation: 4 });
   expect(await screen.findByText('Pâtisserie')).toBeDefined();
   expect(screen.getByText(/Matériel fourni/)).toBeDefined();

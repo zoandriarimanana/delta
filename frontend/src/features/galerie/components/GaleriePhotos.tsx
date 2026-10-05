@@ -13,9 +13,11 @@ import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Expand, X } from 'lucide-react';
 
 import { urlPhoto } from '../galerie.api';
-import type { PhotoBien } from '../galerie.types';
+import type { BienPhotographie, PhotoBien } from '../galerie.types';
 
 interface Proprietes {
+  /** L'élément photographié — il désigne le dossier où lire les fichiers. */
+  bien: BienPhotographie;
   photos: PhotoBien[];
   /** Illustration affichée tant que le bien n'a aucune photo. */
   repli: string;
@@ -26,7 +28,7 @@ interface Proprietes {
 const CLASSES_FLECHE =
   'absolute top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-warm-gray-700 shadow-md transition hover:bg-white';
 
-export default function GaleriePhotos({ photos, repli, nomBien }: Proprietes) {
+export default function GaleriePhotos({ bien, photos, repli, nomBien }: Proprietes) {
   const [index, setIndex] = useState(0);
   const [pleinEcran, setPleinEcran] = useState(false);
   const nombre = photos.length;
@@ -58,11 +60,11 @@ export default function GaleriePhotos({ photos, repli, nomBien }: Proprietes) {
     );
   }
 
-  const texteAlternatif = photo.legende ?? `${nomBien}, photo ${courant + 1}`;
+  const texteAlternatif = `${nomBien}, photo ${courant + 1} sur ${nombre}`;
 
   return (
     <div className="self-start space-y-3">
-      <figure className="relative overflow-hidden rounded-2xl bg-warm-gray-200 shadow-md">
+      <div className="relative overflow-hidden rounded-2xl bg-warm-gray-200 shadow-md">
         <button
           type="button"
           onClick={() => setPleinEcran(true)}
@@ -70,7 +72,7 @@ export default function GaleriePhotos({ photos, repli, nomBien }: Proprietes) {
           className="group block w-full"
         >
           <img
-            src={urlPhoto(photo.id_photo)}
+            src={urlPhoto(bien, photo.fichier)}
             alt={texteAlternatif}
             className="aspect-[4/3] w-full object-cover"
           />
@@ -101,17 +103,12 @@ export default function GaleriePhotos({ photos, repli, nomBien }: Proprietes) {
             </span>
           </>
         )}
-        {photo.legende !== null && (
-          <figcaption className="absolute bottom-0 left-0 max-w-[75%] rounded-tr-xl bg-black/50 px-3 py-1.5 text-sm text-white">
-            {photo.legende}
-          </figcaption>
-        )}
-      </figure>
+      </div>
 
       {nombre > 1 && (
         <ul aria-label="Miniatures" className="flex gap-2 overflow-x-auto pb-1">
           {photos.map((miniature, rang) => (
-            <li key={miniature.id_photo} className="shrink-0">
+            <li key={miniature.fichier} className="shrink-0">
               <button
                 type="button"
                 onClick={() => setIndex(rang)}
@@ -124,7 +121,7 @@ export default function GaleriePhotos({ photos, repli, nomBien }: Proprietes) {
                 }`}
               >
                 <img
-                  src={urlPhoto(miniature.id_photo)}
+                  src={urlPhoto(bien, miniature.fichier)}
                   alt=""
                   className="h-16 w-20 object-cover"
                 />
@@ -143,7 +140,7 @@ export default function GaleriePhotos({ photos, repli, nomBien }: Proprietes) {
           onClick={() => setPleinEcran(false)}
         >
           <img
-            src={urlPhoto(photo.id_photo)}
+            src={urlPhoto(bien, photo.fichier)}
             alt={texteAlternatif}
             className="max-h-full max-w-full rounded-lg object-contain"
             onClick={(evenement) => evenement.stopPropagation()}
@@ -181,11 +178,6 @@ export default function GaleriePhotos({ photos, repli, nomBien }: Proprietes) {
                 <ChevronRight size={20} aria-hidden />
               </button>
             </>
-          )}
-          {photo.legende !== null && (
-            <p className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-1.5 text-sm text-white">
-              {photo.legende}
-            </p>
           )}
         </div>
       )}
