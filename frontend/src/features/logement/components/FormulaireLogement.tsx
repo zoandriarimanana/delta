@@ -35,6 +35,7 @@ function valeursInitiales(logement?: Logement): LogementModifie {
     capacite: logement?.capacite ?? 1,
     tarif_nuitee: logement?.tarif_nuitee ?? '0.00',
     statut: logement?.statut,
+    description: logement?.description ?? '',
   };
 }
 
@@ -61,14 +62,19 @@ export default function FormulaireLogement({
       className="space-y-4"
       onSubmit={(evenement) => {
         evenement.preventDefault();
+        // Chaîne vide ou blanche → `null` : « pas de description », que la
+        // fiche annonce, plutôt qu'un paragraphe vide.
+        const description =
+          (valeurs.description ?? '').trim() === '' ? null : valeurs.description;
         surEnvoi(
           logement === undefined
             ? {
                 type_chambre: valeurs.type_chambre,
                 capacite: valeurs.capacite,
                 tarif_nuitee: valeurs.tarif_nuitee,
+                description,
               }
-            : valeurs
+            : { ...valeurs, description }
         );
       }}
     >
@@ -128,6 +134,23 @@ export default function FormulaireLogement({
           </select>
         </label>
       )}
+
+      <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <span>
+          Description <span className="text-warm-gray-500">(facultative)</span>
+        </span>
+        <textarea
+          rows={6}
+          maxLength={4000}
+          value={valeurs.description ?? ''}
+          onChange={(e) => modifier('description', e.target.value)}
+          placeholder="Présentez le lieu : ambiance, agencement, usages conseillés…"
+          className="rounded border border-warm-gray-300 px-2 py-1"
+        />
+        <span className="text-xs text-warm-gray-500">
+          Affichée sur la fiche publique. Les retours à la ligne sont conservés.
+        </span>
+      </label>
 
       {erreur !== null && (
         // Le message du serveur est repris tel quel : il dit quoi corriger.

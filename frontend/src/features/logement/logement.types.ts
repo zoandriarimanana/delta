@@ -14,6 +14,8 @@ export interface Logement {
   capacite: number;
   tarif_nuitee: string;
   statut: StatutLogement;
+  /** Présentation libre du logement ; `null` si aucune n'a été rédigée. */
+  description: string | null;
   /**
    * Calculée à la demande, **uniquement sur la fiche** (`GET /logements/{id}`)
    * — jamais sur la liste, non paginée (cf. `docs/roadmap.md`, 8.3). `null`
@@ -49,6 +51,7 @@ export interface LogementEnvoye {
   type_chambre: string;
   capacite: number;
   tarif_nuitee: string;
+  description?: string | null;
 }
 
 /**

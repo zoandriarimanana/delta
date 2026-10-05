@@ -56,6 +56,7 @@ describe('création', () => {
     const envoye = surEnvoi.mock.calls[0]?.[0];
     expect(envoye).toEqual({
       type_chambre: 'Double',
+      description: null,
       capacite: 2,
       tarif_nuitee: '45000',
     });
@@ -67,6 +68,7 @@ describe('modification', () => {
   const LOGEMENT = {
     id_logement: 7,
     type_chambre: 'Suite',
+    description: null,
     capacite: 4,
     tarif_nuitee: '90000.00',
     statut: 'Disponible' as const,

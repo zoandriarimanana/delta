@@ -50,6 +50,7 @@ const SALLE: Salle = {
   tarif_horaire: '15000.00',
   tarif_journee: null,
   equipements: 'Vidéoprojecteur',
+  description: null,
   note_moyenne: null,
   nombre_avis: 0,
 };

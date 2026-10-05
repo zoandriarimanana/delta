@@ -31,6 +31,7 @@ vi.mock('../logement.api');
 const ACTIF = {
   id_logement: 1,
   type_chambre: 'Simple',
+  description: null,
   capacite: 1,
   tarif_nuitee: '20000.00',
   statut: 'Disponible' as const,
@@ -43,6 +44,7 @@ const ARCHIVE = {
   ...ACTIF,
   id_logement: 2,
   type_chambre: 'Double',
+  description: null,
   supprime_le: '2026-09-03T08:12:44Z',
 };
 

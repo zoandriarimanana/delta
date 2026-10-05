@@ -83,6 +83,7 @@ describe('modification', () => {
     tarif_horaire: '20000.00',
     tarif_journee: null,
     equipements: 'Vidéoprojecteur',
+    description: null,
     note_moyenne: null,
     nombre_avis: 0,
   };

@@ -33,6 +33,36 @@ export function estReservable(logement: Logement): boolean {
   return logement.statut === 'Disponible';
 }
 
+const EXPLICATIONS: Record<StatutLogement, string> = {
+  Disponible:
+    'Ce logement est ouvert à la réservation. Choisissez vos dates ci-dessous : si ' +
+    'la période est libre, votre demande est enregistrée aussitôt et apparaît dans ' +
+    '« Mes réservations ». Il peut aussi vous être attribué en complément d’une ' +
+    'formation qui propose l’hébergement.',
+  En_maintenance:
+    'Ce logement fait actuellement l’objet d’un entretien ou de travaux et ne peut ' +
+    'pas être réservé pour le moment. Il reviendra dans l’offre dès la fin de ' +
+    'l’intervention : revenez consulter cette page prochainement, ou découvrez nos ' +
+    'autres hébergements.',
+  Hors_service:
+    'Ce logement a été retiré de notre offre et n’accepte plus de réservation. ' +
+    'Nos autres hébergements restent à votre disposition.',
+};
+
+/**
+ * Explication détaillée du statut, pour la fiche publique.
+ *
+ * `libelleStatut` dit **l'état** en trois mots ; celle-ci dit au visiteur **ce
+ * qu'il peut faire**. Comme le libellé, elle ne parle jamais d'occupation à une
+ * date donnée : le statut décrit le bien, pas son calendrier.
+ */
+export function explicationStatut(statut: StatutLogement): string {
+  return (
+    EXPLICATIONS[statut] ??
+    'L’état de ce logement n’est pas disponible pour le moment. Contactez-nous pour en savoir plus.'
+  );
+}
+
 const VARIANTES: Record<StatutLogement, VarianteBadge> = {
   Disponible: 'positif',
   En_maintenance: 'attente',

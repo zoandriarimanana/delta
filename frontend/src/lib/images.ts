@@ -55,9 +55,17 @@ const PALETTES: Record<FamilleImage, readonly string[]> = {
  * pâtisserie sert alors de repli plutôt qu'une chaîne vide, qui donnerait une
  * image cassée.
  */
-export function imagePour(famille: FamilleImage, identifiant: number): string {
+export function imagePour(
+  famille: FamilleImage,
+  identifiant: number,
+  largeur = 400
+): string {
   const palette = PALETTES[famille];
-  return palette[Math.abs(identifiant) % palette.length] ?? PALETTES.patisserie[0]!;
+  const url =
+    palette[Math.abs(identifiant) % palette.length] ?? PALETTES.patisserie[0]!;
+  // Même image demandée plus large au CDN pour une fiche : la vignette de
+  // 400 px paraîtrait floue en grand.
+  return url.replace('w=400', `w=${largeur}`);
 }
 
 /**
@@ -84,7 +92,7 @@ export function familleProduit(nom: string): FamilleImage {
  * choix reste celui de l'identifiant, la fiche et la vignette concordent.
  */
 export function imageProduit(idProduit: number, nom: string, largeur = 400): string {
-  return imagePour(familleProduit(nom), idProduit).replace('w=400', `w=${largeur}`);
+  return imagePour(familleProduit(nom), idProduit, largeur);
 }
 
 /** Image d'une formation. */

@@ -25,6 +25,7 @@ const SALLE = {
   tarif_horaire: null,
   tarif_journee: '300000.00',
   equipements: 'vidéoprojecteur, sonorisation',
+  description: null,
   note_moyenne: null,
   nombre_avis: 0,
   supprime_le: null,

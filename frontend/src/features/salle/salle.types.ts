@@ -18,6 +18,8 @@ export interface Salle {
   /** `null` si la salle n'est louée qu'à l'heure. */
   tarif_journee: string | null;
   equipements: string | null;
+  /** Présentation libre du lieu ; `null` si aucune n'a été rédigée. */
+  description: string | null;
   /**
    * Calculée à la demande, **uniquement sur la fiche** (`GET /salles/{id}`) —
    * jamais sur la liste, non paginée (cf. `docs/roadmap.md`, 8.3). `null` tant
@@ -51,6 +53,7 @@ export interface SalleEnvoyee {
   tarif_horaire?: string | null;
   tarif_journee?: string | null;
   equipements?: string | null;
+  description?: string | null;
 }
 
 /**

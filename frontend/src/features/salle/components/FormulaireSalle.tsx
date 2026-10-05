@@ -34,6 +34,7 @@ function valeursInitiales(salle?: Salle): SalleEnvoyee {
     tarif_horaire: salle?.tarif_horaire ?? '',
     tarif_journee: salle?.tarif_journee ?? '',
     equipements: salle?.equipements ?? '',
+    description: salle?.description ?? '',
   };
 }
 
@@ -72,6 +73,10 @@ export default function FormulaireSalle({
           tarif_journee:
             (valeurs.tarif_journee ?? '').trim() === '' ? null : valeurs.tarif_journee,
           equipements: valeurs.equipements === '' ? null : valeurs.equipements,
+          // Chaîne vide ou blanche → `null` : « pas de description », que la
+          // fiche annonce, plutôt qu'un paragraphe vide.
+          description:
+            (valeurs.description ?? '').trim() === '' ? null : valeurs.description,
         });
       }}
     >
@@ -140,6 +145,23 @@ export default function FormulaireSalle({
           onChange={(e) => modifier('equipements', e.target.value)}
           className="rounded border border-warm-gray-300 px-2 py-1"
         />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <span>
+          Description <span className="text-warm-gray-500">(facultative)</span>
+        </span>
+        <textarea
+          rows={6}
+          maxLength={4000}
+          value={valeurs.description ?? ''}
+          onChange={(e) => modifier('description', e.target.value)}
+          placeholder="Présentez le lieu : ambiance, agencement, usages conseillés…"
+          className="rounded border border-warm-gray-300 px-2 py-1"
+        />
+        <span className="text-xs text-warm-gray-500">
+          Affichée sur la fiche publique. Les retours à la ligne sont conservés.
+        </span>
       </label>
 
       {erreur !== null && (

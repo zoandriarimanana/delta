@@ -15,6 +15,7 @@ import Bouton from '@/components/ui/Bouton';
 import ChampFiche from '@/components/ui/ChampFiche';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
 import { formaterMontant } from '@/features/commande/commande.service';
+import GestionGalerie from '@/features/galerie/components/GestionGalerie';
 import ReservationsDuBien from '@/features/reservation/components/ReservationsDuBien';
 import { imagePour } from '@/lib/images';
 import { useNoteFiche } from '@/lib/useNoteFiche';
@@ -146,6 +147,15 @@ export default function SalleDetailAdministrationPage() {
                 )}
               </ChampFiche>
             </div>
+            <div className="sm:col-span-2">
+              <ChampFiche intitule="Description">
+                {salle.description !== null ? (
+                  <span className="whitespace-pre-line">{salle.description}</span>
+                ) : (
+                  <span className="text-warm-gray-500">Non rédigée</span>
+                )}
+              </ChampFiche>
+            </div>
           </dl>
 
           <div className="mt-4 flex flex-wrap gap-2">
@@ -173,6 +183,15 @@ export default function SalleDetailAdministrationPage() {
             )}
           </div>
         </div>
+      )}
+
+      {archive ? (
+        <p className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm text-warm-gray-500">
+          Les photos d’une salle archivée sont conservées, mais ne se gèrent qu’une fois
+          restaurée.
+        </p>
+      ) : (
+        <GestionGalerie bien={{ salle: id }} />
       )}
 
       <ReservationsDuBien bien={{ salle: id }} />

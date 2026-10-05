@@ -1,10 +1,10 @@
 /** Fiche d'un produit du catalogue. Publique, comme la liste. */
 
 import type { ReactNode } from 'react';
-import { Link, useParams } from 'react-router';
-import { ArrowLeft } from 'lucide-react';
+import { useParams } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
+import BoutonRetour from '@/components/ui/BoutonRetour';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
 import { formaterMontant } from '@/features/commande/commande.service';
 import { imageProduit } from '@/lib/images';
@@ -171,17 +171,5 @@ function Ligne({ terme, children }: { terme: string; children: ReactNode }) {
 }
 
 function LienRetour() {
-  return (
-    <Link
-      to="/produits"
-      className="group inline-flex items-center gap-2 rounded-full border border-warm-gray-300 bg-white px-4 py-2 text-sm font-medium text-warm-gray-700 no-underline shadow-sm transition-colors hover:border-terracotta hover:text-terracotta"
-    >
-      <ArrowLeft
-        size={16}
-        aria-hidden
-        className="transition-transform group-hover:-translate-x-0.5"
-      />
-      Retour au catalogue
-    </Link>
-  );
+  return <BoutonRetour vers="/produits">Retour au catalogue</BoutonRetour>;
 }

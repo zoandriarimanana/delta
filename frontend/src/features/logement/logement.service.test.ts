@@ -2,13 +2,14 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { estReservable, libelleStatut } from './logement.service';
+import { estReservable, explicationStatut, libelleStatut } from './logement.service';
 import type { Logement, StatutLogement } from './logement.types';
 
 function logement(statut: StatutLogement): Logement {
   return {
     id_logement: 1,
     type_chambre: 'Chambre double',
+    description: null,
     capacite: 2,
     tarif_nuitee: '80000.00',
     statut,
@@ -40,5 +41,23 @@ describe('estReservable', () => {
     expect(estReservable(logement('Disponible'))).toBe(true);
     expect(estReservable(logement('En_maintenance'))).toBe(false);
     expect(estReservable(logement('Hors_service'))).toBe(false);
+  });
+});
+
+describe('explicationStatut', () => {
+  it('dit au visiteur ce qu’il peut faire, pour chaque état', () => {
+    expect(explicationStatut('Disponible')).toContain('ouvert à la réservation');
+    expect(explicationStatut('En_maintenance')).toContain('reviendra dans l’offre');
+    expect(explicationStatut('Hors_service')).toContain('retiré de notre offre');
+  });
+
+  it('ne parle jamais d’occupation : le statut décrit le bien', () => {
+    for (const statut of ['Disponible', 'En_maintenance', 'Hors_service'] as const) {
+      expect(explicationStatut(statut)).not.toMatch(/occup/i);
+    }
+  });
+
+  it('retombe sur un texte neutre pour un statut inconnu', () => {
+    expect(explicationStatut('Inconnu' as StatutLogement)).toMatch(/pas disponible/);
   });
 });

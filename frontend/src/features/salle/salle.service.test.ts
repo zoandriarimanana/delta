@@ -2,7 +2,12 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { libelleTarif } from './salle.service';
+import {
+  explicationLocation,
+  libelleTarif,
+  listeEquipements,
+  modesLocation,
+} from './salle.service';
 import type { Salle } from './salle.types';
 
 function salle(tarifHoraire: string | null, tarifJournee: string | null): Salle {
@@ -13,6 +18,7 @@ function salle(tarifHoraire: string | null, tarifJournee: string | null): Salle 
     tarif_horaire: tarifHoraire,
     tarif_journee: tarifJournee,
     equipements: null,
+    description: null,
     note_moyenne: null,
     nombre_avis: 0,
   };
@@ -52,5 +58,43 @@ describe('libelleTarif', () => {
     // Non représentable en base. S'il se présentait, mieux vaut un libellé
     // neutre qu'une chaîne vide dont personne ne comprendrait la cause.
     expect(libelleTarif(salle(null, null))).toBe('Tarif non communiqué');
+  });
+});
+
+describe('explicationLocation', () => {
+  it('nomme la capacité et les deux modes quand la salle porte deux tarifs', () => {
+    const texte = explicationLocation(salle('15000.00', '90000.00'));
+
+    expect(texte).toContain('12 personne(s)');
+    expect(texte).toContain('à l’heure ou à la journée');
+    expect(texte).toContain('Mes réservations');
+  });
+
+  it('ne nomme que le mode réellement tarifé', () => {
+    expect(explicationLocation(salle(null, '90000.00'))).toContain(
+      'Elle se loue à la journée.'
+    );
+  });
+});
+
+describe('modesLocation', () => {
+  it('suit les tarifs renseignés, gratuité comprise', () => {
+    expect(modesLocation(salle('0.00', null))).toEqual(['À l’heure']);
+    expect(modesLocation(salle('1.00', '2.00'))).toEqual(['À l’heure', 'À la journée']);
+  });
+});
+
+describe('listeEquipements', () => {
+  it('découpe sur les virgules, points-virgules et retours à la ligne', () => {
+    const avec = {
+      ...salle('1.00', null),
+      equipements: 'Wifi, Écran ;Sono\n  Tableau ',
+    };
+
+    expect(listeEquipements(avec)).toEqual(['Wifi', 'Écran', 'Sono', 'Tableau']);
+  });
+
+  it('rend une liste vide sans équipement', () => {
+    expect(listeEquipements(salle('1.00', null))).toEqual([]);
   });
 });

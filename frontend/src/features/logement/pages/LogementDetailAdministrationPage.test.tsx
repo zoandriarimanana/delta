@@ -17,6 +17,7 @@ vi.mock('@/features/reservation/reservation.api');
 const LOGEMENT = {
   id_logement: 2,
   type_chambre: 'double',
+  description: null,
   capacite: 2,
   tarif_nuitee: '80000.00',
   statut: 'En_maintenance' as const,

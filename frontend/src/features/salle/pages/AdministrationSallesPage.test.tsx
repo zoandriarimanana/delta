@@ -36,6 +36,7 @@ const ACTIVE = {
   tarif_horaire: '15000.00',
   tarif_journee: null,
   equipements: null,
+  description: null,
   note_moyenne: null,
   nombre_avis: 0,
   supprime_le: null,
