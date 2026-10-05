@@ -1,4 +1,4 @@
-/** Un champ d'une fiche d'administration : intitulé, puis valeur. */
+/** Un champ d’une fiche d’administration : intitulé, puis valeur. Primitive visuelle. */
 
 import type { ReactNode } from 'react';
 

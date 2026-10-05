@@ -12,6 +12,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { type NoteFiche, useNoteFiche } from '@/lib/useNoteFiche';
+
 import {
   archiverCategorie,
   archiverProduit,
@@ -167,49 +169,10 @@ export function useActionsCatalogue(surSucces: () => void): ActionCatalogue {
   };
 }
 
-export interface NoteAdministration {
-  moyenne: string | null;
-  nombre: number;
-  /** Faux pour un élément archivé : la note n'est calculée que sur l'actif. */
-  disponible: boolean;
-}
-
 /**
- * Note moyenne d'un produit, pour sa fiche d'administration.
- *
- * Lue sur `GET /produits/{id}` — seul endpoint qui la calcule (8.3), et qui
- * ignore les produits archivés : pour eux, la note n'est pas demandée.
+ * Note moyenne d'un produit, pour sa fiche d'administration — lue sur
+ * `GET /produits/{id}`, seul endpoint qui la calcule (8.3), actif uniquement.
  */
-export function useNoteProduit(idProduit: number, actif: boolean): NoteAdministration {
-  const [note, setNote] = useState<NoteAdministration>({
-    moyenne: null,
-    nombre: 0,
-    disponible: false,
-  });
-
-  useEffect(() => {
-    if (!actif || !Number.isInteger(idProduit)) {
-      setNote({ moyenne: null, nombre: 0, disponible: false });
-      return;
-    }
-    let annule = false;
-    recupererProduit(idProduit)
-      .then((produit) => {
-        if (!annule) {
-          setNote({
-            moyenne: produit.note_moyenne,
-            nombre: produit.nombre_avis,
-            disponible: true,
-          });
-        }
-      })
-      .catch(() => {
-        if (!annule) setNote({ moyenne: null, nombre: 0, disponible: false });
-      });
-    return () => {
-      annule = true;
-    };
-  }, [idProduit, actif]);
-
-  return note;
+export function useNoteProduit(idProduit: number, actif: boolean): NoteFiche {
+  return useNoteFiche(idProduit, actif, recupererProduit);
 }

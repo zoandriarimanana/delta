@@ -15,7 +15,7 @@ import Bouton from '@/components/ui/Bouton';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
 import { imageProduit } from '@/lib/images';
 
-import ChampFiche from '../components/ChampFiche';
+import ChampFiche from '@/components/ui/ChampFiche';
 import FormulaireProduit from '../components/FormulaireProduit';
 import {
   estArchive,
