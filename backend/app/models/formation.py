@@ -5,7 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Numeric, String
+from sqlalchemy import ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, SoftDeleteMixin
@@ -36,6 +36,9 @@ class Formation(SoftDeleteMixin, Base):
         ForeignKey("domaine_formation.id_domaine", ondelete="RESTRICT"),
         nullable=False,
     )
+    #: Présentation libre (programme, public visé, prérequis), affichée sur
+    #: la fiche publique — même rôle que `SALLE.description`.
+    description: Mapped[str | None] = mapped_column(Text)
 
     domaine: Mapped[DomaineFormation] = relationship(back_populates="formations")
     sessions: Mapped[list[SessionFormation]] = relationship(

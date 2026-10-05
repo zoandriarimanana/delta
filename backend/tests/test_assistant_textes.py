@@ -78,11 +78,19 @@ def _formation(sessions=(), **kw):
         "prix": Decimal("12345.00"),
         "capacite_max": 654,
         "propose_hebergement": True,
+        "description": None,
         "supprime_le": None,
         "domaine": Objet(libelle="Pâtisserie et cuisine"),
         "sessions": list(sessions),
     }
     return Objet(**valeurs | kw)
+
+
+def test_la_description_d_une_formation_est_indexee() -> None:
+    texte = formation.construire_texte(
+        _formation(description="Programme : pâte à choux et crèmes.")
+    )
+    assert "Présentation : Programme : pâte à choux et crèmes." in texte
 
 
 # --- PRODUIT ----------------------------------------------------------------

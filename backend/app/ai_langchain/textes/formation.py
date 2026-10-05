@@ -59,6 +59,8 @@ def construire_texte(formation: Formation, aujourd_hui: date | None = None) -> s
         if formation.propose_hebergement
         else "Sans hébergement."
     )
+    if formation.description:
+        lignes.append(f"Présentation : {formation.description}")
     sessions = _sessions_a_venir(formation, aujourd_hui or date.today())
     if sessions:
         lignes.append("Sessions à venir :")

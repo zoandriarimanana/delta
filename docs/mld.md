@@ -140,7 +140,7 @@ toute façon jamais soumis à `supprimer_definitivement()`.
 
 ```
 DOMAINE_FORMATION(id_domaine, libelle, description)
-FORMATION(id_formation, titre, niveau, duree_heures, prix, capacite_max, propose_hebergement, #id_domaine)
+FORMATION(id_formation, titre, niveau, duree_heures, prix, capacite_max, propose_hebergement, description, #id_domaine)
 SESSION_FORMATION(id_session, date_debut, date_fin, places_restantes, statut, #id_formation, #id_formateur)
 ```
 
@@ -177,10 +177,11 @@ CATEGORIE_PRODUIT(id_categorie, libelle)
 PRODUIT(id_produit, nom, description, prix_unitaire, unite_mesure, stock_disponible, est_personnalisable, supplement_personnalisation, est_livrable, #id_categorie)
 SALLE(id_salle, nom, capacite, tarif_horaire, tarif_journee, equipements, description)
 LOGEMENT(id_logement, type_chambre, capacite, tarif_nuitee, statut, description)
-PHOTO_BIEN(id_photo, contenu, format, taille_octets, legende, date_ajout, #id_salle, #id_logement)
+PHOTO_BIEN(id_photo, contenu, format, taille_octets, legende, date_ajout, #id_salle, #id_logement, #id_formation)
 ```
 
-- `SALLE.description` et `LOGEMENT.description` sont des `TEXT` **nullables**,
+- `SALLE.description`, `LOGEMENT.description` et `FORMATION.description`
+  (ajoutée ensuite, même demande étendue aux formations) sont des `TEXT` **nullables**,
   ajoutés hors sprint avec la galerie (demande du 5 octobre 2026) : une
   présentation libre affichée sur la fiche publique. `NULL` signifie « pas
   encore rédigée » — la fiche l'annonce, elle n'affiche jamais un paragraphe
@@ -188,7 +189,9 @@ PHOTO_BIEN(id_photo, contenu, format, taille_octets, legende, date_ajout, #id_sa
   elle ne doit pas devenir un document. Absente du dictionnaire d'origine,
   comme `PRODUIT.description` qui, elle, y figurait.
 
-- **`PHOTO_BIEN` — galerie d'une salle ou d'un logement.** Entité entièrement
+- **`PHOTO_BIEN` — galerie d'une salle, d'un logement ou d'une formation.**
+  « Bien » est pris au sens large depuis l'ajout des formations (migration
+  `263370ab6692`) : ce qui est présenté en galerie sur une fiche publique. Entité entièrement
   nouvelle, ajoutée hors sprint (même demande), comme `DOCUMENT_CONNAISSANCE`
   au Sprint 12 — pas la correction d'une omission.
 
@@ -201,21 +204,27 @@ PHOTO_BIEN(id_photo, contenu, format, taille_octets, legende, date_ajout, #id_sa
   chargée en différé (`deferred`) : une liste de photos ne lit jamais les
   octets.
 
-  **Une seule entité pour les deux biens**, et non deux tables jumelles : la
-  règle (formats, taille, nombre, diffusion publique) est la même, deux copies
-  divergeraient. Le rattachement suit le patron d'`AVIS` :
+  **Une seule entité pour les trois**, et non des tables jumelles : la règle
+  (formats, taille, nombre, diffusion publique) est la même, plusieurs copies
+  divergeraient. Le rattachement suit le patron de la contrainte n°2 de
+  `RESERVATION`, mais **exactement** une cible — une photo orpheline n'aurait
+  aucune fiche où s'afficher :
 
   ```sql
-  CHECK ((id_salle IS NOT NULL) <> (id_logement IS NOT NULL))
+  CHECK ((id_salle IS NOT NULL)::int + (id_logement IS NOT NULL)::int
+         + (id_formation IS NOT NULL)::int = 1)
   ```
+
+  Le premier état du schéma (`e2cb623114f8`) portait un XOR à deux colonnes,
+  `cible_xor` ; il a été remplacé par `cible_unique` à l'ajout des formations.
 
   `PHOTO_BIEN.format` ∈ {JPEG, PNG, WEBP}. Domaine formel, `CHECK` en base.
   **Déduit des octets** par Pillow, jamais du nom ni du `Content-Type` déclaré
   — même règle que `PERSONNEL.photo_chemin` et `DOCUMENT_CONNAISSANCE.type_fichier`.
   C'est lui qui fixe le type renvoyé à la lecture.
 
-  Les deux clés étrangères sont en **`ON DELETE CASCADE`** : une photo n'a
-  aucune valeur probante, et `SALLE`/`LOGEMENT` sont justement des entités
+  Les trois clés étrangères sont en **`ON DELETE CASCADE`** : une photo n'a
+  aucune valeur probante, et `SALLE`/`LOGEMENT`/`FORMATION` sont justement des entités
   soumises à `supprimer_definitivement()`. Supprimer le bien emporte sa
   galerie ; rien d'autre ne la référence.
 

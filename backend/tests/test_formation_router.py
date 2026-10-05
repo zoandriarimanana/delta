@@ -499,3 +499,16 @@ def test_liste_publique_formations_ne_remonte_aucune_archive_ni_le_champ(
 
     assert creee["id_formation"] not in [f["id_formation"] for f in publique]
     assert all("supprime_le" not in f for f in publique)
+
+
+def test_la_description_d_une_formation_se_lit_sur_la_fiche(
+    client_http: TestClient, entete_admin: dict[str, str], id_domaine: int
+) -> None:
+    creee = client_http.post(
+        FORMATIONS,
+        json=_formation(id_domaine, description="Pour débutants.\nMatériel fourni."),
+        headers=entete_admin,
+    ).json()
+
+    fiche = client_http.get(f"{FORMATIONS}/{creee['id_formation']}").json()
+    assert fiche["description"] == "Pour débutants.\nMatériel fourni."

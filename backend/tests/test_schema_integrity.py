@@ -65,8 +65,9 @@ CHECKS_ATTENDUS = [
     ("personnel", "ck_personnel_fonction_personnel"),
     # Décide si un document peut ressortir dans la bulle publique (12.9).
     ("document_connaissance", "ck_document_connaissance_public_cible_document"),
-    # Une photo appartient à exactement un bien, salle ou logement.
-    ("photo_bien", "ck_photo_bien_cible_xor"),
+    # Une photo appartient à exactement un élément : salle, logement ou
+    # formation.
+    ("photo_bien", "ck_photo_bien_cible_unique"),
     ("photo_bien", "ck_photo_bien_format_photo"),
     ("commande", "ck_commande_type_commande"),
     ("commande", "ck_commande_statut_commande"),

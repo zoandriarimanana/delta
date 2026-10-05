@@ -23,6 +23,10 @@ class PhotoBienRepository(BaseRepository[PhotoBien]):
         """Photos actives d'un logement, dans l'ordre d'ajout."""
         return self._lister(PhotoBien.id_logement == id_logement)
 
+    def lister_par_formation(self, id_formation: int) -> Sequence[PhotoBien]:
+        """Photos actives d'une formation, dans l'ordre d'ajout."""
+        return self._lister(PhotoBien.id_formation == id_formation)
+
     def _lister(self, critere: object) -> Sequence[PhotoBien]:
         requete = (
             select(PhotoBien)
@@ -38,6 +42,10 @@ class PhotoBienRepository(BaseRepository[PhotoBien]):
     def compter_par_logement(self, id_logement: int) -> int:
         """Nombre de photos actives d'un logement."""
         return self._compter(PhotoBien.id_logement == id_logement)
+
+    def compter_par_formation(self, id_formation: int) -> int:
+        """Nombre de photos actives d'une formation."""
+        return self._compter(PhotoBien.id_formation == id_formation)
 
     def _compter(self, critere: object) -> int:
         requete = (

@@ -13,6 +13,7 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -20,6 +21,8 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import TypeSujet, hacher_mot_de_passe
 from app.main import app
+from app.models.domaine_formation import DomaineFormation
+from app.models.formation import Formation
 from app.models.logement import Logement, StatutLogement
 from app.models.personnel import FonctionPersonnel, Personnel
 from app.models.photo_bien import FormatPhoto, PhotoBien
@@ -84,6 +87,23 @@ def logement(db: Session) -> Logement:
         capacite=2,
         tarif_nuitee=Decimal("50.00"),
         statut=StatutLogement.DISPONIBLE,
+    )
+    db.add(objet)
+    db.commit()
+    return objet
+
+
+@pytest.fixture
+def formation(db: Session) -> Formation:
+    domaine = DomaineFormation(libelle=f"Domaine {uuid4().hex[:8]}")
+    db.add(domaine)
+    db.flush()
+    objet = Formation(
+        titre="Atelier galerie",
+        duree_heures=3,
+        prix=Decimal("20.00"),
+        capacite_max=8,
+        id_domaine=domaine.id_domaine,
     )
     db.add(objet)
     db.commit()
@@ -346,18 +366,66 @@ def test_supprimer_definitivement_le_bien_emporte_sa_galerie(
     assert db.get(PhotoBien, id_photo) is None
 
 
-@pytest.mark.parametrize("deux_biens", [True, False], ids=["deux-biens", "aucun"])
-def test_une_photo_appartient_a_exactement_un_bien(
-    db: Session, salle: Salle, logement: Logement, deux_biens: bool
+@pytest.mark.parametrize(
+    ("salle_", "logement_", "formation_"),
+    [(True, True, False), (True, False, True), (False, False, False)],
+    ids=["salle-et-logement", "salle-et-formation", "aucun"],
+)
+def test_une_photo_appartient_a_exactement_un_element(
+    db: Session,
+    salle: Salle,
+    logement: Logement,
+    formation: Formation,
+    salle_: bool,
+    logement_: bool,
+    formation_: bool,
 ) -> None:
     db.add(
         PhotoBien(
             contenu=_image(),
             format=FormatPhoto.PNG,
             taille_octets=10,
-            id_salle=salle.id_salle if deux_biens else None,
-            id_logement=logement.id_logement if deux_biens else None,
+            id_salle=salle.id_salle if salle_ else None,
+            id_logement=logement.id_logement if logement_ else None,
+            id_formation=formation.id_formation if formation_ else None,
         )
     )
-    with pytest.raises(IntegrityError, match="ck_photo_bien_cible_xor"):
+    with pytest.raises(IntegrityError, match="ck_photo_bien_cible_unique"):
         db.flush()
+
+
+# --- Formations ---------------------------------------------------------------
+
+
+def test_une_formation_a_sa_propre_galerie(
+    client_http: TestClient,
+    admin: dict[str, str],
+    formation: Formation,
+    salle: Salle,
+) -> None:
+    chemin = f"/formations/{formation.id_formation}/photos"
+    reponse = _envoyer(client_http, chemin, admin, legende="Plan de travail")
+    assert reponse.status_code == 201
+
+    galerie = client_http.get(f"{PREFIXE}{chemin}").json()
+    assert [p["legende"] for p in galerie] == ["Plan de travail"]
+    assert client_http.get(f"{PREFIXE}/salles/{salle.id_salle}/photos").json() == []
+
+    image = client_http.get(f"{PREFIXE}/photos-biens/{galerie[0]['id_photo']}")
+    assert image.status_code == 200
+
+
+def test_la_photo_d_une_formation_archivee_disparait(
+    client_http: TestClient, admin: dict[str, str], db: Session, formation: Formation
+) -> None:
+    id_photo = _envoyer(
+        client_http, f"/formations/{formation.id_formation}/photos", admin
+    ).json()["id_photo"]
+
+    formation.supprime_le = func.now()
+    db.commit()
+
+    assert client_http.get(f"{PREFIXE}/photos-biens/{id_photo}").status_code == 404
+    assert (
+        client_http.get(f"{PREFIXE}/formations/{formation.id_formation}/photos")
+    ).status_code == 404

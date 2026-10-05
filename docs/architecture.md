@@ -391,12 +391,12 @@ retire puis s'ajoute sous un nouvel identifiant, donc le contenu d'une URL ne
 change pas. La photo de profil, remplacée à URL constante, est au contraire en
 `no-store`.
 
-**Un module `features/galerie/`**, monté par les fiches salle et logement
+**Un module `features/galerie/`**, monté par les fiches salle, logement et formation
 sans qu'elles en sachent davantage — même mécanique que
 `FormulaireReservationCreneau`. `GaleriePhotos` pour la fiche publique,
-`GestionGalerie` pour l'administration. Le bien visé est une union
-(`{ salle } | { logement }`) : une galerie à deux biens est inexprimable,
-comme côté base.
+`GestionGalerie` pour l'administration. L'élément visé est une union
+(`{ salle } | { logement } | { formation }`) : une galerie rattachée à deux
+éléments est inexprimable, comme côté base.
 
 ## Frontend — arborescence
 
@@ -1121,7 +1121,7 @@ chaque redéploiement. Format lu dans les octets, jamais dans le nom.
 | `avis` | AVIS |
 | `paiement` | PAIEMENT |
 | `assistant` | DOCUMENT_CONNAISSANCE (et l'index vectoriel, hors MLD) |
-| `galerie` | PHOTO_BIEN |
+| `galerie` | PHOTO_BIEN (salles, logements, formations) |
 
 Voir `docs/mld.md` pour le détail des colonnes de chaque table.
 Voir `docs/roadmap.md` pour l'ordre de développement de ces modules.

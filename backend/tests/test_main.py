@@ -90,6 +90,7 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         # écriture administrateur.
         f"{prefixe}/salles/{{id_salle}}/photos",
         f"{prefixe}/logements/{{id_logement}}/photos",
+        f"{prefixe}/formations/{{id_formation}}/photos",
         f"{prefixe}/photos-biens/{{id_photo}}",
         f"{prefixe}/reservations",
         f"{prefixe}/reservations/administration",

@@ -1,12 +1,12 @@
-"""Endpoints de PHOTO_BIEN — galerie des salles et des logements.
+"""Endpoints de PHOTO_BIEN — galerie des salles, logements et formations.
 
 **Lecture publique, écriture réservée aux administrateurs** — même réglage que
 le catalogue des salles et des logements, dont la galerie fait partie : un
 visiteur doit voir les lieux avant de réserver.
 
-Un seul routeur pour les deux biens, comme une seule entité : les chemins
-`/salles/{id}/photos` et `/logements/{id}/photos` désignent la galerie de
-chacun, `/photos-biens/{id}` une photo quel que soit son bien.
+Un seul routeur pour les trois, comme une seule entité : `/salles/{id}/photos`,
+`/logements/{id}/photos` et `/formations/{id}/photos` désignent la galerie de
+chacun, `/photos-biens/{id}` une photo quel que soit son élément.
 """
 
 from typing import Annotated
@@ -87,6 +87,37 @@ def ajouter_photo_logement(
     """Voir `PhotoBienService._enregistrer` pour les trois contrôles."""
     photo = PhotoBienService(db).ajouter_a_logement(
         id_logement, fichier.file.read(), fichier.content_type, legende
+    )
+    return PhotoBienRead.model_validate(photo)
+
+
+@router.get(
+    "/formations/{id_formation}/photos",
+    response_model=list[PhotoBienRead],
+    summary="Lister les photos d'une formation",
+)
+def lister_photos_formation(id_formation: int, db: SessionBase) -> list[PhotoBienRead]:
+    """Galerie publique, dans l'ordre d'ajout."""
+    photos = PhotoBienService(db).lister_pour_formation(id_formation)
+    return [PhotoBienRead.model_validate(p) for p in photos]
+
+
+@router.post(
+    "/formations/{id_formation}/photos",
+    response_model=PhotoBienRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ajouter une photo à une formation",
+)
+def ajouter_photo_formation(
+    id_formation: int,
+    admin: PersonnelAdministrateur,
+    db: SessionBase,
+    fichier: FichierPhoto,
+    legende: Legende = None,
+) -> PhotoBienRead:
+    """Voir `PhotoBienService._enregistrer` pour les trois contrôles."""
+    photo = PhotoBienService(db).ajouter_a_formation(
+        id_formation, fichier.file.read(), fichier.content_type, legende
     )
     return PhotoBienRead.model_validate(photo)
 

@@ -1498,6 +1498,19 @@ Sprint 12. La seconde **modifie le schéma** — signalé avant de coder.
       ajoutées par l'écran d'administration puis affichées sur la fiche
       publique, plein écran, logement en maintenance, mobile. Backend
       1385/1385 sur base vierge, frontend 692/692, build compris.
+      — **Étendu aux formations** (même jour, demande suivante) : colonne
+      `FORMATION.description`, galerie `PHOTO_BIEN.#id_formation` — le
+      `CHECK cible_xor` devient `cible_unique` (exactement une cible parmi
+      trois), migration `263370ab6692`. Fiche publique refaite sur le même
+      patron : galerie, domaine et sa description, pastilles (sessions
+      ouvertes, niveau, durée, hébergement), encadré « Inscription », et
+      **chaque session** porte une pastille d'état et une explication
+      détaillée (ouverte, complète, bientôt ouverte, terminée, annulée).
+      « Complète » reste un affichage dérivé de `places_restantes`, jamais un
+      statut (`docs/mld.md`). Deux illustrations de repli corrigées au passage
+      dans `lib/images.ts` : une URL en 404 (formations et boulangerie) et un
+      portrait sans rapport. Backend 1390/1390 sur base vierge, frontend
+      704/704 ; vérifié dans un vrai navigateur sur les données réelles.
       — **Non traité** : les cartes des listes publiques gardent leur
       illustration — la liste ne renvoie pas la photo de couverture, et
       l'ajouter appellerait une requête par carte ou une évolution de l'API.

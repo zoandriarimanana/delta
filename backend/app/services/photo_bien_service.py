@@ -1,4 +1,4 @@
-"""Service métier de PHOTO_BIEN — galerie des salles et des logements."""
+"""Service métier de PHOTO_BIEN — galerie des salles, logements et formations."""
 
 import io
 from collections.abc import Sequence
@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ConflitMetier, ErreurMetier, RessourceIntrouvable
 from app.models.photo_bien import FormatPhoto, PhotoBien
 from app.repositories.photo_bien_repository import PhotoBienRepository
+from app.services.formation_service import FormationService
 from app.services.logement_service import LogementService
 from app.services.salle_service import SalleService
 
@@ -40,7 +41,7 @@ MESSAGE_PHOTO_INTROUVABLE = "Photo introuvable."
 class PhotoBienService:
     """Règles de la galerie : formats, taille, nombre, diffusion.
 
-    Le bien doit être **actif** pour toute opération : une salle archivée n'a
+    L'élément doit être **actif** pour toute opération : une salle archivée n'a
     pas de fiche publique, sa galerie n'a donc rien à montrer. La galerie
     survit en revanche à l'archivage — restaurer le bien la fait réapparaître,
     même raisonnement que la photo du personnel à l'archivage.
@@ -62,6 +63,11 @@ class PhotoBienService:
         LogementService(self.db).obtenir(id_logement)
         return self.photos.lister_par_logement(id_logement)
 
+    def lister_pour_formation(self, id_formation: int) -> Sequence[PhotoBien]:
+        """Galerie d'une formation active, ou 404."""
+        FormationService(self.db).obtenir(id_formation)
+        return self.photos.lister_par_formation(id_formation)
+
     def obtenir_contenu(self, id_photo: int) -> tuple[bytes, str]:
         """Octets et type MIME d'une photo dont le bien est actif.
 
@@ -71,7 +77,7 @@ class PhotoBienService:
         photo = self.photos.obtenir_avec_contenu(id_photo)
         if photo is None:
             raise RessourceIntrouvable(MESSAGE_PHOTO_INTROUVABLE)
-        bien = photo.salle if photo.id_salle is not None else photo.logement
+        bien = photo.salle or photo.logement or photo.formation
         if bien is None or bien.supprime_le is not None:
             raise RessourceIntrouvable(MESSAGE_PHOTO_INTROUVABLE)
         return photo.contenu, TYPE_MIME_PAR_FORMAT[photo.format]
@@ -100,6 +106,21 @@ class PhotoBienService:
             raise ConflitMetier(MESSAGE_GALERIE_PLEINE)
         return self._enregistrer(
             contenu, type_mime, legende, {"id_logement": id_logement}
+        )
+
+    def ajouter_a_formation(
+        self,
+        id_formation: int,
+        contenu: bytes,
+        type_mime: str | None,
+        legende: str | None,
+    ) -> PhotoBien:
+        """Ajoute une photo à la galerie d'une formation active."""
+        FormationService(self.db).obtenir(id_formation)
+        if self.photos.compter_par_formation(id_formation) >= NOMBRE_MAX_PHOTOS:
+            raise ConflitMetier(MESSAGE_GALERIE_PLEINE)
+        return self._enregistrer(
+            contenu, type_mime, legende, {"id_formation": id_formation}
         )
 
     def supprimer(self, id_photo: int) -> None:

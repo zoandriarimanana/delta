@@ -12,6 +12,9 @@ PRIX_MAX_CHIFFRES = 10
 PRIX_DECIMALES = 2
 LONGUEUR_TITRE = 200
 LONGUEUR_NIVEAU = 50
+#: Même borne que `SALLE.description` : une fiche se lit, elle ne doit pas
+#: devenir un document.
+LONGUEUR_DESCRIPTION = 4000
 
 
 class FormationCreate(BaseModel):
@@ -36,6 +39,7 @@ class FormationCreate(BaseModel):
     capacite_max: int = Field(gt=0)
     propose_hebergement: bool = False
     id_domaine: int
+    description: str | None = Field(default=None, max_length=LONGUEUR_DESCRIPTION)
 
 
 class FormationUpdate(BaseModel):
@@ -50,6 +54,7 @@ class FormationUpdate(BaseModel):
     capacite_max: int | None = Field(default=None, gt=0)
     propose_hebergement: bool | None = None
     id_domaine: int | None = None
+    description: str | None = Field(default=None, max_length=LONGUEUR_DESCRIPTION)
 
 
 class FormationRead(BaseModel):
@@ -65,6 +70,7 @@ class FormationRead(BaseModel):
     capacite_max: int
     propose_hebergement: bool
     id_domaine: int
+    description: str | None = None
     #: Calculée à la demande sur la fiche formation (`GET /formations/{id}`),
     #: jamais sur la liste — cf. `docs/roadmap.md`, 8.3. `None` tant qu'aucun
     #: avis actif n'existe, jamais `0` : ce serait une note valide. Agrégée au
