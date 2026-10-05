@@ -99,6 +99,12 @@ export class ErreurAssistant extends Error {
  * pour un visiteur.
  */
 export function messageErreur(statut: number, detail: unknown): string {
+  if (statut === 401) {
+    // Session expirée, ou remplacée par celle d'un autre compte. Le flux passe
+    // par `fetch` et non par axios : l'intercepteur qui gère le 401 ailleurs
+    // ne voit pas cet appel, le message doit donc dire quoi faire.
+    return 'Votre session n’est plus valide : reconnectez-vous pour continuer.';
+  }
   if (statut === 429) {
     return 'Vous avez posé beaucoup de questions d’un coup. Patientez une minute avant de continuer.';
   }

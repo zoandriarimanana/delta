@@ -85,6 +85,12 @@ describe('messageErreur', () => {
     expect(messageErreur(422, [{ msg: 'x' }])).toMatch(/500 caractères/);
   });
 
+  it('dit de se reconnecter sur un 401 plutôt qu’un message générique', () => {
+    expect(messageErreur(401, 'Jeton d’accès absent ou invalide.')).toMatch(
+      /reconnectez-vous/
+    );
+  });
+
   it('retombe sur un message générique sinon', () => {
     expect(messageErreur(500, 'Internal Server Error')).toMatch(/n’a pas pu répondre/);
   });
