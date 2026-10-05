@@ -56,6 +56,13 @@ class Settings(BaseSettings):
     # service qui l'utilise (`PersonnelService`).
     PHOTO_STORAGE_DIR: str = "stockage/personnel_photos"
 
+    # --- Photos du catalogue (salles, logements, formations, produits) ---
+    # Un sous-dossier par partie, un fichier `<id>-<n>.<ext>` par photo (voir
+    # `GalerieService`). Relatif au répertoire de travail du backend.
+    # **Sur Render, ce disque est effacé à chaque déploiement** : voir la dette
+    # « Photos du catalogue sur disque » dans `docs/roadmap.md`.
+    UPLOAD_DIR: str = "static/upload"
+
     # --- Environnement d'exécution ---
     # Défaut fermé (`production`) : un déploiement qui omet cette variable
     # reste protégé plutôt que de se retrouver exposé par omission. Seul

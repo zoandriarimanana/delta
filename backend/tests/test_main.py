@@ -86,12 +86,13 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/salles/administration",
         f"{prefixe}/salles/{{id_salle}}",
         f"{prefixe}/salles/{{id_salle}}/restauration",
-        # Galerie des salles et logements (PHOTO_BIEN) : lecture publique,
-        # écriture administrateur.
+        # Photos du catalogue, sur disque (`static/upload/`) : lecture
+        # publique, écriture administrateur.
         f"{prefixe}/salles/{{id_salle}}/photos",
         f"{prefixe}/logements/{{id_logement}}/photos",
         f"{prefixe}/formations/{{id_formation}}/photos",
-        f"{prefixe}/photos-biens/{{id_photo}}",
+        f"{prefixe}/produits/{{id_produit}}/photos",
+        f"{prefixe}/photos/{{partie}}/{{fichier}}",
         f"{prefixe}/reservations",
         f"{prefixe}/reservations/administration",
         f"{prefixe}/reservations/administration/{{id_reservation}}",

@@ -177,7 +177,6 @@ CATEGORIE_PRODUIT(id_categorie, libelle)
 PRODUIT(id_produit, nom, description, prix_unitaire, unite_mesure, stock_disponible, est_personnalisable, supplement_personnalisation, est_livrable, #id_categorie)
 SALLE(id_salle, nom, capacite, tarif_horaire, tarif_journee, equipements, description)
 LOGEMENT(id_logement, type_chambre, capacite, tarif_nuitee, statut, description)
-PHOTO_BIEN(id_photo, contenu, format, taille_octets, legende, date_ajout, #id_salle, #id_logement, #id_formation)
 ```
 
 - `SALLE.description`, `LOGEMENT.description` et `FORMATION.description`
@@ -189,60 +188,32 @@ PHOTO_BIEN(id_photo, contenu, format, taille_octets, legende, date_ajout, #id_sa
   elle ne doit pas devenir un document. Absente du dictionnaire d'origine,
   comme `PRODUIT.description` qui, elle, y figurait.
 
-- **`PHOTO_BIEN` — galerie d'une salle, d'un logement ou d'une formation.**
-  « Bien » est pris au sens large depuis l'ajout des formations (migration
-  `263370ab6692`) : ce qui est présenté en galerie sur une fiche publique. Entité entièrement
-  nouvelle, ajoutée hors sprint (même demande), comme `DOCUMENT_CONNAISSANCE`
-  au Sprint 12 — pas la correction d'une omission.
+- **Photos du catalogue : aucune table, des fichiers sur disque.** Les
+  photos des salles, logements, formations et produits sont rangées dans
+  `backend/static/upload/<partie>/` (`salles/`, `logements/`, `formations/`,
+  `produits/`), chacune nommée **`<id>-<n>.<ext>`** — `3-2.jpg` est la
+  deuxième photo de la salle n°3. L'ordre est celui de `n`, la première sert
+  de couverture. Décision de l'utilisateur (5 octobre 2026) : pouvoir lire,
+  ranger et déposer les fichiers soi-même.
 
-  **Les octets sont stockés en base (`bytea`), pas sur disque.** Le disque
-  d'un service Render est effacé à chaque redéploiement : un fichier rangé sur
-  disque disparaîtrait sans que la ligne qui le référence le sache. Même
-  raisonnement que `DOCUMENT_CONNAISSANCE`, et **différence assumée avec
-  `PERSONNEL.photo_chemin`**, resté sur disque : à reprendre si la photo de
-  profil doit survivre à un redéploiement Render. La colonne `contenu` est
-  chargée en différé (`deferred`) : une liste de photos ne lit jamais les
-  octets.
+  Une table `PHOTO_BIEN` (photos en `bytea`) a existé brièvement le même jour
+  (migrations `e2cb623114f8` et `263370ab6692`) ; elle est **retirée** par
+  `4e4ce0aaf1ea`, avec les seules photos de test qu'elle contenait. Les
+  colonnes `description` sont conservées.
 
-  **Une seule entité pour les trois**, et non des tables jumelles : la règle
-  (formats, taille, nombre, diffusion publique) est la même, plusieurs copies
-  divergeraient. Le rattachement suit le patron de la contrainte n°2 de
-  `RESERVATION`, mais **exactement** une cible — une photo orpheline n'aurait
-  aucune fiche où s'afficher :
+  Sans table, rien en base ne relie un fichier à son élément : c'est le
+  **nom** qui porte le lien, et `GalerieService` qui le vérifie (élément
+  actif, motif `^\d+-\d+\.(jpg|png|webp)$`). Archiver un élément rend ses
+  photos invisibles sans toucher aux fichiers ; le restaurer les fait
+  réapparaître. **Supprimer définitivement** un élément laisse en revanche ses
+  fichiers orphelins sur disque — aucun `CASCADE` ne les atteint. Sans
+  conséquence visible (un fichier dont l'identifiant n'existe plus n'est
+  jamais servi), mais un identifiant n'étant jamais réattribué par PostgreSQL,
+  ils ne ressortiront pas.
 
-  ```sql
-  CHECK ((id_salle IS NOT NULL)::int + (id_logement IS NOT NULL)::int
-         + (id_formation IS NOT NULL)::int = 1)
-  ```
-
-  Le premier état du schéma (`e2cb623114f8`) portait un XOR à deux colonnes,
-  `cible_xor` ; il a été remplacé par `cible_unique` à l'ajout des formations.
-
-  `PHOTO_BIEN.format` ∈ {JPEG, PNG, WEBP}. Domaine formel, `CHECK` en base.
-  **Déduit des octets** par Pillow, jamais du nom ni du `Content-Type` déclaré
-  — même règle que `PERSONNEL.photo_chemin` et `DOCUMENT_CONNAISSANCE.type_fichier`.
-  C'est lui qui fixe le type renvoyé à la lecture.
-
-  Les trois clés étrangères sont en **`ON DELETE CASCADE`** : une photo n'a
-  aucune valeur probante, et `SALLE`/`LOGEMENT`/`FORMATION` sont justement des entités
-  soumises à `supprimer_definitivement()`. Supprimer le bien emporte sa
-  galerie ; rien d'autre ne la référence.
-
-  **Retirer une photo est un vrai `DELETE`**, pas un archivage : garder des
-  mégaoctets archivés que rien ne relira jamais n'a aucun sens. `PHOTO_BIEN`
-  rejoint donc la liste des entités sans valeur probante ci-dessous. Elle
-  porte malgré tout `supprime_le` — la règle « aucune exception » de la
-  section dédiée vaut aussi pour elle.
-
-  **L'archivage du bien ne touche pas à sa galerie** : elle devient
-  invisible (la fiche publique et l'URL de chaque photo répondent 404), puis
-  réapparaît à la restauration. Même raisonnement que la photo du personnel à
-  l'archivage — une restauration ne doit rien faire perdre.
-
-  Bornes **applicatives** (`PhotoBienService`) : 5 Mio par photo, 10 photos
-  actives par bien — une galerie au-delà ne se regarde plus, et chaque photo
-  pèse en base. Pas d'ordre explicite : l'ordre d'ajout fait foi, la première
-  photo sert de couverture.
+  **Limite majeure, acceptée par l'utilisateur** : le disque d'un service
+  Render est effacé à chaque déploiement. Voir la dette « Photos du catalogue
+  sur disque » dans `docs/roadmap.md`.
 
 - `LOGEMENT.statut` ∈ {Disponible, En_maintenance, Hors_service}. Domaine
   formel, `CHECK` en base, même traitement que `COMMANDE.statut` et
@@ -1017,7 +988,7 @@ règle d'identité, pas seulement une unicité de libellé.
 
 ## Suppression logique — `supprime_le`
 
-**Les 23 tables portent une colonne `supprime_le TIMESTAMPTZ NULL.`** `NULL`
+**Les 22 tables portent une colonne `supprime_le TIMESTAMPTZ NULL.`** `NULL`
 signifie « ligne active » ; une date signifie « ligne archivée ». C'est la seule
 colonne transverse du schéma, et elle n'apparaît pas dans les notations
 `TABLE(...)` ci-dessus pour ne pas les alourdir vingt-et-une fois.
@@ -1062,7 +1033,7 @@ omettant le filtre produirait des totaux faux.
 | Opération | Effet | Pour quoi |
 |---|---|---|
 | `delete()` | `supprime_le = now()` | l'archivage courant, réversible |
-| `supprimer_definitivement()` | `DELETE` réel, irréversible | entités **sans valeur probante** : `PRODUIT`, `CATEGORIE_PRODUIT`, `SALLE`, `LOGEMENT`, `FORMATION`, `DOMAINE_FORMATION`, `PHOTO_BIEN` |
+| `supprimer_definitivement()` | `DELETE` réel, irréversible | entités **sans valeur probante** : `PRODUIT`, `CATEGORIE_PRODUIT`, `SALLE`, `LOGEMENT`, `FORMATION`, `DOMAINE_FORMATION` |
 | `ClientService.anonymiser()` | réécrit les données personnelles, archive, **conserve la ligne** | seul chemin de conformité pour `CLIENT` |
 
 `supprimer_definitivement()` n'est **pas** applicable à un `CLIENT` : les FK en
@@ -1089,7 +1060,7 @@ de la comparaison (`include_object`) — sans quoi `alembic check` conclurait
 qu'il faut les supprimer, vérifié empiriquement.
 
 Ce ne sont **pas des entités** : aucune clé étrangère vers ou depuis le MLD,
-pas de `supprime_le`, et elles ne comptent pas parmi les 23 tables. Elles ne
+pas de `supprime_le`, et elles ne comptent pas parmi les 22 tables. Elles ne
 contiennent **aucune donnée d'origine** — seulement des fragments de texte
 dérivés du catalogue public, et leurs vecteurs. Elles sont donc
 **reconstructibles à tout moment** depuis la base métier, et une perte de leur

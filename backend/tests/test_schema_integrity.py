@@ -17,11 +17,12 @@ import pytest
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import configure_mappers
 
-import app.models  # noqa: F401  (peuple Base.metadata avec les 23 entités)
+import app.models  # noqa: F401  (peuple Base.metadata avec les 22 entités)
 from app.core.database import Base
 
-# Les 23 tables du MLD (`docs/mld.md`) — `document_connaissance` depuis le
-# Sprint 12 (12.9), `photo_bien` depuis la galerie des salles et logements.
+# Les 22 tables du MLD (`docs/mld.md`) — `document_connaissance` depuis le
+# Sprint 12 (12.9). Les photos du catalogue n'ont pas de table : elles vivent
+# sur disque (`static/upload/`, voir `GalerieService`).
 # Les tables `langchain_pg_*` de l'index vectoriel, elles, sont hors MLD et
 # hors `Base.metadata` (voir `docs/mld.md`).
 TABLES_ATTENDUES = frozenset(
@@ -44,7 +45,6 @@ TABLES_ATTENDUES = frozenset(
         "logement",
         "paiement",
         "personnel",
-        "photo_bien",
         "produit",
         "reservation",
         "salle",
@@ -65,10 +65,6 @@ CHECKS_ATTENDUS = [
     ("personnel", "ck_personnel_fonction_personnel"),
     # Décide si un document peut ressortir dans la bulle publique (12.9).
     ("document_connaissance", "ck_document_connaissance_public_cible_document"),
-    # Une photo appartient à exactement un élément : salle, logement ou
-    # formation.
-    ("photo_bien", "ck_photo_bien_cible_unique"),
-    ("photo_bien", "ck_photo_bien_format_photo"),
     ("commande", "ck_commande_type_commande"),
     ("commande", "ck_commande_statut_commande"),
 ]
@@ -140,8 +136,8 @@ def test_mappers_configurables() -> None:
 
 
 def test_nombre_de_tables() -> None:
-    """Les 23 tables du MLD sont bien enregistrées dans `Base.metadata`."""
-    assert len(Base.metadata.tables) == 23
+    """Les 22 tables du MLD sont bien enregistrées dans `Base.metadata`."""
+    assert len(Base.metadata.tables) == 22
 
 
 def test_liste_des_tables() -> None:

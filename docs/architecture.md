@@ -370,33 +370,37 @@ exception à cette règle sous prétexte que c'est une image. Réponse
 immédiatement à la même URL, sans dépendre d'un contournement de cache côté
 client.
 
-### Galerie des salles et logements : octets en base, diffusion publique
+### Photos du catalogue : fichiers sur disque, diffusion publique
 
-`PHOTO_BIEN` (voir `docs/mld.md`) suit la photo de profil sur les trois
-contrôles d'upload — type déclaré, taille, octets réels via Pillow — et s'en
-écarte sur deux points, délibérément.
+Les photos des salles, logements, formations et produits n'ont **pas de
+table** (voir `docs/mld.md`) : `GalerieService` lit et écrit dans
+`Settings.UPLOAD_DIR` (`static/upload/`), un sous-dossier par partie, un
+fichier `<id>-<n>.<ext>` par photo. L'administration téléverse depuis la fiche
+de l'élément ; un fichier déposé à la main au bon nom est pris en compte de
+la même façon.
 
-**Stockage en base, pas sur disque.** La photo de profil vit dans
-`Settings.PHOTO_STORAGE_DIR` ; une galerie de bien ne peut pas : le disque
-Render est effacé à chaque redéploiement, et un catalogue qui perd ses photos
-au premier déploiement serait une régression visible de tous les visiteurs.
-`contenu` est un `bytea` chargé en différé : seule la route de diffusion lit
-les octets, une photo à la fois.
+**Mêmes trois contrôles que la photo de profil** — type déclaré, taille
+(5 Mio), octets réels via Pillow — et l'extension vient du format détecté.
+Le nom envoyé par le client n'est jamais utilisé. La création est
+**exclusive** (`open(..., "xb")`) : deux envois simultanés ne peuvent pas
+écrire le même numéro.
 
-**Diffusion publique, en cache long.** Une salle se choisit sur photos avant
-tout compte : la lecture suit le catalogue (public), pas `PERSONNEL`
-(authentifié). `GET /photos-biens/{id}` répond `Cache-Control: public,
-max-age=31536000, immutable` — une photo ne se **remplace** jamais, elle se
-retire puis s'ajoute sous un nouvel identifiant, donc le contenu d'une URL ne
-change pas. La photo de profil, remplacée à URL constante, est au contraire en
-`no-store`.
+**Une route dédiée, pas un montage `StaticFiles`.** `GET
+/photos/{partie}/{fichier}` filtre le nom sur un motif strict avant de toucher
+au disque (aucune traversée de chemin possible) et refuse la photo d'un
+élément archivé, avec le même 404 qu'un fichier absent. Lecture **publique**,
+comme le catalogue. `Cache-Control: no-cache` : un numéro libéré par un
+retrait peut être réattribué, l'URL ne désigne donc pas toujours le même
+contenu — le navigateur revalide par ETag sans retélécharger.
 
-**Un module `features/galerie/`**, monté par les fiches salle, logement et formation
-sans qu'elles en sachent davantage — même mécanique que
-`FormulaireReservationCreneau`. `GaleriePhotos` pour la fiche publique,
-`GestionGalerie` pour l'administration. L'élément visé est une union
-(`{ salle } | { logement } | { formation }`) : une galerie rattachée à deux
-éléments est inexprimable, comme côté base.
+**Une route explicite par partie** (`/salles/{id_salle}/photos`, …) plutôt
+qu'un `/{partie}/{id}/photos` générique, qui capterait n'importe quel préfixe
+et rendrait le contrat public flou.
+
+**Un module `features/galerie/`**, monté par les quatre fiches publiques et
+les quatre fiches d'administration sans qu'elles en sachent davantage — même
+mécanique que `FormulaireReservationCreneau`. L'élément visé est une union
+(`{ salle } | { logement } | { formation } | { produit }`).
 
 ## Frontend — arborescence
 
@@ -1121,7 +1125,7 @@ chaque redéploiement. Format lu dans les octets, jamais dans le nom.
 | `avis` | AVIS |
 | `paiement` | PAIEMENT |
 | `assistant` | DOCUMENT_CONNAISSANCE (et l'index vectoriel, hors MLD) |
-| `galerie` | PHOTO_BIEN (salles, logements, formations) |
+| `galerie` | aucune — fichiers sur disque (`static/upload/`), salles, logements, formations, produits |
 
 Voir `docs/mld.md` pour le détail des colonnes de chaque table.
 Voir `docs/roadmap.md` pour l'ordre de développement de ces modules.
