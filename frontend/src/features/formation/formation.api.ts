@@ -13,10 +13,14 @@ import type {
   DomaineFormationAdministration,
   DomaineFormationEnvoye,
   Formation,
+  FormationAdministration,
+  FormationEnvoyee,
+  FormationModifiee,
   SessionFormation,
 } from './formation.types';
 
 const CHEMIN_DOMAINES = '/domaines-formation';
+const CHEMIN_FORMATIONS = '/formations';
 
 export async function recupererDomaines(): Promise<DomaineFormation[]> {
   const reponse = await axiosClient.get<DomaineFormation[]>(CHEMIN_DOMAINES);
@@ -25,14 +29,16 @@ export async function recupererDomaines(): Promise<DomaineFormation[]> {
 
 /** Catalogue des formations, filtrable par domaine. */
 export async function recupererFormations(idDomaine?: number): Promise<Formation[]> {
-  const reponse = await axiosClient.get<Formation[]>('/formations', {
+  const reponse = await axiosClient.get<Formation[]>(CHEMIN_FORMATIONS, {
     params: idDomaine === undefined ? undefined : { id_domaine: idDomaine },
   });
   return reponse.data;
 }
 
 export async function recupererFormation(idFormation: number): Promise<Formation> {
-  const reponse = await axiosClient.get<Formation>(`/formations/${idFormation}`);
+  const reponse = await axiosClient.get<Formation>(
+    `${CHEMIN_FORMATIONS}/${idFormation}`
+  );
   return reponse.data;
 }
 
@@ -118,6 +124,61 @@ export async function archiverDomaine(idDomaine: number): Promise<void> {
 export async function restaurerDomaine(idDomaine: number): Promise<DomaineFormation> {
   const reponse = await axiosClient.post<DomaineFormation>(
     `${CHEMIN_DOMAINES}/${idDomaine}/restauration`
+  );
+  return reponse.data;
+}
+
+/**
+ * Formations complètes pour l'administration : actives **et** archivées.
+ *
+ * Route distincte de la liste publique, et non un paramètre : celle-ci est
+ * ouverte à tous, et ne remonte jamais d'archive. Sert aussi à alimenter la
+ * fiche (`FormationDetailAdministrationPage`) : aucune route
+ * `/administration/{id}` n'existe pour cette entité, contrairement à
+ * `ABONNEMENT` — la fiche retrouve sa formation dans cette liste plutôt que
+ * d'appeler `GET /formations/{id}`, qui exclurait une formation archivée.
+ */
+export async function recupererFormationsAdministration(): Promise<
+  FormationAdministration[]
+> {
+  const reponse = await axiosClient.get<FormationAdministration[]>(
+    `${CHEMIN_FORMATIONS}/administration`
+  );
+  return reponse.data;
+}
+
+export async function creerFormation(donnees: FormationEnvoyee): Promise<Formation> {
+  const reponse = await axiosClient.post<Formation>(CHEMIN_FORMATIONS, donnees);
+  return reponse.data;
+}
+
+export async function modifierFormation(
+  idFormation: number,
+  donnees: FormationModifiee
+): Promise<Formation> {
+  const reponse = await axiosClient.put<Formation>(
+    `${CHEMIN_FORMATIONS}/${idFormation}`,
+    donnees
+  );
+  return reponse.data;
+}
+
+/**
+ * **Archive** une formation — aucun `DELETE` SQL n'est émis. 409 si elle
+ * porte encore des sessions actives.
+ */
+export async function archiverFormation(idFormation: number): Promise<void> {
+  await axiosClient.delete(`${CHEMIN_FORMATIONS}/${idFormation}`);
+}
+
+/**
+ * Réactive une formation archivée. Ne peut pas échouer sur une collision :
+ * `FORMATION` ne porte aucune unicité, deux formations pouvant légitimement
+ * partager le même titre.
+ */
+export async function restaurerFormation(idFormation: number): Promise<Formation> {
+  const reponse = await axiosClient.post<Formation>(
+    `${CHEMIN_FORMATIONS}/${idFormation}/restauration`
   );
   return reponse.data;
 }

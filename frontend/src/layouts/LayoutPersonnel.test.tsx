@@ -67,6 +67,7 @@ it('masque entièrement la section Gestion à un salarié sans droit', () => {
     'Salles',
     'Logements',
     'Domaines',
+    'Formations',
   ]) {
     expect(screen.queryByRole('link', { name: libelle })).toBeNull();
   }
@@ -88,6 +89,7 @@ it('affiche la section Gestion complète à un administrateur', () => {
     'Salles',
     'Logements',
     'Domaines',
+    'Formations',
   ]) {
     expect(screen.getByRole('link', { name: libelle })).toBeDefined();
   }
@@ -125,6 +127,17 @@ it('pointe le lien Domaines vers /personnel/domaines-formation', () => {
   expect(screen.getByRole('link', { name: 'Domaines' })).toHaveProperty(
     'href',
     expect.stringContaining('/personnel/domaines-formation')
+  );
+});
+
+it('pointe le lien Formations vers /personnel/formations', () => {
+  definirSession('personnel', true);
+
+  afficher();
+
+  expect(screen.getByRole('link', { name: 'Formations' })).toHaveProperty(
+    'href',
+    expect.stringContaining('/personnel/formations')
   );
 });
 

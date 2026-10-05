@@ -17,6 +17,7 @@
  */
 
 import { useCallback, useState } from 'react';
+import { Link } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
 import Bouton from '@/components/ui/Bouton';
@@ -77,12 +78,14 @@ export default function AdministrationDomainesPage() {
 
   return (
     <section>
-      {/* Pas de lien réciproque vers « Formations » pour l'instant : cette
-          tâche (sous-tâche 1/3 du chantier) précède celle qui livre l'écran
-          formations — un lien prématuré serait mort. Ajouté avec elle. */}
-      <h1 className="text-2xl font-semibold text-warm-gray-700">
-        Domaines de formation
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-warm-gray-700">
+          Domaines de formation
+        </h1>
+        <Link to="/personnel/formations" className="text-sm text-terracotta underline">
+          Retour aux formations
+        </Link>
+      </div>
 
       <form
         className="mt-6 space-y-3"
