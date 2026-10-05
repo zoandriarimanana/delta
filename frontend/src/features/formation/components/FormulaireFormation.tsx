@@ -42,6 +42,7 @@ function valeursInitiales(
     prix: formation?.prix ?? '0.00',
     capacite_max: formation?.capacite_max ?? 1,
     propose_hebergement: formation?.propose_hebergement ?? false,
+    description: formation?.description ?? '',
     // `0` n'est jamais envoyé tel quel : le composant y substitue le premier
     // domaine actif, la liste n'étant pas connue de cette fonction.
     id_domaine: formation?.id_domaine ?? domainesActifs[0]?.id_domaine ?? 0,
@@ -78,6 +79,10 @@ export default function FormulaireFormation({
           // Chaîne vide normalisée en `null` : `niveau` est facultatif côté
           // serveur, et `""` n'est pas une absence.
           niveau: valeurs.niveau === '' ? null : valeurs.niveau,
+          // Vide ou blanche → `null` : la fiche annonce l'absence plutôt
+          // qu'un paragraphe vide.
+          description:
+            (valeurs.description ?? '').trim() === '' ? null : valeurs.description,
         });
       }}
     >
@@ -167,6 +172,23 @@ export default function FormulaireFormation({
           onChange={(e) => modifier('propose_hebergement', e.target.checked)}
         />
         Propose un hébergement
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <span>
+          Description <span className="text-warm-gray-500">(facultative)</span>
+        </span>
+        <textarea
+          rows={6}
+          maxLength={4000}
+          value={valeurs.description ?? ''}
+          onChange={(e) => modifier('description', e.target.value)}
+          placeholder="Programme, public visé, prérequis, matériel fourni…"
+          className="rounded border border-warm-gray-300 px-2 py-1"
+        />
+        <span className="text-xs text-warm-gray-500">
+          Affichée sur la fiche publique. Les retours à la ligne sont conservés.
+        </span>
       </label>
 
       {erreur !== null && (

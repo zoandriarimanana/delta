@@ -42,6 +42,8 @@ export interface Formation {
   capacite_max: number;
   propose_hebergement: boolean;
   id_domaine: number;
+  /** Présentation libre (programme, public, prérequis) ; `null` si non rédigée. */
+  description: string | null;
   /**
    * Calculée à la demande, **uniquement sur la fiche**
    * (`GET /formations/{id}`) — jamais sur la liste, non paginée (cf.
@@ -79,6 +81,7 @@ export interface FormationEnvoyee {
   capacite_max: number;
   propose_hebergement?: boolean;
   id_domaine: number;
+  description?: string | null;
 }
 
 /**

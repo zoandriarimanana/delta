@@ -26,10 +26,13 @@ export type FamilleImage =
   'formation' | 'patisserie' | 'boulangerie' | 'salle' | 'logement';
 
 const PALETTES: Record<FamilleImage, readonly string[]> = {
+  // Ateliers de cuisine et de pâtisserie. Une version antérieure portait une
+  // URL devenue 404 et le portrait d'une personne sans rapport avec une
+  // formation — constaté sur une fiche sans photo, remplacés.
   formation: [
     'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400&q=80',
-    'https://images.unsplash.com/photo-1444565541849-ab7f84eaf40f?w=400&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80',
+    'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=400&q=80',
+    'https://images.unsplash.com/photo-1486427944299-d1955d23e34d?w=400&q=80',
   ],
   patisserie: [
     'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&q=80',
@@ -38,7 +41,7 @@ const PALETTES: Record<FamilleImage, readonly string[]> = {
   ],
   boulangerie: [
     'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&q=80',
-    'https://images.unsplash.com/photo-1444565541849-ab7f84eaf40f?w=400&q=80',
+    'https://images.unsplash.com/photo-1517433670267-08bbd4be890f?w=400&q=80',
   ],
   salle: ['https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&q=80'],
   logement: ['https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&q=80'],

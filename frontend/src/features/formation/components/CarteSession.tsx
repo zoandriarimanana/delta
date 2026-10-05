@@ -6,10 +6,19 @@
  * envoie pas, et le type ne les déclare pas non plus.
  */
 
+import { CalendarDays, UserRound, Users } from 'lucide-react';
+
+import Badge from '@/components/ui/Badge';
 import { formaterDate } from '@/features/commande/commande.service';
 import FormulaireReservation from '@/features/reservation/components/FormulaireReservation';
 
-import { estReservable, nomFormateur, raisonIndisponible } from '../formation.service';
+import {
+  estReservable,
+  explicationSession,
+  libelleEtatSession,
+  nomFormateur,
+  varianteEtatSession,
+} from '../formation.service';
 import type { SessionFormation } from '../formation.types';
 
 interface Proprietes {
@@ -18,44 +27,61 @@ interface Proprietes {
 }
 
 export default function CarteSession({ session, proposeHebergement }: Proprietes) {
-  const indisponible = raisonIndisponible(session);
+  const reservable = estReservable(session);
 
   return (
-    <li className="rounded border border-slate-200 bg-white p-4">
-      <p className="font-medium text-slate-900">
-        <time dateTime={session.date_debut}>{formaterDate(session.date_debut)}</time>
-        {' — '}
-        <time dateTime={session.date_fin}>{formaterDate(session.date_fin)}</time>
-      </p>
-
-      {session.formateur !== null && (
-        <p className="mt-1 text-sm text-slate-600">
-          Animée par {nomFormateur(session.formateur)}
-          {session.formateur.specialite !== null && (
-            <> — {session.formateur.specialite}</>
-          )}
+    <li
+      className={`rounded-2xl border bg-white p-5 shadow-sm ${
+        reservable ? 'border-sage/40' : 'border-warm-gray-200'
+      }`}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="flex items-center gap-2 font-semibold text-warm-gray-700">
+          <CalendarDays size={18} aria-hidden className="text-terracotta" />
+          <span>
+            Du{' '}
+            <time dateTime={session.date_debut}>
+              {formaterDate(session.date_debut)}
+            </time>{' '}
+            au <time dateTime={session.date_fin}>{formaterDate(session.date_fin)}</time>
+          </span>
         </p>
-      )}
+        <Badge variante={varianteEtatSession(session)}>
+          {libelleEtatSession(session)}
+        </Badge>
+      </div>
 
-      <p className="mt-1 text-sm text-slate-500">
-        {session.places_restantes} place(s) restante(s)
-      </p>
+      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-warm-gray-600">
+        <p className="flex items-center gap-1.5">
+          <Users size={16} aria-hidden />
+          {session.places_restantes} place(s) restante(s)
+        </p>
+        {session.formateur !== null && (
+          <p className="flex items-center gap-1.5">
+            <UserRound size={16} aria-hidden />
+            Animée par {nomFormateur(session.formateur)}
+            {session.formateur.specialite !== null && (
+              <> — {session.formateur.specialite}</>
+            )}
+          </p>
+        )}
+      </div>
 
       {/* Une session complète reste visible : le client doit pouvoir constater
           qu'elle existe et attendre la suivante. Elle n'est simplement pas
-          réservable, et le dit. */}
-      {indisponible !== null ? (
-        <p className="mt-3 text-sm text-amber-800">{indisponible}</p>
-      ) : (
-        estReservable(session) && (
-          <FormulaireReservation
-            idSession={session.id_session}
-            dateDebut={session.date_debut}
-            dateFin={session.date_fin}
-            placesRestantes={session.places_restantes}
-            proposeHebergement={proposeHebergement}
-          />
-        )
+          réservable, et le dit — en détail. */}
+      <p className="mt-3 text-sm leading-relaxed text-warm-gray-500">
+        {explicationSession(session)}
+      </p>
+
+      {reservable && (
+        <FormulaireReservation
+          idSession={session.id_session}
+          dateDebut={session.date_debut}
+          dateFin={session.date_fin}
+          placesRestantes={session.places_restantes}
+          proposeHebergement={proposeHebergement}
+        />
       )}
     </li>
   );

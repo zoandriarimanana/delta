@@ -30,6 +30,7 @@ const FORMATION = {
   prix: '450000.00',
   capacite_max: 12,
   propose_hebergement: true,
+  description: null,
   id_domaine: 1,
   note_moyenne: null,
   nombre_avis: 0,

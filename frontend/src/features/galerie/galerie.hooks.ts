@@ -16,12 +16,13 @@ export interface Galerie {
 /**
  * Galerie d'un bien. `null` désactive la requête.
  *
- * Le bien est passé **décomposé** (`salle`, `logement`) et non comme objet :
+ * Le bien est décomposé (`salle`, `logement`, `formation`) avant l'effet :
  * un objet recréé à chaque rendu relancerait la requête en boucle.
  */
 export function useGalerie(bien: BienPhotographie | null): Galerie {
   const idSalle = bien !== null && 'salle' in bien ? bien.salle : null;
   const idLogement = bien !== null && 'logement' in bien ? bien.logement : null;
+  const idFormation = bien !== null && 'formation' in bien ? bien.formation : null;
   const [photos, setPhotos] = useState<PhotoBien[]>([]);
   const [chargement, setChargement] = useState(bien !== null);
   const [erreur, setErreur] = useState(false);
@@ -33,7 +34,9 @@ export function useGalerie(bien: BienPhotographie | null): Galerie {
         ? { salle: idSalle }
         : idLogement !== null
           ? { logement: idLogement }
-          : null;
+          : idFormation !== null
+            ? { formation: idFormation }
+            : null;
     if (cible === null) {
       setPhotos([]);
       setChargement(false);
@@ -54,7 +57,7 @@ export function useGalerie(bien: BienPhotographie | null): Galerie {
     return () => {
       actif = false;
     };
-  }, [idSalle, idLogement, version]);
+  }, [idSalle, idLogement, idFormation, version]);
 
   const recharger = useCallback(() => setVersion((v) => v + 1), []);
   return { photos, chargement, erreur, recharger };

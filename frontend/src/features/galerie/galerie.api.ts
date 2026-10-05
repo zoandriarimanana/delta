@@ -11,9 +11,9 @@ import { axiosClient } from '@/lib/axiosClient';
 import type { BienPhotographie, PhotoBien } from './galerie.types';
 
 function cheminGalerie(bien: BienPhotographie): string {
-  return 'salle' in bien
-    ? `/salles/${bien.salle}/photos`
-    : `/logements/${bien.logement}/photos`;
+  if ('salle' in bien) return `/salles/${bien.salle}/photos`;
+  if ('logement' in bien) return `/logements/${bien.logement}/photos`;
+  return `/formations/${bien.formation}/photos`;
 }
 
 /** Galerie d'un bien, dans l'ordre d'ajout — la première sert de couverture. */

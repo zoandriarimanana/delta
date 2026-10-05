@@ -12,8 +12,9 @@ export interface PhotoBien {
 }
 
 /**
- * Le bien dont on affiche ou gère la galerie : une salle **ou** un logement,
- * jamais les deux — le serveur le garantit par `CHECK cible_xor`, le type le
- * rend inexprimable ici.
+ * L'élément dont on affiche ou gère la galerie : une salle, un logement **ou**
+ * une formation, jamais deux à la fois — le serveur le garantit par
+ * `CHECK cible_unique`, le type le rend inexprimable ici.
  */
-export type BienPhotographie = { salle: number } | { logement: number };
+export type BienPhotographie =
+  { salle: number } | { logement: number } | { formation: number };

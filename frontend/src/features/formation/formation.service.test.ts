@@ -3,6 +3,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  explicationSession,
+  libelleEtatSession,
+  nombreSessionsReservables,
+  varianteEtatSession,
   estReservable,
   formaterDuree,
   nomFormateur,
@@ -86,5 +90,56 @@ describe('nomFormateur', () => {
 describe('formaterDuree', () => {
   it('affiche des heures', () => {
     expect(formaterDuree(140)).toBe('140 h');
+  });
+});
+
+describe('libelleEtatSession', () => {
+  it('distingue une session ouverte d’une session complète', () => {
+    expect(libelleEtatSession(session())).toBe('Inscriptions ouvertes');
+    expect(libelleEtatSession(session({ places_restantes: 0 }))).toBe('Complète');
+  });
+
+  it.each([
+    ['Planifiee', 'Bientôt ouverte'],
+    ['Terminee', 'Terminée'],
+    ['Annulee', 'Annulée'],
+  ] as const)('traduit %s', (statut, libelle) => {
+    expect(libelleEtatSession(session({ statut }))).toBe(libelle);
+  });
+});
+
+describe('varianteEtatSession', () => {
+  it('suit ce que le visiteur peut faire', () => {
+    expect(varianteEtatSession(session())).toBe('positif');
+    expect(varianteEtatSession(session({ statut: 'Planifiee' }))).toBe('attente');
+    expect(varianteEtatSession(session({ places_restantes: 0 }))).toBe('negatif');
+    expect(varianteEtatSession(session({ statut: 'Annulee' }))).toBe('neutre');
+  });
+});
+
+describe('explicationSession', () => {
+  it('explique chaque état en détail', () => {
+    expect(explicationSession(session())).toContain('Mes réservations');
+    expect(explicationSession(session({ places_restantes: 0 }))).toContain(
+      'Toutes les places'
+    );
+    expect(explicationSession(session({ statut: 'Planifiee' }))).toContain(
+      'pas encore ouvertes'
+    );
+    expect(explicationSession(session({ statut: 'Terminee' }))).toContain('avis');
+    expect(explicationSession(session({ statut: 'Annulee' }))).toContain('annulée');
+  });
+});
+
+describe('nombreSessionsReservables', () => {
+  it('ne compte que les sessions ouvertes et non complètes', () => {
+    expect(
+      nombreSessionsReservables([
+        session(),
+        session({ places_restantes: 0 }),
+        session({ statut: 'Planifiee' }),
+        session({ id_session: 2 }),
+      ])
+    ).toBe(2);
   });
 });
