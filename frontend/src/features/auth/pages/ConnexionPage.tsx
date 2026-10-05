@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 
 import { useConnexionClient } from '../auth.hooks';
+import ChampMotDePasse from '@/components/ui/ChampMotDePasse';
 
 export default function ConnexionPage() {
   const naviguer = useNavigate();
@@ -68,8 +69,7 @@ export default function ConnexionPage() {
 
         <label className="flex flex-col gap-1 text-sm text-slate-700">
           Mot de passe
-          <input
-            type="password"
+          <ChampMotDePasse
             required
             autoComplete="current-password"
             value={motDePasse}

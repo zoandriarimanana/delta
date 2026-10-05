@@ -21,6 +21,7 @@ import ChampsEntreprise from '../components/ChampsEntreprise';
 import ChampsParticulier from '../components/ChampsParticulier';
 import { useInscriptionEntreprise, useInscriptionParticulier } from '../auth.hooks';
 import type { IdentiteEntreprise, IdentiteParticulier } from '../auth.types';
+import ChampMotDePasse from '@/components/ui/ChampMotDePasse';
 
 type TypeCompte = 'particulier' | 'entreprise';
 
@@ -119,8 +120,7 @@ export default function InscriptionPage() {
 
         <label className="flex flex-col gap-1 text-sm text-slate-700">
           Mot de passe <span className="text-slate-500">(8 caractères minimum)</span>
-          <input
-            type="password"
+          <ChampMotDePasse
             required
             minLength={8}
             autoComplete="new-password"
