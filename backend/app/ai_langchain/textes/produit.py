@@ -32,6 +32,11 @@ def construire_texte(produit: Produit) -> str:
     return "\n".join(lignes)
 
 
+def titre(produit: Produit) -> str:
+    """Nom affiché dans les sources d'une réponse."""
+    return produit.nom
+
+
 def est_indexable(produit: Produit) -> bool:
     return produit.supprime_le is None
 
@@ -44,4 +49,5 @@ def synchroniser_produit(produit: Produit) -> None:
         produit.id_produit,
         est_indexable(produit),
         lambda: construire_texte(produit),
+        titre(produit),
     )

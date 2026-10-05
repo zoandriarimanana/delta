@@ -24,6 +24,11 @@ def construire_texte(domaine: DomaineFormation) -> str:
     return "\n".join(lignes)
 
 
+def titre(domaine: DomaineFormation) -> str:
+    """Nom affiché dans les sources d'une réponse."""
+    return domaine.libelle
+
+
 def est_indexable(domaine: DomaineFormation) -> bool:
     return domaine.supprime_le is None
 
@@ -37,4 +42,5 @@ def synchroniser_domaine_formation(domaine: DomaineFormation) -> None:
         domaine.id_domaine,
         est_indexable(domaine),
         lambda: construire_texte(domaine),
+        titre(domaine),
     )

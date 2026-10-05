@@ -22,10 +22,12 @@ from app.core.exceptions import (
     ErreurMetier,
     ReferenceInvalide,
     RessourceIntrouvable,
+    ServiceIndisponible,
 )
 from app.core.rate_limit import limiter
 from app.routers import (
     abonnement_router,
+    assistant_router,
     auth_router,
     avis_router,
     beneficiaire_router,
@@ -148,6 +150,22 @@ async def _gerer_limite_de_debit(
     )
 
 
+@app.exception_handler(ServiceIndisponible)
+async def _gerer_service_indisponible(
+    request: Request, exc: ServiceIndisponible
+) -> JSONResponse:
+    """503 : un fournisseur externe ne répond pas, ou l'assistant est coupé.
+
+    Ni la faute de la requête (4xx) ni un bogue (500) : l'appelant peut
+    réessayer plus tard. `Retry-After` le lui dit explicitement.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": str(exc)},
+        headers={"Retry-After": "30"},
+    )
+
+
 @app.exception_handler(ErreurMetier)
 async def _gerer_erreur_metier(request: Request, exc: ErreurMetier) -> JSONResponse:
     """Filet pour toute erreur métier sans traduction dédiée → 400.
@@ -181,3 +199,4 @@ app.include_router(client_entreprise_router.router, prefix=settings.API_V1_PREFI
 app.include_router(consommation_repas_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(avis_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(paiement_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(assistant_router.router, prefix=settings.API_V1_PREFIX)

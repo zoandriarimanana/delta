@@ -125,7 +125,13 @@ def _sources(fragments: list[Document]) -> list[dict[str, Any]]:
         if None in cle or cle in vues:
             continue
         vues.add(cle)
-        sources.append({"type_contenu": cle[0], "id_contenu": cle[1]})
+        sources.append(
+            {
+                "type_contenu": cle[0],
+                "id_contenu": cle[1],
+                "titre": fragment.metadata.get("titre"),
+            }
+        )
     return sources
 
 

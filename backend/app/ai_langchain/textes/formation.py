@@ -69,6 +69,11 @@ def construire_texte(formation: Formation, aujourd_hui: date | None = None) -> s
     return "\n".join(lignes)
 
 
+def titre(formation: Formation) -> str:
+    """Nom affiché dans les sources d'une réponse."""
+    return formation.titre
+
+
 def est_indexable(formation: Formation) -> bool:
     return formation.supprime_le is None
 
@@ -82,4 +87,5 @@ def synchroniser_formation(formation: Formation) -> None:
         formation.id_formation,
         est_indexable(formation),
         lambda: construire_texte(formation),
+        titre(formation),
     )

@@ -23,6 +23,11 @@ def construire_texte(categorie: CategorieProduit) -> str:
     return "\n".join(lignes)
 
 
+def titre(categorie: CategorieProduit) -> str:
+    """Nom affiché dans les sources d'une réponse."""
+    return categorie.libelle
+
+
 def est_indexable(categorie: CategorieProduit) -> bool:
     return categorie.supprime_le is None
 
@@ -36,4 +41,5 @@ def synchroniser_categorie_produit(categorie: CategorieProduit) -> None:
         categorie.id_categorie,
         est_indexable(categorie),
         lambda: construire_texte(categorie),
+        titre(categorie),
     )

@@ -69,7 +69,11 @@ class LlmEspion(FakeListChatModel):
 def fragment(texte: str, type_contenu: str, id_contenu: int) -> Document:
     return Document(
         page_content=texte,
-        metadata={"type_contenu": type_contenu, "id_contenu": id_contenu},
+        metadata={
+            "type_contenu": type_contenu,
+            "id_contenu": id_contenu,
+            "titre": f"Fiche {type_contenu} {id_contenu}",
+        },
     )
 
 
@@ -89,8 +93,8 @@ def test_repondre_transmet_le_contexte_et_rend_les_sources_sans_doublon() -> Non
 
     assert resultat["reponse"] == "Nous proposons une tarte au citron."
     assert resultat["sources"] == [
-        {"type_contenu": "produit", "id_contenu": 3},
-        {"type_contenu": "formation", "id_contenu": 7},
+        {"type_contenu": "produit", "id_contenu": 3, "titre": "Fiche produit 3"},
+        {"type_contenu": "formation", "id_contenu": 7, "titre": "Fiche formation 7"},
     ]
     contenu_humain = llm.recus[0][-1].content
     assert "Tarte au citron meringuée" in contenu_humain
@@ -166,8 +170,12 @@ def test_le_flux_emet_les_jetons_puis_la_fin_avec_les_sources() -> None:
     assert evenements[-1] == {
         "fin": True,
         "sources": [
-            {"type_contenu": "produit", "id_contenu": 3},
-            {"type_contenu": "formation", "id_contenu": 7},
+            {"type_contenu": "produit", "id_contenu": 3, "titre": "Fiche produit 3"},
+            {
+                "type_contenu": "formation",
+                "id_contenu": 7,
+                "titre": "Fiche formation 7",
+            },
         ],
     }
 
@@ -208,4 +216,6 @@ def test_un_fragment_sans_origine_n_apparait_pas_dans_les_sources() -> None:
         llm=FakeListChatModel(responses=["ok"]),
     )
 
-    assert resultat["sources"] == [{"type_contenu": "produit", "id_contenu": 3}]
+    assert resultat["sources"] == [
+        {"type_contenu": "produit", "id_contenu": 3, "titre": "Fiche produit 3"}
+    ]

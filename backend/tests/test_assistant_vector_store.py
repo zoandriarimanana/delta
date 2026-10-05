@@ -91,6 +91,14 @@ def test_indexer_puis_retrouver_par_similarite(store: PGVector) -> None:
     assert resultats[0].metadata == {"type_contenu": "produit", "id_contenu": 3}
 
 
+def test_le_titre_voyage_avec_les_fragments(store: PGVector) -> None:
+    indexer_texte("produit", 3, "Tarte au citron meringuée", store, titre="Tarte")
+
+    resultat = store.similarity_search("Tarte au citron meringuée", k=1)[0]
+
+    assert resultat.metadata["titre"] == "Tarte"
+
+
 def test_reindexer_remplace_au_lieu_d_accumuler(store: PGVector) -> None:
     indexer_texte("produit", 3, "Ancienne description de la tarte", store)
     indexer_texte("produit", 3, "Nouvelle description de la tarte", store)

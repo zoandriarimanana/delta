@@ -51,6 +51,7 @@ def _indexer_type(
     cle: str,
     est_indexable: Callable[[Any], bool],
     construire_texte: Callable[[Any], str],
+    titre: Callable[[Any], str],
 ) -> dict[str, int]:
     """Vide un type de contenu, puis réindexe ses entités indexables.
 
@@ -63,7 +64,11 @@ def _indexer_type(
     for entite in entites:
         if est_indexable(entite):
             fragments += indexer_texte(
-                type_contenu, getattr(entite, cle), construire_texte(entite), store
+                type_contenu,
+                getattr(entite, cle),
+                construire_texte(entite),
+                store,
+                titre=titre(entite),
             )
             elements += 1
     return {"elements": elements, "fragments": fragments}
@@ -81,6 +86,7 @@ def reindexer_tout(db: Session) -> dict[str, dict[str, int]]:
             cle,
             module.est_indexable,
             module.construire_texte,
+            module.titre,
         )
         for module, modele, cle in CONTENUS
     }

@@ -26,6 +26,11 @@ def construire_texte(logement: Logement) -> str:
     )
 
 
+def titre(logement: Logement) -> str:
+    """Nom affiché dans les sources d'une réponse."""
+    return f"Chambre {logement.type_chambre}"
+
+
 def est_indexable(logement: Logement) -> bool:
     return (
         logement.supprime_le is None and logement.statut != StatutLogement.HORS_SERVICE
@@ -40,4 +45,5 @@ def synchroniser_logement(logement: Logement) -> None:
         logement.id_logement,
         est_indexable(logement),
         lambda: construire_texte(logement),
+        titre(logement),
     )

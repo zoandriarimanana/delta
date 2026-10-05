@@ -38,9 +38,11 @@ class Journal:
 
     def __init__(self) -> None:
         self.appels: list[tuple[str, str, int, str | None]] = []
+        self.titres: dict[tuple[str, int], str | None] = {}
 
-    def indexer(self, type_contenu, id_contenu, construire_texte) -> int:
+    def indexer(self, type_contenu, id_contenu, construire_texte, titre=None) -> int:
         self.appels.append(("indexer", type_contenu, id_contenu, construire_texte()))
+        self.titres[(type_contenu, id_contenu)] = titre
         return 1
 
     def desindexer(self, type_contenu, id_contenu) -> int:

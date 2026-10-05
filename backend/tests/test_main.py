@@ -12,7 +12,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
-from app.core.exceptions import AuthentificationInvalide, ConflitMetier, ErreurMetier
+from app.core.exceptions import (
+    AuthentificationInvalide,
+    ConflitMetier,
+    ErreurMetier,
+    ServiceIndisponible,
+)
 from app.main import app
 
 ORIGINE_AUTORISEE = "http://localhost:5173"
@@ -118,12 +123,17 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/avis/{{id_avis}}",
         f"{prefixe}/paiements/webhook",
         f"{prefixe}/paiements/{{id_paiement}}/simuler-confirmation",
+        f"{prefixe}/assistant/disponibilite",
+        f"{prefixe}/assistant/question",
+        f"{prefixe}/assistant/question/flux",
+        f"{prefixe}/assistant/administration/etat",
+        f"{prefixe}/assistant/administration/reindexation",
     }
 
 
 @pytest.mark.parametrize(
     "classe_erreur",
-    [AuthentificationInvalide, ConflitMetier, ErreurMetier],
+    [AuthentificationInvalide, ConflitMetier, ErreurMetier, ServiceIndisponible],
 )
 def test_erreurs_metier_ont_un_gestionnaire_global(
     classe_erreur: type[Exception],
@@ -137,6 +147,7 @@ def test_erreurs_metier_ont_un_gestionnaire_global(
     [
         (AuthentificationInvalide, 401),
         (ConflitMetier, 409),
+        (ServiceIndisponible, 503),
         (ErreurMetier, 400),
     ],
 )

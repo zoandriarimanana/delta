@@ -3,6 +3,7 @@
 Chaque module expose :
 - `TYPE_CONTENU`, la valeur de la métadonnée `type_contenu` de ses fragments ;
 - `construire_texte(entite)`, le texte confié à l'index ;
+- `titre(entite)`, le nom affiché dans les sources d'une réponse ;
 - `est_indexable(entite)`, qui dit si l'entité doit y figurer ;
 - `synchroniser_<entite>(entite)`, appelé par le service après son `commit`.
 

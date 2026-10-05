@@ -42,15 +42,25 @@ _decoupeur = RecursiveCharacterTextSplitter(
 )
 
 
-def decouper(texte: str, type_contenu: str, id_contenu: int) -> list[Document]:
-    """Découpe un texte en fragments portant leur origine en métadonnées."""
+def decouper(
+    texte: str, type_contenu: str, id_contenu: int, titre: str | None = None
+) -> list[Document]:
+    """Découpe un texte en fragments portant leur origine en métadonnées.
+
+    `titre` — le nom de la fiche — voyage avec chaque fragment jusqu'aux
+    sources de la réponse : le frontend affiche « Tarte au citron » plutôt
+    que « produit n°3 », sans relire la base.
+    """
     if not texte.strip():
         return []
+    metadonnees: dict[str, str | int] = {
+        "type_contenu": type_contenu,
+        "id_contenu": id_contenu,
+    }
+    if titre:
+        metadonnees["titre"] = titre
     return [
-        Document(
-            page_content=fragment,
-            metadata={"type_contenu": type_contenu, "id_contenu": id_contenu},
-        )
+        Document(page_content=fragment, metadata=dict(metadonnees))
         for fragment in _decoupeur.split_text(texte)
         if len(fragment.split()) >= MOTS_MINIMUM
     ]
@@ -61,6 +71,7 @@ def indexer_texte(
     id_contenu: int,
     texte: str,
     store: PGVector | None = None,
+    titre: str | None = None,
 ) -> int:
     """Remplace les fragments d'une entité par ceux de son texte actuel.
 
@@ -75,14 +86,17 @@ def indexer_texte(
     """
     store = store or obtenir_vector_store()
     supprimer_par_contenu(type_contenu, id_contenu, store.collection_name)
-    fragments = decouper(texte, type_contenu, id_contenu)
+    fragments = decouper(texte, type_contenu, id_contenu, titre)
     if fragments:
         store.add_documents(fragments)
     return len(fragments)
 
 
 def indexer_sans_echec(
-    type_contenu: str, id_contenu: int, construire_texte: Callable[[], str]
+    type_contenu: str,
+    id_contenu: int,
+    construire_texte: Callable[[], str],
+    titre: str | None = None,
 ) -> int:
     """Indexe une entité ; journalise et rend 0 en cas d'échec, sans lever.
 
@@ -93,7 +107,7 @@ def indexer_sans_echec(
     if not settings.AI_ENABLED:
         return 0
     try:
-        return indexer_texte(type_contenu, id_contenu, construire_texte())
+        return indexer_texte(type_contenu, id_contenu, construire_texte(), titre=titre)
     except Exception:
         journal.warning(
             "Indexation IA échouée pour %s#%s",

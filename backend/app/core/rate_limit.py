@@ -26,3 +26,9 @@ limiter = Limiter(
 #: une seule constante, pour que les deux évoluent ensemble plutôt que de
 #: diverger silencieusement si l'une est ajustée sans l'autre.
 LIMITE_CONNEXION = "5/minute"
+
+# Assistant IA (Sprint 12) : routes publiques, et chaque question coûte un
+# appel facturé chez Groq et Hugging Face. Plus large que la connexion — une
+# conversation enchaîne naturellement plusieurs questions —, mais assez bas
+# pour qu'un script ne vide pas le quota du mois en une après-midi.
+LIMITE_ASSISTANT = "10/minute"

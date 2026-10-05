@@ -37,6 +37,11 @@ def construire_texte(salle: Salle) -> str:
     return "\n".join(lignes)
 
 
+def titre(salle: Salle) -> str:
+    """Nom affiché dans les sources d'une réponse."""
+    return salle.nom
+
+
 def est_indexable(salle: Salle) -> bool:
     return salle.supprime_le is None
 
@@ -49,4 +54,5 @@ def synchroniser_salle(salle: Salle) -> None:
         salle.id_salle,
         est_indexable(salle),
         lambda: construire_texte(salle),
+        titre(salle),
     )
