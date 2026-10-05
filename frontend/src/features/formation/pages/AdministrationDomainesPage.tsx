@@ -21,6 +21,10 @@ import { Link } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
 import Bouton from '@/components/ui/Bouton';
+import {
+  CLASSES_LIGNE_CLIQUABLE,
+  useNavigationAuClic,
+} from '@/lib/useNavigationAuClic';
 
 import { creerDomaine, modifierDomaine } from '../formation.api';
 import {
@@ -34,6 +38,7 @@ import type { DomaineFormationAdministration } from '../formation.types';
 export default function AdministrationDomainesPage() {
   const catalogue = useDomainesAdministration();
   const actions = useActionsDomaines(catalogue.recharger);
+  const naviguerAuClic = useNavigationAuClic();
   const [libelle, setLibelle] = useState('');
   const [description, setDescription] = useState('');
   const [enEdition, setEnEdition] = useState<DomaineFormationAdministration | null>(
@@ -162,13 +167,21 @@ export default function AdministrationDomainesPage() {
           return (
             <li
               key={domaine.id_domaine}
+              onClick={naviguerAuClic(
+                `/personnel/domaines-formation/${domaine.id_domaine}`
+              )}
               className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warm-gray-200 bg-white p-3 ${
                 archive ? 'bg-warm-gray-100/60' : ''
-              }`}
+              } ${CLASSES_LIGNE_CLIQUABLE}`}
             >
               <span className="flex flex-col gap-1 text-sm text-warm-gray-700">
                 <span className="flex items-center gap-3">
-                  {domaine.libelle}
+                  <Link
+                    to={`/personnel/domaines-formation/${domaine.id_domaine}`}
+                    className="hover:underline"
+                  >
+                    {domaine.libelle}
+                  </Link>
                   <Badge variante={archive ? 'negatif' : 'positif'}>
                     {archive ? 'Archivé' : 'Actif'}
                   </Badge>

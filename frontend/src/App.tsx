@@ -21,6 +21,7 @@ import PanierPage from '@/features/commande/pages/PanierPage';
 import PriseDeCommandePage from '@/features/commande/pages/PriseDeCommandePage';
 import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
 import AdministrationDomainesPage from '@/features/formation/pages/AdministrationDomainesPage';
+import DomaineDetailAdministrationPage from '@/features/formation/pages/DomaineDetailAdministrationPage';
 import AdministrationFormationsPage from '@/features/formation/pages/AdministrationFormationsPage';
 import FormationDetailAdministrationPage from '@/features/formation/pages/FormationDetailAdministrationPage';
 import FormationDetailPage from '@/features/formation/pages/FormationDetailPage';
@@ -166,6 +167,10 @@ export default function App() {
             element={<LogementDetailAdministrationPage />}
           />
           <Route path="domaines-formation" element={<AdministrationDomainesPage />} />
+          <Route
+            path="domaines-formation/:idDomaine"
+            element={<DomaineDetailAdministrationPage />}
+          />
           <Route path="formations" element={<AdministrationFormationsPage />} />
           <Route
             path="formations/:idFormation"
