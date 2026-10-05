@@ -1242,6 +1242,68 @@ Ordre contraint par les dépendances. Une PR par tâche, vers `develop`.
       proposition que l'utilisateur confirme, puis passe par l'endpoint
       normal et ses contrôles.
 
+### Extension validée le 5 octobre (12.8 → 12.10)
+
+Demande explicite, après démonstration de 12.1 → 12.6 : un visiteur n'a pas
+parcouru tout le site, l'assistant doit pouvoir répondre **précisément sur
+toute la plateforme** et pas seulement sur le catalogue ; l'administration
+doit pouvoir **enrichir la base de connaissances** par des documents ; et le
+personnel doit disposer de **son propre assistant**, qui le guide dans le
+back-office. Trois tâches, dans cet ordre (chacune s'appuie sur la
+précédente) :
+
+- [ ] **12.8 — Précision côté client : prix du catalogue et guide de la
+      plateforme.**
+      — **Correction d'une décision de 12.0, pas un revirement de principe.**
+      Les prix avaient été exclus de l'index au motif qu'ils « changent à
+      chaque vente ». C'est faux pour un prix : ce sont le **stock** et les
+      **places restantes** qui changent à chaque vente. Un prix ne change
+      que par une modification d'administrateur, et celle-ci resynchronise
+      l'index (12.3). Prix catalogue, supplément de personnalisation, tarifs
+      de salle et de logement **entrent donc dans l'index** ; stock, places
+      restantes et disponibilités d'un créneau **restent exclus**, pour la
+      raison d'origine.
+      — **Guide client** versionné dans le code
+      (`app/ai_langchain/guides/guide_client.md`) : comment commander, avec
+      ou sans compte, suivre une commande, réserver, payer, déposer un avis,
+      créer un compte. Rédigé **à partir de l'interface réelle** (libellés
+      relevés dans le code), jamais d'une fonctionnalité supposée. Indexé
+      avec le catalogue, à chaque réindexation.
+- [ ] **12.9 — Base de connaissances téléversée par l'administration.**
+      — Nouvelle table **`DOCUMENT_CONNAISSANCE`** (MLD + migration) :
+      titre, nom et type du fichier, taille, **public cible**
+      (`Client` / `Personnel`), **texte extrait**, date d'ajout, salarié
+      auteur, `supprime_le`.
+      — **Le texte extrait est stocké en base, pas le fichier.** Le disque
+      d'un service Render est effacé à chaque redéploiement : un fichier
+      rangé sur disque disparaîtrait, et l'index ne pourrait plus être
+      reconstruit. Le texte, lui, suffit à réindexer à tout moment.
+      — Formats : PDF, Word (`.docx`), texte (`.txt`), Markdown (`.md`) ;
+      5 Mio au plus ; contenu vérifié sur les octets, jamais sur le seul
+      `Content-Type` (même règle que la photo de profil). Un document sans
+      texte extractible (PDF scanné) est refusé en 422 plutôt qu'indexé vide.
+      — Découpage et indexation **automatiques** au téléversement ;
+      archivage = retrait de l'index, restauration = retour.
+- [ ] **12.10 — Assistant du personnel.**
+      — Chaque fragment porte une métadonnée **`audience`** (`client` /
+      `personnel`). L'assistant client ne recherche **que** l'audience
+      `client` — un document destiné au personnel ne peut donc jamais
+      ressortir dans la bulle du site ; un test le verrouille. L'assistant
+      du personnel lit les deux.
+      — **Guide du personnel** versionné
+      (`app/ai_langchain/guides/guide_personnel.md`) : les étapes de chaque
+      écran du back-office, rédigées depuis l'interface réelle. Prompt
+      dédié, orienté « quelles étapes suivre ».
+      — `POST /assistant/personnel/question/flux`, réservé au personnel
+      connecté. Bulle dans `LayoutPersonnel`, disponible sur tous les écrans
+      de l'espace personnel ; la page « Assistant IA » gagne l'espace de
+      téléversement et le choix entre assistant du personnel et aperçu
+      client.
+      — **Limite connue** : les écrans d'administration des formations et des
+      sessions vivent sur une branche non encore intégrée
+      (`feature/sprint-admin-formation`) ; le guide du personnel ne les décrit
+      pas tant qu'ils ne sont pas dans `develop`.
+
 ---
 
 ## Règle transverse — suppression d'une entité référencée
