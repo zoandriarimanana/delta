@@ -13,6 +13,7 @@ import { Link, useParams } from 'react-router';
 import Badge from '@/components/ui/Badge';
 import Bouton from '@/components/ui/Bouton';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
+import { formaterMontant } from '@/features/commande/commande.service';
 import { imageProduit } from '@/lib/images';
 
 import ChampFiche from '@/components/ui/ChampFiche';
@@ -145,7 +146,7 @@ export default function ProduitDetailAdministrationPage() {
             </ChampFiche>
             <ChampFiche intitule="Personnalisation">
               {produit.est_personnalisable
-                ? `Personnalisable — supplément de ${produit.supplement_personnalisation ?? '—'} Ar par ${produit.unite_mesure}`
+                ? `Personnalisable — supplément de ${produit.supplement_personnalisation !== null ? formaterMontant(produit.supplement_personnalisation) : '—'} par ${produit.unite_mesure}`
                 : 'Non personnalisable'}
             </ChampFiche>
             <ChampFiche intitule="Avis des clients">

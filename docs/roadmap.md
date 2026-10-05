@@ -751,7 +751,7 @@ Sprint 12 — chacune son commit, sur son module.
       `components/ui/ChampMotDePasse`, un œil dans les trois champs de mot de
       passe (connexion client, connexion du personnel, inscription). Masqué
       par défaut.
-- [ ] **Fiches détaillées de l'administration du catalogue** : cliquer sur une
+- [x] **Fiches détaillées de l'administration du catalogue** : cliquer sur une
       ligne des listes « Catalogue », « Catégories », « Salles », « Logements »
       et « Domaines » ouvre une **fiche**, même patron que la fiche
       d'administration d'une formation — tous les champs, « Modifier »,
@@ -765,11 +765,22 @@ Sprint 12 — chacune son commit, sur son module.
       `reservation`, que les fiches salle et logement **montent** sans appeler
       elles-mêmes l'API de réservation : même règle que « Réserver n'est pas
       consulter » (`docs/architecture.md`).
-      — Ligne cliquable par une primitive `components/ui/LigneCliquable` : un
-      clic sur un bouton ou un lien de la ligne garde son propre effet ; le
-      nom reste un lien, pour le clavier.
-      — Un commit par module : `produit` (catalogue et catégories), `salle`,
-      `logement`, `formation` (domaines).
+      — Ligne cliquable par un **hook** `lib/useNavigationAuClic`, et non la
+      primitive `LigneCliquable` prévue : les catégories et les domaines
+      s'affichent en `<li>`, pas en `<tr>` — un comportement s'applique aux
+      deux, un composant de ligne de tableau non. Un clic sur un bouton ou un
+      lien de la ligne garde son propre effet ; le nom reste un lien, pour le
+      clavier.
+      — Partagés au passage : `components/ui/ChampFiche` (intitulé et valeur)
+      et `lib/useNoteFiche` (note moyenne, produit, salle et logement). La
+      note est **dérivée** quand l'élément est archivé, pas remise à zéro dans
+      un effet : un test intermittent avait révélé un rendu « archivé » avec
+      l'ancienne note.
+      — Guide du personnel complété d'une section « Consulter la fiche d'un
+      élément » ; index de l'assistant reconstruit.
+      — Vérifié dans un vrai navigateur sur les données réelles : un clic sur
+      la première ligne de chacune des cinq listes ouvre la bonne fiche.
+      Frontend 661/661, build compris.
 
 ## Sprint 11 — Durcissement pré-production
 

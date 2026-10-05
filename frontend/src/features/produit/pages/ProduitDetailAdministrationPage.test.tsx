@@ -80,7 +80,7 @@ describe('ProduitDetailAdministrationPage', () => {
     expect(screen.getByText('6')).toBeTruthy();
     expect(screen.getByText('Retrait sur place uniquement')).toBeTruthy();
     expect(
-      screen.getByText(/Personnalisable — supplément de 5000.00 Ar par pièce/)
+      screen.getByText(/Personnalisable — supplément de 5\s000,00\sAr par pièce/)
     ).toBeTruthy();
     expect(screen.getByText('Génoise, décor au choix.')).toBeTruthy();
     await waitFor(() => expect(recupererProduit).toHaveBeenCalledWith(4));
