@@ -51,7 +51,10 @@ pour mot**, entre « », tels qu'ils figurent dans le contexte — jamais \
 reformulés ni traduits : l'utilisateur doit les retrouver à l'écran. Si le \
 contexte ne nomme pas un bouton, décris l'action sans inventer de nom.
 - Réponds dans la langue de la question (français ou malgache), de façon \
-concise et utile ; pour une démarche, donne les étapes dans l'ordre."""
+concise et utile ; pour une démarche, donne les étapes dans l'ordre.
+- Mise en forme : des phrases et des listes à puces ou numérotées, avec du \
+gras si utile — **jamais de tableau** ni de titre Markdown, que la fenêtre de \
+discussion n'affiche pas."""
 
 PROMPT_SYSTEME = (
     """Tu es l'assistant en ligne de Delta, à Madagascar : cantine \

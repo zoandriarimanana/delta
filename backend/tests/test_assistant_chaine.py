@@ -251,3 +251,12 @@ def test_le_prompt_client_autorise_les_prix_mais_jamais_le_stock() -> None:
     systeme = llm.recus[0][0].content
     assert "Les prix du contexte sont ceux du catalogue" in systeme
     assert "Ne donne jamais un stock" in systeme
+
+
+def test_le_prompt_interdit_les_tableaux_que_la_bulle_n_affiche_pas() -> None:
+    """Constaté sur données réelles : une réponse en tableau Markdown
+    s'affichait en barres verticales brutes dans la bulle."""
+    llm = LlmEspion(responses=["ok"], recus=[])
+    repondre("Produits ?", retriever=FauxRetriever(fragments=FRAGMENTS), llm=llm)
+
+    assert "jamais de tableau" in llm.recus[0][0].content
