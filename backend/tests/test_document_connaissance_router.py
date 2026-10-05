@@ -93,9 +93,7 @@ def _televerser(client_http, entetes, *, public="Client", contenu=None, nom="faq
         DOCUMENTS,
         headers=entetes,
         data={"titre": "Foire aux questions", "public_cible": public},
-        files={
-            "fichier": (nom, contenu or b"Livraison le mardi.", "text/plain")
-        },
+        files={"fichier": (nom, contenu or b"Livraison le mardi.", "text/plain")},
     )
 
 

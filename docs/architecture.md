@@ -1062,6 +1062,20 @@ réponse au fil de l'eau dans un navigateur —, d'où `jetonCsrf()` exposé par
 `axiosClient.ts`. L'écran d'administration réutilise la **même** fenêtre de
 conversation que la bulle : un seul rendu, pas deux qui divergeraient.
 
+**Deux profils, un seul filtre qui compte** (12.8 → 12.10). Chaque fragment
+porte une métadonnée `audience` (`client` / `personnel`). La bulle du site
+interroge le profil client, qui ne recherche que l'audience `client` ; la bulle
+de l'espace personnel interroge le profil personnel, qui lit tout. **C'est le
+filtre de recherche qui protège un document interne, pas le prompt** — et c'est
+le routeur qui fixe le profil d'après la session, jamais la requête. Les
+guides de la plateforme (`app/ai_langchain/guides/`) sont versionnés avec le
+code et rédigés depuis les libellés réels de l'interface : modifier un écran
+suppose de relire son guide, puis de réindexer.
+
+**Base de connaissances** (`DOCUMENT_CONNAISSANCE`) : le texte extrait est
+stocké en base, pas le fichier — le disque d'un service Render est effacé à
+chaque redéploiement. Format lu dans les octets, jamais dans le nom.
+
 ## Correspondance modules ↔ tables du MLD
 
 | Module (dossier) | Tables du MLD concernées |

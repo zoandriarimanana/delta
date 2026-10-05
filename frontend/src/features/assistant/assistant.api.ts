@@ -9,12 +9,22 @@ import {
 } from './assistant.service';
 import type {
   DisponibiliteAssistant,
+  DocumentConnaissance,
   EtatAssistant,
   EvenementFlux,
+  ProfilAssistant,
+  PublicCible,
   ReindexationAssistant,
 } from './assistant.types';
 
 const CHEMIN = '/assistant';
+const CHEMIN_DOCUMENTS = `${CHEMIN}/administration/documents`;
+
+/** Le profil choisit l'endpoint ; le serveur vérifie la session derrière. */
+const CHEMINS_FLUX: Record<ProfilAssistant, string> = {
+  client: `${CHEMIN}/question/flux`,
+  personnel: `${CHEMIN}/personnel/question/flux`,
+};
 
 /** Public et gratuit : ne contacte aucun fournisseur côté serveur. */
 export async function recupererDisponibilite(): Promise<DisponibiliteAssistant> {
@@ -42,7 +52,8 @@ export async function recupererDisponibilite(): Promise<DisponibiliteAssistant> 
 export async function poserQuestionEnFlux(
   question: string,
   surEvenement: (evenement: EvenementFlux) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  profil: ProfilAssistant = 'client'
 ): Promise<void> {
   const enTetes: Record<string, string> = { 'Content-Type': 'application/json' };
   const csrf = jetonCsrf();
@@ -51,7 +62,7 @@ export async function poserQuestionEnFlux(
   }
 
   const reponse = await fetch(
-    `${axiosClient.defaults.baseURL ?? ''}${CHEMIN}/question/flux`,
+    `${axiosClient.defaults.baseURL ?? ''}${CHEMINS_FLUX[profil]}`,
     {
       method: 'POST',
       credentials: 'include',
@@ -98,6 +109,54 @@ export async function recupererEtat(): Promise<EtatAssistant> {
 export async function lancerReindexation(): Promise<ReindexationAssistant> {
   const reponse = await axiosClient.post<ReindexationAssistant>(
     `${CHEMIN}/administration/reindexation`
+  );
+  return reponse.data;
+}
+
+// --- Base de connaissances (administrateurs) ---------------------------------
+
+export async function recupererDocuments(
+  inclureArchives = false
+): Promise<DocumentConnaissance[]> {
+  const reponse = await axiosClient.get<DocumentConnaissance[]>(CHEMIN_DOCUMENTS, {
+    params: inclureArchives ? { inclure_archives: true } : undefined,
+  });
+  return reponse.data;
+}
+
+/**
+ * Téléverse un document : formulaire multipart. L'en-tête `Content-Type` est
+ * laissé au navigateur, qui seul connaît la frontière (`boundary`) du
+ * formulaire — le fixer à la main casserait l'envoi.
+ */
+export async function televerserDocument(
+  titre: string,
+  publicCible: PublicCible,
+  fichier: File
+): Promise<DocumentConnaissance> {
+  const formulaire = new FormData();
+  formulaire.append('titre', titre);
+  formulaire.append('public_cible', publicCible);
+  formulaire.append('fichier', fichier);
+  const reponse = await axiosClient.post<DocumentConnaissance>(
+    CHEMIN_DOCUMENTS,
+    formulaire,
+    {
+      headers: { 'Content-Type': undefined },
+    }
+  );
+  return reponse.data;
+}
+
+export async function archiverDocument(idDocument: number): Promise<void> {
+  await axiosClient.delete(`${CHEMIN_DOCUMENTS}/${idDocument}`);
+}
+
+export async function restaurerDocument(
+  idDocument: number
+): Promise<DocumentConnaissance> {
+  const reponse = await axiosClient.post<DocumentConnaissance>(
+    `${CHEMIN_DOCUMENTS}/${idDocument}/restauration`
   );
   return reponse.data;
 }

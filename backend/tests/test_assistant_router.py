@@ -57,7 +57,7 @@ def chaine_factice(monkeypatch: pytest.MonkeyPatch, actif: None) -> None:
             "sources": [{"type_contenu": "produit", "id_contenu": 3}],
         }
 
-    def repondre_en_flux(question: str) -> Iterator[dict]:
+    def repondre_en_flux(question: str, profil=None) -> Iterator[dict]:
         yield {"jeton": "Bon"}
         yield {"jeton": "jour"}
         yield {"fin": True, "sources": [{"type_contenu": "salle", "id_contenu": 1}]}
@@ -196,7 +196,7 @@ def test_flux_emet_des_evenements_sse(
 def test_flux_panne_avant_le_premier_jeton_donne_un_vrai_503(
     client_http: TestClient, actif: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def en_panne(question: str) -> Iterator[dict]:
+    def en_panne(question: str, profil=None) -> Iterator[dict]:
         raise ServiceIndisponible("Index injoignable.")
         yield {}  # pragma: no cover — fait de la fonction un générateur
 
@@ -212,7 +212,7 @@ def test_flux_panne_avant_le_premier_jeton_donne_un_vrai_503(
 def test_flux_panne_pendant_la_generation_est_signalee_dans_le_flux(
     client_http: TestClient, actif: None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    def coupe(question: str) -> Iterator[dict]:
+    def coupe(question: str, profil=None) -> Iterator[dict]:
         yield {"jeton": "Début"}
         raise ServiceIndisponible("Groq ne répond plus.")
 
@@ -334,3 +334,68 @@ def test_panne_pendant_la_reindexation_donne_503(
 
     assert reponse.status_code == 503
     assert "incomplet" in reponse.json()["detail"]
+
+
+# --- Assistant du personnel ----------------------------------------------------
+
+
+def test_assistant_du_personnel_reserve_au_personnel_connecte(
+    client_http: TestClient, db: Session, chaine_factice: None
+) -> None:
+    url = f"{ASSISTANT}/personnel/question/flux"
+    assert client_http.post(url, json={"question": "Étapes ?"}).status_code == 401
+
+    client = Client(
+        type_client=TypeClient.PARTICULIER,
+        email=f"jean_{uuid4().hex[:8]}@example.mg",
+        mot_de_passe=hacher_mot_de_passe("motdepasse123"),
+    )
+    db.add(client)
+    db.commit()
+    jeton_client = authentifier(client.id_client, TypeSujet.CLIENT)
+    assert (
+        client_http.post(
+            url, json={"question": "Étapes ?"}, headers=jeton_client
+        ).status_code
+        == 401
+    ), "un jeton client n'ouvre pas l'assistant du personnel"
+
+
+def test_assistant_du_personnel_ouvert_a_tout_salarie_avec_le_profil_personnel(
+    client_http: TestClient, db: Session, actif: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    profils: list[str] = []
+
+    def repondre_en_flux(question: str, profil=None) -> Iterator[dict]:
+        profils.append(profil.nom if profil is not None else "defaut")
+        yield {"jeton": "Ouvrez « Catalogue »."}
+        yield {"fin": True, "sources": []}
+
+    monkeypatch.setattr(chaine, "repondre_en_flux", repondre_en_flux)
+    agent = _personnel(db, administrateur=False)
+
+    reponse = client_http.post(
+        f"{ASSISTANT}/personnel/question/flux",
+        json={"question": "Comment ajouter un produit ?"},
+        headers=agent,
+    )
+
+    assert reponse.status_code == 200
+    assert _evenements(reponse.text)[0] == {"jeton": "Ouvrez « Catalogue »."}
+    assert profils == ["personnel"]
+
+
+def test_la_bulle_publique_reste_sur_le_profil_client(
+    client_http: TestClient, actif: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    profils: list[str] = []
+
+    def repondre_en_flux(question: str, profil=None) -> Iterator[dict]:
+        profils.append(profil.nom if profil is not None else "defaut")
+        yield {"fin": True, "sources": []}
+
+    monkeypatch.setattr(chaine, "repondre_en_flux", repondre_en_flux)
+
+    client_http.post(f"{ASSISTANT}/question/flux", json={"question": "Tartes ?"})
+
+    assert profils == ["client"]

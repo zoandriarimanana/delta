@@ -95,4 +95,13 @@ describe('poserQuestionEnFlux', () => {
       message: 'L’assistant n’est pas disponible.',
     });
   });
+
+  it('l’assistant du personnel interroge son propre endpoint', async () => {
+    fetchSimule.mockResolvedValue(new Response(corpsEnMorceaux(''), { status: 200 }));
+
+    await poserQuestionEnFlux('Étapes ?', () => undefined, undefined, 'personnel');
+
+    const [url] = fetchSimule.mock.calls[0] as [string, RequestInit];
+    expect(url).toMatch(/\/assistant\/personnel\/question\/flux$/);
+  });
 });

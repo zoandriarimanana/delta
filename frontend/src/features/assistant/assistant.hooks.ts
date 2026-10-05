@@ -14,7 +14,7 @@ import {
   LONGUEUR_MAX_QUESTION,
   messageErreur,
 } from './assistant.service';
-import type { MessageConversation } from './assistant.types';
+import type { MessageConversation, ProfilAssistant } from './assistant.types';
 
 /**
  * Vrai si l'assistant est activé côté serveur ; `null` tant qu'on ne sait pas.
@@ -60,7 +60,7 @@ export interface Conversation {
  * Une seule réponse à la fois : `envoyer` est sans effet tant qu'une réponse
  * arrive. Le flux en cours est interrompu au démontage du composant.
  */
-export function useConversation(): Conversation {
+export function useConversation(profil: ProfilAssistant = 'client'): Conversation {
   const [messages, setMessages] = useState<MessageConversation[]>([]);
   const [enCours, setEnCours] = useState(false);
   const compteur = useRef(0);
@@ -129,7 +129,8 @@ export function useConversation(): Conversation {
               }));
             }
           },
-          controleur.signal
+          controleur.signal,
+          profil
         );
         majReponse((m) => ({ ...m, enCours: false }));
       } catch (erreur) {
@@ -145,7 +146,7 @@ export function useConversation(): Conversation {
         }
       }
     },
-    [enCours]
+    [enCours, profil]
   );
 
   const reinitialiser = useCallback(() => {

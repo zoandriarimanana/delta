@@ -1,0 +1,40 @@
+# Guide du back-office Delta, pour le personnel
+
+## Accéder à l'espace personnel
+Depuis la page « Connexion » du site, suivez le lien « Espace personnel ». Saisissez votre « Adresse professionnelle » et votre « Mot de passe ». L'espace personnel s'ouvre avec un menu à gauche : la section « Général » contient « Prise de commande » ; la section « Gestion » contient « Personnel », « Réservations », « Commandes », « Abonnements », « Catalogue », « Catégories », « Salles », « Logements », « Domaines » et « Assistant IA ». La section « Gestion » n'apparaît qu'aux administrateurs : un salarié sans ce droit ne la voit pas, et le serveur refuserait de toute façon ses actions. « Déconnexion » est en bas du menu.
+
+## Prendre une commande sur place
+Ouvrez « Prise de commande ». Cherchez les articles avec « Rechercher un produit » et cliquez sur « Ajouter » pour chacun ; un produit sans stock affiche « Épuisé ». Dans « Acheteur », choisissez « Sur une réservation de table » et saisissez le « Numéro de réservation » — le client est alors déduit de la réservation —, ou « Sans compte » et renseignez le « Nom de l'acheteur » et son « Téléphone ou e-mail ». Cliquez sur « Enregistrer la commande ». La commande est enregistrée sur place, sans livraison, et votre nom est retenu comme auteur de la commande. Le panier de cet écran se vide à chaque commande : il n'est jamais mélangé à celui d'un client.
+
+## Ajouter un produit au catalogue
+Ouvrez « Catalogue », puis cliquez sur « Nouveau produit ». Remplissez « Nom », « Description » (facultative), « Prix unitaire », « Unité de mesure » (par exemple pièce ou pot de 350 g), « Stock disponible » et « Catégorie ». Cochez « Livrable » si le produit peut être livré, et « Personnalisable » s'il peut être personnalisé : le « Supplément de personnalisation, par unité » devient alors obligatoire. Cliquez sur « Créer ». La catégorie doit exister avant le produit : si elle manque, créez-la d'abord (voir « Gérer les catégories »). Le nouveau produit apparaît aussitôt dans le catalogue public et l'assistant des clients le connaît automatiquement.
+
+## Modifier, archiver ou restaurer un produit
+Dans « Catalogue », cliquez sur « Modifier » sur la ligne du produit, changez les champs voulus, puis cliquez sur « Enregistrer ». Pour retirer un produit du catalogue, cliquez sur « Archiver » : il disparaît du site mais reste dans l'historique des commandes. Pour le remettre en vente, cochez « Afficher les archives », puis cliquez sur « Restaurer » sur sa ligne. Un changement de prix s'applique aux nouvelles commandes, jamais aux commandes déjà passées.
+
+## Gérer les catégories de produits
+Ouvrez « Catégories » (ou, depuis « Catalogue », « Gérer les catégories »). Pour en créer une, saisissez son « Libellé » et cliquez sur « Ajouter ». Pour la renommer, cliquez sur « Renommer », modifiez le libellé et cliquez sur « Enregistrer ». « Archiver » est refusé tant que la catégorie contient des produits actifs : archivez ou déplacez d'abord ces produits. Deux catégories actives ne peuvent pas porter le même nom. « Afficher les archives » puis « Restaurer » remet une catégorie archivée.
+
+## Ajouter ou modifier une salle
+Ouvrez « Salles », puis « Nouvelle salle ». Remplissez « Nom », « Capacité », « Tarif horaire » et/ou « Tarif journalier » — au moins un des deux est obligatoire ; pour une salle gratuite, indiquez 0 — et « Équipements » (facultatif). Cliquez sur « Créer ». Sur la ligne d'une salle : « Modifier » puis « Enregistrer », ou « Archiver ». L'archivage est refusé tant que la salle porte des réservations actives.
+
+## Ajouter un logement ou changer son état
+Ouvrez « Logements », puis « Nouveau logement ». Remplissez « Type de chambre », « Capacité » et « Tarif à la nuitée », puis cliquez sur « Créer » : le logement naît disponible. Pour une fermeture temporaire ou définitive, cliquez sur « Modifier » et choisissez le « Statut » : « Disponible à la réservation », « Temporairement indisponible » (maintenance : le logement reviendra) ou « Retiré de l'offre » (hors service). Cliquez sur « Enregistrer ». Mettre un logement en maintenance n'annule pas les réservations déjà prises : prévenez les clients concernés.
+
+## Gérer les domaines de formation
+Ouvrez « Domaines ». Pour en créer un, saisissez son « Libellé » et, si vous le souhaitez, une « Description » (facultative), puis cliquez sur « Ajouter ». « Modifier » puis « Enregistrer » change un domaine ; « Archiver » est refusé tant que le domaine contient des formations actives ; « Afficher les archives » puis « Restaurer » le remet. La gestion des formations et de leurs sessions n'est pas encore décrite dans ce guide.
+
+## Gérer le personnel
+Ouvrez « Personnel ». Le tableau se filtre avec « Filtrer par fonction ». Pour ajouter quelqu'un, cliquez sur « Nouveau membre » et remplissez « Nom », « Prénom », « Fonction », « E-mail professionnel », « Téléphone », « Date d'embauche », et selon le poste « Spécialité » ou « Zone de livraison » ; une « Photo de profil » (facultatif, JPEG ou PNG, 2 Mio maximum) peut être jointe. Cliquez sur « Créer ». Sur « Voir la fiche » d'un membre : « Modifier », « Archiver » (réversible, « Restaurer »), « Anonymiser » (efface définitivement ses données personnelles), « Télécharger le badge » et « Retirer la photo ». Les droits d'administrateur et les comptes de connexion ne se donnent pas depuis cet écran : adressez-vous au responsable technique.
+
+## Suivre et traiter les réservations
+Ouvrez « Réservations ». Filtrez par « Type » et par « Statut ». Une fois la prestation réalisée — formation suivie, salle ou chambre occupée —, cliquez sur « Marquer honorée » : c'est ce qui permet ensuite au client de déposer un avis. « Annuler » annule la réservation et rend ses places. « Voir le détail » ouvre la fiche, où les mêmes actions sont proposées ; elle indique aussi si un hébergement a été demandé et attribué.
+
+## Traiter une commande
+Ouvrez « Commandes ». Filtrez par « Statut », puis cliquez sur « Voir le détail ». Trois actions selon la situation : « Annuler » (impossible sur une commande déjà livrée ou servie), « Relancer la livraison » (proposé quand la livraison a échoué : elle repart en attente, à réaffecter) et « Marquer remboursée » (à utiliser une fois le remboursement fait hors plateforme — espèces, virement — ; cette action ne touche pas aux paiements enregistrés). Les liens « Voir les réservations » et « Voir les abonnements » mènent aux écrans correspondants.
+
+## Créer et suivre un abonnement de cantine
+Ouvrez « Abonnements », puis « Nouvel abonnement ». Choisissez l'« Entreprise cliente », la « Date de début » et la « Date de fin », le « Type de facturation » (« Forfait » ou « Consommation réelle ») et le « Mode de suivi » (« Global » ou « Individuel »). Renseignez le tarif correspondant : « Tarif forfait » pour un forfait, « Tarif unitaire par repas » pour la consommation réelle. Cliquez sur « Créer ». Deux abonnements actifs d'une même entreprise ne peuvent pas se chevaucher. Sur « Voir le détail » : « Modifier », « Archiver », « Ajouter un bénéficiaire » (« Nom », « Prénom », « Badge », puis « Ajouter ») et le « Suivi de consommation ».
+
+## Enrichir l'assistant IA avec des documents
+Ouvrez « Assistant IA ». Dans « Base de connaissances », remplissez le « Titre », choisissez le « Public » — « Clients » si les visiteurs du site peuvent le lire, « Personnel » s'il est interne — et le « Fichier » : PDF, Word (.docx), texte (.txt) ou Markdown (.md), 5 Mio au plus. Cliquez sur « Téléverser ». Le document est lu, découpé et indexé automatiquement ; l'assistant peut s'en servir aussitôt. Un PDF scanné (image de texte) est refusé : il faut un document contenant du vrai texte. Un document destiné au personnel ne ressort jamais dans la bulle du site public. Pour corriger un document, archivez-le et téléversez la nouvelle version. « Réindexer tout le catalogue » reconstruit l'index complet : utile après un changement de configuration, ou si l'état signale un index vide.

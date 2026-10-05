@@ -1324,7 +1324,7 @@ précédente) :
       — `pyproject.toml` déclare les guides `.md` en données du paquet : une
       installation non éditable les aurait omis sans erreur.
       — 20 tests, dont des **PDF et Word réels fabriqués dans le test**.
-- [ ] **12.10 — Assistant du personnel.**
+- [x] **12.10 — Assistant du personnel.**
       — Chaque fragment porte une métadonnée **`audience`** (`client` /
       `personnel`). L'assistant client ne recherche **que** l'audience
       `client` — un document destiné au personnel ne peut donc jamais
@@ -1343,6 +1343,22 @@ précédente) :
       sessions vivent sur une branche non encore intégrée
       (`feature/sprint-admin-formation`) ; le guide du personnel ne les décrit
       pas tant qu'ils ne sont pas dans `develop`.
+      — Livré. Le **profil est décidé par le routeur** d'après
+      l'authentification (`PersonnelConnecte`), jamais par un paramètre de la
+      requête : un visiteur ne peut pas demander le profil personnel. Ouvert à
+      tout salarié connecté, pas aux seuls administrateurs — le guide sert
+      aussi à la prise de commande.
+      — Guide du personnel rédigé depuis les libellés réels de chaque écran
+      (13 sections, une démarche chacune). Écran d'administration découpé en
+      trois panneaux (état et index, base de connaissances, conversation avec
+      bascule assistant du personnel / aperçu client) ; bulle du personnel
+      montée par `LayoutPersonnel` sur tous les écrans de l'espace.
+      — Vérifié **dans un vrai navigateur** contre le vrai backend et les
+      vraies clés : étapes exactes pour ajouter un produit ; un document
+      « Personnel » répond au personnel et **reste muet pour un visiteur** qui
+      pose la même question ; un document « Clients » répond au visiteur.
+      Suite backend complète verte (1357/1357) sur base vierge, deux
+      migrations comprises ; frontend 603/603, build compris.
 
 ---
 

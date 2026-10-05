@@ -107,6 +107,7 @@ def test_reindexer_n_indexe_que_l_actif_et_jamais_le_stock(
         "domaine_formation",
         "salle",
         "logement",
+        "document",
         "guide",
     }
     assert resultats["produit"]["elements"] >= 1
@@ -132,3 +133,57 @@ def test_reindexer_un_assistant_desactive_leve(
 
     with pytest.raises(ServiceIndisponible, match="désactivé"):
         reindexer_tout(session_postgres)
+
+
+def test_un_document_interne_garde_son_audience_apres_reindexation(
+    session_postgres: Session, store: PGVector
+) -> None:
+    """Le chemin du déploiement : tout l'index reconstruit d'un coup. Un
+    document « Personnel » doit en ressortir `personnel`, et rester invisible
+    du filtre client."""
+    from app.ai_langchain.chaine import PROFIL_CLIENT, filtre_audience
+    from app.models.document_connaissance import (
+        DocumentConnaissance,
+        PublicCible,
+        TypeFichier,
+    )
+    from app.models.personnel import FonctionPersonnel, Personnel
+
+    auteur = Personnel(
+        nom="Auteur",
+        prenom="Test",
+        fonction=FonctionPersonnel.AUTRE,
+        email=f"auteur_{uuid.uuid4().hex[:8]}@delta.mg",
+    )
+    session_postgres.add(auteur)
+    session_postgres.flush()
+    interne = DocumentConnaissance(
+        titre="Procédure de fermeture de caisse",
+        nom_fichier="caisse.txt",
+        type_fichier=TypeFichier.TXT,
+        taille_octets=42,
+        public_cible=PublicCible.PERSONNEL,
+        texte_extrait="Compter le fond de caisse avant de fermer le comptoir.",
+        id_personnel=auteur.id_personnel,
+    )
+    session_postgres.add(interne)
+    session_postgres.flush()
+
+    reindexer_tout(session_postgres)
+
+    tous = store.similarity_search("fond de caisse", k=50)
+    fragments = [
+        d
+        for d in tous
+        if d.metadata["type_contenu"] == "document"
+        and d.metadata["id_contenu"] == interne.id_document
+    ]
+    assert fragments and all(d.metadata["audience"] == "personnel" for d in fragments)
+    vus_client = store.similarity_search(
+        "fond de caisse", k=50, filter=filtre_audience(PROFIL_CLIENT)
+    )
+    assert all(
+        d.metadata.get("id_contenu") != interne.id_document
+        or d.metadata["type_contenu"] != "document"
+        for d in vus_client
+    )

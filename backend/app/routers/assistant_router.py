@@ -16,7 +16,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import PersonnelAdministrateur
+from app.core.deps import PersonnelAdministrateur, PersonnelConnecte
 from app.core.exceptions import ServiceIndisponible
 from app.core.rate_limit import LIMITE_ASSISTANT, limiter
 from app.schemas.assistant import (
@@ -73,7 +73,35 @@ def poser_question_en_flux(
     *pendant* la génération ne peut plus changer le code HTTP déjà envoyé :
     elle est signalée dans le flux par un événement `{"erreur": ...}`.
     """
-    evenements = AssistantService().repondre_en_flux(donnees.question)
+    return _reponse_en_flux(AssistantService().repondre_en_flux(donnees.question))
+
+
+@router.post(
+    "/personnel/question/flux",
+    summary="Assistant du personnel : poser une question, réponse en flux (SSE)",
+)
+@limiter.limit(LIMITE_ASSISTANT)
+def poser_question_personnel_en_flux(
+    request: Request, donnees: QuestionAssistant, _personnel: PersonnelConnecte
+) -> StreamingResponse:
+    """Même contrat que `/question/flux`, avec le profil **personnel** : guide
+    du back-office et documents internes en plus du catalogue.
+
+    Ouvert à **tout salarié connecté**, pas aux seuls administrateurs : le
+    guide aide aussi à la prise de commande. Le profil est fixé ici, par
+    l'authentification — un visiteur ne peut pas le demander.
+    """
+    return _reponse_en_flux(
+        AssistantService().repondre_en_flux(donnees.question, profil="personnel")
+    )
+
+
+def _reponse_en_flux(evenements: Iterator[dict[str, Any]]) -> StreamingResponse:
+    """Calcule le premier événement, puis ouvre le flux SSE.
+
+    Le premier événement avant tout : une panne à la recherche lève encore
+    `ServiceIndisponible` à temps pour un vrai 503.
+    """
     premier = next(evenements)
 
     def flux() -> Iterator[str]:

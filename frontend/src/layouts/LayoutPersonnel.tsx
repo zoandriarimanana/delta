@@ -24,6 +24,7 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 
+import BulleAssistant from '@/features/assistant/components/BulleAssistant';
 import { useDeconnexion } from '@/features/auth/auth.hooks';
 import { useEstAdministrateur } from '@/lib/useEstConnecte';
 
@@ -183,6 +184,12 @@ export default function LayoutPersonnel() {
           <Outlet />
         </main>
       </div>
+
+      {/* Assistant du personnel (Sprint 12, 12.10) : disponible sur tous les
+          écrans de l'espace, pour demander les étapes d'une tâche sans
+          quitter celle en cours. Composant du module `assistant`, que le
+          layout monte sans rien savoir de son fonctionnement. */}
+      <BulleAssistant profil="personnel" />
     </div>
   );
 }

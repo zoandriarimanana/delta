@@ -65,6 +65,8 @@ const LIBELLES_PAR_TYPE: Record<string, string> = {
   domaine_formation: 'Domaine de formation',
   salle: 'Salle',
   logement: 'Hébergement',
+  guide: 'Guide de la plateforme',
+  document: 'Document',
 };
 
 /** Libellé lisible d'un type de contenu — l'identifiant brut en dernier recours. */

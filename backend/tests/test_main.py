@@ -126,6 +126,7 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/assistant/disponibilite",
         f"{prefixe}/assistant/question",
         f"{prefixe}/assistant/question/flux",
+        f"{prefixe}/assistant/personnel/question/flux",
         f"{prefixe}/assistant/administration/etat",
         f"{prefixe}/assistant/administration/reindexation",
         f"{prefixe}/assistant/administration/documents",

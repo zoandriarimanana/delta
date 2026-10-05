@@ -14,11 +14,35 @@ import { useEffect, useState } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 
 import { useConversation, useDisponibiliteAssistant } from '../assistant.hooks';
-import FenetreConversation from './FenetreConversation';
+import type { ProfilAssistant } from '../assistant.types';
+import FenetreConversation, {
+  ACCUEIL_CLIENT,
+  ACCUEIL_PERSONNEL,
+} from './FenetreConversation';
 
-export default function BulleAssistant() {
+const PRESENTATIONS: Record<ProfilAssistant, { titre: string; sousTitre: string }> = {
+  client: {
+    titre: 'Assistant Delta',
+    sousTitre: 'Réponses à partir de notre catalogue',
+  },
+  personnel: {
+    titre: 'Assistant du personnel',
+    sousTitre: 'Les étapes à suivre dans l’espace personnel',
+  },
+};
+
+interface Proprietes {
+  /**
+   * `personnel` : montée par `LayoutPersonnel`, elle interroge l'endpoint du
+   * personnel — le serveur vérifie la session, ce choix ne contourne rien.
+   */
+  profil?: ProfilAssistant;
+}
+
+export default function BulleAssistant({ profil = 'client' }: Proprietes) {
   const actif = useDisponibiliteAssistant();
-  const conversation = useConversation();
+  const conversation = useConversation(profil);
+  const presentation = PRESENTATIONS[profil];
   const [ouverte, setOuverte] = useState(false);
 
   useEffect(() => {
@@ -39,15 +63,13 @@ export default function BulleAssistant() {
       {ouverte && (
         <section
           id="fenetre-assistant"
-          aria-label="Assistant Delta"
+          aria-label={presentation.titre}
           className="flex h-[min(34rem,calc(100vh-7rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-warm-gray-200 bg-cream shadow-xl"
         >
           <header className="flex items-center justify-between bg-burgundy px-4 py-3 text-white">
             <div>
-              <h2 className="text-sm font-semibold">Assistant Delta</h2>
-              <p className="text-xs text-white/80">
-                Réponses à partir de notre catalogue
-              </p>
+              <h2 className="text-sm font-semibold">{presentation.titre}</h2>
+              <p className="text-xs text-white/80">{presentation.sousTitre}</p>
             </div>
             <button
               type="button"
@@ -63,6 +85,7 @@ export default function BulleAssistant() {
           <FenetreConversation
             conversation={conversation}
             surNavigation={() => setOuverte(false)}
+            accueil={profil === 'personnel' ? ACCUEIL_PERSONNEL : ACCUEIL_CLIENT}
             className="flex-1"
           />
         </section>

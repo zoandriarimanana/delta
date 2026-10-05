@@ -85,9 +85,7 @@ def test_un_docx_reel_est_reconnu_et_lu() -> None:
     ("nom", "attendu"), [("notes.txt", TypeFichier.TXT), ("Guide.MD", TypeFichier.MD)]
 )
 def test_texte_et_markdown(nom: str, attendu: TypeFichier) -> None:
-    type_fichier, texte = extraire(
-        b"Livraison du mardi.\r\n\r\n\r\n\r\nFin.", nom
-    )
+    type_fichier, texte = extraire(b"Livraison du mardi.\r\n\r\n\r\n\r\nFin.", nom)
 
     assert type_fichier is attendu
     assert texte == "Livraison du mardi.\n\nFin.", "lignes vides superflues retirées"

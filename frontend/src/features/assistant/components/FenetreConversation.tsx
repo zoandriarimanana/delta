@@ -13,14 +13,34 @@ import type { Conversation } from '../assistant.hooks';
 import { LONGUEUR_MAX_QUESTION } from '../assistant.service';
 import MessageAssistant from './MessageAssistant';
 
-const SUGGESTIONS = [
-  'Quelles formations en pâtisserie proposez-vous ?',
-  'Avez-vous une salle pour une réunion de 30 personnes ?',
-  'Faites-vous des gâteaux personnalisés ?',
-];
+/** Accueil et suggestions de départ, selon qui interroge l'assistant. */
+export const ACCUEIL_CLIENT = {
+  message:
+    'Bonjour ! Posez-moi vos questions sur nos produits, nos formations, nos salles ou nos hébergements, ou sur la façon de commander et de réserver.',
+  avertissement:
+    'Réponses générées par une IA à partir de notre catalogue. Stock, disponibilités et places : consultez la fiche concernée.',
+  suggestions: [
+    'Comment commander sans créer de compte ?',
+    'Avez-vous une salle pour une réunion de 30 personnes ?',
+    'Faites-vous des gâteaux personnalisés ?',
+  ],
+};
+
+export const ACCUEIL_PERSONNEL = {
+  message:
+    'Bonjour ! Je vous guide dans l’espace personnel : demandez-moi les étapes à suivre pour une tâche.',
+  avertissement:
+    'Réponses générées par une IA à partir du guide du back-office et des documents internes : vérifiez à l’écran avant d’agir.',
+  suggestions: [
+    'Comment ajouter un nouveau produit au catalogue ?',
+    'Comment prendre une commande sur place ?',
+    'Comment ajouter un document à la base de connaissances ?',
+  ],
+};
 
 interface Proprietes {
   conversation: Conversation;
+  accueil?: { message: string; avertissement: string; suggestions: string[] };
   surNavigation?: () => void;
   className?: string;
 }
@@ -28,6 +48,7 @@ interface Proprietes {
 export default function FenetreConversation({
   conversation,
   surNavigation,
+  accueil = ACCUEIL_CLIENT,
   className = '',
 }: Proprietes) {
   const [saisie, setSaisie] = useState('');
@@ -62,12 +83,9 @@ export default function FenetreConversation({
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3" aria-live="polite">
         {messages.length === 0 ? (
           <div className="space-y-3 text-sm text-warm-gray-600">
-            <p>
-              Bonjour ! Posez-moi vos questions sur nos produits, nos formations, nos
-              salles ou nos hébergements.
-            </p>
+            <p>{accueil.message}</p>
             <ul className="space-y-2">
-              {SUGGESTIONS.map((suggestion) => (
+              {accueil.suggestions.map((suggestion) => (
                 <li key={suggestion}>
                   <button
                     type="button"
@@ -131,8 +149,7 @@ export default function FenetreConversation({
           )}
         </div>
         <p className="mt-1 text-[11px] leading-tight text-warm-gray-400">
-          Réponses générées par une IA à partir de notre catalogue. Prix, disponibilités
-          et places : consultez la fiche concernée.
+          {accueil.avertissement}
         </p>
       </form>
     </div>

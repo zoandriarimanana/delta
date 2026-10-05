@@ -57,3 +57,31 @@ export interface ReindexationAssistant {
   par_type: Record<string, CompteIndexation>;
   total_fragments: number;
 }
+
+/**
+ * Qui interroge l'assistant. `personnel` lit aussi le guide du back-office et
+ * les documents internes ; c'est le **serveur** qui l'accorde, d'après la
+ * session — le choisir côté client ne contourne rien.
+ */
+export type ProfilAssistant = 'client' | 'personnel';
+
+/** Public d'un document de la base de connaissances. */
+export type PublicCible = 'Client' | 'Personnel';
+
+export type TypeFichier = 'pdf' | 'docx' | 'txt' | 'md';
+
+/** Miroir de `DocumentConnaissanceRead` — le texte complet n'est jamais renvoyé. */
+export interface DocumentConnaissance {
+  id_document: number;
+  titre: string;
+  nom_fichier: string;
+  type_fichier: TypeFichier;
+  taille_octets: number;
+  public_cible: PublicCible;
+  date_ajout: string;
+  id_personnel: number;
+  supprime_le: string | null;
+  apercu: string;
+  /** `null` assistant coupé ; `0` sur un document actif : indexation à relancer. */
+  nombre_fragments: number | null;
+}

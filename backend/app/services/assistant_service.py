@@ -7,7 +7,7 @@ absent. Chaque méthode vérifie l'activation avant d'importer quoi que ce soit.
 """
 
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,10 @@ from app.core.config import settings
 from app.core.exceptions import ServiceIndisponible
 
 MESSAGE_DESACTIVE = "L'assistant n'est pas disponible pour le moment."
+
+#: Qui pose la question. Une chaîne et non l'objet `Profil` de la chaîne RAG :
+#: ce service est importé au démarrage, sans LangChain.
+NomProfil = Literal["client", "personnel"]
 
 
 class AssistantService:
@@ -43,12 +47,26 @@ class AssistantService:
 
         return repondre(question)
 
-    def repondre_en_flux(self, question: str) -> Iterator[dict[str, Any]]:
-        """Réponse en flux : jetons, puis événement de fin avec les sources."""
-        self._exiger_actif()
-        from app.ai_langchain.chaine import repondre_en_flux
+    def repondre_en_flux(
+        self, question: str, profil: NomProfil = "client"
+    ) -> Iterator[dict[str, Any]]:
+        """Réponse en flux : jetons, puis événement de fin avec les sources.
 
-        return repondre_en_flux(question)
+        Le profil `personnel` lit aussi les documents internes et le guide du
+        back-office ; **c'est le routeur qui décide du profil**, d'après
+        l'authentification — jamais un paramètre de la requête.
+        """
+        self._exiger_actif()
+        from app.ai_langchain.chaine import (
+            PROFIL_CLIENT,
+            PROFIL_PERSONNEL,
+            repondre_en_flux,
+        )
+
+        return repondre_en_flux(
+            question,
+            profil=PROFIL_PERSONNEL if profil == "personnel" else PROFIL_CLIENT,
+        )
 
     def etat(self) -> dict[str, Any]:
         """État de l'assistant, pour l'administration.

@@ -88,7 +88,8 @@ describe('BulleAssistant', () => {
     expect(poserQuestionEnFlux).toHaveBeenCalledWith(
       'Une salle pour 30 personnes ?',
       expect.any(Function),
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
+      'client'
     );
   });
 
@@ -128,6 +129,38 @@ describe('BulleAssistant', () => {
     expect((envoyer as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText('501/500')).toBeTruthy();
     expect(poserQuestionEnFlux).not.toHaveBeenCalled();
+  });
+
+  it('côté personnel, interroge l’assistant du personnel', async () => {
+    vi.mocked(recupererDisponibilite).mockResolvedValue({ actif: true });
+    vi.mocked(poserQuestionEnFlux).mockImplementation(async (_q, surEvenement) => {
+      surEvenement({ jeton: 'Ouvrez « Catalogue ».' });
+      surEvenement({ fin: true, sources: [] });
+    });
+    const utilisateur = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <BulleAssistant profil="personnel" />
+      </MemoryRouter>
+    );
+
+    await utilisateur.click(
+      await screen.findByRole('button', { name: 'Ouvrir l’assistant' })
+    );
+    expect(screen.getByRole('region', { name: 'Assistant du personnel' })).toBeTruthy();
+    await utilisateur.click(
+      screen.getByRole('button', {
+        name: 'Comment ajouter un nouveau produit au catalogue ?',
+      })
+    );
+
+    expect(await screen.findByText('Ouvrez « Catalogue ».')).toBeTruthy();
+    expect(poserQuestionEnFlux).toHaveBeenCalledWith(
+      'Comment ajouter un nouveau produit au catalogue ?',
+      expect.any(Function),
+      expect.any(AbortSignal),
+      'personnel'
+    );
   });
 
   it('se ferme avec Échap', async () => {
