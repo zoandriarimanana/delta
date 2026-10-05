@@ -6,6 +6,8 @@ from datetime import date
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.ai_langchain.synchronisation import assistant_actif
+from app.ai_langchain.textes.formation import synchroniser_formation
 from app.core.exceptions import (
     ConflitMetier,
     ReferenceInvalide,
@@ -101,6 +103,7 @@ class SessionFormationService:
                 }
             )
             self.db.commit()
+            self._synchroniser_assistant(session)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_SESSION_FORMATION):
@@ -140,6 +143,7 @@ class SessionFormationService:
 
         self.sessions.update(session, modifications)
         self.db.commit()
+        self._synchroniser_assistant(session)
         return session
 
     def _verifier_les_dates(
@@ -212,6 +216,7 @@ class SessionFormationService:
 
         session.statut = statut
         self.db.commit()
+        self._synchroniser_assistant(session)
         return session
 
     def _refuser_si_terminee(self, session: SessionFormation, action: str) -> None:
@@ -239,6 +244,7 @@ class SessionFormationService:
         session = self.obtenir(id_session)
         self.sessions.delete(session)
         self.db.commit()
+        self._synchroniser_assistant(session)
 
     def lister_pour_administration(self) -> Sequence[SessionFormation]:
         """Retourne **toutes** les sessions, actives et archivées.
@@ -247,3 +253,13 @@ class SessionFormationService:
         `SalleService.lister_pour_administration`.
         """
         return self.sessions.list(inclure_supprimes=True)
+
+    def _synchroniser_assistant(self, session: SessionFormation) -> None:
+        """Resynchronise la formation de la session dans l'index IA (Sprint 12).
+
+        Les sessions ne sont pas indexées à part : leurs dates et leur statut
+        vivent dans le fragment de leur formation. Ne lève jamais.
+        """
+        if not assistant_actif():
+            return
+        synchroniser_formation(session.formation)

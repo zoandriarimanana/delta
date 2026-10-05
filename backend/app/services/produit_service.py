@@ -5,6 +5,9 @@ from collections.abc import Sequence
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.ai_langchain.synchronisation import assistant_actif, recharger_relation
+from app.ai_langchain.textes.categorie_produit import synchroniser_categorie_produit
+from app.ai_langchain.textes.produit import synchroniser_produit
 from app.core.exceptions import ReferenceInvalide, RessourceIntrouvable
 from app.core.integrite import viole_contrainte
 from app.models.produit import Produit
@@ -63,6 +66,7 @@ class ProduitService:
         try:
             produit = self.produits.create(donnees.model_dump())
             self.db.commit()
+            self._synchroniser_assistant(produit)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_PRODUIT_CATEGORIE):
@@ -83,8 +87,10 @@ class ProduitService:
         self._verifier_coherence_personnalisation(produit, modifications)
 
         try:
+            id_ancienne_categorie = produit.id_categorie
             self.produits.update(produit, modifications)
             self.db.commit()
+            self._synchroniser_assistant(produit, id_ancienne_categorie)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_PRODUIT_CATEGORIE):
@@ -128,6 +134,7 @@ class ProduitService:
         produit = self.obtenir(id_produit)
         self.produits.delete(produit)
         self.db.commit()
+        self._synchroniser_assistant(produit)
 
     def restaurer(self, id_produit: int) -> Produit:
         """Réactive un produit archivé.
@@ -155,6 +162,7 @@ class ProduitService:
 
         self.produits.restaurer(produit)
         self.db.commit()
+        self._synchroniser_assistant(produit)
         return produit
 
     def lister_pour_administration(self) -> Sequence[Produit]:
@@ -173,3 +181,25 @@ class ProduitService:
         pas être appelé faute de savoir sur quoi.
         """
         return self.produits.list(inclure_supprimes=True)
+
+    def _synchroniser_assistant(
+        self, produit: Produit, id_ancienne_categorie: int | None = None
+    ) -> None:
+        """Met l'index de l'assistant IA à jour après un `commit` (Sprint 12).
+
+        Resynchronise aussi la catégorie — son fragment liste ses produits
+        actifs —, et l'ancienne si le produit a changé de catégorie. Ne lève
+        jamais : une panne d'indexation ne fait pas échouer l'écriture.
+        """
+        if not assistant_actif():
+            return
+        # Relation rechargée : `expire_on_commit=False` (core/database.py), et
+        # un changement de catégorie ne modifie que la clé étrangère — sans
+        # cela, `produit.categorie` désignerait encore l'ancienne.
+        recharger_relation(produit, "categorie")
+        synchroniser_produit(produit)
+        synchroniser_categorie_produit(produit.categorie)
+        if id_ancienne_categorie not in (None, produit.id_categorie):
+            ancienne = self.categories.get_by_id(id_ancienne_categorie)
+            if ancienne is not None:
+                synchroniser_categorie_produit(ancienne)

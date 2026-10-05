@@ -5,6 +5,9 @@ from collections.abc import Sequence
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.ai_langchain.synchronisation import assistant_actif, recharger_relation
+from app.ai_langchain.textes.domaine_formation import synchroniser_domaine_formation
+from app.ai_langchain.textes.formation import synchroniser_formation
 from app.core.exceptions import (
     ConflitMetier,
     ReferenceInvalide,
@@ -71,6 +74,7 @@ class FormationService:
         try:
             formation = self.formations.create(donnees.model_dump())
             self.db.commit()
+            self._synchroniser_assistant(formation)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_FORMATION_DOMAINE):
@@ -90,8 +94,10 @@ class FormationService:
             self._verifier_domaine(modifications["id_domaine"])
 
         try:
+            id_ancien_domaine = formation.id_domaine
             self.formations.update(formation, modifications)
             self.db.commit()
+            self._synchroniser_assistant(formation, id_ancien_domaine)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_FORMATION_DOMAINE):
@@ -121,6 +127,7 @@ class FormationService:
             raise ConflitMetier(MESSAGE_ENCORE_PEUPLEE)
         self.formations.delete(formation)
         self.db.commit()
+        self._synchroniser_assistant(formation)
 
     def restaurer(self, id_formation: int) -> Formation:
         """Réactive une formation archivée. Idempotent.
@@ -138,6 +145,7 @@ class FormationService:
 
         self.formations.restaurer(formation)
         self.db.commit()
+        self._synchroniser_assistant(formation)
         return formation
 
     def lister_pour_administration(self) -> Sequence[Formation]:
@@ -148,3 +156,24 @@ class FormationService:
         restauration ci-dessus atteignable.
         """
         return self.formations.list(inclure_supprimes=True)
+
+    def _synchroniser_assistant(
+        self, formation: Formation, id_ancien_domaine: int | None = None
+    ) -> None:
+        """Met l'index de l'assistant IA à jour après un `commit` (Sprint 12).
+
+        Resynchronise aussi le domaine — son fragment liste ses formations
+        actives —, et l'ancien si la formation a changé de domaine. Ne lève
+        jamais : une panne d'indexation ne fait pas échouer l'écriture.
+        """
+        if not assistant_actif():
+            return
+        # Même raison que `ProduitService._synchroniser_assistant` : seule la
+        # clé étrangère change, la relation désignerait encore l'ancien domaine.
+        recharger_relation(formation, "domaine")
+        synchroniser_formation(formation)
+        synchroniser_domaine_formation(formation.domaine)
+        if id_ancien_domaine not in (None, formation.id_domaine):
+            ancien = self.domaines.get_by_id(id_ancien_domaine)
+            if ancien is not None:
+                synchroniser_domaine_formation(ancien)

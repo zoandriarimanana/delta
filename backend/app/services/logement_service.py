@@ -4,6 +4,7 @@ from collections.abc import Sequence
 
 from sqlalchemy.orm import Session
 
+from app.ai_langchain.textes.logement import synchroniser_logement
 from app.core.exceptions import ConflitMetier, RessourceIntrouvable
 from app.models.logement import Logement, StatutLogement
 from app.models.reservation import StatutReservation
@@ -54,6 +55,7 @@ class LogementService:
             {**donnees.model_dump(), "statut": StatutLogement.DISPONIBLE}
         )
         self.db.commit()
+        synchroniser_logement(logement)
         return logement
 
     def modifier(self, id_logement: int, donnees: LogementUpdate) -> Logement:
@@ -67,6 +69,7 @@ class LogementService:
         logement = self.obtenir(id_logement)
         self.logements.update(logement, donnees.model_dump(exclude_unset=True))
         self.db.commit()
+        synchroniser_logement(logement)
         return logement
 
     def supprimer(self, id_logement: int) -> None:
@@ -91,6 +94,7 @@ class LogementService:
             raise ConflitMetier(MESSAGE_ENCORE_RESERVE)
         self.logements.delete(logement)
         self.db.commit()
+        synchroniser_logement(logement)
 
     def restaurer(self, id_logement: int) -> Logement:
         """Réactive un logement archivé. Idempotent.
@@ -106,6 +110,7 @@ class LogementService:
 
         self.logements.restaurer(logement)
         self.db.commit()
+        synchroniser_logement(logement)
         return logement
 
     def lister_pour_administration(self) -> Sequence[Logement]:

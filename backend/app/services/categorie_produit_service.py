@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.ai_langchain.textes.categorie_produit import synchroniser_categorie_produit
 from app.core.exceptions import ConflitMetier, RessourceIntrouvable
 from app.core.integrite import viole_contrainte
 from app.models.categorie_produit import CategorieProduit
@@ -54,6 +55,7 @@ class CategorieProduitService:
         try:
             categorie = self.categories.create(donnees.model_dump())
             self.db.commit()
+            synchroniser_categorie_produit(categorie)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_LIBELLE_UNIQUE, INDICE_LIBELLE):
@@ -69,6 +71,7 @@ class CategorieProduitService:
         try:
             self.categories.update(categorie, donnees.model_dump(exclude_unset=True))
             self.db.commit()
+            synchroniser_categorie_produit(categorie)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_LIBELLE_UNIQUE, INDICE_LIBELLE):
@@ -90,6 +93,7 @@ class CategorieProduitService:
         try:
             self.categories.delete(categorie)
             self.db.commit()
+            synchroniser_categorie_produit(categorie)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_PRODUIT_CATEGORIE):
@@ -127,6 +131,7 @@ class CategorieProduitService:
         try:
             self.categories.restaurer(categorie)
             self.db.commit()
+            synchroniser_categorie_produit(categorie)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_LIBELLE_UNIQUE, INDICE_LIBELLE):

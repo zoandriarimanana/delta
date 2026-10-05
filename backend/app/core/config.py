@@ -75,12 +75,14 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "openai/gpt-oss-120b"
     # Embeddings — API d'inférence Hugging Face, jamais un modèle local : pas
-    # de torch sur l'instance de déploiement. Modèle multilingue (contenu en
-    # français, parfois en malgache), 384 dimensions.
+    # de torch sur l'instance de déploiement. `BAAI/bge-m3` (1024 dimensions),
+    # retenu sur mesure : sur un catalogue d'essai, il place le bon fragment
+    # en tête 9 fois sur 10, contre 5 et 6 pour deux modèles multilingues plus
+    # légers, et il est le seul à répondre correctement à des questions en
+    # malgache (Sprint 12, 12.3, docs/roadmap.md). Changer de modèle impose une
+    # réindexation complète : les vecteurs de deux modèles ne se comparent pas.
     HF_API_TOKEN: str = ""
-    LC_EMBEDDING_MODEL: str = (
-        "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    )
+    LC_EMBEDDING_MODEL: str = "BAAI/bge-m3"
 
     model_config = SettingsConfigDict(
         env_file=".env",

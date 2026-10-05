@@ -9,6 +9,7 @@ ni la faute de la question, ni un bogue du serveur.
 """
 
 from collections.abc import Iterator
+from datetime import date
 from typing import Any
 
 from langchain_core.documents import Document
@@ -26,6 +27,15 @@ journal = get_logger(__name__)
 # Porté de 4 à 6 dans le module d'origine, après évaluation sur des questions
 # réelles : à 4, une information présente dans l'index n'était pas remontée.
 NOMBRE_FRAGMENTS = 6
+# Pertinence minimale (1 - distance cosinus) d'un fragment, calibrée en 12.3
+# sur un catalogue d'essai avec `BAAI/bge-m3` : les bonnes réponses sortaient
+# toutes à 0,408 au moins, les questions hors sujet à 0,370 au plus. Sous ce
+# seuil, aucun fragment n'est retenu : l'assistant répond qu'il ne sait pas,
+# sans appeler le LLM — et les sources ne listent plus des fiches sans
+# rapport. Placé près du bas plutôt qu'au milieu : un appel de trop sur une
+# question farfelue coûte moins qu'une vraie question ignorée. À recalibrer
+# si le modèle d'embeddings change.
+SEUIL_PERTINENCE = 0.38
 
 PROMPT_SYSTEME = """Tu es l'assistant en ligne de Delta, à Madagascar : cantine \
 et restauration, pâtisserie, boulangerie et confitures (certains produits \
@@ -49,6 +59,7 @@ _PROMPT = ChatPromptTemplate.from_messages(
         ("system", PROMPT_SYSTEME),
         (
             "human",
+            "Nous sommes le {date_du_jour}.\n\n"
             "Contexte (extraits du catalogue Delta) :\n\n{contexte}\n\n---\n\n"
             "Question : {question}",
         ),
@@ -68,7 +79,21 @@ MESSAGE_PANNE = (
 def _retriever_par_defaut() -> BaseRetriever:
     from app.ai_langchain.vector_store import obtenir_vector_store
 
-    return obtenir_vector_store().as_retriever(search_kwargs={"k": NOMBRE_FRAGMENTS})
+    return obtenir_vector_store().as_retriever(
+        search_type="similarity_score_threshold",
+        search_kwargs={"k": NOMBRE_FRAGMENTS, "score_threshold": SEUIL_PERTINENCE},
+    )
+
+
+def _variables(fragments: list[Document], question: str) -> dict[str, str]:
+    """Variables du prompt. La date du jour permet au LLM d'écarter une session
+    déjà passée que l'index n'aurait pas encore retirée — le texte d'une
+    formation n'est recalculé qu'à la modification suivante."""
+    return {
+        "contexte": _formater_contexte(fragments),
+        "question": question,
+        "date_du_jour": f"{date.today():%d/%m/%Y}",
+    }
 
 
 def _llm_par_defaut() -> BaseChatModel:
@@ -130,9 +155,7 @@ def repondre(
 
     chaine = _PROMPT | (llm or _llm_par_defaut()) | StrOutputParser()
     try:
-        texte = chaine.invoke(
-            {"contexte": _formater_contexte(fragments), "question": question}
-        )
+        texte = chaine.invoke(_variables(fragments, question))
     except ServiceIndisponible:
         raise
     except Exception as erreur:
@@ -170,9 +193,7 @@ def repondre_en_flux(
 
     chaine = _PROMPT | (llm or _llm_par_defaut()) | StrOutputParser()
     try:
-        for morceau in chaine.stream(
-            {"contexte": _formater_contexte(fragments), "question": question}
-        ):
+        for morceau in chaine.stream(_variables(fragments, question)):
             if morceau:
                 yield {"jeton": morceau}
     except ServiceIndisponible:

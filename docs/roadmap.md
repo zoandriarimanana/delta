@@ -1025,9 +1025,10 @@ nom de collection et modules importés (`app.utils.politesse`,
   aussi, les tests important LangChain (avec des faux modèles, voir 12.2).
 - **Fournisseurs** : LLM Groq (`langchain-groq`), embeddings via l'API
   d'inférence Hugging Face. Aucun modèle local ni `torch` sur le serveur.
-  Modèle d'embeddings **multilingue** (`paraphrase-multilingual-MiniLM-L12-v2`,
-  384 dimensions) et non `all-MiniLM-L6-v2`, anglophone, pour un contenu en
-  français et parfois en malgache.
+  Modèle d'embeddings **multilingue** et non `all-MiniLM-L6-v2`, anglophone,
+  pour un contenu en français et parfois en malgache — `BAAI/bge-m3`
+  (1024 dimensions), retenu **sur mesure** en 12.3 à la place de
+  `paraphrase-multilingual-MiniLM-L12-v2`, choisi ici à l'ouverture du sprint.
 - **Tables vectorielles hors MLD.** `langchain-postgres` crée et gère ses deux
   tables (`langchain_pg_collection`, `langchain_pg_embedding`) ; leur schéma
   suit la version de la bibliothèque, pas une décision métier. L'extension
@@ -1122,13 +1123,59 @@ Ordre contraint par les dépendances. Une PR par tâche, vers `develop`.
       reporté en 12.3 : les sources listent tous les fragments remontés, même
       peu pertinents — un seuil de pertinence sera calibré sur le vrai
       catalogue. Suite complète verte (1266/1266) sur base vierge.
-- [ ] **12.3 — Indexation Delta** : constructeurs de texte des sept entités du
+- [x] **12.3 — Indexation Delta** : constructeurs de texte des sept entités du
       catalogue public (sans prix ni compteurs), `reindex_all`, branchement de
       l'indexation incrémentale dans les services (création, modification,
       archivage, restauration, suppression définitive), script
       `backend/scripts/reindexer_assistant.py`. Tests : une entité archivée
       n'est jamais retournée par le retriever ; aucune donnée personnelle
       dans l'index.
+      — `app/ai_langchain/textes/`, **un fichier par entité indexée**. Deux
+      écarts au plan : les **sessions sont fondues dans le texte de leur
+      formation** (dates et statut des sessions à venir) plutôt qu'indexées à
+      part — la fiche d'une session est celle de sa formation, c'est là que
+      le client doit être renvoyé ; et **aucun nom de formateur**, bien que
+      `FormateurPublic` l'expose — un salarié anonymisé resterait nommé dans
+      l'index. Catégories et domaines portent la liste de leurs produits ou
+      formations actifs. Un logement `Hors_service` sort de l'index,
+      `En_maintenance` y reste. Aucune suppression définitive n'est exposée
+      par les services du catalogue : rien à brancher de ce côté.
+      — Branchement **après le `commit`** de chaque écriture, via
+      `synchronisation.py`, qui **n'importe rien de LangChain** au chargement
+      (vérifié par un test en sous-processus) : un déploiement sans
+      `requirements-ai.txt` démarre toujours. Assistant coupé, aucune
+      requête de plus : la garde précède tout accès à l'entité.
+      — **Bogue trouvé en parcours réel, invisible aux tests** : `SessionLocal`
+      tourne en `expire_on_commit=False`, `session_postgres` non. En
+      production, une formation gardait la liste de sessions lue à sa
+      création — « aucune session à venir » juste après en avoir créé une —,
+      et un produit changé de catégorie désignait encore l'ancienne. Les tests
+      de synchronisation alignent désormais leur session sur la production (ce
+      qui a reproduit 3 échecs avant correctif), et les relations sont
+      rechargées avant chaque construction de texte.
+      — **Modèle d'embeddings changé pour `BAAI/bge-m3`**, sur mesure : sur un
+      catalogue d'essai de 10 questions, le bon fragment arrive en tête 9 fois
+      sur 10, contre 5 (`paraphrase-multilingual-MiniLM-L12-v2`, modèle initial)
+      et 6 (`paraphrase-multilingual-mpnet-base-v2`) ; seul à trouver le pain,
+      la confiture et à comprendre une question en malgache. Changer de modèle
+      impose une réindexation complète.
+      — **Seuil de pertinence 0,38** (`chaine.SEUIL_PERTINENCE`) : bonnes
+      réponses à 0,408 au moins, hors sujet à 0,370 au plus. Sous le seuil,
+      réponse « pas trouvé » **sans appel au LLM**, et les sources ne listent
+      plus des fiches sans rapport. Date du jour ajoutée au prompt, pour qu'un
+      fragment pas encore recalculé ne fasse pas annoncer une session passée.
+      — **Limite connue, malgache** : termes malgaches ajoutés aux textes de
+      `LOGEMENT` et de `SALLE` (« Misy trano hatoriana ve ? » ne trouvait
+      aucun logement). Certaines formulations restent sous le seuil
+      (« Misy efitrano ho an'olona 30 ve ? » à 0,348), d'autres passent
+      (« Mila efitrano ho an'olona 30 aho » à 0,479). Baisser le seuil
+      laisserait passer le hors sujet ; à reprendre avec de vraies questions de
+      clients.
+      — 34 tests (textes, branchements, réindexation), contrôlés par mutation :
+      ancienne catégorie non resynchronisée, prix ou formateur glissés dans le
+      texte — chaque sabotage fait échouer au moins un test. Parcours réel
+      vérifié avec les vraies clés sur la base du conteneur IA. Suite complète
+      verte (1300/1300) sur base vierge.
 - [ ] **12.4 — API** : `assistant_router.py`/`assistant_service.py`.
       `POST /assistant/question` et `/assistant/question/flux` (SSE), publics,
       **rate limités** (`slowapi`, déjà en place depuis T0.6 — chaque appel a

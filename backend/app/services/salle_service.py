@@ -4,6 +4,7 @@ from collections.abc import Sequence
 
 from sqlalchemy.orm import Session
 
+from app.ai_langchain.textes.salle import synchroniser_salle
 from app.core.exceptions import (
     ConflitMetier,
     ReferenceInvalide,
@@ -52,6 +53,7 @@ class SalleService:
         """Crée une salle. Le schema garantit déjà qu'elle porte un tarif."""
         salle = self.salles.create(donnees.model_dump())
         self.db.commit()
+        synchroniser_salle(salle)
         return salle
 
     def modifier(self, id_salle: int, donnees: SalleUpdate) -> Salle:
@@ -73,6 +75,7 @@ class SalleService:
 
         self.salles.update(salle, modifications)
         self.db.commit()
+        synchroniser_salle(salle)
         return salle
 
     def supprimer(self, id_salle: int) -> None:
@@ -97,6 +100,7 @@ class SalleService:
             raise ConflitMetier(MESSAGE_ENCORE_RESERVEE)
         self.salles.delete(salle)
         self.db.commit()
+        synchroniser_salle(salle)
 
     def restaurer(self, id_salle: int) -> Salle:
         """Réactive une salle archivée.
@@ -114,6 +118,7 @@ class SalleService:
 
         self.salles.restaurer(salle)
         self.db.commit()
+        synchroniser_salle(salle)
         return salle
 
     def lister_pour_administration(self) -> Sequence[Salle]:

@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.ai_langchain.textes.domaine_formation import synchroniser_domaine_formation
 from app.core.exceptions import ConflitMetier, RessourceIntrouvable
 from app.core.integrite import viole_contrainte
 from app.models.domaine_formation import DomaineFormation
@@ -56,6 +57,7 @@ class DomaineFormationService:
         try:
             domaine = self.domaines.create(donnees.model_dump())
             self.db.commit()
+            synchroniser_domaine_formation(domaine)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_LIBELLE_UNIQUE, INDICE_LIBELLE):
@@ -71,6 +73,7 @@ class DomaineFormationService:
         try:
             self.domaines.update(domaine, donnees.model_dump(exclude_unset=True))
             self.db.commit()
+            synchroniser_domaine_formation(domaine)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_LIBELLE_UNIQUE, INDICE_LIBELLE):
@@ -96,6 +99,7 @@ class DomaineFormationService:
             raise ConflitMetier(MESSAGE_ENCORE_PEUPLE)
         self.domaines.delete(domaine)
         self.db.commit()
+        synchroniser_domaine_formation(domaine)
 
     def restaurer(self, id_domaine: int) -> DomaineFormation:
         """Réactive un domaine archivé.
@@ -115,6 +119,7 @@ class DomaineFormationService:
         try:
             self.domaines.restaurer(domaine)
             self.db.commit()
+            synchroniser_domaine_formation(domaine)
         except IntegrityError as erreur:
             self.db.rollback()
             if viole_contrainte(erreur, CONTRAINTE_LIBELLE_UNIQUE, INDICE_LIBELLE):
