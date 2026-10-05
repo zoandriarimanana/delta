@@ -1,8 +1,10 @@
 /** Tests de la fiche produit. */
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+import { lirePanier, viderPanier } from '@/features/commande/commande.panier';
 
 import { recupererCategories, recupererProduit } from '../produit.api';
 import type { Produit } from '../produit.types';
@@ -44,6 +46,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  viderPanier();
   vi.resetAllMocks();
 });
 
@@ -61,10 +64,50 @@ it('résout le libellé de la catégorie', async () => {
   expect(await screen.findByText('Pâtisserie')).toBeDefined();
 });
 
-it('annonce un produit épuisé', async () => {
+it('annonce un produit épuisé et retire le bloc d’achat', async () => {
   afficher('/produits/1');
 
-  expect(await screen.findByText('Épuisé')).toBeDefined();
+  expect((await screen.findAllByText('Épuisé')).length).toBeGreaterThan(0);
+  expect(screen.queryByRole('button', { name: /ajouter au panier/i })).toBeNull();
+});
+
+it('affiche les statuts du produit en pastilles', async () => {
+  afficher('/produits/1');
+
+  const statuts = await screen.findByRole('list', { name: 'Statuts du produit' });
+  expect(statuts.textContent).toContain('Épuisé');
+  expect(statuts.textContent).toContain('Livrable');
+  expect(statuts.textContent).toContain('Personnalisable');
+});
+
+it('affiche une illustration en grand format', async () => {
+  const { container } = afficher('/produits/1');
+
+  await screen.findByRole('heading', { name: PRODUIT.nom });
+  expect(container.querySelector('img')?.getAttribute('src')).toContain('w=900');
+});
+
+it('annonce une description absente plutôt que de laisser un vide', async () => {
+  vi.mocked(recupererProduit).mockResolvedValue({ ...PRODUIT, description: null });
+  afficher('/produits/1');
+
+  expect(await screen.findByText('Aucune description pour ce produit.')).toBeDefined();
+});
+
+it('ajoute la quantité choisie au panier, bornée au stock', async () => {
+  vi.mocked(recupererProduit).mockResolvedValue({ ...PRODUIT, stock_disponible: 2 });
+  afficher('/produits/1');
+
+  const plus = await screen.findByRole('button', { name: 'Augmenter la quantité' });
+  fireEvent.click(plus);
+  expect(plus.hasAttribute('disabled')).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: /ajouter au panier/i }));
+
+  expect(lirePanier()).toMatchObject([{ id_produit: 1, quantite: 2 }]);
+  expect(screen.getByRole('status').textContent).toContain('Ajouté au panier');
+  expect(
+    screen.getByRole('link', { name: 'Voir le panier' }).getAttribute('href')
+  ).toBe('/panier');
 });
 
 it('affiche la note moyenne calculée sur la fiche', async () => {

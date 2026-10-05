@@ -76,9 +76,15 @@ export function familleProduit(nom: string): FamilleImage {
     : 'patisserie';
 }
 
-/** Image d'un produit du catalogue. */
-export function imageProduit(idProduit: number, nom: string): string {
-  return imagePour(familleProduit(nom), idProduit);
+/**
+ * Image d'un produit du catalogue.
+ *
+ * `largeur` sert à la fiche, où la vignette de 400 px paraîtrait floue en
+ * grand : c'est la même image, simplement demandée plus large au CDN — le
+ * choix reste celui de l'identifiant, la fiche et la vignette concordent.
+ */
+export function imageProduit(idProduit: number, nom: string, largeur = 400): string {
+  return imagePour(familleProduit(nom), idProduit).replace('w=400', `w=${largeur}`);
 }
 
 /** Image d'une formation. */
