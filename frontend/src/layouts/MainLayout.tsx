@@ -19,6 +19,7 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 
+import BulleAssistant from '@/features/assistant/components/BulleAssistant';
 import { useDeconnexion } from '@/features/auth/auth.hooks';
 import { usePanier } from '@/features/commande/commande.hooks';
 import { useEstConnecte } from '@/lib/useEstConnecte';
@@ -182,6 +183,11 @@ export default function MainLayout() {
         {/* Le routeur injecte ici la page correspondant à l'URL. */}
         <Outlet />
       </main>
+
+      {/* Bulle de l'assistant IA (Sprint 12) : composant du module
+          `assistant`, que le layout monte sans rien savoir de son
+          fonctionnement — elle ne s'affiche que si l'assistant est activé. */}
+      <BulleAssistant />
 
       <footer className="border-t border-warm-gray-200 bg-white">
         <div className="mx-auto max-w-5xl px-4 py-4 text-sm text-warm-gray-500">

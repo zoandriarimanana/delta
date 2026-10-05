@@ -9,6 +9,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 
 import AbonnementDetailAdministrationPage from '@/features/abonnement/pages/AbonnementDetailAdministrationPage';
 import AdministrationAbonnementsPage from '@/features/abonnement/pages/AdministrationAbonnementsPage';
+import AdministrationAssistantPage from '@/features/assistant/pages/AdministrationAssistantPage';
 import ConnexionPage from '@/features/auth/pages/ConnexionPage';
 import ConnexionPersonnelPage from '@/features/auth/pages/ConnexionPersonnelPage';
 import InscriptionPage from '@/features/auth/pages/InscriptionPage';
@@ -146,6 +147,7 @@ export default function App() {
           <Route path="salles" element={<AdministrationSallesPage />} />
           <Route path="logements" element={<AdministrationLogementsPage />} />
           <Route path="domaines-formation" element={<AdministrationDomainesPage />} />
+          <Route path="assistant" element={<AdministrationAssistantPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

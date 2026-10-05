@@ -106,6 +106,19 @@ function lireCookie(nom: string): string | null {
   return null;
 }
 
+/**
+ * Jeton anti-CSRF courant, pour une requête mutante qui ne passe **pas** par
+ * axios.
+ *
+ * Un seul appelant aujourd'hui : le flux de l'assistant IA (Sprint 12), envoyé
+ * par `fetch` parce qu'axios ne sait pas lire une réponse au fil de l'eau dans
+ * un navigateur. Exposé ici plutôt que recopié : ce module reste le seul à
+ * savoir où vit le jeton.
+ */
+export function jetonCsrf(): string | null {
+  return lireCookie(NOM_COOKIE_CSRF);
+}
+
 // --- Requête : double-submit anti-CSRF --------------------------------------
 
 axiosClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {

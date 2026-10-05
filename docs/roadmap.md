@@ -1176,7 +1176,7 @@ Ordre contraint par les dépendances. Une PR par tâche, vers `develop`.
       texte — chaque sabotage fait échouer au moins un test. Parcours réel
       vérifié avec les vraies clés sur la base du conteneur IA. Suite complète
       verte (1300/1300) sur base vierge.
-- [ ] **12.4 — API** : `assistant_router.py`/`assistant_service.py`.
+- [x] **12.4 — API** : `assistant_router.py`/`assistant_service.py`.
       `POST /assistant/question` et `/assistant/question/flux` (SSE), publics,
       **rate limités** (`slowapi`, déjà en place depuis T0.6 — chaque appel a
       un coût chez Groq), longueur de question bornée par le schema, **503
@@ -1184,12 +1184,54 @@ Ordre contraint par les dépendances. Une PR par tâche, vers `develop`.
       réindexation complète et statistiques d'index, réservées
       `PersonnelAdministrateur`. Ligne de dette ajoutée : quotas et coûts des
       API, et données envoyées à des services tiers.
-- [ ] **12.5 — Frontend client** : module `features/assistant/`
+      — `LIMITE_ASSISTANT = "10/minute"` par IP, un budget par route. 503
+      porte `Retry-After: 30` (gestionnaire dédié de `ServiceIndisponible`
+      dans `main.py`). Ajout hors plan : `GET /assistant/disponibilite`,
+      public et gratuit, qui permet au frontend de **ne pas afficher la
+      bulle** quand l'assistant est coupé.
+      — Flux SSE : le **premier événement est calculé avant d'ouvrir la
+      réponse**, pour qu'une panne à la recherche donne encore un vrai 503 ;
+      une panne en cours de génération est signalée dans le flux
+      (`{"erreur": ...}`). En-têtes `Cache-Control: no-cache` et
+      `X-Accel-Buffering: no`, sans lesquels un proxy (Render) peut livrer le
+      flux d'un bloc.
+      — Les sources portent désormais le **titre** de la fiche (métadonnée
+      `titre` à l'indexation) : « Tarte au citron » plutôt que « produit
+      n°3 ». Les fragments indexés avant ce changement n'en ont pas — d'où
+      la **réindexation obligatoire au déploiement**.
+      — Ni le routeur ni le service n'importent LangChain au chargement
+      (vérifié) : `main.py` démarre sans `requirements-ai.txt`. 17 tests.
+- [x] **12.5 — Frontend client** : module `features/assistant/`
       (`*.api.ts`, `*.service.ts`, `*.hooks.ts`, `*.types.ts`,
       `components/`), bulle de discussion montée par `MainLayout` via un hook
       du module, réponse affichée au fil du flux avec ses sources.
-- [ ] **12.6 — Frontend administration** : page « Assistant IA » dans la
+      — Flux lu par **`fetch` et non axios**, qui dans un navigateur ne rend
+      la réponse qu'une fois complète. Ce qu'axios fait d'office est refait
+      à la main : URL de base, cookies, en-tête anti-CSRF —
+      `axiosClient.ts` expose pour cela `jetonCsrf()` plutôt que de laisser
+      recopier la lecture du cookie.
+      — Sources rendues en **liens vers les fiches** ; gras du LLM
+      interprété, et lui seul — aucune bibliothèque Markdown, qui laisserait
+      passer du HTML ou des liens produits par le modèle. **Chaque question
+      est indépendante** côté serveur : l'historique affiché n'est pas
+      renvoyé au modèle, choix de périmètre pour ce sprint.
+      — Invisible pour le personnel connecté, `MainLayout` lui étant fermé
+      depuis #150 : il interroge l'assistant depuis sa propre page (12.6).
+- [x] **12.6 — Frontend administration** : page « Assistant IA » dans la
       sidebar personnel — réindexation, statistiques par type de contenu.
+      — Trois blocs : état (activé, Groq joignable, modèles), index (fragments
+      par type, réindexation **après confirmation**), et une **fenêtre de
+      conversation identique à celle de la bulle** — même composant
+      (`FenetreConversation`), pour voir exactement ce que voit un visiteur.
+      — 26 tests frontend (fonctions pures, flux simulé dont un événement
+      coupé entre deux morceaux réseau, bulle, page d'administration).
+      Vérifié **dans un vrai navigateur** (Playwright, Chrome) contre le vrai
+      backend et les vraies clés : bulle, réponse en flux en ~3,5 s, refus
+      hors sujet en ~0,9 s sans appel au LLM, clic sur une source qui mène à
+      la fiche et referme la bulle, conversation conservée à la navigation,
+      affichage mobile, connexion administrateur, réindexation et
+      conversation depuis l'écran d'administration. CI frontend complète
+      verte (597/597, build compris).
 - [ ] **12.7 — Agentique (après le déploiement du 6 octobre)** : outils
       LangChain **en lecture seule**, appelant les services existants et
       jamais du SQL direct — places restantes d'une session, disponibilité
@@ -1259,6 +1301,8 @@ nommer sa tâche d'origine et sa condition de résorption.
 | Sprint 10.3 | `ReservationService.changer_statut()` relit la réservation puis écrit son nouveau statut sans verrou de ligne (`SELECT ... FOR UPDATE`) ni `UPDATE` conditionnel atomique — contrairement au décrément de `places_restantes` (`docs/architecture.md`, « Un compteur ne se lit pas avant de s'écrire »). La restitution des places ne s'appuie que sur une idempotence applicative (« relis, vérifie en mémoire, écris »), déjà documentée comme telle. Pas un problème introduit par 10.2/10.3 — ce comportement date du Sprint 4/5 et est partagé avec l'annulation client — mais **10.3 le rend concrètement plus probable** : plusieurs administrateurs peuvent désormais agir sur la même réservation depuis le même tableau de bord, alors qu'avant seul le client pouvait déclencher une double requête sur sa propre réservation. Une course entre deux administrateurs simultanés pourrait théoriquement créditer deux fois les places d'une même annulation. | Faire porter la transition par un `UPDATE` conditionnel (`WHERE statut = :statut_attendu`) ou un verrou de ligne explicite, même patron que le décrément. À évaluer une fois qu'un usage réellement concurrent du tableau de bord (plusieurs administrateurs actifs simultanément) est probable — pas une urgence pour un back-office à faible trafic, mais **à traiter avant mise en prod** si l'équipe d'administration grossit. |
 | Inspection QA (`docs/checkliste-inspection-admin.md`, section 3) | **Priorité moyenne.** Sur `personnel/commandes/administration` (liste et fiche), le nom et le contact d'une commande invitée (`nom_invite`/`contact_invite`) ne s'affichent **nulle part** — ni `AdministrationCommandesPage.tsx` ni `CommandeDetailAdministrationPage.tsx` ne les rendent. Pas une absence structurelle comme le vendeur d'une commande `Servie` (`id_personnel`, absent de `CommandeRead` lui-même) : ici, `CommandeRead` (backend) expose bien les deux champs, et `commande.types.ts` les type déjà côté frontend — c'est un vrai trou d'affichage, pas un manque d'API. Un administrateur consultant une commande invitée n'a aujourd'hui aucun moyen de savoir pour qui elle a été passée ni comment la contacter, sans passer par `/docs`. Constaté en vérifiant empiriquement l'écran (pas en supposant), puis confirmé en lisant `app/schemas/commande.py` et `commande.types.ts`. | Ajouter le nom et le contact de l'invité à la fiche (et idéalement à la liste, en substitut du nom client absent sur ces lignes) — changement purement frontend, aucune modification d'API nécessaire. Pas critique avant mise en prod, mais un vrai trou fonctionnel pour la gestion courante des commandes invité : à traiter dès qu'une tâche touche de toute façon cet écran, plutôt que d'ouvrir un chantier dédié pour ce seul point. |
 | Sprint 10.1 | `GET /personnel` ne porte aucun paramètre `inclure_supprimes`, contrairement à `GET /produits/administration` — aucune route ne permet de lister ou consulter un membre du personnel archivé ou anonymisé. Pourtant `POST /personnel/{id}/restauration` existe et suppose de retrouver cet identifiant : la réversibilité est voulue, mais rien ne permet de la découvrir une fois l'écran quitté. Constaté en construisant le frontend (10.1) : un F5 après archivage/anonymisation fait disparaître la ligne de l'annuaire sans aucune trace, indiscernable d'un identifiant jamais créé ou supprimé définitivement. Ce n'est pas une décision — contrairement à `ABONNEMENT`, dont l'absence d'archives consultables est un choix assumé et documenté (7.1, « CRUD courant, pas d'historique »), cohérent avec l'absence de restauration pour cette entité. `PERSONNEL` a la moitié du mécanisme (restauration) sans l'autre (lecture des archives). Le frontend compense provisoirement par une restauration en « annulation immédiate » (état local, cf. `personnel.administration.ts`), pas une vraie consultation d'archives. | Ajouter `GET /personnel/administration` (archives comprises), miroir de `GET /produits/administration`, ce qui permettrait de remplacer l'« annulation immédiate » du frontend par une vraie vue d'archives consultable à tout moment. Petite tâche indépendante, pas bloquante pour clore 10.1 — mais à faire avant de considérer l'administration du personnel complètement alignée sur le patron déjà établi par PRODUIT. |
+
+| Sprint 12 (12.4) | **Coûts, quotas et données confiées à des tiers.** Chaque question de l'assistant IA appelle deux services externes : Hugging Face (embeddings de la question) et Groq (génération). Le texte des questions des visiteurs et des extraits du catalogue public leur sont donc transmis. Les comptes actuels sont gratuits, avec des quotas : une fois épuisés, l'assistant répond 503 — proprement, mais sans plus servir personne. Le rate limiting par IP (`10/minute`) protège d'un abus isolé, pas d'un trafic légitime important. Aucune donnée personnelle n'est indexée, mais un visiteur peut en écrire une dans sa question. | Avant mise en production à volume réel : choisir des offres payantes ou des quotas adaptés, suivre la consommation, et mentionner le traitement par des services tiers dans les mentions légales / la politique de confidentialité. |
 
 ## Traçabilité MLD → sprints (à retenir)
 

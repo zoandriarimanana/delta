@@ -1026,6 +1026,42 @@ d'architecture : ce sont les points d'entrée standard imposés par Vite et Reac
 Ils sont listés ci-dessus pour que l'arborescence soit complète, pas parce qu'ils
 relèvent d'une décision de conception.
 
+## Assistant IA générative (Sprint 12)
+
+RAG LangChain : le catalogue public est découpé, vectorisé (Hugging Face,
+`BAAI/bge-m3`) et rangé dans PostgreSQL (pgvector) ; une question remonte les
+fragments les plus proches, que le LLM (Groq) reformule. Détail des décisions
+dans `docs/roadmap.md`, Sprint 12 ; tables vectorielles hors MLD dans
+`docs/mld.md`.
+
+**Backend.** `app/ai_langchain/` porte le mécanisme — un module transverse,
+comme `core/`, et non une entité : il n'a ni table du MLD ni repository.
+`textes/` y est découpé **un fichier par entité indexée**, la SRP s'appliquant
+à ce qui connaît une entité. Les services du catalogue appellent
+`synchronisation.py` **après leur `commit`**, `AssistantService` sert le
+routeur. Ni l'un ni l'autre n'importe LangChain au chargement : désactivé
+(`AI_ENABLED=false`), l'assistant ne coûte rien, et l'application démarre même
+sans `requirements-ai.txt`.
+
+**Ce que l'index a le droit de contenir** : ce que l'API expose déjà
+anonymement — jamais une donnée personnelle, jamais une entité archivée,
+jamais un prix, un stock ou un nombre de places, valeurs qui changent à chaque
+vente. Le prompt système n'est pas une protection : ce qui n'est pas indexé ne
+peut pas ressortir.
+
+**Une panne de l'assistant ne casse rien d'autre.** La synchronisation ne lève
+jamais — l'administrateur enregistre son produit même si Hugging Face est hors
+quota ; les questions répondent 503 avec `Retry-After`. Seule la réindexation
+complète, action explicite, signale son échec.
+
+**Frontend.** `features/assistant/`, même structure que les autres modules. La
+bulle (`BulleAssistant`) est montée par `MainLayout` sans qu'il en sache rien,
+et ne s'affiche que si `GET /assistant/disponibilite` répond `actif`. La
+réponse arrive en flux SSE, lu par `fetch` — axios ne sait pas lire une
+réponse au fil de l'eau dans un navigateur —, d'où `jetonCsrf()` exposé par
+`axiosClient.ts`. L'écran d'administration réutilise la **même** fenêtre de
+conversation que la bulle : un seul rendu, pas deux qui divergeraient.
+
 ## Correspondance modules ↔ tables du MLD
 
 | Module (dossier) | Tables du MLD concernées |
