@@ -14,7 +14,7 @@ l'assistant avec les étapes de la mauvaise.
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.ai_langchain.indexation import AUDIENCE_CLIENT, AUDIENCE_PERSONNEL
+from app.ai_langchain.audience import AUDIENCE_CLIENT, AUDIENCE_PERSONNEL
 
 DOSSIER = Path(__file__).parent / "guides"
 TYPE_CONTENU = "guide"

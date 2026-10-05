@@ -16,9 +16,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.ai_langchain import guides
+from app.ai_langchain.audience import AUDIENCE_CLIENT
 from app.ai_langchain.indexation import indexer_texte
 from app.ai_langchain.textes import (
     categorie_produit,
+    document_connaissance,
     domaine_formation,
     formation,
     logement,
@@ -29,6 +31,7 @@ from app.ai_langchain.vector_store import obtenir_vector_store, supprimer_par_co
 from app.core.config import settings
 from app.core.exceptions import ServiceIndisponible
 from app.models.categorie_produit import CategorieProduit
+from app.models.document_connaissance import DocumentConnaissance
 from app.models.domaine_formation import DomaineFormation
 from app.models.formation import Formation
 from app.models.logement import Logement
@@ -43,6 +46,7 @@ CONTENUS = (
     (domaine_formation, DomaineFormation, "id_domaine"),
     (salle, Salle, "id_salle"),
     (logement, Logement, "id_logement"),
+    (document_connaissance, DocumentConnaissance, "id_document"),
 )
 
 
@@ -53,6 +57,7 @@ def _indexer_type(
     est_indexable: Callable[[Any], bool],
     construire_texte: Callable[[Any], str],
     titre: Callable[[Any], str],
+    audience: Callable[[Any], str],
 ) -> dict[str, int]:
     """Vide un type de contenu, puis réindexe ses entités indexables.
 
@@ -70,6 +75,7 @@ def _indexer_type(
                 construire_texte(entite),
                 store,
                 titre=titre(entite),
+                audience=audience(entite),
             )
             elements += 1
     return {"elements": elements, "fragments": fragments}
@@ -106,6 +112,9 @@ def reindexer_tout(db: Session) -> dict[str, dict[str, int]]:
             module.est_indexable,
             module.construire_texte,
             module.titre,
+            # Le catalogue est entièrement `client` ; seuls les documents
+            # téléversés choisissent leur public.
+            getattr(module, "audience", lambda _entite: AUDIENCE_CLIENT),
         )
         for module, modele, cle in CONTENUS
     }

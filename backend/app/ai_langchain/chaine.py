@@ -19,7 +19,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.retrievers import BaseRetriever
 
-from app.ai_langchain.indexation import AUDIENCE_CLIENT
+from app.ai_langchain.audience import AUDIENCE_CLIENT
 from app.ai_langchain.politesse import reponse_politesse
 from app.core.exceptions import ServiceIndisponible
 from app.core.logging import get_logger

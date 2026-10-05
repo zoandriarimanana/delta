@@ -118,7 +118,7 @@ spécifique — c'est le signe que l'héritage n'est pas utilisé correctement.
 
 ### Suppression logique, suppression réelle, anonymisation
 
-Les 21 entités portent `supprime_le` via `SoftDeleteMixin` (`core/database.py`).
+Les 22 entités portent `supprime_le` via `SoftDeleteMixin` (`core/database.py`).
 `BaseRepository` en tire trois opérations qu'il ne faut pas confondre.
 
 **`delete()` archive.** Aucun `DELETE` SQL n'est émis : la ligne reste,
@@ -1078,6 +1078,7 @@ conversation que la bulle : un seul rendu, pas deux qui divergeraient.
 | `abonnement` | ABONNEMENT, BENEFICIAIRE, CONSOMMATION_REPAS |
 | `avis` | AVIS |
 | `paiement` | PAIEMENT |
+| `assistant` | DOCUMENT_CONNAISSANCE (et l'index vectoriel, hors MLD) |
 
 Voir `docs/mld.md` pour le détail des colonnes de chaque table.
 Voir `docs/roadmap.md` pour l'ordre de développement de ces modules.

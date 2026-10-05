@@ -17,10 +17,12 @@ import pytest
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import configure_mappers
 
-import app.models  # noqa: F401  (peuple Base.metadata avec les 21 entités)
+import app.models  # noqa: F401  (peuple Base.metadata avec les 22 entités)
 from app.core.database import Base
 
-# Les 21 tables du MLD (`docs/mld.md`).
+# Les 22 tables du MLD (`docs/mld.md`) — `document_connaissance` depuis le
+# Sprint 12 (12.9). Les tables `langchain_pg_*` de l'index vectoriel, elles,
+# sont hors MLD et hors `Base.metadata` (voir `docs/mld.md`).
 TABLES_ATTENDUES = frozenset(
     {
         "abonnement",
@@ -33,6 +35,7 @@ TABLES_ATTENDUES = frozenset(
         "commande",
         "consommation_repas",
         "demande_personnalisation",
+        "document_connaissance",
         "domaine_formation",
         "formation",
         "ligne_commande",
@@ -58,6 +61,8 @@ CHECKS_ATTENDUS = [
     # (#25, sprint 4). Sur une chaîne libre, « livreur » et « Livreur » seraient
     # deux valeurs distinctes et la comparaison passerait à côté.
     ("personnel", "ck_personnel_fonction_personnel"),
+    # Décide si un document peut ressortir dans la bulle publique (12.9).
+    ("document_connaissance", "ck_document_connaissance_public_cible_document"),
     ("commande", "ck_commande_type_commande"),
     ("commande", "ck_commande_statut_commande"),
 ]
@@ -102,6 +107,7 @@ FK_RESTRICT_ATTENDUES = [
     ("beneficiaire", "id_abonnement"),
     ("consommation_repas", "id_abonnement"),
     ("demande_personnalisation", "id_produit_base"),
+    ("document_connaissance", "id_personnel"),
     ("formation", "id_domaine"),
     ("ligne_commande", "id_produit"),
     ("livraison", "id_commande"),
@@ -128,8 +134,8 @@ def test_mappers_configurables() -> None:
 
 
 def test_nombre_de_tables() -> None:
-    """Les 21 tables du MLD sont bien enregistrées dans `Base.metadata`."""
-    assert len(Base.metadata.tables) == 21
+    """Les 22 tables du MLD sont bien enregistrées dans `Base.metadata`."""
+    assert len(Base.metadata.tables) == 22
 
 
 def test_liste_des_tables() -> None:

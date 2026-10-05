@@ -105,6 +105,30 @@ def supprimer_par_contenu(
         return resultat.rowcount
 
 
+def compter_par_contenu(
+    type_contenu: str, collection: str = NOM_COLLECTION
+) -> dict[int, int]:
+    """Nombre de fragments par entité d'un type — pour l'administration."""
+    with engine.connect() as connexion:
+        if not _tables_existent(connexion):
+            return {}
+        lignes = connexion.execute(
+            text(
+                "SELECT (cmetadata->>'id_contenu')::int, COUNT(*)"
+                " FROM langchain_pg_embedding"
+                " WHERE collection_id = ("
+                "   SELECT uuid FROM langchain_pg_collection WHERE name = :collection)"
+                " AND cmetadata @> CAST(:filtre AS jsonb)"
+                " GROUP BY 1"
+            ),
+            {
+                "collection": collection,
+                "filtre": json.dumps({"type_contenu": type_contenu}),
+            },
+        ).all()
+    return {id_contenu: nombre for id_contenu, nombre in lignes}
+
+
 def statistiques(collection: str = NOM_COLLECTION) -> dict[str, int]:
     """Nombre de fragments indexés, par type de contenu."""
     with engine.connect() as connexion:

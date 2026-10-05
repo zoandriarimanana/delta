@@ -29,3 +29,7 @@ langchain-postgres>=0.0.18,<0.1
 # Driver psycopg 3, exigé par langchain-postgres — cohabite avec
 # psycopg2-binary du socle, qu'utilisent SQLAlchemy et Alembic.
 psycopg[binary]>=3.2,<4
+# Extraction du texte des documents téléversés (12.9) : PDF et Word. Légères,
+# sans dépendance propre — vérifié par résolution à blanc.
+pypdf>=6.0,<7
+docx2txt>=0.9,<1

@@ -842,6 +842,49 @@ initial, pas la correction d'une omission comme `AVIS` ou `COMMANDE.date_command
   sprint qui branchera un vrai fournisseur, pas de cette garde. Voir
   `docs/roadmap.md`, section Dette technique.
 
+## Assistant IA — base de connaissances
+
+```
+DOCUMENT_CONNAISSANCE(id_document, titre, nom_fichier, type_fichier, taille_octets, public_cible, texte_extrait, date_ajout, #id_personnel)
+```
+
+Ajoutée au Sprint 12 (12.9) : documents téléversés par l'administration pour
+enrichir la base de connaissances de l'assistant IA. Entité entièrement
+nouvelle, comme `PAIEMENT` au Sprint 9 — pas la correction d'une omission.
+
+- **Le texte extrait est stocké, pas le fichier.** Le disque d'un service
+  Render est effacé à chaque redéploiement : un fichier rangé sur disque
+  disparaîtrait, et l'index vectoriel ne pourrait plus être reconstruit. Le
+  texte suffit à réindexer à tout moment. Contrepartie assumée : le fichier
+  d'origine n'est pas re-téléchargeable depuis la plateforme — l'administration
+  en garde sa copie.
+
+  ```sql
+  CHECK (length(texte_extrait) > 0)
+  ```
+
+  Un document sans texte (PDF scanné) n'apporterait rien à l'index : il est
+  refusé au téléversement, et la base le refuse aussi.
+
+- `DOCUMENT_CONNAISSANCE.public_cible` ∈ {Client, Personnel}. Domaine formel,
+  `CHECK` en base. **C'est la valeur qui décide si un contenu peut ressortir
+  dans la bulle publique du site** : elle devient la métadonnée `audience` des
+  fragments indexés, et l'assistant client ne recherche que l'audience
+  `client`. Une chaîne libre laisserait passer « client » ou « Clients » sans
+  que le filtre les reconnaisse.
+
+- `DOCUMENT_CONNAISSANCE.type_fichier` ∈ {pdf, docx, txt, md}. **Déduit des
+  octets** du fichier, jamais de son nom ni du `Content-Type` déclaré — même
+  règle que `PERSONNEL.photo_chemin`. `nom_fichier` garde le nom d'origine pour
+  l'affichage ; il n'est jamais utilisé comme chemin.
+
+- `DOCUMENT_CONNAISSANCE.#id_personnel` est le salarié qui a téléversé,
+  **dérivé du jeton, jamais du corps** — même règle que `COMMANDE.#id_personnel`.
+  `ON DELETE RESTRICT` : un salarié s'anonymise, il ne s'efface pas.
+
+- **Pas de modification** : un document se remplace — archiver l'ancien,
+  téléverser le nouveau. Archiver le retire de l'index, restaurer l'y remet.
+
 ## Contraintes d'exclusivité à implémenter en `CHECK` / trigger (pas de l'algèbre relationnelle pure)
 
 1. **CLIENT** : exactement une ligne fille (`CLIENT_PARTICULIER` xor `CLIENT_ENTREPRISE`).
@@ -909,7 +952,7 @@ règle d'identité, pas seulement une unicité de libellé.
 
 ## Suppression logique — `supprime_le`
 
-**Les 21 tables portent une colonne `supprime_le TIMESTAMPTZ NULL.`** `NULL`
+**Les 22 tables portent une colonne `supprime_le TIMESTAMPTZ NULL.`** `NULL`
 signifie « ligne active » ; une date signifie « ligne archivée ». C'est la seule
 colonne transverse du schéma, et elle n'apparaît pas dans les notations
 `TABLE(...)` ci-dessus pour ne pas les alourdir vingt-et-une fois.
@@ -981,7 +1024,7 @@ de la comparaison (`include_object`) — sans quoi `alembic check` conclurait
 qu'il faut les supprimer, vérifié empiriquement.
 
 Ce ne sont **pas des entités** : aucune clé étrangère vers ou depuis le MLD,
-pas de `supprime_le`, et elles ne comptent pas parmi les 21 tables. Elles ne
+pas de `supprime_le`, et elles ne comptent pas parmi les 22 tables. Elles ne
 contiennent **aucune donnée d'origine** — seulement des fragments de texte
 dérivés du catalogue public, et leurs vecteurs. Elles sont donc
 **reconstructibles à tout moment** depuis la base métier, et une perte de leur

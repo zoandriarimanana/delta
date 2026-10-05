@@ -1290,7 +1290,7 @@ précédente) :
       — **Limite de débit Groq mesurée** : 8 000 jetons/minute sur le compte
       gratuit, ~1 400 par réponse — 5 à 6 réponses par minute pour tout le
       site. Voir la dette technique.
-- [ ] **12.9 — Base de connaissances téléversée par l'administration.**
+- [x] **12.9 — Base de connaissances téléversée par l'administration.**
       — Nouvelle table **`DOCUMENT_CONNAISSANCE`** (MLD + migration) :
       titre, nom et type du fichier, taille, **public cible**
       (`Client` / `Personnel`), **texte extrait**, date d'ajout, salarié
@@ -1305,6 +1305,25 @@ précédente) :
       texte extractible (PDF scanné) est refusé en 422 plutôt qu'indexé vide.
       — Découpage et indexation **automatiques** au téléversement ;
       archivage = retrait de l'index, restauration = retour.
+      — Livré. Migration `bb7e7128d33a` (relue : l'autogénération doublait
+      les deux `CHECK` de domaine sous deux noms, retirés pour suivre le
+      patron de `PAIEMENT`). Un fichier refusé répond **400** et non 422
+      comme prévu : même convention que la photo de profil
+      (`ErreurMetier`), plutôt qu'une seconde pour le même geste.
+      — Contrôles dans l'ordre du moins coûteux : taille, **format lu dans
+      les octets** (`%PDF-`, archive ZIP portant `word/document.xml`, texte
+      UTF-8 sans octet nul), extraction, texte non vide, longueur au plus
+      200 000 caractères (au-delà, découper le document). Un exécutable
+      renommé en `.pdf` est refusé ; un PDF protégé ou endommagé aussi, sans
+      erreur 500.
+      — L'indexation suit le `commit` : en cas d'échec du fournisseur, le
+      document reste enregistré et la réponse le dit par
+      `nombre_fragments = 0`. Aucun module de LangChain ni de `pypdf` chargé
+      au démarrage — constantes d'audience déplacées dans un module à part
+      après qu'un contrôle l'a révélé.
+      — `pyproject.toml` déclare les guides `.md` en données du paquet : une
+      installation non éditable les aurait omis sans erreur.
+      — 20 tests, dont des **PDF et Word réels fabriqués dans le test**.
 - [ ] **12.10 — Assistant du personnel.**
       — Chaque fragment porte une métadonnée **`audience`** (`client` /
       `personnel`). L'assistant client ne recherche **que** l'audience
@@ -1392,3 +1411,5 @@ nommer sa tâche d'origine et sa condition de résorption.
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère
 la roadmap close. Toute table ajoutée au MLD après coup doit immédiatement être
 ajoutée à un sprint ici — ne jamais laisser une table orpheline.
+
+- `DOCUMENT_CONNAISSANCE` — ajoutée après coup, couverte par le Sprint 12 (12.9).

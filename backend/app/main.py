@@ -35,6 +35,7 @@ from app.routers import (
     client_entreprise_router,
     commande_router,
     consommation_repas_router,
+    document_connaissance_router,
     domaine_formation_router,
     formation_router,
     livraison_router,
@@ -200,3 +201,4 @@ app.include_router(consommation_repas_router.router, prefix=settings.API_V1_PREF
 app.include_router(avis_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(paiement_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(assistant_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(document_connaissance_router.router, prefix=settings.API_V1_PREFIX)

@@ -18,6 +18,7 @@ from langchain_core.documents import Document
 from langchain_postgres import PGVector
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from app.ai_langchain.audience import AUDIENCE_CLIENT, AUDIENCE_PERSONNEL  # noqa: F401
 from app.ai_langchain.vector_store import (
     obtenir_vector_store,
     supprimer_par_contenu,
@@ -26,12 +27,6 @@ from app.core.config import settings
 from app.core.logging import get_logger
 
 journal = get_logger(__name__)
-
-# Public d'un fragment (Sprint 12, 12.8/12.10). L'assistant du site ne
-# recherche que `AUDIENCE_CLIENT` : un fragment `AUDIENCE_PERSONNEL` ne peut
-# jamais ressortir dans la bulle publique. Le catalogue est `client`.
-AUDIENCE_CLIENT = "client"
-AUDIENCE_PERSONNEL = "personnel"
 
 TAILLE_FRAGMENT = 1000
 CHEVAUCHEMENT = 150

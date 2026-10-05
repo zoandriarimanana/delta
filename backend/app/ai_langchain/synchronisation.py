@@ -13,6 +13,7 @@ from collections.abc import Callable
 
 from sqlalchemy.orm import object_session
 
+from app.ai_langchain.audience import AUDIENCE_CLIENT
 from app.core.config import settings
 
 
@@ -50,7 +51,7 @@ def synchroniser(
     indexable: bool,
     construire_texte: Callable[[], str],
     titre: str | None = None,
-    audience: str = "client",
+    audience: str = AUDIENCE_CLIENT,
 ) -> None:
     """Indexe l'entité si elle doit l'être, la retire de l'index sinon.
 

@@ -48,6 +48,12 @@ dev = [
     "black>=24.0",
 ]
 
+[tool.setuptools.package-data]
+# Guides de l'assistant IA (Sprint 12) : sans cette ligne, une installation non
+# éditable (`pip install .`, courante en déploiement) les omettrait, et
+# l'assistant perdrait silencieusement son guide de la plateforme.
+"app.ai_langchain" = ["guides/*.md"]
+
 [tool.setuptools.packages.find]
 # `alembic/` est un dossier de migrations, pas un package distribuable. Sans
 # cette restriction, setuptools voit deux packages racine (`app` et `alembic`),

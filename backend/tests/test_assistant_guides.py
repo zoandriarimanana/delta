@@ -1,7 +1,8 @@
 """Guides versionnés de l'assistant IA (Sprint 12, 12.8/12.10)."""
 
 from app.ai_langchain import guides
-from app.ai_langchain.indexation import AUDIENCE_CLIENT, TAILLE_FRAGMENT
+from app.ai_langchain.audience import AUDIENCE_CLIENT
+from app.ai_langchain.indexation import TAILLE_FRAGMENT
 
 
 def test_sections_decoupe_sur_les_titres_de_niveau_deux() -> None:
