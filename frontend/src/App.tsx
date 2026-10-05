@@ -29,6 +29,8 @@ import AdministrationLogementsPage from '@/features/logement/pages/Administratio
 import LogementDetailPage from '@/features/logement/pages/LogementDetailPage';
 import LogementListPage from '@/features/logement/pages/LogementListPage';
 import AdministrationCategoriesPage from '@/features/produit/pages/AdministrationCategoriesPage';
+import CategorieDetailAdministrationPage from '@/features/produit/pages/CategorieDetailAdministrationPage';
+import ProduitDetailAdministrationPage from '@/features/produit/pages/ProduitDetailAdministrationPage';
 import AdministrationProduitsPage from '@/features/produit/pages/AdministrationProduitsPage';
 import ProduitDetailPage from '@/features/produit/pages/ProduitDetailPage';
 import ProduitListPage from '@/features/produit/pages/ProduitListPage';
@@ -115,7 +117,15 @@ export default function App() {
           <Route index element={<Navigate to="commandes" replace />} />
           <Route path="commandes" element={<PriseDeCommandePage />} />
           <Route path="catalogue" element={<AdministrationProduitsPage />} />
+          <Route
+            path="catalogue/:idProduit"
+            element={<ProduitDetailAdministrationPage />}
+          />
           <Route path="categories" element={<AdministrationCategoriesPage />} />
+          <Route
+            path="categories/:idCategorie"
+            element={<CategorieDetailAdministrationPage />}
+          />
           {/* Déclarée avant la route paramétrée : même précaution que
               `commandes/invite/:reference` avant `commandes` — ici les deux
               chemins n'ont de toute façon pas la même forme, mais la

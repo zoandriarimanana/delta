@@ -24,10 +24,15 @@ import {
 } from '../produit.administration';
 import { creerCategorie, modifierCategorie } from '../produit.api';
 import type { CategorieProduitAdministration } from '../produit.types';
+import {
+  CLASSES_LIGNE_CLIQUABLE,
+  useNavigationAuClic,
+} from '@/lib/useNavigationAuClic';
 
 export default function AdministrationCategoriesPage() {
   const catalogue = useCatalogueAdministration();
   const actions = useActionsCatalogue(catalogue.recharger);
+  const naviguerAuClic = useNavigationAuClic();
   const [libelle, setLibelle] = useState('');
   const [enEdition, setEnEdition] = useState<CategorieProduitAdministration | null>(
     null
@@ -138,12 +143,20 @@ export default function AdministrationCategoriesPage() {
           return (
             <li
               key={categorie.id_categorie}
+              onClick={naviguerAuClic(
+                `/personnel/categories/${categorie.id_categorie}`
+              )}
               className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warm-gray-200 bg-white p-3 ${
                 archive ? 'bg-warm-gray-100/60' : ''
-              }`}
+              } ${CLASSES_LIGNE_CLIQUABLE}`}
             >
               <span className="flex items-center gap-3 text-sm text-warm-gray-700">
-                {categorie.libelle}
+                <Link
+                  to={`/personnel/categories/${categorie.id_categorie}`}
+                  className="hover:underline"
+                >
+                  {categorie.libelle}
+                </Link>
                 <Badge variante={archive ? 'negatif' : 'positif'}>
                   {archive ? 'Archivée' : 'Active'}
                 </Badge>

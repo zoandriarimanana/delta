@@ -5,8 +5,14 @@
  * actions, et rien d'autre.
  */
 
+import { Link } from 'react-router';
+
 import Badge from '@/components/ui/Badge';
 import Bouton from '@/components/ui/Bouton';
+import {
+  CLASSES_LIGNE_CLIQUABLE,
+  useNavigationAuClic,
+} from '@/lib/useNavigationAuClic';
 
 import { estArchive } from '../produit.administration';
 import { formaterPrix } from '../produit.service';
@@ -33,11 +39,20 @@ export default function LigneProduitAdministration({
   surRestauration,
 }: Proprietes) {
   const archive = estArchive(produit);
+  const naviguerAuClic = useNavigationAuClic();
+  const fiche = `/personnel/catalogue/${produit.id_produit}`;
   const categorie = categories.find((c) => c.id_categorie === produit.id_categorie);
 
   return (
-    <tr className={archive ? 'bg-warm-gray-100/60' : undefined}>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">{produit.nom}</td>
+    <tr
+      onClick={naviguerAuClic(fiche)}
+      className={`${archive ? 'bg-warm-gray-100/60' : ''} ${CLASSES_LIGNE_CLIQUABLE}`}
+    >
+      <td className="px-3 py-2 text-sm">
+        <Link to={fiche} className="text-warm-gray-700 hover:underline">
+          {produit.nom}
+        </Link>
+      </td>
       <td className="px-3 py-2 text-sm text-warm-gray-600">
         {categorie?.libelle ?? '—'}
       </td>

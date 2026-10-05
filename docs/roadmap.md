@@ -743,6 +743,34 @@ aucun écran réservé au personnel n'était accessible, y compris celui du cata
 C'est pourquoi ce travail a pu démarrer une fois #73 livré, sans attendre un
 découpage formel de sprint.
 
+**Travaux hors sprint : confort de l'interface (demandes du 5 octobre 2026).**
+Deux demandes explicites, hors roadmap, signalées et réalisées à part du
+Sprint 12 — chacune son commit, sur son module.
+
+- [x] **Afficher / masquer le mot de passe** (`auth`) : primitive visuelle
+      `components/ui/ChampMotDePasse`, un œil dans les trois champs de mot de
+      passe (connexion client, connexion du personnel, inscription). Masqué
+      par défaut.
+- [ ] **Fiches détaillées de l'administration du catalogue** : cliquer sur une
+      ligne des listes « Catalogue », « Catégories », « Salles », « Logements »
+      et « Domaines » ouvre une **fiche**, même patron que la fiche
+      d'administration d'une formation — tous les champs, « Modifier »,
+      « Archiver », « Restaurer », « Retour à la liste ». Les actions en ligne
+      de la liste restent.
+      — **Informations liées**, toutes servies par des endpoints existants,
+      sans modifier l'API : produits d'une catégorie, formations d'un domaine,
+      note moyenne et nombre d'avis d'un produit, d'une salle, d'un logement,
+      et **réservations** d'une salle ou d'un logement.
+      — Les réservations sont rendues par un composant du module
+      `reservation`, que les fiches salle et logement **montent** sans appeler
+      elles-mêmes l'API de réservation : même règle que « Réserver n'est pas
+      consulter » (`docs/architecture.md`).
+      — Ligne cliquable par une primitive `components/ui/LigneCliquable` : un
+      clic sur un bouton ou un lien de la ligne garde son propre effet ; le
+      nom reste un lien, pour le clavier.
+      — Un commit par module : `produit` (catalogue et catégories), `salle`,
+      `logement`, `formation` (domaines).
+
 ## Sprint 11 — Durcissement pré-production
 
 Le roadmap métier est fonctionnellement complet à l'issue du Sprint 10 : les 21
