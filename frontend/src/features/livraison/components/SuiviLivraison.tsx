@@ -25,7 +25,7 @@ export default function SuiviLivraison({ suivi }: Proprietes) {
     <section
       aria-label="Suivi de livraison"
       className={`mt-4 rounded-2xl border p-5 shadow-sm ${
-        nominal ? 'border-gris-200 bg-white' : 'border-attente/40 bg-attente/10'
+        nominal ? 'border-gris-200 bg-surface' : 'border-attente/40 bg-attente/10'
       }`}
     >
       <h3 className="flex items-center gap-2 font-semibold text-gris-700">
@@ -43,7 +43,7 @@ export default function SuiviLivraison({ suivi }: Proprietes) {
       {/* Une tournée non planifiée n'affiche rien plutôt qu'un tiret : une
           ligne vide se lit comme une donnée manquante, son absence non. */}
       {suivi.date_heure_prevue !== null && (
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-gris-500">
           Prévue le{' '}
           <time dateTime={suivi.date_heure_prevue}>
             {formaterDate(suivi.date_heure_prevue)}
@@ -52,7 +52,7 @@ export default function SuiviLivraison({ suivi }: Proprietes) {
       )}
 
       {suivi.date_heure_reelle !== null && (
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-gris-500">
           Remise le{' '}
           <time dateTime={suivi.date_heure_reelle}>
             {formaterDate(suivi.date_heure_reelle)}
@@ -61,7 +61,7 @@ export default function SuiviLivraison({ suivi }: Proprietes) {
       )}
 
       {!priseEnCharge && (
-        <p className="mt-2 text-sm text-amber-800">
+        <p className="mt-2 text-sm text-attente">
           Contactez-nous si vous souhaitez repasser commande.
         </p>
       )}

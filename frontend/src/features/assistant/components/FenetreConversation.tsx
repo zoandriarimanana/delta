@@ -90,7 +90,7 @@ export default function FenetreConversation({
                   <button
                     type="button"
                     onClick={() => void envoyer(suggestion)}
-                    className="w-full rounded-lg border border-gris-200 bg-white px-3 py-2 text-left text-sm text-gris-700 hover:border-primaire"
+                    className="w-full rounded-lg border border-gris-200 bg-surface px-3 py-2 text-left text-sm text-gris-700 hover:border-primaire"
                   >
                     {suggestion}
                   </button>
@@ -128,7 +128,7 @@ export default function FenetreConversation({
             type="submit"
             disabled={!envoyable}
             aria-label="Envoyer la question"
-            className="rounded-lg bg-primaire p-2.5 text-white transition-opacity disabled:opacity-40"
+            className="rounded-lg bg-primaire p-2.5 text-sur-couleur transition-opacity disabled:opacity-40"
           >
             <Send size={18} aria-hidden />
           </button>

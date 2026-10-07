@@ -75,8 +75,8 @@ export default function InscriptionPage() {
 
   return (
     <section className="mx-auto max-w-sm">
-      <h1 className="text-2xl font-semibold text-slate-900">Créer un compte</h1>
-      <p className="mt-2 text-sm text-slate-600">
+      <h1 className="text-2xl font-semibold text-gris-700">Créer un compte</h1>
+      <p className="mt-2 text-sm text-gris-600">
         Pour suivre vos commandes et vos réservations.
       </p>
 
@@ -88,11 +88,11 @@ export default function InscriptionPage() {
         }}
       >
         <fieldset className="space-y-2">
-          <legend className="text-sm text-slate-700">Type de compte</legend>
+          <legend className="text-sm text-gris-700">Type de compte</legend>
           {(['particulier', 'entreprise'] as const).map((valeur) => (
             <label
               key={valeur}
-              className="flex items-center gap-2 text-sm text-slate-700"
+              className="flex items-center gap-2 text-sm text-gris-700"
             >
               <input
                 type="radio"
@@ -106,7 +106,7 @@ export default function InscriptionPage() {
           ))}
         </fieldset>
 
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Adresse e-mail
           <input
             type="email"
@@ -114,29 +114,29 @@ export default function InscriptionPage() {
             autoComplete="username"
             value={email}
             onChange={(evenement) => setEmail(evenement.target.value)}
-            className="rounded border border-slate-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
-          Mot de passe <span className="text-slate-500">(8 caractères minimum)</span>
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
+          Mot de passe <span className="text-gris-500">(8 caractères minimum)</span>
           <ChampMotDePasse
             required
             minLength={8}
             autoComplete="new-password"
             value={motDePasse}
             onChange={(evenement) => setMotDePasse(evenement.target.value)}
-            className="rounded border border-slate-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
-          Téléphone <span className="text-slate-500">(facultatif)</span>
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
+          Téléphone <span className="text-gris-500">(facultatif)</span>
           <input
             type="tel"
             value={telephone}
             onChange={(evenement) => setTelephone(evenement.target.value)}
-            className="rounded border border-slate-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
@@ -158,7 +158,7 @@ export default function InscriptionPage() {
           // corriger, et ne se corrigent pas de la même façon.
           <p
             role="alert"
-            className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+            className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
           >
             {courant.erreur}
           </p>
@@ -167,15 +167,15 @@ export default function InscriptionPage() {
         <button
           type="submit"
           disabled={courant.envoi}
-          className="w-full rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+          className="w-full rounded bg-action px-4 py-2 text-sm text-white disabled:opacity-50"
         >
           {courant.envoi ? 'Création…' : 'Créer mon compte'}
         </button>
       </form>
 
-      <p className="mt-6 text-sm text-slate-600">
+      <p className="mt-6 text-sm text-gris-600">
         Vous avez déjà un compte ?{' '}
-        <Link to="/connexion" className="text-slate-900 underline">
+        <Link to="/connexion" className="text-gris-700 underline">
           Se connecter
         </Link>
       </p>

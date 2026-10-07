@@ -112,7 +112,7 @@ export default function FormationDetailPage() {
         )}
 
         {sessions.donnees !== null && sessions.donnees.length === 0 && (
-          <p className="mt-4 rounded-xl border border-gris-200 bg-white p-4 text-gris-600">
+          <p className="mt-4 rounded-xl border border-gris-200 bg-surface p-4 text-gris-600">
             Aucune session n’est programmée pour le moment. Revenez prochainement : les
             nouvelles dates sont annoncées ici dès leur planification.
           </p>
@@ -213,7 +213,7 @@ function Presentation({
         </p>
       </div>
 
-      <dl className="grid gap-2 rounded-xl border border-gris-200 bg-white p-4 text-sm">
+      <dl className="grid gap-2 rounded-xl border border-gris-200 bg-surface p-4 text-sm">
         <Ligne terme="Durée" valeur={formaterDuree(formation.duree_heures)} />
         <Ligne terme="Niveau" valeur={formation.niveau ?? 'Tous niveaux'} />
         <Ligne

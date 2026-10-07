@@ -41,7 +41,7 @@ export default function ReferencePublique({ reference }: Proprietes) {
       </p>
       <code
         data-testid="reference-publique"
-        className="mt-3 block select-all break-all rounded-lg border border-gris-200 bg-white px-3 py-2 font-mono text-sm text-gris-700"
+        className="mt-3 block select-all break-all rounded-lg border border-gris-200 bg-surface px-3 py-2 font-mono text-sm text-gris-700"
       >
         {reference}
       </code>
@@ -49,7 +49,7 @@ export default function ReferencePublique({ reference }: Proprietes) {
         <button
           type="button"
           onClick={() => void copier()}
-          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-gris-700 shadow-sm ring-1 ring-gris-300 transition-colors hover:text-primaire hover:ring-primaire"
+          className="inline-flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm font-medium text-gris-700 shadow-sm ring-1 ring-gris-300 transition-colors hover:text-primaire hover:ring-primaire"
         >
           {copie ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />}
           {copie ? 'Lien copié' : 'Copier le lien'}

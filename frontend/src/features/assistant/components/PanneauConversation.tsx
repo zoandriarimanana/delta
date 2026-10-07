@@ -37,7 +37,7 @@ export default function PanneauConversation() {
   const mode = MODES.find((m) => m.profil === profil) ?? MODES[0]!;
 
   return (
-    <div className="mt-6 rounded-xl border border-gris-200 bg-white">
+    <div className="mt-6 rounded-xl border border-gris-200 bg-surface">
       <div className="border-b border-gris-200 p-4">
         <h2 className="text-lg font-medium text-gris-700">Interroger l’assistant</h2>
         <div
@@ -54,7 +54,7 @@ export default function PanneauConversation() {
               onClick={() => setProfil(m.profil)}
               className={`rounded-full px-3 py-1 text-sm ${
                 m.profil === profil
-                  ? 'bg-primaire text-white'
+                  ? 'bg-primaire text-sur-couleur'
                   : 'border border-gris-300 text-gris-700 hover:border-primaire'
               }`}
             >

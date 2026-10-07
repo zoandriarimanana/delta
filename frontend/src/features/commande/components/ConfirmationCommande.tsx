@@ -23,7 +23,7 @@ export default function ConfirmationCommande({ commande }: Proprietes) {
     <section>
       <EtapesCommande courante="Confirmation" />
 
-      <div className="mx-auto mt-8 max-w-xl rounded-2xl border border-gris-200 bg-white p-8 text-center shadow-sm">
+      <div className="mx-auto mt-8 max-w-xl rounded-2xl border border-gris-200 bg-surface p-8 text-center shadow-sm">
         <CheckCircle2 size={56} aria-hidden className="mx-auto text-succes" />
         <h1 className="mt-4 text-3xl font-semibold text-gris-700">
           Commande enregistrée
@@ -50,7 +50,7 @@ export default function ConfirmationCommande({ commande }: Proprietes) {
           </Link>
           <Link
             to="/produits"
-            className="inline-flex items-center gap-2 rounded-full border border-gris-300 bg-white px-6 py-3 font-medium text-gris-700 no-underline transition-colors hover:border-primaire hover:text-primaire"
+            className="inline-flex items-center gap-2 rounded-full border border-gris-300 bg-surface px-6 py-3 font-medium text-gris-700 no-underline transition-colors hover:border-primaire hover:text-primaire"
           >
             <ShoppingBag size={18} aria-hidden />
             Continuer mes achats

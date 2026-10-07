@@ -96,16 +96,16 @@ export default function AccueilPage() {
 
       {/* CTA section */}
       <section className="bg-primaire rounded-xl p-8 text-center">
-        <h2 className="text-2xl font-serif font-bold text-white mb-3">
+        <h2 className="text-2xl font-serif font-bold text-sur-couleur mb-3">
           Découvrez notre offre
         </h2>
-        <p className="text-gris-100 mb-6">
+        <p className="text-sur-couleur/85 mb-6">
           Explorez notre catalogue de produits, formations et services. Tous les détails
           vous attendent.
         </p>
         <a
           href="/produits"
-          className="inline-block px-6 py-3 bg-white text-primaire font-semibold rounded-lg hover:bg-gris-100 transition-colors"
+          className="inline-block px-6 py-3 bg-surface text-primaire font-semibold rounded-lg hover:bg-gris-100 transition-colors"
         >
           Commencer à explorer
         </a>
@@ -143,7 +143,7 @@ function ModuleCard({
   };
 
   const baseClasses =
-    'p-6 bg-white rounded-xl border-l-4 border-primaire cursor-pointer transition-all duration-300';
+    'p-6 bg-surface rounded-xl border-l-4 border-primaire cursor-pointer transition-all duration-300';
   const selectedClasses = isSelected
     ? 'scale-105 shadow-xl'
     : 'shadow-md hover:shadow-xl hover:-translate-y-1 focus:ring-2 focus:ring-primaire';

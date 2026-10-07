@@ -19,7 +19,7 @@ function Rendu({ etat }: { etat: EtatSuivi }) {
 
   if (etat.erreur !== null) {
     return (
-      <p role="alert" className="mt-4 text-sm text-red-800">
+      <p role="alert" className="mt-4 text-sm text-danger">
         {etat.erreur}
       </p>
     );

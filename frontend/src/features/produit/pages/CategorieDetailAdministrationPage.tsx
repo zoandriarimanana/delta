@@ -99,7 +99,7 @@ export default function CategorieDetailAdministrationPage() {
         </p>
       )}
 
-      <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+      <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
         <p className="text-sm text-gris-600">
           {produits.length} produit(s) dans cette catégorie, dont {actifs} actif(s).
         </p>
@@ -175,7 +175,7 @@ export default function CategorieDetailAdministrationPage() {
           Aucun produit dans cette catégorie.
         </p>
       ) : (
-        <table className="mt-3 w-full border-collapse rounded-xl bg-white shadow-sm">
+        <table className="mt-3 w-full border-collapse rounded-xl bg-surface shadow-sm">
           <thead>
             <tr className="text-left">
               <th className="px-3 py-2 text-sm font-medium text-gris-600">Nom</th>

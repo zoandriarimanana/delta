@@ -91,7 +91,7 @@ export default function TarifLivraisonPage() {
         été faites.
       </p>
 
-      <div className="mt-4 rounded-xl border border-gris-200 bg-white p-4 text-sm text-gris-600">
+      <div className="mt-4 rounded-xl border border-gris-200 bg-surface p-4 text-sm text-gris-600">
         Actuellement : <strong>{formaterMontant(tarif.forfait)}</strong> par livraison
         {tarif.seuil_gratuite !== null ? (
           <>
@@ -105,7 +105,7 @@ export default function TarifLivraisonPage() {
 
       <form
         onSubmit={(e) => void enregistrer(e)}
-        className="mt-6 space-y-4 rounded-xl border border-gris-200 bg-white p-4"
+        className="mt-6 space-y-4 rounded-xl border border-gris-200 bg-surface p-4"
       >
         <label className="flex flex-col gap-1 text-sm text-gris-700">
           Forfait de livraison (Ar)

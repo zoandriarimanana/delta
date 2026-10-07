@@ -123,7 +123,7 @@ export default function AdministrationPersonnelPage() {
       )}
 
       {edition.mode === 'creation' && (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <h2 className="mb-4 text-lg font-medium text-gris-700">Nouveau membre</h2>
           <FormulairePersonnel
             envoi={creation.envoi}
@@ -147,7 +147,7 @@ export default function AdministrationPersonnelPage() {
 
       {donnees.personnels.length > 0 && (
         <div className="mt-6 overflow-x-auto">
-          <table className="w-full border-collapse rounded-xl bg-white shadow-sm">
+          <table className="w-full border-collapse rounded-xl bg-surface shadow-sm">
             <thead>
               <tr className="border-b border-gris-200 text-left">
                 <th className="px-3 py-2" />

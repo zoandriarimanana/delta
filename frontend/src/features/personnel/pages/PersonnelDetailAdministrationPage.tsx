@@ -225,7 +225,7 @@ export default function PersonnelDetailAdministrationPage() {
       )}
 
       {archiveLocalement && (
-        <p className="mt-4 flex items-center justify-between rounded border border-gris-200 bg-white p-3 text-sm text-gris-700">
+        <p className="mt-4 flex items-center justify-between rounded border border-gris-200 bg-surface p-3 text-sm text-gris-700">
           <span>Ce membre a été archivé.</span>
           <Bouton
             variante="secondaire"
@@ -238,7 +238,7 @@ export default function PersonnelDetailAdministrationPage() {
       )}
 
       {modeEdition ? (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <h2 className="mb-4 text-lg font-medium text-gris-700">Modifier le membre</h2>
           <FormulairePersonnel
             personnel={affichage}
@@ -250,7 +250,7 @@ export default function PersonnelDetailAdministrationPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <dl className="grid gap-3 sm:grid-cols-2">
             <div>
               <dt className="text-sm text-gris-500">Fonction</dt>

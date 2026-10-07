@@ -1680,6 +1680,19 @@ main (pastille « négatif », panier actif, compteurs d'onglets).
       en attendant la décision de l'utilisateur ; une sans-empattement
       épaisse serait plus proche du mot « DELTA » du logo.
 
+**Travaux hors sprint : mode sombre / mode clair (7 octobre 2026).**
+Bouton de bascule dans l'en-tête public et dans la barre latérale du
+personnel (et sa barre mobile). Rôles de couleur redéfinis sous `.dark`
+(voir `docs/architecture.md`, « Couleurs ») ; passe outillée sur 84 fichiers
+pour remplacer les couleurs codées en dur (`bg-white`, `slate-*`,
+`red/green/amber-*`) par des rôles, puis relue. Symbole du logo éclairci
+par filtre CSS en sombre.
+
+- [x] Thème mémorisé par visiteur, système suivi par défaut, sans
+      clignotement au chargement ; frontend 771/771, build ; vérifié dans
+      un vrai navigateur (accueil, tunnel, fiche admin, mobile, persistance
+      après rechargement).
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère

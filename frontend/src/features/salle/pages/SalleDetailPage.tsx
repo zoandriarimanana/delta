@@ -80,7 +80,7 @@ export default function SalleDetailPage() {
 
       <section
         aria-labelledby="titre-reserver"
-        className="mt-10 rounded-2xl border border-gris-200 bg-white p-6 shadow-sm"
+        className="mt-10 rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm"
       >
         <h2 id="titre-reserver" className="text-xl font-semibold text-gris-700">
           Réserver cette salle
@@ -147,7 +147,7 @@ function Presentation({ salle }: { salle: Salle }) {
             {equipements.map((equipement) => (
               <li
                 key={equipement}
-                className="rounded-lg border border-gris-200 bg-white px-3 py-1 text-sm text-gris-700"
+                className="rounded-lg border border-gris-200 bg-surface px-3 py-1 text-sm text-gris-700"
               >
                 {equipement}
               </li>

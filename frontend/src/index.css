@@ -27,8 +27,12 @@
   --color-succes: #15803d;
   --color-attente: #b45309;
   --color-danger: #b91c1c;
-  /* Fond de page et gris neutres (texte, bordures). */
+  /* Texte posé sur un fond primaire, succès ou danger plein : blanc en
+     clair, presque noir en sombre — ces fonds s'éclaircissent en sombre. */
+  --color-sur-couleur: #ffffff;
+  /* Fond de page, surfaces (cartes, en-tête, champs) et gris neutres. */
   --color-fond: #f8fafc;
+  --color-surface: #ffffff;
   --color-gris-100: #f1f5f9;
   --color-gris-200: #e2e8f0;
   --color-gris-300: #cbd5e1;
@@ -41,8 +45,44 @@
   --font-sans: 'Inter', sans-serif;
 }
 
+/* Mode sombre — mêmes rôles, autres valeurs. Activé par la classe `dark`
+   sur <html>, posée avant le premier affichage par le script de
+   `index.html` puis tenue par `lib/theme.ts`. Les gris s'inversent : le
+   100 reste « le plus proche du fond », le 700 « le texte principal ».
+   Contrastes mesurés sur la surface sombre : primaire 7,1 · gris-500 6,6 ·
+   danger 6,2 · succès 9,8 · attente 10,2 · texte principal 14,5. */
+.dark {
+  color-scheme: dark;
+  --color-primaire: #6ea8ff;
+  --color-primaire-fonce: #9cc3ff;
+  --color-action: #c2410c;
+  --color-action-fonce: #ea580c;
+  --color-succes: #4ade80;
+  --color-attente: #fbbf24;
+  --color-danger: #f87171;
+  --color-sur-couleur: #0b1220;
+  --color-fond: #0b1220;
+  --color-surface: #131c2e;
+  --color-gris-100: #1b2538;
+  --color-gris-200: #283449;
+  --color-gris-300: #3a475e;
+  --color-gris-400: #64748b;
+  --color-gris-500: #94a3b8;
+  --color-gris-600: #cbd5e1;
+  --color-gris-700: #e8edf4;
+}
+
 html {
   font-family: theme('fontFamily.sans');
+}
+
+/* Champs de saisie : sans fond explicite, le navigateur les peint en blanc,
+   illisibles en sombre. Ils suivent la surface et la couleur du texte. */
+input,
+select,
+textarea {
+  background-color: var(--color-surface);
+  color: inherit;
 }
 
 h1,
@@ -57,4 +97,10 @@ h6 {
 
 body {
   @apply bg-fond text-gris-700;
+}
+
+/* Le symbole du logo est bleu foncé : sur fond sombre, on l'éclaircit plutôt
+   que de maintenir une seconde image (cf. LogoDelta). */
+.dark .logo-delta-symbole {
+  filter: brightness(2.2) saturate(1.2);
 }

@@ -5,6 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Delta</title>
     <link rel="icon" type="image/png" href="/favicon.png" />
+    <script>
+      // Thème posé avant le premier affichage, pour éviter un éclair blanc en
+      // mode sombre. Même clé et même règle que src/lib/theme.ts : choix
+      // mémorisé, sinon réglage du système.
+      try {
+        var t = localStorage.getItem('delta.theme');
+        if (
+          t === 'sombre' ||
+          (t !== 'clair' && matchMedia('(prefers-color-scheme: dark)').matches)
+        ) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {}
+    </script>
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

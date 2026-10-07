@@ -22,7 +22,7 @@ export default function MessageAssistant({ message, surNavigation }: Proprietes)
   if (message.auteur === 'visiteur') {
     return (
       <div className="flex justify-end">
-        <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-primaire px-3 py-2 text-sm text-white">
+        <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-primaire px-3 py-2 text-sm text-sur-couleur">
           {message.texte}
         </p>
       </div>
@@ -66,7 +66,7 @@ export default function MessageAssistant({ message, surNavigation }: Proprietes)
                   <Link
                     to={lienSource(source) ?? '/'}
                     onClick={surNavigation}
-                    className="inline-block rounded-full border border-gris-300 bg-white px-2.5 py-0.5 text-xs text-primaire hover:border-primaire"
+                    className="inline-block rounded-full border border-gris-300 bg-surface px-2.5 py-0.5 text-xs text-primaire hover:border-primaire"
                   >
                     {libelleSource(source)}
                   </Link>

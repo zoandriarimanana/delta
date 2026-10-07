@@ -38,7 +38,7 @@ export default function ChampQuantite({ ligne, onChangement }: Proprietes) {
   }, [ligne.quantite]);
 
   return (
-    <div className="flex w-fit items-center overflow-hidden rounded-full border border-gris-300 bg-white">
+    <div className="flex w-fit items-center overflow-hidden rounded-full border border-gris-300 bg-surface">
       <button
         type="button"
         onClick={() => onChangement(ligne.quantite - 1)}

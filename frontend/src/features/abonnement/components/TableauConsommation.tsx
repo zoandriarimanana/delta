@@ -43,7 +43,7 @@ export default function TableauConsommation({
 
   return (
     <div className="mt-4 overflow-x-auto">
-      <table className="w-full border-collapse rounded-xl bg-white shadow-sm">
+      <table className="w-full border-collapse rounded-xl bg-surface shadow-sm">
         <thead>
           <tr className="border-b border-gris-200 text-left">
             <th className="px-3 py-2 text-sm font-medium text-gris-600">Date</th>

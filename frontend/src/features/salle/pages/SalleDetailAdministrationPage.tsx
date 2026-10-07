@@ -102,7 +102,7 @@ export default function SalleDetailAdministrationPage() {
       )}
 
       {modeEdition ? (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <h2 className="mb-4 text-lg font-medium text-gris-700">Modifier la salle</h2>
           <FormulaireSalle
             salle={salle}
@@ -116,7 +116,7 @@ export default function SalleDetailAdministrationPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <dl className="grid gap-3 sm:grid-cols-2">
             <ChampFiche intitule="Capacité">{salle.capacite} personnes</ChampFiche>
             <ChampFiche intitule="Tarif horaire">
@@ -184,7 +184,7 @@ export default function SalleDetailAdministrationPage() {
       )}
 
       {archive ? (
-        <p className="mt-6 rounded-xl border border-gris-200 bg-white p-4 text-sm text-gris-500">
+        <p className="mt-6 rounded-xl border border-gris-200 bg-surface p-4 text-sm text-gris-500">
           Les photos d’une salle archivée sont conservées, mais ne se gèrent qu’une fois
           restaurée.
         </p>

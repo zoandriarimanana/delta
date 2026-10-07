@@ -28,6 +28,7 @@ import { useDeconnexion } from '@/features/auth/auth.hooks';
 import { usePanier } from '@/features/commande/commande.hooks';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import BoutonTheme from './BoutonTheme';
 import MenuCompte from './MenuCompte';
 
 interface Lien {
@@ -64,7 +65,7 @@ function classeLienMobile({ isActive }: { isActive: boolean }): string {
   const base =
     'block w-full rounded-lg px-3 py-2 text-left text-base font-medium transition-colors';
   return isActive
-    ? `${base} bg-primaire text-white`
+    ? `${base} bg-primaire text-sur-couleur`
     : `${base} text-gris-700 hover:bg-gris-100`;
 }
 
@@ -103,7 +104,7 @@ export default function MainLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-fond">
-      <header className="sticky top-0 z-20 border-b border-gris-200 bg-white/95 shadow-sm backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-gris-200 bg-surface/95 shadow-sm backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <NavLink to="/" className="shrink-0 transition-opacity hover:opacity-80">
             <LogoDelta />
@@ -125,7 +126,8 @@ export default function MainLayout() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <BoutonTheme />
             <NavLink
               to="/panier"
               aria-label={nombre > 0 ? `Panier, ${nombre} article(s)` : 'Panier'}
@@ -170,7 +172,7 @@ export default function MainLayout() {
         {menuOuvert && (
           <nav
             aria-label="Menu"
-            className="flex flex-col gap-1 border-t border-gris-200 bg-white px-4 py-4 lg:hidden"
+            className="flex flex-col gap-1 border-t border-gris-200 bg-surface px-4 py-4 lg:hidden"
           >
             {[...LIENS_PUBLICS, ...(connecte ? LIENS_COMPTE : [])].map((lien) => (
               <NavLink
@@ -218,7 +220,7 @@ export default function MainLayout() {
           fonctionnement — elle ne s'affiche que si l'assistant est activé. */}
       <BulleAssistant />
 
-      <footer className="border-t border-gris-200 bg-white">
+      <footer className="border-t border-gris-200 bg-surface">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-4 text-sm text-gris-500">
           <LogoDelta forme="symbole" className="h-6" />
           <span>Delta</span>

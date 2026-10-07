@@ -33,7 +33,7 @@ export default function PanneauEtatAssistant({ etat, reindexation }: Proprietes)
 
   return (
     <div className="mt-6 grid gap-4 md:grid-cols-2">
-      <div className="rounded-xl border border-gris-200 bg-white p-4">
+      <div className="rounded-xl border border-gris-200 bg-surface p-4">
         <h2 className="text-lg font-medium text-gris-700">État</h2>
         <dl className="mt-3 space-y-2 text-sm">
           <div className="flex items-center justify-between gap-2">
@@ -85,7 +85,7 @@ export default function PanneauEtatAssistant({ etat, reindexation }: Proprietes)
         )}
       </div>
 
-      <div className="rounded-xl border border-gris-200 bg-white p-4">
+      <div className="rounded-xl border border-gris-200 bg-surface p-4">
         <h2 className="text-lg font-medium text-gris-700">Index</h2>
         <p className="mt-1 text-sm text-gris-500">
           {donnees.total_fragments} fragment(s) indexé(s). L’index se met à jour seul à

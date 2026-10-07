@@ -132,7 +132,7 @@ export default function AdministrationReservationsPage() {
 
       {reservationsFiltrees.length > 0 && (
         <div className="mt-6 overflow-x-auto">
-          <table className="w-full border-collapse rounded-xl bg-white shadow-sm">
+          <table className="w-full border-collapse rounded-xl bg-surface shadow-sm">
             <thead>
               <tr className="border-b border-gris-200 text-left">
                 <th className="px-3 py-2" />

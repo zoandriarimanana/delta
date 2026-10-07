@@ -70,7 +70,7 @@ export default function PanneauDocuments({ base }: Proprietes) {
   }
 
   return (
-    <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+    <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
       <h2 className="text-lg font-medium text-gris-700">Base de connaissances</h2>
       <p className="mt-1 text-sm text-gris-500">
         Ajoutez des documents (PDF, Word, texte, Markdown — 5 Mio maximum) : ils sont

@@ -94,7 +94,7 @@ export default function HistoriqueCommandesPage() {
       )}
 
       {!chargement && erreur === null && commandes.length === 0 && (
-        <div className="mt-8 rounded-2xl border border-dashed border-gris-300 bg-white p-10 text-center">
+        <div className="mt-8 rounded-2xl border border-dashed border-gris-300 bg-surface p-10 text-center">
           <ShoppingBag size={36} aria-hidden className="mx-auto text-primaire" />
           <p className="mt-3 text-gris-500">
             Vous n’avez pas encore passé de commande.
@@ -133,7 +133,9 @@ export default function HistoriqueCommandesPage() {
                   {libelle}
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs ${
-                      actif ? 'bg-primaire text-white' : 'bg-gris-200 text-gris-600'
+                      actif
+                        ? 'bg-primaire text-sur-couleur'
+                        : 'bg-gris-200 text-gris-600'
                     }`}
                   >
                     {parEtape[etape].length}
@@ -144,7 +146,7 @@ export default function HistoriqueCommandesPage() {
           </div>
 
           {liste.length === 0 ? (
-            <p className="mt-8 rounded-2xl border border-dashed border-gris-300 bg-white p-10 text-center text-gris-500">
+            <p className="mt-8 rounded-2xl border border-dashed border-gris-300 bg-surface p-10 text-center text-gris-500">
               {courant.vide}
             </p>
           ) : (

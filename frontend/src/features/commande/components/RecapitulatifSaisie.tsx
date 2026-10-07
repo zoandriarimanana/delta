@@ -26,7 +26,7 @@ export default function RecapitulatifSaisie({
   surRetrait,
 }: Proprietes) {
   if (lignes.length === 0) {
-    return <p className="text-sm text-slate-600">Aucun article sélectionné.</p>;
+    return <p className="text-sm text-gris-600">Aucun article sélectionné.</p>;
   }
 
   return (
@@ -35,9 +35,9 @@ export default function RecapitulatifSaisie({
         {lignes.map((ligne) => (
           <li
             key={ligne.id_produit}
-            className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-white p-2"
+            className="flex items-center justify-between gap-3 rounded border border-gris-200 bg-surface p-2"
           >
-            <span className="text-sm text-slate-800">{ligne.nom}</span>
+            <span className="text-sm text-gris-700">{ligne.nom}</span>
             <span className="flex items-center gap-2">
               <input
                 type="number"
@@ -51,12 +51,12 @@ export default function RecapitulatifSaisie({
                 onChange={(evenement) =>
                   surModification(ligne.id_produit, Number(evenement.target.value))
                 }
-                className="w-16 rounded border border-slate-300 px-2 py-1 text-sm"
+                className="w-16 rounded border border-gris-300 px-2 py-1 text-sm"
               />
               <button
                 type="button"
                 onClick={() => surRetrait(ligne.id_produit)}
-                className="rounded px-2 py-1 text-sm text-slate-600 hover:bg-slate-200"
+                className="rounded px-2 py-1 text-sm text-gris-600 hover:bg-gris-200"
               >
                 Retirer
               </button>
@@ -65,7 +65,7 @@ export default function RecapitulatifSaisie({
         ))}
       </ul>
 
-      <p className="mt-3 text-right text-sm font-medium text-slate-900">
+      <p className="mt-3 text-right text-sm font-medium text-gris-700">
         Total indicatif : {formaterMontant(total)}
       </p>
     </div>

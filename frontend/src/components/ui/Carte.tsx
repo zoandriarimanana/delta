@@ -46,7 +46,7 @@ export default function Carte({
 
   return (
     <div
-      className={`overflow-hidden rounded-xl bg-white shadow-md transition-shadow hover:shadow-lg ${
+      className={`overflow-hidden rounded-xl bg-surface shadow-md transition-shadow hover:shadow-lg ${
         cliquable ? 'cursor-pointer hover:shadow-xl' : ''
       } ${className}`}
       onClick={surClic}

@@ -41,7 +41,7 @@ export default function ProduitListPage() {
                     : (Number(e.target.value) as FiltreCategorie)
                 )
               }
-              className="rounded-lg border-2 border-gris-200 px-3 py-2 bg-white text-gris-700 hover:border-primaire transition-colors"
+              className="rounded-lg border-2 border-gris-200 px-3 py-2 bg-surface text-gris-700 hover:border-primaire transition-colors"
             >
               <option value="">Tous</option>
               {categories.donnees.map((cat) => (

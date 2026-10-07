@@ -43,7 +43,7 @@ export default function ComparaisonLivraison({
     <div
       role="group"
       aria-label="Frais de livraison"
-      className="divide-y divide-gris-200 rounded-xl border border-gris-200 bg-white text-sm"
+      className="divide-y divide-gris-200 rounded-xl border border-gris-200 bg-surface text-sm"
     >
       {!produit.est_livrable ? (
         <Ligne

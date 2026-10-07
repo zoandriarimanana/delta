@@ -83,7 +83,7 @@ export default function LogementDetailPage() {
 
       <section
         aria-labelledby="titre-reserver"
-        className="mt-10 rounded-2xl border border-gris-200 bg-white p-6 shadow-sm"
+        className="mt-10 rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm"
       >
         <h2 id="titre-reserver" className="text-xl font-semibold text-gris-700">
           Réserver ce logement
@@ -146,7 +146,7 @@ function Presentation({ logement }: { logement: Logement }) {
         </p>
       </div>
 
-      <dl className="grid gap-2 rounded-xl border border-gris-200 bg-white p-4 text-sm">
+      <dl className="grid gap-2 rounded-xl border border-gris-200 bg-surface p-4 text-sm">
         <div className="flex justify-between gap-4">
           <dt className="text-gris-500">Type de chambre</dt>
           <dd className="text-right font-medium text-gris-700">

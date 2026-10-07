@@ -108,7 +108,7 @@ export default function ProduitDetailAdministrationPage() {
       )}
 
       {modeEdition ? (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <h2 className="mb-4 text-lg font-medium text-gris-700">
             Modifier le produit
           </h2>
@@ -125,7 +125,7 @@ export default function ProduitDetailAdministrationPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <dl className="grid gap-3 sm:grid-cols-2">
             <ChampFiche intitule="Catégorie">
               {categorie !== undefined ? (
@@ -195,7 +195,7 @@ export default function ProduitDetailAdministrationPage() {
       )}
 
       {archive ? (
-        <p className="mt-6 rounded-xl border border-gris-200 bg-white p-4 text-sm text-gris-500">
+        <p className="mt-6 rounded-xl border border-gris-200 bg-surface p-4 text-sm text-gris-500">
           Les photos d’un produit archivé sont conservées, mais ne se gèrent qu’une fois
           restauré.
         </p>

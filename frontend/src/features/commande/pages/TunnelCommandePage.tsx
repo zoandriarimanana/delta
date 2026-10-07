@@ -28,7 +28,7 @@ import type { Commande } from '../commande.types';
 const ID_FORMULAIRE = 'formulaire-commande';
 
 const CLASSES_CHAMP =
-  'mt-1 block w-full rounded-lg border border-gris-300 bg-white px-3 py-2.5 text-gris-700 focus:border-primaire focus:outline-none focus:ring-2 focus:ring-primaire/20';
+  'mt-1 block w-full rounded-lg border border-gris-300 bg-surface px-3 py-2.5 text-gris-700 focus:border-primaire focus:outline-none focus:ring-2 focus:ring-primaire/20';
 
 export default function TunnelCommandePage() {
   const panier = usePanier();
@@ -182,9 +182,9 @@ function Etape({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-gris-200 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm">
       <h2 className="flex items-center gap-3 text-lg font-semibold text-gris-700">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primaire text-sm text-white">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primaire text-sm text-sur-couleur">
           {numero}
         </span>
         {titre}

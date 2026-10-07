@@ -27,6 +27,8 @@ import { NavLink, Outlet, useNavigate } from 'react-router';
 import LogoDelta from '@/components/ui/LogoDelta';
 import BulleAssistant from '@/features/assistant/components/BulleAssistant';
 import { useDeconnexion } from '@/features/auth/auth.hooks';
+
+import BoutonTheme from './BoutonTheme';
 import { useEstAdministrateur } from '@/lib/useEstConnecte';
 
 interface Lien {
@@ -59,7 +61,7 @@ const LIENS_GESTION: Lien[] = [
 function classeLien({ isActive }: { isActive: boolean }): string {
   const base = 'block rounded-lg px-3 py-2 text-sm font-medium transition-colors';
   return isActive
-    ? `${base} bg-primaire text-white`
+    ? `${base} bg-primaire text-sur-couleur`
     : `${base} text-gris-700 hover:bg-gris-100`;
 }
 
@@ -124,7 +126,7 @@ export default function LayoutPersonnel() {
   return (
     <div className="flex min-h-screen bg-fond">
       {/* Sidebar fixe, visible à partir de md. */}
-      <aside className="hidden w-64 flex-col border-r-2 border-gris-200 bg-white md:flex">
+      <aside className="hidden w-64 flex-col border-r-2 border-gris-200 bg-surface md:flex">
         <NavLink
           to="/"
           className="border-b border-gris-200 px-4 py-5 transition-opacity hover:opacity-80"
@@ -133,6 +135,7 @@ export default function LayoutPersonnel() {
         </NavLink>
         <ContenuSidebar estAdministrateur={estAdministrateur} />
         <div className="border-t border-gris-200 p-3">
+          <BoutonTheme avecLibelle className="mb-1 w-full rounded-lg px-3 py-2" />
           <button
             type="button"
             onClick={seDeconnecter}
@@ -146,23 +149,26 @@ export default function LayoutPersonnel() {
       <div className="flex flex-1 flex-col">
         {/* Barre mobile : logo + bouton d'ouverture, la sidebar devenant un
             tiroir plutôt qu'une colonne fixe sous md. */}
-        <header className="flex items-center justify-between border-b-2 border-gris-200 bg-white px-4 py-4 md:hidden">
+        <header className="flex items-center justify-between border-b-2 border-gris-200 bg-surface px-4 py-4 md:hidden">
           <NavLink to="/" className="transition-opacity hover:opacity-80">
             <LogoDelta />
           </NavLink>
-          <button
-            type="button"
-            onClick={() => setMenuOuvert(!menuOuvert)}
-            className="rounded-lg p-2 text-gris-700 transition-colors hover:bg-gris-100"
-            aria-label={menuOuvert ? 'Fermer le menu' : 'Ouvrir le menu'}
-            aria-expanded={menuOuvert}
-          >
-            {menuOuvert ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          <div className="flex items-center gap-1">
+            <BoutonTheme />
+            <button
+              type="button"
+              onClick={() => setMenuOuvert(!menuOuvert)}
+              className="rounded-lg p-2 text-gris-700 transition-colors hover:bg-gris-100"
+              aria-label={menuOuvert ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-expanded={menuOuvert}
+            >
+              {menuOuvert ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </header>
 
         {menuOuvert && (
-          <nav className="flex flex-col border-b border-gris-200 bg-white px-3 py-2 md:hidden">
+          <nav className="flex flex-col border-b border-gris-200 bg-surface px-3 py-2 md:hidden">
             <ContenuSidebar
               estAdministrateur={estAdministrateur}
               onNaviguer={() => setMenuOuvert(false)}

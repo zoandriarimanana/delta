@@ -496,6 +496,24 @@ Contrastes vérifiés au calcul WCAG (≥ 4,5 pour du texte). L'orange du logo
 (`action-vif`). La couleur n'est jamais seule porteuse d'un sens — chaque
 statut a aussi son libellé.
 
+**Mode sombre.** Les rôles ci-dessus sont redéfinis sous la classe `.dark`
+posée sur `<html>` : aucun composant ne connaît le thème, il peint des
+rôles (`bg-surface`, `text-gris-700`, `text-sur-couleur` pour le texte posé
+sur une couleur pleine). L'échelle `gris-*` y est **inversée** — `gris-700`
+reste « le texte le plus contrasté » dans les deux thèmes. Contrastes
+recalculés (texte 14,5 ; `primaire` 7,1 ; `danger` 6,2). L'orange `action`
+garde le texte blanc dans les deux thèmes.
+
+Le choix vit dans `lib/theme.ts` (magasin externe, même patron que le
+panier) et dans `localStorage` (`delta.theme`) — préférence **par
+visiteur**, pas une donnée serveur ; sans choix mémorisé, on suit le
+système (`prefers-color-scheme`). Un script en ligne dans `index.html` pose
+la classe **avant** le premier rendu, sans quoi chaque chargement
+clignoterait en clair. Le bouton (`layouts/BoutonTheme.tsx`) est monté dans
+l'en-tête public et dans la barre latérale du personnel. Les voiles posés
+sur une photo (`bg-white/85`, dégradés noirs) restent fixes : ils
+dépendent de l'image, pas du thème.
+
 ### `src/components/ui/` — l'exception, et son critère
 
 Cette phrase interdisait un `src/components/` fourre-tout, et l'interdiction

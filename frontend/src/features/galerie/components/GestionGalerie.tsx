@@ -43,7 +43,7 @@ export default function GestionGalerie({ bien }: Proprietes) {
   }
 
   return (
-    <section className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+    <section className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-lg font-medium text-gris-700">Photos</h2>
         <span className="text-sm text-gris-500">

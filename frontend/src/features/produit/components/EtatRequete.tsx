@@ -23,7 +23,7 @@ export default function EtatRequete({
 }: Proprietes) {
   if (chargement) {
     return (
-      <p role="status" className="text-slate-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -33,7 +33,7 @@ export default function EtatRequete({
     return (
       <p
         role="alert"
-        className="rounded border border-red-200 bg-red-50 p-4 text-red-800"
+        className="rounded border border-danger/30 bg-danger/10 p-4 text-danger"
       >
         {erreur}
       </p>
@@ -41,7 +41,7 @@ export default function EtatRequete({
   }
 
   if (estVide && messageVide !== undefined) {
-    return <p className="text-slate-500">{messageVide}</p>;
+    return <p className="text-gris-500">{messageVide}</p>;
   }
 
   return <>{children}</>;

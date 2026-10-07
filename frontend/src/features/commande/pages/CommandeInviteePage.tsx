@@ -67,7 +67,7 @@ export default function CommandeInviteePage() {
                   livreur n'y figurent — l'API ne les renvoie pas, et le type
                   ne les porte pas non plus. */}
               {reference !== undefined && <EncartSuiviInvite reference={reference} />}
-              <div className="rounded-2xl border border-gris-200 bg-white p-6 shadow-sm">
+              <div className="rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-gris-700">Articles</h2>
                 <RecapitulatifCommande commande={commande} />
               </div>
@@ -109,7 +109,7 @@ function Informations({ commande }: { commande: Commande }) {
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-6">
-      <div className="rounded-2xl border border-gris-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gris-700">Informations</h2>
         <dl className="mt-4 space-y-3 text-sm">
           <div>
@@ -130,7 +130,7 @@ function Informations({ commande }: { commande: Commande }) {
         </dl>
       </div>
 
-      <div className="rounded-2xl border border-gris-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm">
         <p className="flex items-center gap-2 font-semibold text-gris-700">
           <UserPlus size={18} aria-hidden className="text-succes" />
           Commandez plus simplement

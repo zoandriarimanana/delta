@@ -40,8 +40,8 @@ export default function FormulaireReservation({
   // absurde pour quelqu'un qui n'était simplement pas connecté.
   if (!connecte) {
     return (
-      <p className="mt-3 text-sm text-slate-600">
-        <Link to="/connexion" className="text-slate-900 underline">
+      <p className="mt-3 text-sm text-gris-600">
+        <Link to="/connexion" className="text-gris-700 underline">
           Connectez-vous
         </Link>{' '}
         pour réserver cette session.
@@ -51,7 +51,7 @@ export default function FormulaireReservation({
 
   if (reussite !== null) {
     return (
-      <p role="status" className="mt-3 text-sm text-green-800">
+      <p role="status" className="mt-3 text-sm text-succes">
         Réservation enregistrée pour {reussite.nombre_personnes} personne(s).
         Retrouvez-la dans{' '}
         <Link to="/reservations" className="underline">
@@ -77,7 +77,7 @@ export default function FormulaireReservation({
         });
       }}
     >
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-gris-700">
         Nombre de personnes
         <input
           type="number"
@@ -90,7 +90,7 @@ export default function FormulaireReservation({
           onChange={(evenement) =>
             setNombrePersonnes(Math.max(1, Number(evenement.target.value) || 1))
           }
-          className="w-20 rounded border border-slate-300 px-2 py-1"
+          className="w-20 rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
@@ -98,7 +98,7 @@ export default function FormulaireReservation({
           refuserait en 422 de toute façon ; ne pas l'afficher évite au client
           de découvrir le refus après coup. */}
       {proposeHebergement && (
-        <label className="flex items-center gap-2 text-sm text-slate-700">
+        <label className="flex items-center gap-2 text-sm text-gris-700">
           <input
             type="checkbox"
             checked={avecHebergement}
@@ -113,7 +113,7 @@ export default function FormulaireReservation({
         // place(s) » dit au client quoi corriger, un message générique non.
         <p
           role="alert"
-          className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+          className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {erreur}
         </p>
@@ -122,7 +122,7 @@ export default function FormulaireReservation({
       <button
         type="submit"
         disabled={envoi}
-        className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+        className="rounded bg-action px-4 py-2 text-sm text-white disabled:opacity-50"
       >
         {envoi ? 'Envoi…' : 'Réserver'}
       </button>

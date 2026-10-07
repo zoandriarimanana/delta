@@ -118,7 +118,7 @@ export default function AbonnementDetailAdministrationPage() {
       )}
 
       {modeEdition ? (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <h2 className="mb-4 text-lg font-medium text-gris-700">
             Modifier l'abonnement
           </h2>
@@ -132,7 +132,7 @@ export default function AbonnementDetailAdministrationPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <dl className="grid gap-3 sm:grid-cols-2">
             <div>
               <dt className="text-sm text-gris-500">Période</dt>
@@ -199,7 +199,7 @@ export default function AbonnementDetailAdministrationPage() {
 
         {ajoutBeneficiaireOuvert && (
           <form
-            className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-gris-200 bg-white p-4"
+            className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-gris-200 bg-surface p-4"
             onSubmit={(e) => {
               e.preventDefault();
               void ajouterBeneficiaire();

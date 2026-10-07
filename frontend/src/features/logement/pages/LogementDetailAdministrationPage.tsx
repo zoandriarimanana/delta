@@ -106,7 +106,7 @@ export default function LogementDetailAdministrationPage() {
       )}
 
       {modeEdition ? (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <h2 className="mb-4 text-lg font-medium text-gris-700">
             Modifier le logement
           </h2>
@@ -122,7 +122,7 @@ export default function LogementDetailAdministrationPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <dl className="grid gap-3 sm:grid-cols-2">
             <ChampFiche intitule="Type de chambre">{logement.type_chambre}</ChampFiche>
             <ChampFiche intitule="Capacité">{logement.capacite} personne(s)</ChampFiche>
@@ -182,7 +182,7 @@ export default function LogementDetailAdministrationPage() {
       )}
 
       {archive ? (
-        <p className="mt-6 rounded-xl border border-gris-200 bg-white p-4 text-sm text-gris-500">
+        <p className="mt-6 rounded-xl border border-gris-200 bg-surface p-4 text-sm text-gris-500">
           Les photos d’un logement archivé sont conservées, mais ne se gèrent qu’une
           fois restauré.
         </p>

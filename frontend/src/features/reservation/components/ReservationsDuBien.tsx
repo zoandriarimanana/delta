@@ -82,7 +82,7 @@ export default function ReservationsDuBien({ bien }: Proprietes) {
           <p className="mt-1 text-sm text-gris-600">
             {reservations.length} réservation(s), dont {aVenir} à venir.
           </p>
-          <table className="mt-3 w-full border-collapse rounded-xl bg-white shadow-sm">
+          <table className="mt-3 w-full border-collapse rounded-xl bg-surface shadow-sm">
             <thead>
               <tr className="text-left">
                 <th className="px-3 py-2 text-sm font-medium text-gris-600">N°</th>

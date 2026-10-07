@@ -22,7 +22,7 @@ export default function BoutonRetour({ vers, children }: Proprietes) {
   return (
     <Link
       to={vers}
-      className="group inline-flex items-center gap-2 rounded-full border border-gris-300 bg-white px-4 py-2 text-sm font-medium text-gris-700 no-underline shadow-sm transition-colors hover:border-primaire hover:text-primaire"
+      className="group inline-flex items-center gap-2 rounded-full border border-gris-300 bg-surface px-4 py-2 text-sm font-medium text-gris-700 no-underline shadow-sm transition-colors hover:border-primaire hover:text-primaire"
     >
       <ArrowLeft
         size={16}

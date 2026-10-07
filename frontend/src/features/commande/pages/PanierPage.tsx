@@ -27,7 +27,7 @@ export default function PanierPage() {
       </div>
 
       <div className="mt-6 grid items-start gap-8 lg:grid-cols-[1fr_22rem]">
-        <div className="rounded-2xl border border-gris-200 bg-white px-5 shadow-sm">
+        <div className="rounded-2xl border border-gris-200 bg-surface px-5 shadow-sm">
           <ul className="divide-y divide-gris-200">
             {panier.lignes.map((ligne) => (
               <LignePanierCarte
@@ -79,7 +79,7 @@ function PanierVide() {
         </Link>
         <Link
           to="/formations"
-          className="inline-flex items-center gap-2 rounded-full border border-gris-300 bg-white px-6 py-3 font-medium text-gris-700 no-underline transition-colors hover:border-primaire hover:text-primaire"
+          className="inline-flex items-center gap-2 rounded-full border border-gris-300 bg-surface px-6 py-3 font-medium text-gris-700 no-underline transition-colors hover:border-primaire hover:text-primaire"
         >
           <GraduationCap size={18} aria-hidden />
           Voir les formations

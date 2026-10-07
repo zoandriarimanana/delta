@@ -81,7 +81,7 @@ export default function FormulaireReservationCreneau({
 
   if (!reservable) {
     return (
-      <p className="mt-3 text-sm text-slate-600">
+      <p className="mt-3 text-sm text-gris-600">
         Ce logement n’est pas réservable pour le moment.
       </p>
     );
@@ -92,8 +92,8 @@ export default function FormulaireReservationCreneau({
   // absurde pour quelqu'un qui n'était simplement pas connecté.
   if (!connecte) {
     return (
-      <p className="mt-3 text-sm text-slate-600">
-        <Link to="/connexion" className="text-slate-900 underline">
+      <p className="mt-3 text-sm text-gris-600">
+        <Link to="/connexion" className="text-gris-700 underline">
           Connectez-vous
         </Link>{' '}
         pour réserver.
@@ -103,7 +103,7 @@ export default function FormulaireReservationCreneau({
 
   if (reussite !== null) {
     return (
-      <p role="status" className="mt-3 text-sm text-green-800">
+      <p role="status" className="mt-3 text-sm text-succes">
         Réservation enregistrée pour {reussite.nombre_personnes} personne(s).
         Retrouvez-la dans{' '}
         <Link to="/reservations" className="underline">
@@ -122,18 +122,18 @@ export default function FormulaireReservationCreneau({
         void reserver(charge(cible, idCible, debut, fin, nombrePersonnes));
       }}
     >
-      <label className="flex flex-col gap-1 text-sm text-slate-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         Début
         <input
           type="datetime-local"
           required
           value={debut}
           onChange={(evenement) => setDebut(evenement.target.value)}
-          className="rounded border border-slate-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-slate-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         Fin
         <input
           type="datetime-local"
@@ -143,11 +143,11 @@ export default function FormulaireReservationCreneau({
           min={debut || undefined}
           value={fin}
           onChange={(evenement) => setFin(evenement.target.value)}
-          className="rounded border border-slate-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
-      <label className="flex items-center gap-2 text-sm text-slate-700">
+      <label className="flex items-center gap-2 text-sm text-gris-700">
         Nombre de personnes
         <input
           type="number"
@@ -159,7 +159,7 @@ export default function FormulaireReservationCreneau({
           onChange={(evenement) =>
             setNombrePersonnes(Math.max(1, Number(evenement.target.value) || 1))
           }
-          className="w-20 rounded border border-slate-300 px-2 py-1"
+          className="w-20 rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
@@ -169,7 +169,7 @@ export default function FormulaireReservationCreneau({
         // générique non. Même traitement que le 409 « session complète ».
         <p
           role="alert"
-          className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+          className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {erreur}
         </p>
@@ -178,7 +178,7 @@ export default function FormulaireReservationCreneau({
       <button
         type="submit"
         disabled={envoi}
-        className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+        className="rounded bg-action px-4 py-2 text-sm text-white disabled:opacity-50"
       >
         {envoi ? 'Envoi…' : 'Réserver'}
       </button>

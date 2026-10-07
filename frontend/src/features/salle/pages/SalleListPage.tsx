@@ -42,7 +42,7 @@ export default function SalleListPage() {
             const saisie = Number(evenement.target.value);
             setCapacite(Number.isInteger(saisie) && saisie > 0 ? saisie : null);
           }}
-          className="w-32 rounded-lg border-2 border-gris-200 px-3 py-2 bg-white text-gris-700 hover:border-primaire transition-colors"
+          className="w-32 rounded-lg border-2 border-gris-200 px-3 py-2 bg-surface text-gris-700 hover:border-primaire transition-colors"
           placeholder="Personnes"
         />
       </div>

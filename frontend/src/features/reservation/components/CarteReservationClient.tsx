@@ -70,7 +70,7 @@ export default function CarteReservationClient({
   }
 
   return (
-    <li className="flex flex-col gap-4 rounded-2xl border border-gris-200 bg-white p-5 shadow-sm sm:flex-row">
+    <li className="flex flex-col gap-4 rounded-2xl border border-gris-200 bg-surface p-5 shadow-sm sm:flex-row">
       <div className="h-28 w-full shrink-0 overflow-hidden rounded-xl bg-gris-200 sm:h-24 sm:w-32">
         {image !== null ? (
           <img src={image} alt="" className="h-full w-full object-cover" />
@@ -167,7 +167,7 @@ export default function CarteReservationClient({
                 type="button"
                 disabled={envoi}
                 onClick={() => void annuler()}
-                className="rounded-full bg-danger px-3 py-1 font-semibold text-white disabled:opacity-60"
+                className="rounded-full bg-danger px-3 py-1 font-semibold text-sur-couleur disabled:opacity-60"
               >
                 {envoi ? 'Annulation…' : 'Confirmer l’annulation'}
               </button>
@@ -175,7 +175,7 @@ export default function CarteReservationClient({
                 type="button"
                 disabled={envoi}
                 onClick={() => setConfirmer(false)}
-                className="rounded-full px-3 py-1 font-medium text-gris-600 hover:bg-white"
+                className="rounded-full px-3 py-1 font-medium text-gris-600 hover:bg-surface"
               >
                 Garder
               </button>

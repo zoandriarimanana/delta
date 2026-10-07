@@ -28,7 +28,7 @@ export default function RecapitulatifMontants({
     avecLivraison && tarif !== null ? resteAvantGratuite(tarif, sousTotal) : null;
 
   return (
-    <dl className="space-y-1 rounded-xl border border-gris-200 bg-white p-4 text-sm">
+    <dl className="space-y-1 rounded-xl border border-gris-200 bg-surface p-4 text-sm">
       <div className="flex justify-between">
         <dt className="text-gris-500">Produits</dt>
         <dd className="text-gris-700">{formaterMontant(sousTotal)}</dd>

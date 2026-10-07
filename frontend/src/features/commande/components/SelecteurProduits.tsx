@@ -29,41 +29,41 @@ export default function SelecteurProduits({ surAjout }: Proprietes) {
 
   return (
     <div>
-      <label className="flex flex-col gap-1 text-sm text-slate-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         Rechercher un produit
         <input
           type="search"
           value={recherche}
           onChange={(evenement) => setRecherche(evenement.target.value)}
-          className="rounded border border-slate-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
       {chargement && (
-        <p role="status" className="mt-3 text-sm text-slate-500">
+        <p role="status" className="mt-3 text-sm text-gris-500">
           Chargement…
         </p>
       )}
 
       {erreur !== null && (
-        <p role="alert" className="mt-3 text-sm text-red-800">
+        <p role="alert" className="mt-3 text-sm text-danger">
           {erreur}
         </p>
       )}
 
       {donnees !== null && visibles.length === 0 && (
-        <p className="mt-3 text-sm text-slate-600">Aucun produit ne correspond.</p>
+        <p className="mt-3 text-sm text-gris-600">Aucun produit ne correspond.</p>
       )}
 
       <ul className="mt-3 space-y-2">
         {visibles.map((produit) => (
           <li
             key={produit.id_produit}
-            className="flex items-center justify-between gap-3 rounded border border-slate-200 bg-white p-2"
+            className="flex items-center justify-between gap-3 rounded border border-gris-200 bg-surface p-2"
           >
-            <span className="text-sm text-slate-800">
+            <span className="text-sm text-gris-700">
               {produit.nom}
-              <span className="ml-2 text-slate-500">
+              <span className="ml-2 text-gris-500">
                 {formaterMontant(produit.prix_unitaire)}
               </span>
             </span>
@@ -74,7 +74,7 @@ export default function SelecteurProduits({ surAjout }: Proprietes) {
               // n'existe pas.
               disabled={produit.stock_disponible <= 0}
               onClick={() => surAjout(produit)}
-              className="rounded bg-slate-900 px-3 py-1 text-sm text-white disabled:opacity-40"
+              className="rounded bg-action px-3 py-1 text-sm text-white disabled:opacity-40"
             >
               {produit.stock_disponible <= 0 ? 'Épuisé' : 'Ajouter'}
             </button>

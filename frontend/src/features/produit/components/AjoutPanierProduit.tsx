@@ -62,7 +62,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
   return (
     <div className="space-y-3">
       {produit.est_personnalisable && (
-        <div className="rounded-xl border border-gris-200 bg-white">
+        <div className="rounded-xl border border-gris-200 bg-surface">
           <label className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
             <span className="flex items-center gap-2 text-sm font-semibold text-gris-700">
               <Sparkles size={18} aria-hidden className="text-attente" />
@@ -122,7 +122,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
         <div
           role="group"
           aria-label={parPersonne ? 'Nombre de personnes' : 'Quantité'}
-          className="flex w-fit items-center overflow-hidden rounded-full border border-gris-300 bg-white"
+          className="flex w-fit items-center overflow-hidden rounded-full border border-gris-300 bg-surface"
         >
           <button
             type="button"

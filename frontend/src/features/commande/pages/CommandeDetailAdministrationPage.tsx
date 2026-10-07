@@ -108,12 +108,12 @@ export default function CommandeDetailAdministrationPage() {
       )}
 
       {commande.rembourse_le !== null && (
-        <p className="mt-4 rounded border border-gris-200 bg-white p-3 text-sm text-gris-700">
+        <p className="mt-4 rounded border border-gris-200 bg-surface p-3 text-sm text-gris-700">
           Remboursée le {formaterDate(commande.rembourse_le)}.
         </p>
       )}
 
-      <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+      <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
         <RecapitulatifCommande commande={commande} />
       </div>
 

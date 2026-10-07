@@ -26,7 +26,7 @@ interface Proprietes {
 }
 
 const CLASSES_FLECHE =
-  'absolute top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-gris-700 shadow-md transition hover:bg-white';
+  'absolute top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-gris-700 shadow-md transition hover:bg-surface';
 
 export default function GaleriePhotos({ bien, photos, repli, nomBien }: Proprietes) {
   const [index, setIndex] = useState(0);

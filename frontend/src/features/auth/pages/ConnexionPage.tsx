@@ -30,15 +30,15 @@ export default function ConnexionPage() {
 
   return (
     <section className="mx-auto max-w-sm">
-      <h1 className="text-2xl font-semibold text-slate-900">Connexion</h1>
-      <p className="mt-2 text-sm text-slate-600">
+      <h1 className="text-2xl font-semibold text-gris-700">Connexion</h1>
+      <p className="mt-2 text-sm text-gris-600">
         Retrouvez vos commandes et vos réservations.
       </p>
 
       {confirmation !== undefined && (
         <p
           role="status"
-          className="mt-4 rounded border border-green-200 bg-green-50 p-3 text-sm text-green-800"
+          className="mt-4 rounded border border-succes/30 bg-succes/10 p-3 text-sm text-succes"
         >
           {confirmation}
         </p>
@@ -55,7 +55,7 @@ export default function ConnexionPage() {
           });
         }}
       >
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Adresse e-mail
           <input
             type="email"
@@ -63,18 +63,18 @@ export default function ConnexionPage() {
             autoComplete="username"
             value={email}
             onChange={(evenement) => setEmail(evenement.target.value)}
-            className="rounded border border-slate-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Mot de passe
           <ChampMotDePasse
             required
             autoComplete="current-password"
             value={motDePasse}
             onChange={(evenement) => setMotDePasse(evenement.target.value)}
-            className="rounded border border-slate-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
@@ -84,7 +84,7 @@ export default function ConnexionPage() {
           // donc le reprendre ne révèle pas si le compte existe.
           <p
             role="alert"
-            className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+            className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
           >
             {erreur}
           </p>
@@ -93,22 +93,22 @@ export default function ConnexionPage() {
         <button
           type="submit"
           disabled={envoi}
-          className="w-full rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+          className="w-full rounded bg-action px-4 py-2 text-sm text-white disabled:opacity-50"
         >
           {envoi ? 'Connexion…' : 'Se connecter'}
         </button>
       </form>
 
-      <p className="mt-6 text-sm text-slate-600">
+      <p className="mt-6 text-sm text-gris-600">
         Pas encore de compte ?{' '}
-        <Link to="/inscription" className="text-slate-900 underline">
+        <Link to="/inscription" className="text-gris-700 underline">
           Créer un compte
         </Link>
       </p>
 
-      <p className="mt-2 text-sm text-slate-600">
+      <p className="mt-2 text-sm text-gris-600">
         Vous êtes membre de l’équipe Delta ?{' '}
-        <Link to="/personnel/connexion" className="text-slate-900 underline">
+        <Link to="/personnel/connexion" className="text-gris-700 underline">
           Espace personnel
         </Link>
       </p>

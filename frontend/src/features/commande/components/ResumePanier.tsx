@@ -29,7 +29,7 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
   return (
     <aside
       aria-labelledby="titre-recapitulatif"
-      className="rounded-2xl border border-gris-200 bg-white p-6 shadow-sm lg:sticky lg:top-6"
+      className="rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm lg:sticky lg:top-6"
     >
       <h2 id="titre-recapitulatif" className="text-lg font-semibold text-gris-700">
         Récapitulatif
@@ -67,7 +67,7 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progression)}
-            className="mt-2 h-2 overflow-hidden rounded-full bg-white"
+            className="mt-2 h-2 overflow-hidden rounded-full bg-surface"
           >
             <div
               className="h-full rounded-full bg-succes transition-all"

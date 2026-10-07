@@ -38,7 +38,7 @@ export default function FormationListPage() {
               evenement.target.value === '' ? null : Number(evenement.target.value)
             )
           }
-          className="rounded-lg border-2 border-gris-200 px-3 py-2 bg-white text-gris-700 hover:border-primaire transition-colors"
+          className="rounded-lg border-2 border-gris-200 px-3 py-2 bg-surface text-gris-700 hover:border-primaire transition-colors"
         >
           <option value="">Tous les domaines</option>
           {(domaines.donnees ?? []).map((domaine) => (

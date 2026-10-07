@@ -59,7 +59,7 @@ export default function ChoixReception({
         {MODES.map(({ valeur, libelle, detail, icone: Icone }) => (
           <label
             key={valeur}
-            className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 bg-white p-3 transition-colors ${
+            className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 bg-surface p-3 transition-colors ${
               mode === valeur
                 ? 'border-primaire'
                 : 'border-gris-200 hover:border-gris-300'

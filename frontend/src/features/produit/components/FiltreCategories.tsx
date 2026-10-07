@@ -20,7 +20,7 @@ export default function FiltreCategories({
 }: Proprietes) {
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor="filtre-categorie" className="text-sm text-slate-700">
+      <label htmlFor="filtre-categorie" className="text-sm text-gris-700">
         Catégorie
       </label>
       <select
@@ -29,7 +29,7 @@ export default function FiltreCategories({
         onChange={(evenement) =>
           onChangement(depuisValeurSelect(evenement.target.value))
         }
-        className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+        className="rounded border border-gris-300 bg-surface px-3 py-2 text-sm"
       >
         <option value={TOUTES_CATEGORIES}>Toutes</option>
         {categories.map((categorie) => (

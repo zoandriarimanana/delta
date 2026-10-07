@@ -168,7 +168,7 @@ export default function AdministrationDomainesPage() {
               onClick={naviguerAuClic(
                 `/personnel/domaines-formation/${domaine.id_domaine}`
               )}
-              className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gris-200 bg-white p-3 ${
+              className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gris-200 bg-surface p-3 ${
                 archive ? 'bg-gris-100/60' : ''
               } ${CLASSES_LIGNE_CLIQUABLE}`}
             >

@@ -72,7 +72,7 @@ export default function FormulaireAvis({ cible, idCible }: Proprietes) {
 
   return (
     <form
-      className="mt-2 space-y-2 rounded border border-gris-200 bg-white p-3"
+      className="mt-2 space-y-2 rounded border border-gris-200 bg-surface p-3"
       onSubmit={(evenement) => {
         evenement.preventDefault();
         void deposer(charge(cible, idCible, note, commentaire));

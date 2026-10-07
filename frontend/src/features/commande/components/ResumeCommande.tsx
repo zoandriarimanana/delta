@@ -32,7 +32,7 @@ export default function ResumeCommande({
   return (
     <aside
       aria-labelledby="titre-votre-commande"
-      className="rounded-2xl border border-gris-200 bg-white p-6 shadow-sm lg:sticky lg:top-6"
+      className="rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm lg:sticky lg:top-6"
     >
       <div className="flex items-baseline justify-between">
         <h2 id="titre-votre-commande" className="text-lg font-semibold text-gris-700">

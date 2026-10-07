@@ -72,7 +72,7 @@ export default function MenuCompte({ surDeconnexion }: Proprietes) {
         <div
           role="menu"
           aria-label="Mon compte"
-          className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-gris-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-gris-200 bg-surface py-1 shadow-lg"
         >
           {ENTREES.map(({ vers, libelle, icone: Icone }) => (
             <NavLink

@@ -21,8 +21,8 @@ export default function ConnexionPersonnelPage() {
 
   return (
     <section className="mx-auto max-w-sm">
-      <h1 className="text-2xl font-semibold text-slate-900">Espace personnel</h1>
-      <p className="mt-2 text-sm text-slate-600">
+      <h1 className="text-2xl font-semibold text-gris-700">Espace personnel</h1>
+      <p className="mt-2 text-sm text-gris-600">
         Réservé aux membres de l’équipe Delta.
       </p>
 
@@ -41,7 +41,7 @@ export default function ConnexionPersonnelPage() {
           });
         }}
       >
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Adresse professionnelle
           <input
             type="email"
@@ -49,18 +49,18 @@ export default function ConnexionPersonnelPage() {
             autoComplete="username"
             value={email}
             onChange={(evenement) => setEmail(evenement.target.value)}
-            className="rounded border border-slate-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-slate-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Mot de passe
           <ChampMotDePasse
             required
             autoComplete="current-password"
             value={motDePasse}
             onChange={(evenement) => setMotDePasse(evenement.target.value)}
-            className="rounded border border-slate-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
@@ -70,7 +70,7 @@ export default function ConnexionPersonnelPage() {
           // connexion, compte archivé —, donc le reprendre ne divulgue rien.
           <p
             role="alert"
-            className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+            className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
           >
             {erreur}
           </p>
@@ -79,7 +79,7 @@ export default function ConnexionPersonnelPage() {
         <button
           type="submit"
           disabled={envoi}
-          className="w-full rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+          className="w-full rounded bg-action px-4 py-2 text-sm text-white disabled:opacity-50"
         >
           {envoi ? 'Connexion…' : 'Se connecter'}
         </button>

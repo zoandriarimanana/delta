@@ -72,7 +72,7 @@ export default function PersonnalisationPanierBloc({
             type="button"
             onClick={() => setEdition(true)}
             aria-label={`Modifier la personnalisation de ${ligne.nom}`}
-            className="rounded p-1 text-gris-500 hover:bg-white hover:text-primaire"
+            className="rounded p-1 text-gris-500 hover:bg-surface hover:text-primaire"
           >
             <Pencil size={15} aria-hidden />
           </button>
@@ -80,7 +80,7 @@ export default function PersonnalisationPanierBloc({
             type="button"
             onClick={() => surPersonnalisation(null)}
             aria-label={`Retirer la personnalisation de ${ligne.nom}`}
-            className="rounded p-1 text-gris-500 hover:bg-white hover:text-primaire"
+            className="rounded p-1 text-gris-500 hover:bg-surface hover:text-primaire"
           >
             <X size={15} aria-hidden />
           </button>

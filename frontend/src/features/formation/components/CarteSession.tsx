@@ -31,7 +31,7 @@ export default function CarteSession({ session, proposeHebergement }: Proprietes
 
   return (
     <li
-      className={`rounded-2xl border bg-white p-5 shadow-sm ${
+      className={`rounded-2xl border bg-surface p-5 shadow-sm ${
         reservable ? 'border-succes/40' : 'border-gris-200'
       }`}
     >

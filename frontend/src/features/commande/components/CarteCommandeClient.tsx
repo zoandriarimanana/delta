@@ -50,7 +50,7 @@ export default function CarteCommandeClient({
   const autres = commande.lignes.length - VIGNETTES_MAX;
 
   return (
-    <li className="overflow-hidden rounded-2xl border border-gris-200 bg-white shadow-sm">
+    <li className="overflow-hidden rounded-2xl border border-gris-200 bg-surface shadow-sm">
       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">

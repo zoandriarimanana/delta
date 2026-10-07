@@ -35,9 +35,9 @@ export default function EtapesCommande({ courante }: Proprietes) {
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
                   active
-                    ? 'bg-primaire text-white'
+                    ? 'bg-primaire text-sur-couleur'
                     : faite
-                      ? 'bg-succes text-white'
+                      ? 'bg-succes text-sur-couleur'
                       : 'bg-gris-200 text-gris-500'
                 }`}
               >

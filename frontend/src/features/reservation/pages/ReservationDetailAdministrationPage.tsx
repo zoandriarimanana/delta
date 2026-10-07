@@ -82,7 +82,7 @@ export default function ReservationDetailAdministrationPage() {
         </p>
       )}
 
-      <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+      <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
         <div className="flex gap-4">
           {image !== null && (
             <img

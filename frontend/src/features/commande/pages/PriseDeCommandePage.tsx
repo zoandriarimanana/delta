@@ -51,15 +51,15 @@ export default function PriseDeCommandePage() {
 
   return (
     <section>
-      <h1 className="text-2xl font-semibold text-slate-900">Prise de commande</h1>
-      <p className="mt-2 text-sm text-slate-600">
+      <h1 className="text-2xl font-semibold text-gris-700">Prise de commande</h1>
+      <p className="mt-2 text-sm text-gris-600">
         Commande sur place, à retirer au comptoir ou servie à table.
       </p>
 
       {derniere !== null && (
         <p
           role="status"
-          className="mt-4 rounded border border-green-200 bg-green-50 p-3 text-sm text-green-800"
+          className="mt-4 rounded border border-succes/30 bg-succes/10 p-3 text-sm text-succes"
         >
           Commande n° {derniere.id_commande} enregistrée —{' '}
           {formaterMontant(derniere.montant_total)}.
@@ -75,14 +75,14 @@ export default function PriseDeCommandePage() {
 
       <div className="mt-6 grid gap-8 md:grid-cols-2">
         <div>
-          <h2 className="text-lg font-medium text-slate-900">Articles</h2>
+          <h2 className="text-lg font-medium text-gris-700">Articles</h2>
           <div className="mt-3">
             <SelecteurProduits surAjout={saisie.ajouter} />
           </div>
         </div>
 
         <div>
-          <h2 className="text-lg font-medium text-slate-900">Commande</h2>
+          <h2 className="text-lg font-medium text-gris-700">Commande</h2>
           <div className="mt-3">
             <RecapitulatifSaisie
               lignes={saisie.lignes}
@@ -124,7 +124,7 @@ export default function PriseDeCommandePage() {
               // disent au salarié quoi corriger.
               <p
                 role="alert"
-                className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+                className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
               >
                 {saisie.erreur}
               </p>
@@ -133,7 +133,7 @@ export default function PriseDeCommandePage() {
             <button
               type="submit"
               disabled={saisie.envoi || !prete}
-              className="w-full rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+              className="w-full rounded bg-action px-4 py-2 text-sm text-white disabled:opacity-50"
             >
               {saisie.envoi ? 'Enregistrement…' : 'Enregistrer la commande'}
             </button>

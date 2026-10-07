@@ -116,7 +116,7 @@ export default function DomaineDetailAdministrationPage() {
         </p>
       )}
 
-      <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+      <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
         {edition !== null ? (
           <form onSubmit={(e) => void enregistrer(e)} className="grid gap-3">
             <label className="flex flex-col gap-1 text-sm text-gris-700">
@@ -211,7 +211,7 @@ export default function DomaineDetailAdministrationPage() {
       {sesFormations.length === 0 ? (
         <p className="mt-2 text-sm text-gris-500">Aucune formation dans ce domaine.</p>
       ) : (
-        <table className="mt-3 w-full border-collapse rounded-xl bg-white shadow-sm">
+        <table className="mt-3 w-full border-collapse rounded-xl bg-surface shadow-sm">
           <thead>
             <tr className="text-left">
               <th className="px-3 py-2 text-sm font-medium text-gris-600">Titre</th>

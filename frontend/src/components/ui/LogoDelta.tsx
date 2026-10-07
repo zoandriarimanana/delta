@@ -7,6 +7,10 @@
  * retouche de forme ni de couleur : le symbole, le mot « DELTA », et le logo
  * complet.
  *
+ * En mode sombre, le symbole bleu foncé se fondrait dans le fond : la classe
+ * `logo-delta-symbole` l'éclaircit par un filtre CSS (`index.css`), sans
+ * seconde version de l'image à maintenir.
+ *
  * En-tête : symbole et mot **côte à côte**, plutôt que le logo carré — dans
  * une barre de navigation horizontale, le mot y resterait illisible.
  */
@@ -46,14 +50,18 @@ export default function LogoDelta({
       <img
         src={logoSymbole}
         alt="Delta"
-        className={`${HAUTEURS.symbole} w-auto ${className}`}
+        className={`logo-delta-symbole ${HAUTEURS.symbole} w-auto ${className}`}
       />
     );
   }
   return (
     // Un seul nom accessible, « Delta » : le symbole est décoratif à côté du mot.
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <img src={logoSymbole} alt="" className={`${HAUTEURS.horizontal} w-auto`} />
+      <img
+        src={logoSymbole}
+        alt=""
+        className={`logo-delta-symbole ${HAUTEURS.horizontal} w-auto`}
+      />
       <img src={logoTexte} alt="Delta" className="h-5 w-auto" />
     </span>
   );

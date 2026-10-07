@@ -121,7 +121,7 @@ export default function AdministrationLogementsPage() {
       </div>
 
       {edition.mode !== 'ferme' && (
-        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-surface p-4">
           <h2 className="mb-4 text-lg font-medium text-gris-700">
             {edition.mode === 'creation' ? 'Nouveau logement' : 'Modifier le logement'}
           </h2>
@@ -147,7 +147,7 @@ export default function AdministrationLogementsPage() {
 
       {visibles.length > 0 && (
         <div className="mt-6 overflow-x-auto">
-          <table className="w-full border-collapse rounded-xl bg-white shadow-sm">
+          <table className="w-full border-collapse rounded-xl bg-surface shadow-sm">
             <thead>
               <tr className="border-b border-gris-200 text-left">
                 <th className="px-3 py-2" />

@@ -17,7 +17,7 @@ interface Proprietes {
 export default function ChampsEntreprise({ valeurs, surChangement }: Proprietes) {
   return (
     <>
-      <label className="flex flex-col gap-1 text-sm text-slate-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         Raison sociale
         <input
           type="text"
@@ -26,11 +26,11 @@ export default function ChampsEntreprise({ valeurs, surChangement }: Proprietes)
           onChange={(evenement) =>
             surChangement({ ...valeurs, raison_sociale: evenement.target.value })
           }
-          className="rounded border border-slate-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-slate-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         Numéro d’identification fiscale
         <input
           type="text"
@@ -39,12 +39,12 @@ export default function ChampsEntreprise({ valeurs, surChangement }: Proprietes)
           onChange={(evenement) =>
             surChangement({ ...valeurs, numero_id_fiscal: evenement.target.value })
           }
-          className="rounded border border-slate-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-slate-700">
-        Secteur d’activité <span className="text-slate-500">(facultatif)</span>
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
+        Secteur d’activité <span className="text-gris-500">(facultatif)</span>
         <input
           type="text"
           value={valeurs.secteur_activite ?? ''}
@@ -54,12 +54,12 @@ export default function ChampsEntreprise({ valeurs, surChangement }: Proprietes)
               secteur_activite: evenement.target.value || undefined,
             })
           }
-          className="rounded border border-slate-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-slate-700">
-        Contact référent <span className="text-slate-500">(facultatif)</span>
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
+        Contact référent <span className="text-gris-500">(facultatif)</span>
         <input
           type="text"
           value={valeurs.nom_contact_referent ?? ''}
@@ -69,7 +69,7 @@ export default function ChampsEntreprise({ valeurs, surChangement }: Proprietes)
               nom_contact_referent: evenement.target.value || undefined,
             })
           }
-          className="rounded border border-slate-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
     </>

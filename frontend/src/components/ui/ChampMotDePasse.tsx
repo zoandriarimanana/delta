@@ -40,7 +40,7 @@ export default function ChampMotDePasse({ className = '', ...reste }: Proprietes
         aria-label={visible ? 'Masquer la saisie' : 'Afficher la saisie'}
         aria-pressed={visible}
         title={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-        className="absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-500 hover:text-slate-800"
+        className="absolute inset-y-0 right-0 flex items-center px-2.5 text-gris-500 hover:text-gris-700"
       >
         {visible ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
       </button>

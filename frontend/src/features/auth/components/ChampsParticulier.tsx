@@ -17,7 +17,7 @@ interface Proprietes {
 export default function ChampsParticulier({ valeurs, surChangement }: Proprietes) {
   return (
     <>
-      <label className="flex flex-col gap-1 text-sm text-slate-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         Nom
         <input
           type="text"
@@ -26,11 +26,11 @@ export default function ChampsParticulier({ valeurs, surChangement }: Proprietes
           onChange={(evenement) =>
             surChangement({ ...valeurs, nom: evenement.target.value })
           }
-          className="rounded border border-slate-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-slate-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         Prénom
         <input
           type="text"
@@ -39,12 +39,12 @@ export default function ChampsParticulier({ valeurs, surChangement }: Proprietes
           onChange={(evenement) =>
             surChangement({ ...valeurs, prenom: evenement.target.value })
           }
-          className="rounded border border-slate-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-slate-700">
-        Date de naissance <span className="text-slate-500">(facultative)</span>
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
+        Date de naissance <span className="text-gris-500">(facultative)</span>
         <input
           type="date"
           value={valeurs.date_naissance ?? ''}
@@ -56,7 +56,7 @@ export default function ChampsParticulier({ valeurs, surChangement }: Proprietes
               date_naissance: evenement.target.value || undefined,
             })
           }
-          className="rounded border border-slate-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
     </>

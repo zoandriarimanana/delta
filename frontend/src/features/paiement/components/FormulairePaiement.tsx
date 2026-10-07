@@ -99,7 +99,7 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
   if (paiement === null) {
     return (
       <form
-        className="mt-2 space-y-2 rounded border border-gris-200 bg-white p-3"
+        className="mt-2 space-y-2 rounded border border-gris-200 bg-surface p-3"
         onSubmit={(evenement) => {
           evenement.preventDefault();
           void initier(idCommande, { methode, fournisseur });
@@ -163,7 +163,7 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
   }
 
   return (
-    <div className="mt-2 space-y-2 rounded border border-gris-200 bg-white p-3">
+    <div className="mt-2 space-y-2 rounded border border-gris-200 bg-surface p-3">
       <p className="text-sm text-gris-700">
         Statut du paiement : {LIBELLES_STATUT[paiement.statut] ?? paiement.statut}
       </p>

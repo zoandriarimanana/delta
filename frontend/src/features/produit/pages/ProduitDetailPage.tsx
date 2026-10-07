@@ -128,7 +128,7 @@ function Fiche({
           </p>
         </div>
 
-        <dl className="grid gap-2 rounded-xl border border-gris-200 bg-white p-4 text-sm">
+        <dl className="grid gap-2 rounded-xl border border-gris-200 bg-surface p-4 text-sm">
           <Ligne terme="Disponibilité">
             {!disponible
               ? 'Épuisé'
