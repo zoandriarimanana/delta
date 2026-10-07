@@ -24,7 +24,15 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 
-import { formaterDate, formaterMontant } from '../commande.service';
+import Badge from '@/components/ui/Badge';
+
+import {
+  formaterDate,
+  formaterMontant,
+  libelleModeReception,
+  libelleStatutCommande,
+  varianteStatutCommande,
+} from '../commande.service';
 import { useCommandesAdministration } from '../commande.administration';
 import type { Commande, StatutCommande } from '../commande.types';
 
@@ -73,7 +81,7 @@ export default function AdministrationCommandesPage() {
             <option value="">Tous</option>
             {STATUTS.map((valeur) => (
               <option key={valeur} value={valeur}>
-                {valeur}
+                {libelleStatutCommande(valeur)}
               </option>
             ))}
           </select>
@@ -135,12 +143,16 @@ function LigneCommande({ commande }: { commande: Commande }) {
       <td className="px-3 py-2 text-sm text-gris-600">
         {formaterDate(commande.date_commande)}
       </td>
-      <td className="px-3 py-2 text-sm text-gris-700">{commande.type_commande}</td>
+      <td className="px-3 py-2 text-sm text-gris-700">
+        {libelleModeReception(commande.type_commande)}
+      </td>
       <td className="px-3 py-2 text-sm text-gris-700">
         {formaterMontant(commande.montant_total)}
       </td>
       <td className="px-3 py-2 text-sm text-gris-700">
-        {commande.statut}
+        <Badge variante={varianteStatutCommande(commande.statut)}>
+          {libelleStatutCommande(commande.statut)}
+        </Badge>
         {commande.rembourse_le !== null && (
           <span className="ml-2 text-xs text-gris-500">(remboursée)</span>
         )}
