@@ -1,5 +1,9 @@
 /**
- * Tunnel de commande : récapitulatif, identité si invité, validation.
+ * Tunnel de commande : mode de réception, coordonnées si invité, validation.
+ *
+ * Deux colonnes, comme sur tout site marchand : à gauche ce que le client
+ * renseigne, en étapes numérotées ; à droite ce qu'il achète, le total et le
+ * bouton de validation (`ResumeCommande`).
  *
  * Après validation, l'invité est redirigé vers la page publique de sa commande —
  * une URL qu'il peut mettre en favori, plutôt qu'un UUID à recopier depuis un
@@ -7,20 +11,24 @@
  */
 
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { ShoppingBag, UserRound } from 'lucide-react';
 
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
 import ChoixReception from '../components/ChoixReception';
+import ConfirmationCommande from '../components/ConfirmationCommande';
 import EtapesCommande from '../components/EtapesCommande';
-import RecapitulatifMontants from '../components/RecapitulatifMontants';
+import ResumeCommande from '../components/ResumeCommande';
 import { usePanier, useValidationCommande } from '../commande.hooks';
-import {
-  formaterMontant,
-  TYPE_PAR_MODE,
-  type ModeReception,
-} from '../commande.service';
+import { TYPE_PAR_MODE, type ModeReception } from '../commande.service';
 import type { Commande } from '../commande.types';
+
+const ID_FORMULAIRE = 'formulaire-commande';
+
+const CLASSES_CHAMP =
+  'mt-1 block w-full rounded-lg border border-warm-gray-300 bg-white px-3 py-2.5 text-warm-gray-700 focus:border-terracotta focus:outline-none focus:ring-2 focus:ring-terracotta/20';
 
 export default function TunnelCommandePage() {
   const panier = usePanier();
@@ -37,35 +45,23 @@ export default function TunnelCommandePage() {
   const [confirmee, setConfirmee] = useState<Commande | null>(null);
 
   if (confirmee !== null) {
-    return (
-      <section>
-        <EtapesCommande courante="Confirmation" />
-        <h1 className="mt-6 text-2xl font-semibold text-slate-900">
-          Commande enregistrée
-        </h1>
-        <p className="mt-2 text-slate-700">
-          Votre commande n° {confirmee.id_commande} est enregistrée pour un montant de{' '}
-          {formaterMontant(confirmee.montant_total)}
-          {Number(confirmee.frais_livraison) > 0 && (
-            <>, dont {formaterMontant(confirmee.frais_livraison)} de livraison</>
-          )}
-          .
-        </p>
-        <Link to="/produits" className="mt-6 inline-block text-slate-900 underline">
-          Retour au catalogue
-        </Link>
-      </section>
-    );
+    return <ConfirmationCommande commande={confirmee} />;
   }
 
   if (panier.lignes.length === 0) {
     return (
-      <section>
-        <h1 className="text-2xl font-semibold text-slate-900">Commande</h1>
-        <p className="mt-2 text-slate-600">
+      <section className="mx-auto max-w-lg py-12 text-center">
+        <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-terracotta/10 text-terracotta">
+          <ShoppingBag size={36} aria-hidden />
+        </span>
+        <h1 className="mt-6 text-3xl font-semibold text-warm-gray-700">Commande</h1>
+        <p className="mt-3 text-warm-gray-500">
           Votre panier est vide, il n’y a rien à commander.
         </p>
-        <Link to="/produits" className="mt-4 inline-block text-slate-900 underline">
+        <Link
+          to="/produits"
+          className="mt-8 inline-flex items-center gap-2 rounded-full bg-terracotta px-6 py-3 font-semibold text-white no-underline shadow-md hover:bg-burgundy"
+        >
           Parcourir le catalogue
         </Link>
       </section>
@@ -95,79 +91,105 @@ export default function TunnelCommandePage() {
   return (
     <section>
       <EtapesCommande courante="Commande" />
-      <h1 className="mt-6 text-2xl font-semibold text-slate-900">Commande</h1>
+      <h1 className="mt-6 text-3xl font-semibold text-warm-gray-700">
+        Finaliser ma commande
+      </h1>
 
-      <ul className="mt-6 divide-y divide-slate-200">
-        {panier.lignes.map((ligne) => (
-          <li key={ligne.id_produit} className="flex justify-between py-2">
-            <span className="text-slate-900">
-              {ligne.nom} × {ligne.quantite}
-            </span>
-            <span className="text-slate-700">
-              {formaterMontant(Number(ligne.prix_unitaire) * ligne.quantite)}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-4 max-w-md sm:ml-auto">
-        <RecapitulatifMontants
+      <div className="mt-6 grid items-start gap-8 lg:grid-cols-[1fr_24rem]">
+        <form id={ID_FORMULAIRE} onSubmit={soumettre} className="space-y-6">
+          <Etape numero={1} titre="Mode de réception">
+            <ChoixReception
+              mode={mode}
+              adresse={adresse}
+              surMode={setMode}
+              surAdresse={setAdresse}
+            />
+          </Etape>
+
+          <Etape numero={2} titre="Vos coordonnées">
+            {connecte ? (
+              <p className="flex items-center gap-2 text-sm text-warm-gray-600">
+                <UserRound size={18} aria-hidden className="text-sage" />
+                Vous êtes connecté : la commande sera rattachée à votre compte et
+                visible dans « Mes commandes ».
+              </p>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-warm-gray-500">
+                  Vous commandez sans compte. Ces informations nous permettent de vous
+                  recontacter.{' '}
+                  <Link to="/connexion" className="font-medium text-terracotta">
+                    Déjà client ? Se connecter
+                  </Link>
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-warm-gray-700">Nom</span>
+                    <input
+                      required
+                      autoComplete="name"
+                      value={nom}
+                      onChange={(evenement) => setNom(evenement.target.value)}
+                      className={CLASSES_CHAMP}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-medium text-warm-gray-700">
+                      Téléphone ou e-mail
+                    </span>
+                    <input
+                      required
+                      autoComplete="tel"
+                      value={contact}
+                      onChange={(evenement) => setContact(evenement.target.value)}
+                      className={CLASSES_CHAMP}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+          </Etape>
+
+          {erreur !== null && (
+            <p
+              role="alert"
+              className="rounded-xl border border-terracotta/30 bg-terracotta/10 p-4 text-sm text-terracotta"
+            >
+              {erreur}
+            </p>
+          )}
+        </form>
+
+        <ResumeCommande
+          lignes={panier.lignes}
           sousTotal={panier.total}
           avecLivraison={mode === 'livraison'}
+          idFormulaire={ID_FORMULAIRE}
+          envoi={envoi}
         />
       </div>
+    </section>
+  );
+}
 
-      <form onSubmit={soumettre} className="mt-6 max-w-2xl space-y-4">
-        <ChoixReception
-          mode={mode}
-          adresse={adresse}
-          surMode={setMode}
-          surAdresse={setAdresse}
-        />
-
-        {!connecte && (
-          <>
-            <p className="text-sm text-slate-600">
-              Vous commandez sans compte. Ces informations nous permettent de vous
-              recontacter.
-            </p>
-            <label className="block">
-              <span className="text-sm text-slate-700">Nom</span>
-              <input
-                required
-                value={nom}
-                onChange={(evenement) => setNom(evenement.target.value)}
-                className="mt-1 block w-full rounded border border-slate-300 px-3 py-2"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm text-slate-700">Téléphone ou e-mail</span>
-              <input
-                required
-                value={contact}
-                onChange={(evenement) => setContact(evenement.target.value)}
-                className="mt-1 block w-full rounded border border-slate-300 px-3 py-2"
-              />
-            </label>
-          </>
-        )}
-
-        {erreur !== null && (
-          <p
-            role="alert"
-            className="rounded border border-red-200 bg-red-50 p-3 text-red-800"
-          >
-            {erreur}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={envoi}
-          className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
-        >
-          {envoi ? 'Envoi…' : 'Valider la commande'}
-        </button>
-      </form>
+function Etape({
+  numero,
+  titre,
+  children,
+}: {
+  numero: number;
+  titre: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-warm-gray-200 bg-white p-6 shadow-sm">
+      <h2 className="flex items-center gap-3 text-lg font-semibold text-warm-gray-700">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-terracotta text-sm text-white">
+          {numero}
+        </span>
+        {titre}
+      </h2>
+      <div className="mt-4">{children}</div>
     </section>
   );
 }

@@ -1,21 +1,14 @@
 /**
  * Une ligne du panier : vignette, nom, prix unitaire, quantité, total, retrait.
- *
- * La vignette est la **couverture** du produit (première photo de sa
- * galerie) ou, à défaut, son illustration — la même image que sur sa fiche,
- * pour que le client reconnaisse ce qu'il a choisi.
  */
 
 import { Link } from 'react-router';
 import { Trash2 } from 'lucide-react';
 
-import { urlPhoto } from '@/features/galerie/galerie.api';
-import { useGalerie } from '@/features/galerie/galerie.hooks';
-import { imageProduit } from '@/lib/images';
-
 import { formaterMontant } from '../commande.service';
 import type { LignePanier } from '../commande.types';
 import ChampQuantite from './ChampQuantite';
+import VignetteProduit from './VignetteProduit';
 
 interface Proprietes {
   ligne: LignePanier;
@@ -28,22 +21,16 @@ export default function LignePanierCarte({
   surQuantite,
   surRetrait,
 }: Proprietes) {
-  const bien = { produit: ligne.id_produit };
-  const { photos } = useGalerie(bien);
-  const couverture = photos[0];
-  const image =
-    couverture !== undefined
-      ? urlPhoto(bien, couverture.fichier)
-      : imageProduit(ligne.id_produit, ligne.nom);
   const auMaximum = ligne.quantite >= ligne.stock_disponible;
 
   return (
     <li className="flex gap-4 py-5">
-      <Link
-        to={`/produits/${ligne.id_produit}`}
-        className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-warm-gray-200 sm:h-28 sm:w-28"
-      >
-        <img src={image} alt="" className="h-full w-full object-cover" />
+      <Link to={`/produits/${ligne.id_produit}`} className="shrink-0">
+        <VignetteProduit
+          idProduit={ligne.id_produit}
+          nom={ligne.nom}
+          className="h-24 w-24 sm:h-28 sm:w-28"
+        />
       </Link>
 
       <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

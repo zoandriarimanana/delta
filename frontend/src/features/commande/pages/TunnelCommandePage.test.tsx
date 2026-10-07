@@ -6,7 +6,7 @@
  * l'invité vers sa commande.
  */
 
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -18,6 +18,7 @@ import {
   creerCommandeInvite,
   recupererCommandeInvitee,
 } from '../commande.api';
+import { recupererPhotos } from '@/features/galerie/galerie.api';
 import { recupererTarifLivraison } from '@/features/livraison/livraison.api';
 
 import { ecrirePanier, lirePanier, resynchroniserPanier } from '../commande.panier';
@@ -28,6 +29,10 @@ import TunnelCommandePage from './TunnelCommandePage';
 vi.mock('../commande.api');
 // Seule la lecture du tarif est simulée : la page de commande invitée appelle
 // aussi le suivi de livraison, qui doit garder son comportement réel.
+vi.mock('@/features/galerie/galerie.api', async (original) => ({
+  ...(await original<typeof import('@/features/galerie/galerie.api')>()),
+  recupererPhotos: vi.fn(),
+}));
 vi.mock('@/features/livraison/livraison.api', async (original) => ({
   ...(await original<typeof import('@/features/livraison/livraison.api')>()),
   recupererTarifLivraison: vi.fn(),
@@ -95,6 +100,7 @@ beforeEach(() => {
   resynchroniserPanier();
   effacerSession();
   vi.mocked(creerCommande).mockResolvedValue(COMMANDE_CLIENT);
+  vi.mocked(recupererPhotos).mockResolvedValue([]);
   vi.mocked(recupererTarifLivraison).mockResolvedValue({
     forfait: '5000.00',
     seuil_gratuite: '100000.00',
@@ -258,5 +264,37 @@ describe('mode de réception et frais de livraison', () => {
     await userEvent.click(screen.getByRole('button', { name: /valider/i }));
 
     expect(await screen.findByText(/dont 5\s000,00 Ar de livraison/)).toBeDefined();
+  });
+});
+
+describe('présentation du tunnel', () => {
+  it('résume la commande à côté du formulaire, avec un lien pour modifier le panier', () => {
+    definirSession('client');
+    act(remplirLePanier);
+    afficher();
+
+    const resume = within(
+      screen.getByRole('complementary', { name: 'Votre commande' })
+    );
+    expect(resume.getByText('Éclair × 2')).toBeDefined();
+    expect(resume.getByRole('link', { name: 'Modifier' }).getAttribute('href')).toBe(
+      '/panier'
+    );
+    expect(screen.getByRole('heading', { name: /Mode de réception/ })).toBeDefined();
+    expect(screen.getByRole('heading', { name: /Vos coordonnées/ })).toBeDefined();
+  });
+
+  it('la confirmation propose de suivre ses commandes', async () => {
+    definirSession('client');
+    act(remplirLePanier);
+    afficher();
+
+    await userEvent.click(screen.getByRole('button', { name: /valider/i }));
+
+    expect(
+      (await screen.findByRole('link', { name: /Suivre mes commandes/ })).getAttribute(
+        'href'
+      )
+    ).toBe('/commandes');
   });
 });

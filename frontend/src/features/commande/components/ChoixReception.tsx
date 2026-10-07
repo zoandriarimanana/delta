@@ -52,7 +52,7 @@ export default function ChoixReception({
 }: Proprietes) {
   return (
     <fieldset className="space-y-3">
-      <legend className="text-sm font-medium text-warm-gray-700">
+      <legend className="sr-only">
         Comment souhaitez-vous recevoir votre commande ?
       </legend>
       <div className="grid gap-2 sm:grid-cols-3">

@@ -1,0 +1,109 @@
+/**
+ * Colonne « Votre commande » du tunnel : articles, montants, validation.
+ *
+ * Le bouton de validation vit ici, hors du `<form>` de la colonne de gauche,
+ * et lui est rattaché par l'attribut `form` : le client le voit à côté du
+ * total qu'il s'apprête à payer, comme sur tout site marchand.
+ */
+
+import { Link } from 'react-router';
+import { Lock, PackageCheck, Store } from 'lucide-react';
+
+import { formaterMontant } from '../commande.service';
+import type { LignePanier } from '../commande.types';
+import RecapitulatifMontants from './RecapitulatifMontants';
+import VignetteProduit from './VignetteProduit';
+
+interface Proprietes {
+  lignes: LignePanier[];
+  sousTotal: number;
+  avecLivraison: boolean;
+  idFormulaire: string;
+  envoi: boolean;
+}
+
+export default function ResumeCommande({
+  lignes,
+  sousTotal,
+  avecLivraison,
+  idFormulaire,
+  envoi,
+}: Proprietes) {
+  return (
+    <aside
+      aria-labelledby="titre-votre-commande"
+      className="rounded-2xl border border-warm-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-6"
+    >
+      <div className="flex items-baseline justify-between">
+        <h2
+          id="titre-votre-commande"
+          className="text-lg font-semibold text-warm-gray-700"
+        >
+          Votre commande
+        </h2>
+        <Link
+          to="/panier"
+          className="text-sm font-medium text-terracotta no-underline hover:underline"
+        >
+          Modifier
+        </Link>
+      </div>
+
+      <ul className="mt-4 divide-y divide-warm-gray-200">
+        {lignes.map((ligne) => (
+          <li key={ligne.id_produit} className="flex items-center gap-3 py-3">
+            <span className="relative">
+              <VignetteProduit
+                idProduit={ligne.id_produit}
+                nom={ligne.nom}
+                className="h-14 w-14"
+              />
+              <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-warm-gray-600 px-1 text-xs font-semibold text-white">
+                {ligne.quantite}
+              </span>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-warm-gray-700">
+                {ligne.nom} × {ligne.quantite}
+              </span>
+              <span className="block text-xs text-warm-gray-500">
+                {formaterMontant(ligne.prix_unitaire)} / {ligne.unite_mesure}
+              </span>
+            </span>
+            <span className="whitespace-nowrap text-sm font-semibold text-warm-gray-700">
+              {formaterMontant(Number(ligne.prix_unitaire) * ligne.quantite)}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-4">
+        <RecapitulatifMontants sousTotal={sousTotal} avecLivraison={avecLivraison} />
+      </div>
+
+      <button
+        type="submit"
+        form={idFormulaire}
+        disabled={envoi}
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-terracotta px-6 py-3 font-semibold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-burgundy hover:shadow-lg disabled:translate-y-0 disabled:cursor-wait disabled:opacity-60"
+      >
+        <Lock size={16} aria-hidden />
+        {envoi ? 'Envoi…' : 'Valider la commande'}
+      </button>
+      <p className="mt-2 text-center text-xs text-warm-gray-500">
+        Montants confirmés par nos soins à la validation.
+      </p>
+
+      <ul className="mt-5 space-y-2 border-t border-warm-gray-200 pt-4 text-xs text-warm-gray-500">
+        <li className="flex items-center gap-2">
+          <PackageCheck size={16} aria-hidden className="text-sage" />
+          Suivi de votre commande en ligne
+        </li>
+        <li className="flex items-center gap-2">
+          <Store size={16} aria-hidden className="text-sage" />
+          Retrait en boutique gratuit
+        </li>
+      </ul>
+    </aside>
+  );
+}

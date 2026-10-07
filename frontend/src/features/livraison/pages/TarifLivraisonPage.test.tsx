@@ -45,6 +45,9 @@ it('affiche le tarif en vigueur', async () => {
 it('retirer la gratuité envoie un seuil nul', async () => {
   render(<TarifLivraisonPage />);
   const forfait = await screen.findByLabelText(/Forfait de livraison/);
+  // Attendre que l'effet ait rempli le champ : sinon, sous charge, la saisie
+  // pouvait précéder le remplissage et s'y ajouter.
+  await waitFor(() => expect(forfait).toHaveProperty('value', '5000.00'));
 
   await userEvent.clear(forfait);
   await userEvent.type(forfait, '4000');
