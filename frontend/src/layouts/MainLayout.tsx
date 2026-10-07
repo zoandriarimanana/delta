@@ -10,13 +10,16 @@
  * donc plus besoin de connaître `useEstPersonnelConnecte`.
  *
  * **Une seule source d'entrées pour les deux navigations.** La version large et
- * le menu mobile rendent la *même* liste, calculée une fois : deux listes
- * parallèles divergeraient au premier lien ajouté d'un seul côté — et c'est le
- * menu mobile, moins souvent regardé, qui resterait en retard.
+ * le menu mobile rendent les *mêmes* listes (`LIENS_PUBLICS`, `LIENS_COMPTE`) :
+ * deux listes parallèles divergeraient au premier lien ajouté d'un seul côté.
+ *
+ * **Sur grand écran**, les pages du compte vivent dans le menu « Mon compte »
+ * et le panier est une icône : une fois connecté, huit liens à plat faisaient
+ * déborder la barre (logo tronqué, libellés sur deux lignes).
  */
 
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, ShoppingCart, UserRound, X } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 
 import LogoDelta from '@/components/ui/LogoDelta';
@@ -25,12 +28,12 @@ import { useDeconnexion } from '@/features/auth/auth.hooks';
 import { usePanier } from '@/features/commande/commande.hooks';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import MenuCompte from './MenuCompte';
+
 interface Lien {
   vers: string;
   libelle: string;
   exact?: boolean;
-  /** Valeur affichée en pastille, masquée si nulle. Sert au compteur de panier. */
-  compteur?: number;
 }
 
 const LIENS_PUBLICS: Lien[] = [
@@ -41,11 +44,20 @@ const LIENS_PUBLICS: Lien[] = [
   { vers: '/logements', libelle: 'Hébergements' },
 ];
 
+/** Pages du client connecté — dans « Mon compte » sur grand écran, à plat sur mobile. */
+const LIENS_COMPTE: Lien[] = [
+  { vers: '/commandes', libelle: 'Mes commandes' },
+  { vers: '/reservations', libelle: 'Mes réservations' },
+];
+
 function classeLien({ isActive }: { isActive: boolean }): string {
-  const base = 'rounded-lg px-3 py-2 text-sm font-medium transition-colors';
+  // Soulignement plutôt que pavé plein : la rubrique active se lit sans que
+  // la barre change de hauteur ni de largeur d'une page à l'autre.
+  const base =
+    'relative whitespace-nowrap px-3 py-2 text-sm font-medium no-underline transition-colors after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded-full after:transition-colors';
   return isActive
-    ? `${base} bg-terracotta text-white`
-    : `${base} text-warm-gray-700 hover:bg-warm-gray-100`;
+    ? `${base} text-terracotta after:bg-terracotta`
+    : `${base} text-warm-gray-700 hover:text-terracotta after:bg-transparent`;
 }
 
 function classeLienMobile({ isActive }: { isActive: boolean }): string {
@@ -72,38 +84,36 @@ export default function MainLayout() {
   const deconnecter = useDeconnexion();
   const naviguer = useNavigate();
 
-  const liens: Lien[] = [
-    ...LIENS_PUBLICS,
-    ...(connecte
-      ? [
-          { vers: '/commandes', libelle: 'Mes commandes' },
-          { vers: '/reservations', libelle: 'Mes réservations' },
-        ]
-      : []),
-    { vers: '/panier', libelle: 'Panier', compteur: nombre },
-    ...(connecte ? [] : [{ vers: '/connexion', libelle: 'Connexion' }]),
-  ];
-
   function seDeconnecter() {
     // Ni jeton ni magasin à effacer nous-mêmes ici : `useDeconnexion` appelle
     // le serveur (seul capable d'effacer le cookie `httpOnly`) puis met à jour
     // le magasin réactif de session — la navigation ci-dessous n'a plus qu'à
-    // suivre. Fini le rechargement complet : le magasin réactif (T0.10) rend
-    // désormais inutile le contournement que ce commentaire décrivait encore
-    // récemment ici.
+    // suivre.
     void deconnecter().then(() => naviguer('/'));
   }
 
+  const pastillePanier = nombre > 0 && (
+    <span
+      data-testid="compteur-panier"
+      className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta px-1 text-xs font-semibold text-white"
+    >
+      {nombre}
+    </span>
+  );
+
   return (
     <div className="flex min-h-screen flex-col bg-cream">
-      <header className="border-b-2 border-warm-gray-200 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-6">
-          <NavLink to="/" className="transition-opacity hover:opacity-80">
+      <header className="sticky top-0 z-20 border-b border-warm-gray-200 bg-white/95 shadow-sm backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+          <NavLink to="/" className="shrink-0 transition-opacity hover:opacity-80">
             <LogoDelta />
           </NavLink>
 
-          <nav className="hidden gap-1 md:flex">
-            {liens.map((lien) => (
+          <nav
+            aria-label="Navigation principale"
+            className="hidden items-center lg:flex"
+          >
+            {LIENS_PUBLICS.map((lien) => (
               <NavLink
                 key={lien.vers}
                 to={lien.vers}
@@ -111,41 +121,58 @@ export default function MainLayout() {
                 className={classeLien}
               >
                 {lien.libelle}
-                {lien.compteur !== undefined && lien.compteur > 0 && (
-                  <span
-                    data-testid="compteur-panier"
-                    className="ml-2 inline-block rounded-full bg-terracotta px-2 py-0.5 text-xs font-semibold text-white"
-                  >
-                    {lien.compteur}
-                  </span>
-                )}
               </NavLink>
             ))}
-            {connecte && (
-              <button
-                type="button"
-                onClick={seDeconnecter}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-warm-gray-700 transition-colors hover:bg-warm-gray-100"
-              >
-                Déconnexion
-              </button>
-            )}
           </nav>
 
-          <button
-            type="button"
-            onClick={() => setMenuOuvert(!menuOuvert)}
-            className="rounded-lg p-2 text-warm-gray-700 transition-colors hover:bg-warm-gray-100 md:hidden"
-            aria-label={menuOuvert ? 'Fermer le menu' : 'Ouvrir le menu'}
-            aria-expanded={menuOuvert}
-          >
-            {menuOuvert ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          <div className="flex items-center gap-2">
+            <NavLink
+              to="/panier"
+              aria-label={nombre > 0 ? `Panier, ${nombre} article(s)` : 'Panier'}
+              className={({ isActive }) =>
+                `relative rounded-full p-2.5 transition-colors ${
+                  isActive
+                    ? 'bg-terracotta/10 text-terracotta'
+                    : 'text-warm-gray-700 hover:bg-warm-gray-100 hover:text-terracotta'
+                }`
+              }
+            >
+              <ShoppingCart size={22} aria-hidden />
+              {pastillePanier}
+            </NavLink>
+
+            <div className="hidden lg:block">
+              {connecte ? (
+                <MenuCompte surDeconnexion={seDeconnecter} />
+              ) : (
+                <NavLink
+                  to="/connexion"
+                  className="flex items-center gap-2 rounded-full bg-terracotta px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors hover:bg-burgundy"
+                >
+                  <UserRound size={18} aria-hidden />
+                  Connexion
+                </NavLink>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setMenuOuvert(!menuOuvert)}
+              className="rounded-lg p-2 text-warm-gray-700 transition-colors hover:bg-warm-gray-100 lg:hidden"
+              aria-label={menuOuvert ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-expanded={menuOuvert}
+            >
+              {menuOuvert ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
 
         {menuOuvert && (
-          <nav className="flex flex-col gap-2 border-t border-warm-gray-200 bg-white px-4 py-4 md:hidden">
-            {liens.map((lien) => (
+          <nav
+            aria-label="Menu"
+            className="flex flex-col gap-1 border-t border-warm-gray-200 bg-white px-4 py-4 lg:hidden"
+          >
+            {[...LIENS_PUBLICS, ...(connecte ? LIENS_COMPTE : [])].map((lien) => (
               <NavLink
                 key={lien.vers}
                 to={lien.vers}
@@ -154,14 +181,10 @@ export default function MainLayout() {
                 onClick={fermerMenu}
               >
                 {lien.libelle}
-                {lien.compteur !== undefined && lien.compteur > 0 && (
-                  <span className="ml-2 inline-block rounded-full bg-terracotta px-2 py-0.5 text-xs font-semibold text-white">
-                    {lien.compteur}
-                  </span>
-                )}
               </NavLink>
             ))}
-            {connecte && (
+            <div className="my-2 border-t border-warm-gray-200" />
+            {connecte ? (
               <button
                 type="button"
                 onClick={() => {
@@ -172,12 +195,20 @@ export default function MainLayout() {
               >
                 Déconnexion
               </button>
+            ) : (
+              <NavLink
+                to="/connexion"
+                className={classeLienMobile}
+                onClick={fermerMenu}
+              >
+                Connexion
+              </NavLink>
             )}
           </nav>
         )}
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         {/* Le routeur injecte ici la page correspondant à l'URL. */}
         <Outlet />
       </main>
@@ -188,7 +219,7 @@ export default function MainLayout() {
       <BulleAssistant />
 
       <footer className="border-t border-warm-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-4 text-sm text-warm-gray-500">
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-4 text-sm text-warm-gray-500">
           <LogoDelta forme="symbole" className="h-6" />
           <span>Delta</span>
         </div>

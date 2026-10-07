@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Croissant, ChefHat, Building2, Bed, ShoppingCart, User } from 'lucide-react';
 
+import { useEstConnecte } from '@/lib/useEstConnecte';
+
 const MODULES = [
   {
     href: '/produits',
@@ -33,17 +35,27 @@ const MODULES = [
     description: 'Passez votre commande en ligne',
     icon: ShoppingCart,
   },
-  {
-    href: '/connexion',
-    title: 'Mon compte',
-    description: 'Connectez-vous pour gérer vos réservations',
-    icon: User,
-  },
 ];
+
+/** Carte « Mon compte » : connexion pour un visiteur, ses commandes pour un client. */
+const CARTE_VISITEUR = {
+  href: '/connexion',
+  title: 'Mon compte',
+  description: 'Connectez-vous pour gérer vos réservations',
+  icon: User,
+};
+const CARTE_CLIENT = {
+  href: '/commandes',
+  title: 'Mon compte',
+  description: 'Retrouvez vos commandes et vos réservations',
+  icon: User,
+};
 
 export default function AccueilPage() {
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
   const navigate = useNavigate();
+  const connecte = useEstConnecte();
+  const modules = [...MODULES, connecte ? CARTE_CLIENT : CARTE_VISITEUR];
 
   const handleModuleClick = (href: string) => {
     setSelectedHref(href);
@@ -70,7 +82,7 @@ export default function AccueilPage() {
 
       {/* Grille de modules */}
       <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {MODULES.map((module) => (
+        {modules.map((module) => (
           <ModuleCard
             key={module.href}
             href={module.href}

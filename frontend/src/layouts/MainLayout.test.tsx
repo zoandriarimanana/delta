@@ -6,7 +6,7 @@
  * `layouts/` (cf. `docs/architecture.md`).
  */
 
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -100,15 +100,39 @@ it('offre « Connexion » au visiteur, jamais « Déconnexion »', () => {
   expect(screen.queryByRole('button', { name: /déconnexion/i })).toBeNull();
 });
 
-it('offre la déconnexion au client connecté', () => {
+it('offre la déconnexion au client connecté, dans « Mon compte »', async () => {
   // Sans elle, un client ne pourrait pas fermer sa session autrement qu'en
-  // vidant le stockage du navigateur.
+  // vidant le stockage du navigateur. Elle vit dans le menu « Mon compte »,
+  // qui libère l'en-tête une fois connecté.
   definirSession('client');
 
   afficher();
+  await userEvent.click(screen.getByRole('button', { name: /mon compte/i }));
 
-  expect(screen.getByRole('button', { name: /déconnexion/i })).toBeDefined();
+  const menu = screen.getByRole('menu', { name: 'Mon compte' });
+  expect(within(menu).getByRole('menuitem', { name: /déconnexion/i })).toBeDefined();
+  expect(within(menu).getByRole('menuitem', { name: /mes commandes/i })).toBeDefined();
+  expect(
+    within(menu).getByRole('menuitem', { name: /mes réservations/i })
+  ).toBeDefined();
   expect(screen.queryByRole('link', { name: /^connexion$/i })).toBeNull();
+});
+
+it('le menu « Mon compte » se referme sur Échap', async () => {
+  definirSession('client');
+  afficher();
+
+  await userEvent.click(screen.getByRole('button', { name: /mon compte/i }));
+  await userEvent.keyboard('{Escape}');
+
+  expect(screen.queryByRole('menu')).toBeNull();
+});
+
+it('le panier est une icône dont le nom annonce le nombre d’articles', () => {
+  act(() => remplir(3));
+  afficher();
+
+  expect(screen.getByRole('link', { name: 'Panier, 3 article(s)' })).toBeDefined();
 });
 
 it('ne propose les pages client qu’au client', () => {
@@ -201,12 +225,14 @@ it('se déconnecte sans rechargement : la nav se met à jour, le panier survit',
 
   const utilisateur = userEvent.setup();
   afficher();
-  await utilisateur.click(screen.getByRole('button', { name: /déconnexion/i }));
+  await utilisateur.click(screen.getByRole('button', { name: /mon compte/i }));
+  await utilisateur.click(screen.getByRole('menuitem', { name: /déconnexion/i }));
 
   await waitFor(() => expect(deconnecter).toHaveBeenCalledOnce());
   await waitFor(() => expect(lireSession().type).toBeNull());
   expect(screen.getByRole('link', { name: /connexion/i })).toBeDefined();
-  expect(screen.queryByRole('button', { name: /déconnexion/i })).toBeNull();
+  expect(screen.queryByRole('button', { name: /mon compte/i })).toBeNull();
+  expect(screen.queryByRole('menuitem', { name: /déconnexion/i })).toBeNull();
   // Le panier n'a pas été vidé : il vit dans un magasin distinct
   // (`commande.panier.ts`), indépendant de la session.
   expect(screen.getByTestId('compteur-panier').textContent).toBe('2');
