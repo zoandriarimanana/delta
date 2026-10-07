@@ -12,6 +12,7 @@ import { Link, useNavigate } from 'react-router';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
 import ChoixReception from '../components/ChoixReception';
+import EtapesCommande from '../components/EtapesCommande';
 import RecapitulatifMontants from '../components/RecapitulatifMontants';
 import { usePanier, useValidationCommande } from '../commande.hooks';
 import {
@@ -38,7 +39,10 @@ export default function TunnelCommandePage() {
   if (confirmee !== null) {
     return (
       <section>
-        <h1 className="text-2xl font-semibold text-slate-900">Commande enregistrée</h1>
+        <EtapesCommande courante="Confirmation" />
+        <h1 className="mt-6 text-2xl font-semibold text-slate-900">
+          Commande enregistrée
+        </h1>
         <p className="mt-2 text-slate-700">
           Votre commande n° {confirmee.id_commande} est enregistrée pour un montant de{' '}
           {formaterMontant(confirmee.montant_total)}
@@ -90,7 +94,8 @@ export default function TunnelCommandePage() {
 
   return (
     <section>
-      <h1 className="text-2xl font-semibold text-slate-900">Commande</h1>
+      <EtapesCommande courante="Commande" />
+      <h1 className="mt-6 text-2xl font-semibold text-slate-900">Commande</h1>
 
       <ul className="mt-6 divide-y divide-slate-200">
         {panier.lignes.map((ligne) => (

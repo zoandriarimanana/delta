@@ -1,72 +1,86 @@
-/** Panier : lignes, quantités, total d'affichage, accès au tunnel. */
+/** Panier : lignes, quantités, récapitulatif, accès au tunnel. */
 
 import { Link } from 'react-router';
+import { GraduationCap, ShoppingBag } from 'lucide-react';
 
-import ChampQuantite from '../components/ChampQuantite';
+import EtapesCommande from '../components/EtapesCommande';
+import LignePanierCarte from '../components/LignePanierCarte';
+import ResumePanier from '../components/ResumePanier';
 import { usePanier } from '../commande.hooks';
-import { formaterMontant } from '../commande.service';
 
 export default function PanierPage() {
   const panier = usePanier();
 
   if (panier.lignes.length === 0) {
-    return (
-      <section>
-        <h1 className="text-2xl font-semibold text-slate-900">Panier</h1>
-        <p className="mt-2 text-slate-600">Votre panier est vide.</p>
-        <Link to="/produits" className="mt-4 inline-block text-slate-900 underline">
-          Parcourir le catalogue
-        </Link>
-      </section>
-    );
+    return <PanierVide />;
   }
 
   return (
     <section>
-      <h1 className="text-2xl font-semibold text-slate-900">Panier</h1>
+      <EtapesCommande courante="Panier" />
 
-      <ul className="mt-6 divide-y divide-slate-200">
-        {panier.lignes.map((ligne) => (
-          <li key={ligne.id_produit} className="flex flex-wrap items-center gap-4 py-4">
-            <span className="flex-1 text-slate-900">{ligne.nom}</span>
-            <span className="text-slate-600">
-              {formaterMontant(ligne.prix_unitaire)} / {ligne.unite_mesure}
-            </span>
-            <ChampQuantite
-              ligne={ligne}
-              onChangement={(quantite) => panier.modifier(ligne.id_produit, quantite)}
-            />
+      <div className="mt-6 flex flex-wrap items-baseline justify-between gap-2">
+        <h1 className="text-3xl font-semibold text-warm-gray-700">Mon panier</h1>
+        <p className="text-sm text-warm-gray-500">
+          {panier.nombre} article{panier.nombre > 1 ? 's' : ''}
+        </p>
+      </div>
+
+      <div className="mt-6 grid items-start gap-8 lg:grid-cols-[1fr_22rem]">
+        <div className="rounded-2xl border border-warm-gray-200 bg-white px-5 shadow-sm">
+          <ul className="divide-y divide-warm-gray-200">
+            {panier.lignes.map((ligne) => (
+              <LignePanierCarte
+                key={ligne.id_produit}
+                ligne={ligne}
+                surQuantite={(quantite) => panier.modifier(ligne.id_produit, quantite)}
+                surRetrait={() => panier.retirer(ligne.id_produit)}
+              />
+            ))}
+          </ul>
+          <div className="flex justify-end border-t border-warm-gray-200 py-4">
             <button
               type="button"
-              onClick={() => panier.retirer(ligne.id_produit)}
-              className="text-sm text-red-700 underline"
+              onClick={panier.vider}
+              className="text-sm text-warm-gray-500 underline-offset-2 transition-colors hover:text-terracotta hover:underline"
             >
-              Retirer
+              Vider le panier
             </button>
-          </li>
-        ))}
-      </ul>
+          </div>
+        </div>
 
-      <p className="mt-4 text-right text-lg font-semibold text-slate-900">
-        Total : {formaterMontant(panier.total)}
-      </p>
-      {/* Le total est indicatif : le serveur recalcule à partir des prix du
-          catalogue au moment de la commande. */}
-      <p className="text-right text-sm text-slate-500">
-        Montant indicatif, confirmé à la validation.
-      </p>
+        <ResumePanier nombreArticles={panier.nombre} sousTotal={panier.total} />
+      </div>
+    </section>
+  );
+}
 
-      <div className="mt-6 flex gap-4">
-        <Link to="/commande" className="rounded bg-slate-900 px-4 py-2 text-white">
-          Valider la commande
-        </Link>
-        <button
-          type="button"
-          onClick={panier.vider}
-          className="text-sm text-slate-700 underline"
+function PanierVide() {
+  return (
+    <section className="mx-auto max-w-lg py-12 text-center">
+      <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-terracotta/10 text-terracotta">
+        <ShoppingBag size={36} aria-hidden />
+      </span>
+      <h1 className="mt-6 text-3xl font-semibold text-warm-gray-700">Mon panier</h1>
+      <p className="mt-3 text-warm-gray-500">
+        Votre panier est vide. Laissez-vous tenter par nos pâtisseries, pains et
+        confitures maison.
+      </p>
+      <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <Link
+          to="/produits"
+          className="inline-flex items-center gap-2 rounded-full bg-terracotta px-6 py-3 font-semibold text-white no-underline shadow-md transition-all hover:-translate-y-0.5 hover:bg-burgundy"
         >
-          Vider le panier
-        </button>
+          <ShoppingBag size={18} aria-hidden />
+          Découvrir nos produits
+        </Link>
+        <Link
+          to="/formations"
+          className="inline-flex items-center gap-2 rounded-full border border-warm-gray-300 bg-white px-6 py-3 font-medium text-warm-gray-700 no-underline transition-colors hover:border-terracotta hover:text-terracotta"
+        >
+          <GraduationCap size={18} aria-hidden />
+          Voir les formations
+        </Link>
       </div>
     </section>
   );
