@@ -11,9 +11,16 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Check, Minus, Plus, ShoppingCart } from 'lucide-react';
+import { Check, Minus, Plus, ShoppingCart, Sparkles } from 'lucide-react';
 
+import ChampsPersonnalisation from '@/features/commande/components/ChampsPersonnalisation';
 import { usePanier } from '@/features/commande/commande.hooks';
+import {
+  descriptionDemande,
+  formaterMontant,
+  PERSONNALISATION_VIDE,
+} from '@/features/commande/commande.service';
+import type { PersonnalisationPanier } from '@/features/commande/commande.types';
 
 import type { Produit } from '../produit.types';
 import ComparaisonLivraison from './ComparaisonLivraison';
@@ -29,6 +36,14 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
   const panier = usePanier();
   const [quantite, setQuantite] = useState(1);
   const [ajoute, setAjoute] = useState(false);
+  const [personnaliser, setPersonnaliser] = useState(false);
+  const [personnalisation, setPersonnalisation] =
+    useState<PersonnalisationPanier>(PERSONNALISATION_VIDE);
+  const [erreurPersonnalisation, setErreurPersonnalisation] = useState(false);
+  const supplement =
+    personnaliser && produit.supplement_personnalisation !== null
+      ? Number(produit.supplement_personnalisation)
+      : 0;
   const maximum = produit.stock_disponible;
 
   function changer(valeur: number) {
@@ -40,7 +55,56 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
 
   return (
     <div className="space-y-3">
-      <ComparaisonLivraison produit={produit} quantite={quantite} />
+      {produit.est_personnalisable && (
+        <div className="rounded-xl border border-warm-gray-200 bg-white">
+          <label className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
+            <span className="flex items-center gap-2 text-sm font-semibold text-warm-gray-700">
+              <Sparkles size={18} aria-hidden className="text-amber" />
+              Personnaliser ce produit
+              {produit.supplement_personnalisation !== null && (
+                <span className="font-normal text-warm-gray-500">
+                  (+{formaterMontant(produit.supplement_personnalisation)} / unité)
+                </span>
+              )}
+            </span>
+            <input
+              type="checkbox"
+              checked={personnaliser}
+              onChange={(e) => {
+                setPersonnaliser(e.target.checked);
+                setErreurPersonnalisation(false);
+                setAjoute(false);
+              }}
+              className="h-5 w-5 accent-terracotta"
+            />
+          </label>
+          {personnaliser && (
+            <div className="border-t border-warm-gray-200 px-4 py-4">
+              <p className="mb-3 text-xs text-warm-gray-500">
+                Décrivez votre demande : notre équipe la reçoit avec la commande.
+              </p>
+              <ChampsPersonnalisation
+                valeurs={personnalisation}
+                surChangement={(valeurs) => {
+                  setPersonnalisation(valeurs);
+                  setErreurPersonnalisation(false);
+                  setAjoute(false);
+                }}
+              />
+              {erreurPersonnalisation && (
+                <p role="alert" className="mt-3 text-sm text-terracotta">
+                  Indiquez au moins un message, un thème ou une précision.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      <ComparaisonLivraison
+        produit={produit}
+        quantite={quantite}
+        supplementUnitaire={supplement}
+      />
       <div className="flex flex-col gap-3 sm:flex-row">
         <div
           role="group"
@@ -76,7 +140,17 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
         <button
           type="button"
           onClick={() => {
-            panier.ajouter(produit, quantite);
+            if (personnaliser) {
+              // Une personnalisation vide n'apprendrait rien à l'équipe, et le
+              // serveur la refuserait : on le dit avant l'ajout.
+              if (descriptionDemande(personnalisation) === '') {
+                setErreurPersonnalisation(true);
+                return;
+              }
+              panier.ajouter(produit, quantite, personnalisation);
+            } else {
+              panier.ajouter(produit, quantite);
+            }
             setAjoute(true);
           }}
           className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-terracotta px-6 py-3 font-semibold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-burgundy hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta active:translate-y-0"

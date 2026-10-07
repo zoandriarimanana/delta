@@ -9,7 +9,7 @@
 import { Link } from 'react-router';
 import { Lock, PackageCheck, Store } from 'lucide-react';
 
-import { formaterMontant } from '../commande.service';
+import { formaterMontant, supplementLigne } from '../commande.service';
 import type { LignePanier } from '../commande.types';
 import RecapitulatifMontants from './RecapitulatifMontants';
 import VignetteProduit from './VignetteProduit';
@@ -69,9 +69,16 @@ export default function ResumeCommande({
               <span className="block text-xs text-warm-gray-500">
                 {formaterMontant(ligne.prix_unitaire)} / {ligne.unite_mesure}
               </span>
+              {ligne.personnalisation !== undefined && (
+                <span className="mt-0.5 block text-xs font-medium text-amber">
+                  Personnalisé
+                </span>
+              )}
             </span>
             <span className="whitespace-nowrap text-sm font-semibold text-warm-gray-700">
-              {formaterMontant(Number(ligne.prix_unitaire) * ligne.quantite)}
+              {formaterMontant(
+                Number(ligne.prix_unitaire) * ligne.quantite + supplementLigne(ligne)
+              )}
             </span>
           </li>
         ))}

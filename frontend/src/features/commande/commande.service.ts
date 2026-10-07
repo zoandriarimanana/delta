@@ -12,6 +12,8 @@ import type {
   Commande,
   LignePanier,
   LigneCommandeEnvoyee,
+  PersonnalisationEnvoyee,
+  PersonnalisationPanier,
   StatutCommande,
   TypeCommande,
 } from './commande.types';
@@ -57,7 +59,8 @@ export function estTerminee(commande: Pick<Commande, 'statut' | 'type_commande'>
 export function ajouterAuPanier(
   panier: LignePanier[],
   produit: Produit,
-  quantite = 1
+  quantite = 1,
+  personnalisation?: PersonnalisationPanier
 ): LignePanier[] {
   if (produit.stock_disponible <= 0 || quantite <= 0) {
     return panier;
@@ -65,7 +68,16 @@ export function ajouterAuPanier(
 
   const existante = panier.find((l) => l.id_produit === produit.id_produit);
   if (existante) {
-    return modifierQuantite(panier, produit.id_produit, existante.quantite + quantite);
+    const augmente = modifierQuantite(
+      panier,
+      produit.id_produit,
+      existante.quantite + quantite
+    );
+    // Une nouvelle personnalisation remplace l'ancienne : la ligne n'en porte
+    // qu'une, appliquée à toute la quantité.
+    return personnalisation === undefined
+      ? augmente
+      : definirPersonnalisation(augmente, produit.id_produit, personnalisation);
   }
 
   return [
@@ -77,8 +89,73 @@ export function ajouterAuPanier(
       unite_mesure: produit.unite_mesure,
       quantite: Math.min(quantite, produit.stock_disponible),
       stock_disponible: produit.stock_disponible,
+      supplement_personnalisation: produit.supplement_personnalisation,
+      ...(personnalisation === undefined ? {} : { personnalisation }),
     },
   ];
+}
+
+/**
+ * Pose, remplace ou retire (`null`) la personnalisation d'une ligne.
+ *
+ * Une personnalisation vide — aucun champ renseigné — vaut un retrait : elle
+ * n'aurait rien à dire à l'administrateur, et le serveur la refuserait
+ * (`description_demande` est obligatoire).
+ */
+export function definirPersonnalisation(
+  panier: LignePanier[],
+  idProduit: number,
+  personnalisation: PersonnalisationPanier | null
+): LignePanier[] {
+  const valide =
+    personnalisation !== null && descriptionDemande(personnalisation) !== ''
+      ? personnalisation
+      : null;
+  return panier.map((ligne) => {
+    if (ligne.id_produit !== idProduit) return ligne;
+    const copie: LignePanier = { ...ligne };
+    if (valide === null) {
+      delete copie.personnalisation;
+    } else {
+      copie.personnalisation = valide;
+    }
+    return copie;
+  });
+}
+
+const RUBRIQUES: [keyof PersonnalisationPanier, string][] = [
+  ['message', 'Message à écrire'],
+  ['theme', 'Thème et couleurs'],
+  ['precisions', 'Autres précisions'],
+];
+
+/**
+ * Texte envoyé dans `description_demande` : une rubrique par ligne,
+ * nommée, pour que l'administrateur lise la demande d'un coup d'œil. Les
+ * rubriques vides sont omises ; aucune rubrique renseignée donne `''`.
+ */
+export function descriptionDemande(personnalisation: PersonnalisationPanier): string {
+  return RUBRIQUES.map(([champ, libelle]) => [libelle, personnalisation[champ].trim()])
+    .filter(([, valeur]) => valeur !== '')
+    .map(([libelle, valeur]) => `${libelle} : ${valeur}`)
+    .join('\n');
+}
+
+/** Charge utile envoyée au serveur — sans supplément, qu'il calcule lui-même. */
+export function versPersonnalisationEnvoyee(
+  personnalisation: PersonnalisationPanier
+): PersonnalisationEnvoyee {
+  const ingredients = personnalisation.ingredients.trim();
+  return {
+    description_demande: descriptionDemande(personnalisation),
+    ...(ingredients === '' ? {} : { ingredients_specifiques: ingredients }),
+  };
+}
+
+/** Supplément d'une ligne (par unité × quantité), 0 si elle n'est pas personnalisée. */
+export function supplementLigne(ligne: LignePanier): number {
+  if (ligne.personnalisation === undefined) return 0;
+  return Number(ligne.supplement_personnalisation ?? 0) * ligne.quantite;
 }
 
 /**
@@ -123,7 +200,8 @@ export function nombreArticles(panier: LignePanier[]): number {
  */
 export function totalPanier(panier: LignePanier[]): number {
   return panier.reduce(
-    (total, ligne) => total + Number(ligne.prix_unitaire) * ligne.quantite,
+    (total, ligne) =>
+      total + Number(ligne.prix_unitaire) * ligne.quantite + supplementLigne(ligne),
     0
   );
 }
@@ -151,6 +229,9 @@ export function versLignesEnvoyees(panier: LignePanier[]): LigneCommandeEnvoyee[
   return panier.map((ligne) => ({
     id_produit: ligne.id_produit,
     quantite: ligne.quantite,
+    ...(ligne.personnalisation === undefined
+      ? {}
+      : { personnalisation: versPersonnalisationEnvoyee(ligne.personnalisation) }),
   }));
 }
 
@@ -216,4 +297,12 @@ export const TYPE_PAR_MODE: Record<ModeReception, TypeCommande> = {
   livraison: 'En_ligne',
   retrait: 'A_emporter',
   sur_place: 'Sur_place',
+};
+
+/** Personnalisation sans aucune saisie — point de départ des formulaires. */
+export const PERSONNALISATION_VIDE: PersonnalisationPanier = {
+  message: '',
+  theme: '',
+  precisions: '',
+  ingredients: '',
 };

@@ -12,6 +12,8 @@ import { useState } from 'react';
 
 import FormulaireAvis from '@/features/avis/components/FormulaireAvis';
 
+import DemandePersonnalisationLue from './DemandePersonnalisationLue';
+
 import { estTerminee, formaterMontant } from '../commande.service';
 import type { Commande, LigneCommandeLue } from '../commande.types';
 
@@ -66,9 +68,19 @@ function LigneAvecAvis({
           {ligne.nom_produit} × {ligne.quantite}
         </span>
         <span className="text-slate-700">
-          {formaterMontant(Number(ligne.prix_unitaire_applique) * ligne.quantite)}
+          {formaterMontant(
+            (Number(ligne.prix_unitaire_applique) +
+              Number(ligne.personnalisation?.supplement_prix ?? 0)) *
+              ligne.quantite
+          )}
         </span>
       </div>
+      {ligne.personnalisation != null && (
+        <DemandePersonnalisationLue
+          personnalisation={ligne.personnalisation}
+          quantite={ligne.quantite}
+        />
+      )}
       {proposerAvis && !ouvert && (
         <button
           type="button"

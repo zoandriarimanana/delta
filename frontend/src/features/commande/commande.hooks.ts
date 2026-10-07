@@ -20,6 +20,7 @@ import {
 } from './commande.panier';
 import {
   ajouterAuPanier,
+  definirPersonnalisation,
   modifierQuantite,
   nombreArticles,
   retirerDuPanier,
@@ -31,6 +32,7 @@ import type {
   Commande,
   CommandePersonnelEnvoyee,
   LignePanier,
+  PersonnalisationPanier,
   TypeCommande,
 } from './commande.types';
 import type { Produit } from '@/features/produit/produit.types';
@@ -42,7 +44,16 @@ export interface Panier {
   lignes: LignePanier[];
   nombre: number;
   total: number;
-  ajouter: (produit: Produit, quantite?: number) => void;
+  ajouter: (
+    produit: Produit,
+    quantite?: number,
+    personnalisation?: PersonnalisationPanier
+  ) => void;
+  /** Pose, remplace ou retire (`null`) la personnalisation d'une ligne. */
+  personnaliser: (
+    idProduit: number,
+    personnalisation: PersonnalisationPanier | null
+  ) => void;
   modifier: (idProduit: number, quantite: number) => void;
   retirer: (idProduit: number) => void;
   vider: () => void;
@@ -73,8 +84,17 @@ export function usePanier(): Panier {
     nombre: nombreArticles(lignes),
     total: totalPanier(lignes),
     ajouter: useCallback(
-      (produit: Produit, quantite = 1) =>
-        ecrirePanier(ajouterAuPanier(lirePanier(), produit, quantite)),
+      (produit: Produit, quantite = 1, personnalisation?: PersonnalisationPanier) =>
+        ecrirePanier(
+          ajouterAuPanier(lirePanier(), produit, quantite, personnalisation)
+        ),
+      []
+    ),
+    personnaliser: useCallback(
+      (idProduit: number, personnalisation: PersonnalisationPanier | null) =>
+        ecrirePanier(
+          definirPersonnalisation(lirePanier(), idProduit, personnalisation)
+        ),
       []
     ),
     modifier: useCallback(

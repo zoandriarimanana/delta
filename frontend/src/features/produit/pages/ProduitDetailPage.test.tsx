@@ -141,3 +141,26 @@ it('propose toujours un retour au catalogue', async () => {
   const lien = await screen.findByRole('link', { name: /retour au catalogue/i });
   expect(lien.getAttribute('href')).toBe('/produits');
 });
+
+it('un produit personnalisable se commande avec la demande du client', async () => {
+  vi.mocked(recupererProduit).mockResolvedValue({
+    ...PRODUIT,
+    stock_disponible: 5,
+    supplement_personnalisation: '2.00',
+  });
+  afficher('/produits/1');
+
+  fireEvent.click(await screen.findByLabelText(/Personnaliser ce produit/));
+  fireEvent.click(screen.getByRole('button', { name: /ajouter au panier/i }));
+  expect((await screen.findByRole('alert')).textContent).toContain(
+    'au moins un message'
+  );
+  expect(lirePanier()).toEqual([]);
+
+  fireEvent.change(screen.getByLabelText(/Message à écrire/), {
+    target: { value: 'Joyeux anniversaire' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: /ajouter au panier/i }));
+
+  expect(lirePanier()[0]?.personnalisation?.message).toBe('Joyeux anniversaire');
+});

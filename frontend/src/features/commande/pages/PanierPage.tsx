@@ -35,6 +35,9 @@ export default function PanierPage() {
                 ligne={ligne}
                 surQuantite={(quantite) => panier.modifier(ligne.id_produit, quantite)}
                 surRetrait={() => panier.retirer(ligne.id_produit)}
+                surPersonnalisation={(personnalisation) =>
+                  panier.personnaliser(ligne.id_produit, personnalisation)
+                }
               />
             ))}
           </ul>

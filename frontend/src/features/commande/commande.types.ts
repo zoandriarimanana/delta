@@ -17,6 +17,35 @@ export interface LigneCommandeLue {
   nom_produit: string;
   quantite: number;
   prix_unitaire_applique: string;
+  /** Demande jointe à la ligne, `null`/absente si le produit n'est pas personnalisé. */
+  personnalisation?: PersonnalisationLue | null;
+}
+
+/** Miroir de `DemandePersonnalisationRead`. */
+export interface PersonnalisationLue {
+  description_demande: string;
+  ingredients_specifiques: string | null;
+  /** Supplément **par unité**, figé à la commande — fixé par le catalogue. */
+  supplement_prix: string;
+}
+
+/**
+ * Personnalisation saisie par le client, gardée **structurée** dans le panier
+ * pour pouvoir la modifier. Assemblée en un texte lisible à l'envoi
+ * (`versPersonnalisationEnvoyee`) : le serveur ne connaît que
+ * `description_demande` et `ingredients_specifiques`.
+ */
+export interface PersonnalisationPanier {
+  message: string;
+  theme: string;
+  precisions: string;
+  ingredients: string;
+}
+
+/** Miroir de `DemandePersonnalisationCreate` — sans supplément, jamais envoyé. */
+export interface PersonnalisationEnvoyee {
+  description_demande: string;
+  ingredients_specifiques?: string;
 }
 
 export interface Commande {
@@ -60,6 +89,7 @@ export interface Commande {
 export interface LigneCommandeEnvoyee {
   id_produit: number;
   quantite: number;
+  personnalisation?: PersonnalisationEnvoyee;
 }
 
 export interface CommandeEnvoyee {
@@ -119,6 +149,16 @@ export interface LignePanier {
   quantite: number;
   /** Stock connu au moment de l'ajout — sert à borner la quantité saisie. */
   stock_disponible: number;
+  /**
+   * Une par ligne, appliquée à **toute** la quantité — comme côté serveur, où
+   * la demande est rattachée à la ligne de commande.
+   */
+  personnalisation?: PersonnalisationPanier;
+  /**
+   * Supplément par unité lu au catalogue lors de l'ajout, pour l'affichage
+   * seulement : le serveur le relit et le fige à la commande.
+   */
+  supplement_personnalisation?: string | null;
 }
 
 /**

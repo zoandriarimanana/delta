@@ -24,11 +24,17 @@ import type { Produit } from '../produit.types';
 interface Proprietes {
   produit: Produit;
   quantite: number;
+  /** Supplément de personnalisation par unité, compris dans le total. */
+  supplementUnitaire?: number;
 }
 
-export default function ComparaisonLivraison({ produit, quantite }: Proprietes) {
+export default function ComparaisonLivraison({
+  produit,
+  quantite,
+  supplementUnitaire = 0,
+}: Proprietes) {
   const { tarif } = useTarifLivraison();
-  const sousTotal = Number(produit.prix_unitaire) * quantite;
+  const sousTotal = (Number(produit.prix_unitaire) + supplementUnitaire) * quantite;
 
   return (
     <div
@@ -56,9 +62,11 @@ export default function ComparaisonLivraison({ produit, quantite }: Proprietes) 
           tarif={tarif}
           sousTotal={sousTotal}
           detailQuantite={
-            quantite > 1
-              ? `${quantite} × ${formaterMontant(produit.prix_unitaire)} + livraison`
-              : null
+            supplementUnitaire > 0
+              ? `${quantite} × (${formaterMontant(produit.prix_unitaire)} + ${formaterMontant(supplementUnitaire)} de personnalisation) + livraison`
+              : quantite > 1
+                ? `${quantite} × ${formaterMontant(produit.prix_unitaire)} + livraison`
+                : null
           }
         />
       )}

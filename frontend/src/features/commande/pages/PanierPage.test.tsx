@@ -167,3 +167,37 @@ it('vide le panier', async () => {
 
   expect(lirePanier()).toEqual([]);
 });
+
+it('montre la personnalisation d’une ligne et permet de la retirer', async () => {
+  act(() =>
+    ecrirePanier([
+      {
+        id_produit: 1,
+        nom: 'Gâteau',
+        prix_unitaire: '10.00',
+        unite_mesure: 'piece',
+        quantite: 2,
+        stock_disponible: 10,
+        supplement_personnalisation: '3.00',
+        personnalisation: {
+          message: 'Bonne fête',
+          theme: '',
+          precisions: '',
+          ingredients: 'sans gluten',
+        },
+      },
+    ])
+  );
+  afficher();
+
+  expect(screen.getByText('Message à écrire : Bonne fête')).toBeDefined();
+  expect(screen.getByText(/sans gluten/)).toBeDefined();
+  // 2 × 10,00 + 2 × 3,00 de supplément.
+  expect(screen.getAllByText(/26,00 Ar/).length).toBeGreaterThan(0);
+
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Retirer la personnalisation de Gâteau' })
+  );
+
+  expect(lirePanier()[0]).not.toHaveProperty('personnalisation');
+});

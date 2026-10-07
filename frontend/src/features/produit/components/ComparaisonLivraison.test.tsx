@@ -74,3 +74,13 @@ it('tait le montant si le tarif ne peut pas être lu', async () => {
 
   expect(await bloc().findByText(/Affichés au moment de commander/)).toBeDefined();
 });
+
+it('compte le supplément de personnalisation dans le total livré', async () => {
+  render(
+    <ComparaisonLivraison produit={GATEAU} quantite={2} supplementUnitaire={5000} />
+  );
+
+  // 2 × (25 000 + 5 000) = 60 000 de produits + 5 000 de livraison.
+  expect(await bloc().findByText(/^65\s000,00 Ar$/)).toBeDefined();
+  expect(bloc().getByText(/de personnalisation\) \+ livraison/)).toBeDefined();
+});

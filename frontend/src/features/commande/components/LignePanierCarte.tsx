@@ -5,22 +5,26 @@
 import { Link } from 'react-router';
 import { Trash2 } from 'lucide-react';
 
-import { formaterMontant } from '../commande.service';
-import type { LignePanier } from '../commande.types';
+import { formaterMontant, supplementLigne } from '../commande.service';
+import type { LignePanier, PersonnalisationPanier } from '../commande.types';
 import ChampQuantite from './ChampQuantite';
+import PersonnalisationPanierBloc from './PersonnalisationPanierBloc';
 import VignetteProduit from './VignetteProduit';
 
 interface Proprietes {
   ligne: LignePanier;
   surQuantite: (quantite: number) => void;
   surRetrait: () => void;
+  surPersonnalisation: (personnalisation: PersonnalisationPanier | null) => void;
 }
 
 export default function LignePanierCarte({
   ligne,
   surQuantite,
   surRetrait,
+  surPersonnalisation,
 }: Proprietes) {
+  const { personnalisation } = ligne;
   const auMaximum = ligne.quantite >= ligne.stock_disponible;
 
   return (
@@ -61,10 +65,18 @@ export default function LignePanierCarte({
               Quantité maximale disponible en stock.
             </p>
           )}
+          {personnalisation !== undefined && (
+            <PersonnalisationPanierBloc
+              ligne={{ ...ligne, personnalisation }}
+              surPersonnalisation={surPersonnalisation}
+            />
+          )}
         </div>
 
         <p className="whitespace-nowrap text-lg font-semibold text-warm-gray-700 sm:text-right">
-          {formaterMontant(Number(ligne.prix_unitaire) * ligne.quantite)}
+          {formaterMontant(
+            Number(ligne.prix_unitaire) * ligne.quantite + supplementLigne(ligne)
+          )}
         </p>
       </div>
     </li>

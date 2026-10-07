@@ -1575,6 +1575,34 @@ de forfait, livraison offerte dès 100 000 Ar d'achat.
       tunnel, écran d'administration) sur une copie temporaire du serveur,
       sans créer de commande dans la base de développement.
 
+**Travaux hors sprint : personnalisation d'un produit par le client (demande
+du 7 octobre 2026).** Plan écrit avant le code. Constat : l'API accepte
+depuis le Sprint 3 une `DEMANDE_PERSONNALISATION` par ligne de commande
+(`description_demande`, `ingredients_specifiques`, supplément calculé et figé
+par le serveur), mais **aucun écran ne la saisit ni ne l'affiche** — le
+manque relevé en fin de Sprint 12. Aucun changement de schéma.
+
+- [x] **Fiche produit** (produit personnalisable) : bloc « Personnaliser »
+      aux champs guidés — message à écrire, thème et couleurs, autres
+      précisions, ingrédients à éviter ou allergies — avec le supplément par
+      unité ; le total affiché l'inclut.
+- [x] **Panier** : la personnalisation est portée par la ligne (une par
+      produit, appliquée à toute la quantité, comme côté serveur), visible,
+      modifiable et retirable ; supplément compté dans le total indicatif.
+- [x] **Envoi** : les champs guidés sont assemblés en un texte lisible
+      (« Message : … ») dans `description_demande` ; le supplément n'est
+      **jamais** envoyé, le serveur le calcule.
+- [x] **Lecture** : la demande s'affiche sous sa ligne dans le récapitulatif
+      d'une commande — fiche d'administration, historique client, page
+      invitée — avec le supplément figé.
+      — Livré : `ChampsPersonnalisation` (module `commande`, monté par la
+      fiche produit), `PersonnalisationPanierBloc` dans le panier,
+      `DemandePersonnalisationLue` dans le récapitulatif d'une commande.
+      Une personnalisation vide est refusée avant l'ajout (le serveur
+      exige `description_demande`). Guide client de l'assistant mis à jour.
+      Frontend 739/739 ; vérifié dans un vrai navigateur (fiche, panier),
+      sans créer de commande dans la base de développement.
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère

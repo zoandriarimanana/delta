@@ -3,15 +3,20 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  PERSONNALISATION_VIDE,
   ajouterAuPanier,
+  definirPersonnalisation,
+  descriptionDemande,
   formaterDate,
   formaterMontant,
   modifierQuantite,
   nombreArticles,
   retirerDuPanier,
+  supplementLigne,
   totalPanier,
-  versLignesEnvoyees,
   versCibleAcheteur,
+  versLignesEnvoyees,
+  versPersonnalisationEnvoyee,
 } from './commande.service';
 import type { LignePanier } from './commande.types';
 import type { Produit } from '@/features/produit/produit.types';
@@ -208,5 +213,81 @@ describe('versCibleAcheteur', () => {
     expect(versCibleAcheteur('invite', '', 'Jean', '')).toBeNull();
     expect(versCibleAcheteur('invite', '', '', '0340')).toBeNull();
     expect(versCibleAcheteur('invite', '', '   ', '   ')).toBeNull();
+  });
+});
+
+describe('personnalisation', () => {
+  const GATEAU = produit({
+    id_produit: 9,
+    prix_unitaire: '25000.00',
+    est_personnalisable: true,
+    supplement_personnalisation: '5000.00',
+    stock_disponible: 10,
+  });
+  const DEMANDE = {
+    ...PERSONNALISATION_VIDE,
+    message: 'Joyeux anniversaire Lova',
+    theme: '  licornes, rose  ',
+    ingredients: 'sans fruits à coque',
+  };
+
+  it('assemble une description lisible, une rubrique par ligne, sans rubrique vide', () => {
+    expect(descriptionDemande(DEMANDE)).toBe(
+      'Message à écrire : Joyeux anniversaire Lova\nThème et couleurs : licornes, rose'
+    );
+    expect(descriptionDemande(PERSONNALISATION_VIDE)).toBe('');
+  });
+
+  it('envoie la description et les ingrédients, jamais le supplément', () => {
+    expect(versPersonnalisationEnvoyee(DEMANDE)).toEqual({
+      description_demande:
+        'Message à écrire : Joyeux anniversaire Lova\nThème et couleurs : licornes, rose',
+      ingredients_specifiques: 'sans fruits à coque',
+    });
+    expect(
+      versPersonnalisationEnvoyee({ ...DEMANDE, ingredients: '  ' })
+    ).not.toHaveProperty('ingredients_specifiques');
+  });
+
+  it('la ligne porte la personnalisation et le supplément compte dans le total', () => {
+    const panier = ajouterAuPanier([], GATEAU, 2, DEMANDE);
+
+    expect(panier[0]?.personnalisation).toEqual(DEMANDE);
+    expect(supplementLigne(panier[0]!)).toBe(10000);
+    expect(totalPanier(panier)).toBe(60000);
+    expect(versLignesEnvoyees(panier)[0]).toEqual({
+      id_produit: 9,
+      quantite: 2,
+      personnalisation: versPersonnalisationEnvoyee(DEMANDE),
+    });
+  });
+
+  it('sans personnalisation, aucun supplément et rien n’est envoyé', () => {
+    const panier = ajouterAuPanier([], GATEAU, 2);
+
+    expect(totalPanier(panier)).toBe(50000);
+    expect(versLignesEnvoyees(panier)[0]).not.toHaveProperty('personnalisation');
+  });
+
+  it('une personnalisation vide ou nulle retire celle de la ligne', () => {
+    const panier = ajouterAuPanier([], GATEAU, 1, DEMANDE);
+
+    expect(
+      definirPersonnalisation(panier, 9, PERSONNALISATION_VIDE)[0]
+    ).not.toHaveProperty('personnalisation');
+    expect(definirPersonnalisation(panier, 9, null)[0]).not.toHaveProperty(
+      'personnalisation'
+    );
+  });
+
+  it('un nouvel ajout personnalisé remplace la demande et cumule la quantité', () => {
+    const panier = ajouterAuPanier([], GATEAU, 1, DEMANDE);
+    const autre = { ...PERSONNALISATION_VIDE, message: 'Bonne retraite' };
+
+    const resultat = ajouterAuPanier(panier, GATEAU, 1, autre);
+
+    expect(resultat).toHaveLength(1);
+    expect(resultat[0]?.quantite).toBe(2);
+    expect(resultat[0]?.personnalisation).toEqual(autre);
   });
 });
