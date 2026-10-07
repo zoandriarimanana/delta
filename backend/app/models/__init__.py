@@ -1,6 +1,6 @@
 """Point d'entrée unique du package `models`.
 
-Importer ce module suffit à peupler `Base.metadata` avec les 22 tables du MLD.
+Importer ce module suffit à peupler `Base.metadata` avec les 23 tables du MLD.
 C'est indispensable à Alembic (`alembic/env.py`, T0.5) : une entité non importée
 ici est une entité invisible à l'autogénération, donc absente des migrations.
 
@@ -32,6 +32,7 @@ from app.models.produit import Produit
 from app.models.reservation import Reservation
 from app.models.salle import Salle
 from app.models.session_formation import SessionFormation
+from app.models.tarif_livraison import TarifLivraison
 
 __all__ = [
     "Abonnement",
@@ -56,4 +57,5 @@ __all__ = [
     "Reservation",
     "Salle",
     "SessionFormation",
+    "TarifLivraison",
 ]

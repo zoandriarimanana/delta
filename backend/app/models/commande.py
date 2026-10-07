@@ -145,6 +145,13 @@ class Commande(SoftDeleteMixin, Base):
     montant_total: Mapped[Decimal] = mapped_column(
         Numeric(12, 2), nullable=False, server_default="0"
     )
+    #: Frais de livraison **appliqués**, recopiés de `TARIF_LIVRAISON` à la
+    #: commande puis figés — comme `prix_unitaire_applique`. `0` sans
+    #: livraison, ou livraison offerte (seuil atteint). Déjà compris dans
+    #: `montant_total` : c'est le total que `PAIEMENT` encaisse.
+    frais_livraison: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2), nullable=False, server_default="0"
+    )
     id_client: Mapped[int | None] = mapped_column(ForeignKey("client.id_client"))
     id_reservation: Mapped[int | None] = mapped_column(
         ForeignKey("reservation.id_reservation")

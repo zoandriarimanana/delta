@@ -92,6 +92,8 @@ class CommandeRead(BaseModel):
     type_commande: TypeCommande
     statut: StatutCommande
     montant_total: Decimal
+    #: Déjà compris dans `montant_total` ; `0` sans livraison ou si offerte.
+    frais_livraison: Decimal = Decimal("0")
     id_client: int | None = None
     adresse_livraison: str | None = None
     nom_invite: str | None = None

@@ -49,6 +49,7 @@ from app.routers import (
     salle_router,
     session_formation_router,
     session_router,
+    tarif_livraison_router,
 )
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -196,6 +197,7 @@ app.include_router(reservation_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(salle_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(logement_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(galerie_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(tarif_livraison_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(abonnement_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(beneficiaire_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(client_entreprise_router.router, prefix=settings.API_V1_PREFIX)

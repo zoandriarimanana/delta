@@ -661,6 +661,22 @@ L'adresse est **recopiée** et non partagée : la livraison est un fait
 logistique, la commande un fait commercial. Corriger l'adresse d'une tournée ne
 doit pas réécrire la commande.
 
+### Frais de livraison : une règle, un endroit
+
+`TarifLivraisonService.calculer_frais` est le **seul** endroit où vit la
+règle (forfait, une fois par commande, offert au-delà du seuil comparé aux
+produits seuls). `CommandeService` l'appelle **après** la boucle des lignes,
+quand le montant des produits est connu, et seulement si une adresse est
+donnée ; il fige le résultat dans `COMMANDE.frais_livraison` et l'ajoute à
+`montant_total`. Le frontend reproduit le calcul (`fraisLivraison`) pour
+**afficher** les prix avant la commande — fiche produit, tunnel — mais ses
+montants sont indicatifs : le serveur fait foi.
+
+Le tunnel demande l'adresse dès que le client choisit « Livraison à
+domicile ». Avant ce chantier, il proposait « Livraison » sans demander
+d'adresse : la commande naissait sans `LIVRAISON`, la présence de l'adresse
+étant le seul déclencheur.
+
 ### Synchronisation LIVRAISON → COMMANDE
 
 Règle transverse : elle croise deux entités, elle est donc écrite **ici et une
@@ -1126,7 +1142,7 @@ chaque redéploiement. Format lu dans les octets, jamais dans le nom.
 | `personnel` | PERSONNEL |
 | `produit` | CATEGORIE_PRODUIT, PRODUIT |
 | `commande` | COMMANDE, LIGNE_COMMANDE, DEMANDE_PERSONNALISATION |
-| `livraison` | LIVRAISON |
+| `livraison` | LIVRAISON, TARIF_LIVRAISON |
 | `formation` | DOMAINE_FORMATION, FORMATION, SESSION_FORMATION |
 | `salle` | SALLE |
 | `logement` | LOGEMENT |

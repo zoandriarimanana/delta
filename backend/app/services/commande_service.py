@@ -33,6 +33,7 @@ from app.schemas.commande import (
 )
 from app.schemas.ligne_commande import LigneCommandeCreate
 from app.services.livraison_service import LivraisonService
+from app.services.tarif_livraison_service import TarifLivraisonService
 
 #: Statuts d'une réservation qui autorisent une commande à s'y rattacher.
 #:
@@ -390,8 +391,10 @@ class CommandeService:
         - `prix_unitaire_applique` est **recopié du catalogue** au moment de la
           commande. Il est ensuite figé : une évolution ultérieure de
           `PRODUIT.prix_unitaire` ne rétroagit pas sur les commandes passées.
-        - `montant_total` est la somme des lignes, calculée ici. L'accepter du
-          client reviendrait à le laisser fixer ce qu'il paie.
+        - `montant_total` est la somme des lignes, **plus les frais de
+          livraison** si une adresse est donnée — calculés ici par
+          `TarifLivraisonService`, puis figés dans `frais_livraison`.
+          L'accepter du client reviendrait à le laisser fixer ce qu'il paie.
         - `statut` naît toujours `En_attente` : c'est un cycle de vie, pas une
           donnée d'entrée.
 
@@ -429,6 +432,13 @@ class CommandeService:
             montant += produit.prix_unitaire * ligne.quantite
             montant += self._rattacher_personnalisation(ligne, produit, ligne_creee)
 
+        if commande.adresse_livraison is not None:
+            # Le seuil de gratuité se compare aux seuls produits : `montant`
+            # ne contient pas encore les frais à ce stade.
+            commande.frais_livraison = TarifLivraisonService(self.db).calculer_frais(
+                montant
+            )
+            montant += commande.frais_livraison
         commande.montant_total = montant
         # Après la boucle : la livraison ne doit exister que si toutes les
         # lignes ont été acceptées et le stock réservé.

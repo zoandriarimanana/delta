@@ -396,7 +396,7 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 ## Transactions
 
 ```
-COMMANDE(id_commande, date_commande, reference_publique, adresse_livraison, nom_invite, contact_invite, type_commande, statut, montant_total, #id_client, #id_reservation, #id_personnel)
+COMMANDE(id_commande, date_commande, reference_publique, adresse_livraison, nom_invite, contact_invite, type_commande, statut, montant_total, frais_livraison, #id_client, #id_reservation, #id_personnel)
 LIGNE_COMMANDE(id_ligne, quantite, prix_unitaire_applique, #id_commande, #id_produit)
 DEMANDE_PERSONNALISATION(id_personnalisation, description_demande, ingredients_specifiques, supplement_prix, #id_ligne, #id_produit_base)
 RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_personnes, statut, avec_hebergement, #id_client, #id_session, #id_salle, #id_logement, #id_reservation_hebergement)
@@ -465,7 +465,18 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   colonnes : une commande `Sur_place` se termine sur `Servie`, les deux autres
   types sur `Livree`.
 - `COMMANDE.montant_total` est **figé à la création** : il vaut la somme des
-  lignes au moment où la commande est passée, et n'est jamais recalculé. Une
+  lignes au moment où la commande est passée, **plus `frais_livraison`**
+  depuis le 7 octobre 2026, et n'est jamais recalculé. C'est ce total que
+  `PAIEMENT` encaisse.
+
+- `COMMANDE.frais_livraison` est un `NUMERIC(10,2) NOT NULL DEFAULT 0`,
+  ajouté avec `TARIF_LIVRAISON` (voir plus bas). Il vaut le forfait en
+  vigueur **si une `adresse_livraison` est donnée**, `0` sinon — ou si la
+  livraison est offerte. Calculé par le serveur, **jamais accepté depuis la
+  requête**, recopié puis **figé** : même règle que
+  `LIGNE_COMMANDE.prix_unitaire_applique`, changer le tarif ne rétroagit pas.
+  Les commandes antérieures valent `0` : elles n'ont jamais payé de
+  livraison, et leur `montant_total` reste juste. Une
   ligne archivée ensuite ne le modifie pas — c'est une donnée d'archive, pas une
   vue dérivée de `LIGNE_COMMANDE`.
 
@@ -733,6 +744,30 @@ AVIS(id_avis, type_avis, note, commentaire, date_avis, #id_client, #id_ligne, #i
   et les deux autres) : celles-ci expriment une propriété structurelle jamais
   réattribuée, pas une identité métier susceptible d'être reprise.
 
+## Tarif de livraison
+
+```
+TARIF_LIVRAISON(id_tarif, forfait, seuil_gratuite)
+```
+
+Ajoutée le 7 octobre 2026 (hors sprint), sur décision de l'utilisateur :
+**forfait unique**, compté **une fois par commande** quel que soit le nombre
+d'articles, **offert** dès que les produits atteignent `seuil_gratuite`,
+**réglé par l'administrateur**. Valeurs posées par la migration (5 000 Ar,
+offerte dès 100 000 Ar), modifiables ensuite.
+
+- **Une seule ligne**, `id_tarif = 1`, posée par la migration et jamais
+  créée par l'API : `CHECK (id_tarif = 1)`. Une table de réglage, pas un
+  catalogue — une seconde ligne ne dirait pas laquelle appliquer.
+- `forfait >= 0` ; `seuil_gratuite` est `NULL` (« jamais offerte ») ou
+  strictement positif. Un seuil à `0` rendrait la livraison toujours
+  gratuite : c'est `forfait = 0` qui exprime cela.
+- **Le seuil se compare aux produits seuls** (personnalisations comprises),
+  jamais à un total qui contiendrait déjà les frais — sinon le forfait
+  aiderait à atteindre sa propre gratuité.
+- Aucun historique : le montant appliqué est figé dans
+  `COMMANDE.frais_livraison`.
+
 ## Paiement
 
 ```
@@ -988,7 +1023,7 @@ règle d'identité, pas seulement une unicité de libellé.
 
 ## Suppression logique — `supprime_le`
 
-**Les 22 tables portent une colonne `supprime_le TIMESTAMPTZ NULL.`** `NULL`
+**Les 23 tables portent une colonne `supprime_le TIMESTAMPTZ NULL.`** `NULL`
 signifie « ligne active » ; une date signifie « ligne archivée ». C'est la seule
 colonne transverse du schéma, et elle n'apparaît pas dans les notations
 `TABLE(...)` ci-dessus pour ne pas les alourdir vingt-et-une fois.
@@ -1060,7 +1095,7 @@ de la comparaison (`include_object`) — sans quoi `alembic check` conclurait
 qu'il faut les supprimer, vérifié empiriquement.
 
 Ce ne sont **pas des entités** : aucune clé étrangère vers ou depuis le MLD,
-pas de `supprime_le`, et elles ne comptent pas parmi les 22 tables. Elles ne
+pas de `supprime_le`, et elles ne comptent pas parmi les 23 tables. Elles ne
 contiennent **aucune donnée d'origine** — seulement des fragments de texte
 dérivés du catalogue public, et leurs vecteurs. Elles sont donc
 **reconstructibles à tout moment** depuis la base métier, et une perte de leur

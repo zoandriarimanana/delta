@@ -93,6 +93,8 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/formations/{{id_formation}}/photos",
         f"{prefixe}/produits/{{id_produit}}/photos",
         f"{prefixe}/photos/{{partie}}/{{fichier}}",
+        # Frais de livraison : lecture publique, réglage administrateur.
+        f"{prefixe}/tarif-livraison",
         f"{prefixe}/reservations",
         f"{prefixe}/reservations/administration",
         f"{prefixe}/reservations/administration/{{id_reservation}}",

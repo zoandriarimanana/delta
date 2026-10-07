@@ -1544,6 +1544,37 @@ Sprint 12. La seconde **modifie le schéma** — signalé avant de coder.
       demande : le `.env` du worktree portait `AI_ENABLED=false`, la bulle
       n'apparaissait pas et la page d'administration ne discutait pas.
 
+**Travaux hors sprint : frais de livraison (demande du 7 octobre 2026).**
+Plan écrit avant le code. Décisions de l'utilisateur : **forfait unique**,
+compté **une fois par commande**, **offert au-delà d'un seuil**, montants
+**réglables par l'administrateur**. Valeurs de départ, modifiables : 5 000 Ar
+de forfait, livraison offerte dès 100 000 Ar d'achat.
+
+- [x] **Constat préalable, corrigé par la même tâche** : le tunnel client
+      propose « Livraison » (`type_commande = En_ligne`) mais n'envoie aucune
+      `adresse_livraison` — c'est pourtant elle, et elle seule, qui crée la
+      `LIVRAISON` (docs/architecture.md). Une commande « Livraison » naissait
+      donc **sans livraison**.
+- [x] **Schéma** : nouvelle entité `TARIF_LIVRAISON` (une seule ligne,
+      `forfait`, `seuil_gratuite` nullable) et `COMMANDE.frais_livraison`,
+      **figé à la commande** comme `prix_unitaire_applique`. `montant_total`
+      devient produits + frais : c'est lui que `PAIEMENT` encaisse.
+- [x] **API** : `GET /tarif-livraison` public (affichage sur les fiches),
+      `PUT /tarif-livraison` administrateur. Frais calculés **par le
+      serveur**, jamais acceptés depuis la requête.
+- [x] **Fiche produit** : prix en retrait et prix avec livraison, seuil de
+      gratuité annoncé ; rien pour un produit non livrable.
+- [x] **Tunnel** : choix livraison / retrait, adresse exigée pour la
+      livraison, récapitulatif sous-total + frais (ou « offerte ») + total.
+- [x] **Administration** : écran de réglage du tarif ; frais affichés dans
+      la fiche d'une commande et dans l'historique client.
+      — Livré : migration `68afc4891578`, `TarifLivraisonService` seul
+      porteur de la règle, écran « Livraison » dans l'administration,
+      guide client de l'assistant mis à jour. Backend 1416/1416 sur base
+      vierge, frontend 722/722 ; vérifié dans un vrai navigateur (fiche,
+      tunnel, écran d'administration) sur une copie temporaire du serveur,
+      sans créer de commande dans la base de développement.
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère
@@ -1551,5 +1582,7 @@ la roadmap close. Toute table ajoutée au MLD après coup doit immédiatement ê
 ajoutée à un sprint ici — ne jamais laisser une table orpheline.
 
 - `DOCUMENT_CONNAISSANCE` — ajoutée après coup, couverte par le Sprint 12 (12.9).
+- `TARIF_LIVRAISON` — ajoutée après coup, couverte par les travaux hors
+  sprint du 7 octobre 2026 (frais de livraison).
 - `PHOTO_BIEN` — ajoutée puis **retirée** le 5 octobre 2026 : les photos du
   catalogue sont désormais des fichiers sur disque, sans table.
