@@ -1,5 +1,5 @@
 /**
- * Réservations du client connecté.
+ * Réservations du client connecté : à venir, passées, annulées.
  *
  * L'isolation est garantie côté serveur : le filtre vient du jeton, et la
  * réservation d'un autre répond 404 — jamais 403, qui confirmerait son
@@ -13,22 +13,49 @@
  * `localStorage` comme avant.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { BedDouble, Building2, CalendarDays, GraduationCap } from 'lucide-react';
 
-import { formaterDate } from '@/features/commande/commande.service';
-import FormulaireAvis from '@/features/avis/components/FormulaireAvis';
 import { useChargementSession, useEstConnecte } from '@/lib/useEstConnecte';
 
-import { recupererReservations } from '../reservation.api';
-import { imageCible, libelleCible, libelleStatut } from '../reservation.service';
+import CarteReservationClient from '../components/CarteReservationClient';
+import { annulerReservation, recupererReservations } from '../reservation.api';
+import { cleCible, useCiblesResolues } from '../reservation.cibles';
+import { periodeReservation, type Periode } from '../reservation.service';
 import type { Reservation } from '../reservation.types';
+
+const ONGLETS: { periode: Periode; libelle: string; vide: string }[] = [
+  {
+    periode: 'a_venir',
+    libelle: 'À venir',
+    vide: 'Aucune réservation à venir. Réservez une formation, une salle ou un hébergement.',
+  },
+  {
+    periode: 'passee',
+    libelle: 'Passées',
+    vide: 'Aucune réservation passée pour l’instant.',
+  },
+  { periode: 'annulee', libelle: 'Annulées', vide: 'Aucune réservation annulée.' },
+];
+
+function messageAnnulation(erreur: unknown): string {
+  const detail = (erreur as { response?: { data?: { detail?: unknown } } } | null)
+    ?.response?.data?.detail;
+  return typeof detail === 'string' && detail.length > 0
+    ? detail
+    : 'L’annulation a échoué. Réessayez dans un instant.';
+}
 
 export default function MesReservationsPage() {
   const chargementSession = useChargementSession();
   const connecte = useEstConnecte();
   const [reservations, setReservations] = useState<Reservation[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [onglet, setOnglet] = useState<Periode>('a_venir');
+  // Figé au chargement : le classement ne bouge pas pendant que le client lit.
+  const [maintenant] = useState(() => new Date());
+  const cibles = useCiblesResolues(reservations);
 
   const charger = useCallback(() => {
     // Aucune requête avant que la session soit connue, ni si elle ne l'est
@@ -49,116 +76,173 @@ export default function MesReservationsPage() {
 
   useEffect(charger, [charger]);
 
+  const parPeriode = useMemo(() => {
+    const groupes: Record<Periode, Reservation[]> = {
+      a_venir: [],
+      passee: [],
+      annulee: [],
+    };
+    for (const reservation of reservations ?? []) {
+      groupes[periodeReservation(reservation, maintenant)].push(reservation);
+    }
+    // À venir : la plus proche d'abord. Passées et annulées : la plus récente.
+    const debut = (r: Reservation) => new Date(r.date_debut).getTime();
+    groupes.a_venir.sort((a, b) => debut(a) - debut(b));
+    groupes.passee.sort((a, b) => debut(b) - debut(a));
+    groupes.annulee.sort((a, b) => debut(b) - debut(a));
+    return groupes;
+  }, [reservations, maintenant]);
+
+  async function annuler(idReservation: number): Promise<string | null> {
+    try {
+      await annulerReservation(idReservation);
+      // Rechargement complet : annuler une formation annule aussi la
+      // réservation d'hébergement liée, qui doit changer de rubrique.
+      setReservations(await recupererReservations());
+      return null;
+    } catch (erreurAppel) {
+      return messageAnnulation(erreurAppel);
+    }
+  }
+
   if (chargementSession) {
     return null;
   }
 
   if (!connecte) {
     return (
-      <section>
-        <h1 className="text-2xl font-semibold text-slate-900">Mes réservations</h1>
-        <p className="mt-2 text-slate-600">
+      <section className="mx-auto max-w-lg py-12 text-center">
+        <CalendarDays size={40} aria-hidden className="mx-auto text-terracotta" />
+        <h1 className="mt-4 text-3xl font-semibold text-warm-gray-700">
+          Mes réservations
+        </h1>
+        <p className="mt-2 text-warm-gray-500">
           Connectez-vous pour retrouver vos réservations.
         </p>
-        <Link to="/connexion" className="mt-4 inline-block text-slate-900 underline">
+        <Link
+          to="/connexion"
+          className="mt-6 inline-block rounded-full bg-terracotta px-6 py-3 font-semibold text-white no-underline hover:bg-burgundy"
+        >
           Se connecter
         </Link>
       </section>
     );
   }
 
+  const courant = ONGLETS.find((o) => o.periode === onglet)!;
+  const liste = parPeriode[onglet];
+
   return (
     <section>
-      <h1 className="text-2xl font-semibold text-slate-900">Mes réservations</h1>
+      <h1 className="text-3xl font-semibold text-warm-gray-700">Mes réservations</h1>
+      <p className="mt-1 text-warm-gray-500">
+        Vos formations, salles et hébergements réservés chez Delta.
+      </p>
 
       {erreur !== null && (
         <p
           role="alert"
-          className="mt-4 rounded border border-red-200 bg-red-50 p-4 text-red-800"
+          className="mt-4 rounded-xl border border-terracotta/30 bg-terracotta/10 p-4 text-terracotta"
         >
           {erreur}
         </p>
       )}
 
       {reservations === null && erreur === null && (
-        <p role="status" className="mt-4 text-slate-500">
+        <p role="status" className="mt-4 text-warm-gray-500">
           Chargement…
         </p>
       )}
 
-      {reservations !== null && reservations.length === 0 && (
+      {reservations !== null && (
         <>
-          <p className="mt-4 text-slate-600">Vous n’avez aucune réservation.</p>
-          <Link to="/formations" className="mt-4 inline-block text-slate-900 underline">
-            Parcourir les formations
-          </Link>
-          <Link
-            to="/salles"
-            className="mt-4 ml-4 inline-block text-slate-900 underline"
+          <div
+            role="tablist"
+            aria-label="Rubriques de réservations"
+            className="mt-6 flex gap-1 overflow-x-auto border-b border-warm-gray-200"
           >
-            Parcourir les salles
-          </Link>
+            {ONGLETS.map(({ periode, libelle }) => {
+              const actif = periode === onglet;
+              return (
+                <button
+                  key={periode}
+                  type="button"
+                  role="tab"
+                  aria-selected={actif}
+                  onClick={() => setOnglet(periode)}
+                  className={`-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                    actif
+                      ? 'border-terracotta text-terracotta'
+                      : 'border-transparent text-warm-gray-500 hover:text-warm-gray-700'
+                  }`}
+                >
+                  {libelle}
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs ${
+                      actif
+                        ? 'bg-terracotta text-white'
+                        : 'bg-warm-gray-200 text-warm-gray-600'
+                    }`}
+                  >
+                    {parPeriode[periode].length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {liste.length === 0 ? (
+            <div className="mt-8 rounded-2xl border border-dashed border-warm-gray-300 bg-white p-10 text-center">
+              <p className="text-warm-gray-500">{courant.vide}</p>
+              {onglet === 'a_venir' && (
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <LienDecouverte vers="/formations" icone={GraduationCap}>
+                    Formations
+                  </LienDecouverte>
+                  <LienDecouverte vers="/salles" icone={Building2}>
+                    Salles
+                  </LienDecouverte>
+                  <LienDecouverte vers="/logements" icone={BedDouble}>
+                    Hébergements
+                  </LienDecouverte>
+                </div>
+              )}
+            </div>
+          ) : (
+            <ul role="tabpanel" aria-label={courant.libelle} className="mt-6 space-y-4">
+              {liste.map((reservation) => (
+                <CarteReservationClient
+                  key={reservation.id_reservation}
+                  reservation={reservation}
+                  cible={cibles.get(cleCible(reservation))}
+                  maintenant={maintenant}
+                  surAnnulation={annuler}
+                />
+              ))}
+            </ul>
+          )}
         </>
       )}
-
-      <ul className="mt-6 space-y-4">
-        {(reservations ?? []).map((reservation) => (
-          <ReservationAvecAvis
-            key={reservation.id_reservation}
-            reservation={reservation}
-          />
-        ))}
-      </ul>
     </section>
   );
 }
 
-function ReservationAvecAvis({ reservation }: { reservation: Reservation }) {
-  const [ouvert, setOuvert] = useState(false);
-  // Le serveur refuserait de toute façon en 409 une réservation non honorée
-  // (cf. `docs/mld.md`) : ne pas proposer le bouton évite au client de
-  // découvrir le refus après avoir rempli le formulaire.
-  const proposerAvis = reservation.statut === 'Honoree';
-  const image = imageCible(reservation);
-
+function LienDecouverte({
+  vers,
+  icone: Icone,
+  children,
+}: {
+  vers: string;
+  icone: typeof Building2;
+  children: string;
+}) {
   return (
-    <li className="flex gap-4 rounded border border-slate-200 bg-white p-4">
-      {image !== null && (
-        <img src={image} alt="" className="h-16 w-16 shrink-0 rounded object-cover" />
-      )}
-      <div>
-        <h2 className="font-medium text-slate-900">{libelleCible(reservation)}</h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Réservation n° {reservation.id_reservation}
-        </p>
-        <p className="mt-1 text-sm text-slate-600">
-          <time dateTime={reservation.date_debut}>
-            {formaterDate(reservation.date_debut)}
-          </time>
-          {' — '}
-          {reservation.nombre_personnes} personne(s)
-        </p>
-        <p className="mt-1 text-sm text-slate-700">
-          {libelleStatut(reservation.statut, reservation.type_reservation)}
-        </p>
-        {reservation.avec_hebergement && (
-          // Le drapeau dit un souhait, pas une chambre attribuée — la
-          // formulation le reflète (cf. `docs/mld.md`).
-          <p className="mt-1 text-sm text-slate-500">Hébergement demandé</p>
-        )}
-        {proposerAvis && !ouvert && (
-          <button
-            type="button"
-            onClick={() => setOuvert(true)}
-            className="mt-1 text-sm text-slate-900 underline"
-          >
-            Déposer un avis
-          </button>
-        )}
-        {ouvert && (
-          <FormulaireAvis cible="Service" idCible={reservation.id_reservation} />
-        )}
-      </div>
-    </li>
+    <Link
+      to={vers}
+      className="inline-flex items-center gap-2 rounded-full border border-warm-gray-300 bg-white px-4 py-2 text-sm font-medium text-warm-gray-700 no-underline transition-colors hover:border-terracotta hover:text-terracotta"
+    >
+      <Icone size={16} aria-hidden />
+      {children}
+    </Link>
   );
 }

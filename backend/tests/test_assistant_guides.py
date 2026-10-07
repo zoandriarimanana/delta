@@ -33,7 +33,10 @@ def test_le_guide_client_ne_promet_pas_ce_que_le_site_ne_fait_pas() -> None:
     guide = next(g for g in guides.GUIDES if g.fichier == "guide_client.md")
     texte = guide.chemin.read_text(encoding="utf-8")
 
-    assert "contactez Delta : le site ne propose pas encore d'annulation" in texte
+    # Annulation en ligne d'une réservation : disponible depuis le 7 octobre
+    # 2026 — le guide décrit le geste réel, plus la limite d'avant.
+    assert "le site ne propose pas encore d'annulation" not in texte
+    assert "« Annuler la réservation »" in texte
     # Personnalisation : disponible sur la fiche produit depuis le 7 octobre
     # 2026 — le guide décrit le geste réel, plus la limite d'avant.
     assert "ne permet pas encore de décrire votre personnalisation" not in texte

@@ -44,7 +44,7 @@ Ouvrez « Salles », puis la fiche de la salle. Il faut être connecté. Renseig
 Ouvrez « Hébergements », puis la fiche de la chambre. Il faut être connecté. Renseignez le « Début » et la « Fin » de votre séjour et le « Nombre de personnes », puis cliquez sur « Réserver ». Une chambre en maintenance affiche « Ce logement n'est pas réservable pour le moment. »
 
 ## Suivre et annuler une réservation
-Ouvrez « Mes réservations » pour retrouver vos réservations et leur statut : en attente, confirmée, honorée ou annulée. Pour annuler une réservation, contactez Delta : le site ne propose pas encore d'annulation en ligne.
+Ouvrez « Mon compte » puis « Mes réservations ». Vos réservations y sont rangées en trois onglets : « À venir », « Passées » et « Annulées », chacune avec ce qui est réservé, ses dates, le nombre de personnes et son statut (en attente de confirmation, confirmée, honorée ou annulée). Pour annuler une réservation à venir qui n'a pas encore commencé, cliquez sur « Annuler la réservation », puis sur « Confirmer l'annulation » ; « Garder » renonce. Annuler une formation libère votre place et annule aussi l'hébergement lié. Une réservation déjà commencée s'annule en contactant Delta. Après une réservation honorée, vous pouvez « Déposer un avis » depuis l'onglet « Passées ».
 
 ## Donner un avis
 Vous pouvez noter un produit une fois votre commande livrée ou servie, depuis « Mes commandes », et noter une prestation — formation, salle, hébergement — une fois votre réservation honorée, depuis « Mes réservations ». Cliquez sur « Déposer un avis », choisissez la « Note » de 1 à 5, ajoutez si vous le souhaitez un « Commentaire (facultatif) », puis cliquez sur « Déposer mon avis ». Un seul avis par article ou par réservation.

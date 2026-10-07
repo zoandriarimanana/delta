@@ -1633,6 +1633,23 @@ pour deux gâteaux, deux commandes.
       personne, minimum 4, **par l'écran d'administration**, puis commandé
       jusqu'au panier (6 personnes = 30 000 Ar, 1 article).
 
+**Travaux hors sprint : « Mes réservations » côté client (demande du 7
+octobre 2026).** Refonte de la page, et **résorption d'un manque relevé en
+fin de Sprint 12** : le client ne pouvait pas annuler lui-même une
+réservation, alors que `PUT /reservations/{id}/statut` (Sprint 10.2) le
+permet. Aucun changement d'API ni de schéma.
+
+- [x] Onglets « À venir », « Passées », « Annulées » avec leurs nombres ; à
+      venir triées de la plus proche, les autres de la plus récente.
+- [x] **Noms réels des cibles** (« Grande salle événements QA » au lieu de
+      « Salle n° 3 »), liés à leur fiche — une requête par cible distincte,
+      jamais une par ligne (`reservation.cibles.ts`).
+- [x] Cartes : type et statut en pastilles, dates de début **et de fin**,
+      personnes, état de l'hébergement d'une formation.
+- [x] **Annulation par le client**, avec confirmation dans la carte, pour
+      une réservation à venir pas encore commencée ; refus du serveur repris
+      tel quel. Guide client de l'assistant mis à jour (et son test).
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère

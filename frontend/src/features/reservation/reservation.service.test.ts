@@ -8,8 +8,12 @@ import {
   imageCible,
   libelleCible,
   libelleStatut,
+  libelleType,
+  periodeReservation,
   peutAnnuler,
+  peutAnnulerClient,
   peutMarquerHonoree,
+  varianteStatut,
 } from './reservation.service';
 
 vi.mock('@/lib/images', { spy: true });
@@ -153,5 +157,53 @@ describe('peutAnnuler', () => {
     expect(peutAnnuler(reservation({ statut: 'Honoree' }))).toBe(true);
     expect(peutAnnuler(reservation({ statut: 'En_attente' }))).toBe(true);
     expect(peutAnnuler(reservation({ statut: 'Confirmee' }))).toBe(true);
+  });
+});
+
+describe('rubriques de « Mes réservations »', () => {
+  const MAINTENANT = new Date('2026-10-07T12:00:00Z');
+  const FUTUR = {
+    date_debut: '2026-10-20T09:00:00Z',
+    date_fin: '2026-10-21T09:00:00Z',
+  };
+  const PASSE = {
+    date_debut: '2026-09-01T09:00:00Z',
+    date_fin: '2026-09-02T09:00:00Z',
+  };
+
+  it('range selon le statut et les dates', () => {
+    expect(
+      periodeReservation(reservation({ ...FUTUR, statut: 'Confirmee' }), MAINTENANT)
+    ).toBe('a_venir');
+    expect(
+      periodeReservation(reservation({ ...PASSE, statut: 'Confirmee' }), MAINTENANT)
+    ).toBe('passee');
+    expect(
+      periodeReservation(reservation({ ...FUTUR, statut: 'Honoree' }), MAINTENANT)
+    ).toBe('passee');
+    expect(
+      periodeReservation(reservation({ ...FUTUR, statut: 'Annulee' }), MAINTENANT)
+    ).toBe('annulee');
+  });
+
+  it('le client n’annule qu’une réservation à venir, pas encore commencée', () => {
+    expect(
+      peutAnnulerClient(reservation({ ...FUTUR, statut: 'En_attente' }), MAINTENANT)
+    ).toBe(true);
+    const commencee = {
+      date_debut: '2026-10-07T08:00:00Z',
+      date_fin: '2026-10-08T08:00:00Z',
+      statut: 'Confirmee' as const,
+    };
+    expect(peutAnnulerClient(reservation(commencee), MAINTENANT)).toBe(false);
+    expect(
+      peutAnnulerClient(reservation({ ...FUTUR, statut: 'Annulee' }), MAINTENANT)
+    ).toBe(false);
+  });
+
+  it('choisit une variante par statut et nomme le type', () => {
+    expect(varianteStatut('Confirmee')).toBe('positif');
+    expect(varianteStatut('Annulee')).toBe('negatif');
+    expect(libelleType('Logement')).toBe('Hébergement');
   });
 });

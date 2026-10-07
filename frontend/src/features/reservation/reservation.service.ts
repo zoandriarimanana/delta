@@ -2,6 +2,7 @@
  * Règles d'affichage des réservations — fonctions pures, sans appel ni rendu.
  */
 
+import type { VarianteBadge } from '@/components/ui/Badge';
 import { imagePour } from '@/lib/images';
 
 import type {
@@ -126,4 +127,56 @@ export function peutMarquerHonoree(reservation: Reservation): boolean {
 /** Voir `peutMarquerHonoree` — même règle, même raison d'être partagée. */
 export function peutAnnuler(reservation: Reservation): boolean {
   return reservation.statut !== 'Annulee';
+}
+
+/** Rubrique de « Mes réservations » où ranger une réservation. */
+export type Periode = 'a_venir' | 'passee' | 'annulee';
+
+/**
+ * À venir tant qu'elle n'est ni annulée, ni honorée, ni terminée ; passée
+ * sinon. `maintenant` est un paramètre pour que la règle reste testable.
+ */
+export function periodeReservation(
+  reservation: Reservation,
+  maintenant: Date
+): Periode {
+  if (reservation.statut === 'Annulee') return 'annulee';
+  if (reservation.statut === 'Honoree') return 'passee';
+  return new Date(reservation.date_fin) < maintenant ? 'passee' : 'a_venir';
+}
+
+/**
+ * Le client peut-il annuler lui-même ? Seulement une réservation à venir et
+ * pas encore commencée : une fois le créneau entamé, l'annulation relève de
+ * l'équipe. Le serveur reste juge (409 si déjà annulée).
+ */
+export function peutAnnulerClient(reservation: Reservation, maintenant: Date): boolean {
+  return (
+    periodeReservation(reservation, maintenant) === 'a_venir' &&
+    new Date(reservation.date_debut) > maintenant
+  );
+}
+
+const VARIANTES: Record<StatutReservation, VarianteBadge> = {
+  En_attente: 'attente',
+  Confirmee: 'positif',
+  Honoree: 'neutre',
+  Annulee: 'negatif',
+};
+
+/** Variante de pastille du statut — choisie ici, jamais par `Badge`. */
+export function varianteStatut(statut: StatutReservation): VarianteBadge {
+  return VARIANTES[statut] ?? 'neutre';
+}
+
+const TYPES: Record<TypeReservation, string> = {
+  Formation: 'Formation',
+  Salle: 'Salle',
+  Logement: 'Hébergement',
+  Table: 'Table',
+};
+
+/** Libellé court du type, pour une pastille. */
+export function libelleType(type: TypeReservation): string {
+  return TYPES[type] ?? type;
 }

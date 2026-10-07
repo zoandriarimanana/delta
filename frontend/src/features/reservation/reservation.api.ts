@@ -67,3 +67,19 @@ export async function changerStatutAdministration(
   );
   return reponse.data;
 }
+
+/**
+ * Annule une de ses propres réservations — seule transition ouverte au client
+ * (`ReservationAnnulation.statut: Literal[Annulee]` côté serveur). Annuler une
+ * formation rend la place et annule l'hébergement lié, dans la même
+ * transaction (cf. `docs/mld.md`).
+ */
+export async function annulerReservation(idReservation: number): Promise<Reservation> {
+  const reponse = await axiosClient.put<Reservation>(
+    `/reservations/${idReservation}/statut`,
+    {
+      statut: 'Annulee',
+    }
+  );
+  return reponse.data;
+}
