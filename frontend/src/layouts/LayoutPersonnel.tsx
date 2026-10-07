@@ -24,6 +24,7 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 
+import LogoDelta from '@/components/ui/LogoDelta';
 import BulleAssistant from '@/features/assistant/components/BulleAssistant';
 import { useDeconnexion } from '@/features/auth/auth.hooks';
 import { useEstAdministrateur } from '@/lib/useEstConnecte';
@@ -125,9 +126,9 @@ export default function LayoutPersonnel() {
       <aside className="hidden w-64 flex-col border-r-2 border-warm-gray-200 bg-white md:flex">
         <NavLink
           to="/"
-          className="border-b border-warm-gray-200 px-4 py-6 font-serif text-2xl font-bold text-terracotta transition-colors hover:text-burgundy"
+          className="border-b border-warm-gray-200 px-4 py-5 transition-opacity hover:opacity-80"
         >
-          Delta
+          <LogoDelta />
         </NavLink>
         <ContenuSidebar estAdministrateur={estAdministrateur} />
         <div className="border-t border-warm-gray-200 p-3">
@@ -145,11 +146,8 @@ export default function LayoutPersonnel() {
         {/* Barre mobile : logo + bouton d'ouverture, la sidebar devenant un
             tiroir plutôt qu'une colonne fixe sous md. */}
         <header className="flex items-center justify-between border-b-2 border-warm-gray-200 bg-white px-4 py-4 md:hidden">
-          <NavLink
-            to="/"
-            className="font-serif text-xl font-bold text-terracotta transition-colors hover:text-burgundy"
-          >
-            Delta
+          <NavLink to="/" className="transition-opacity hover:opacity-80">
+            <LogoDelta />
           </NavLink>
           <button
             type="button"

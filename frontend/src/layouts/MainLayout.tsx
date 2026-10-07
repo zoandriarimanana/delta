@@ -19,6 +19,7 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 
+import LogoDelta from '@/components/ui/LogoDelta';
 import BulleAssistant from '@/features/assistant/components/BulleAssistant';
 import { useDeconnexion } from '@/features/auth/auth.hooks';
 import { usePanier } from '@/features/commande/commande.hooks';
@@ -97,11 +98,8 @@ export default function MainLayout() {
     <div className="flex min-h-screen flex-col bg-cream">
       <header className="border-b-2 border-warm-gray-200 bg-white shadow-sm">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-6">
-          <NavLink
-            to="/"
-            className="font-serif text-2xl font-bold text-terracotta transition-colors hover:text-burgundy"
-          >
-            Delta
+          <NavLink to="/" className="transition-opacity hover:opacity-80">
+            <LogoDelta />
           </NavLink>
 
           <nav className="hidden gap-1 md:flex">
@@ -190,8 +188,9 @@ export default function MainLayout() {
       <BulleAssistant />
 
       <footer className="border-t border-warm-gray-200 bg-white">
-        <div className="mx-auto max-w-5xl px-4 py-4 text-sm text-warm-gray-500">
-          Delta
+        <div className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-4 text-sm text-warm-gray-500">
+          <LogoDelta forme="symbole" className="h-6" />
+          <span>Delta</span>
         </div>
       </footer>
     </div>
