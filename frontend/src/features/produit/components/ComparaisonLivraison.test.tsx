@@ -1,4 +1,4 @@
-/** Tests du prix en retrait et du prix livré sur la fiche produit. */
+/** Tests des frais de livraison affichés sur la fiche produit. */
 
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -38,40 +38,39 @@ afterEach(() => {
 });
 
 function bloc() {
-  return within(screen.getByRole('group', { name: 'Prix selon le mode de réception' }));
+  return within(screen.getByRole('group', { name: 'Frais de livraison' }));
 }
 
-it('montre le prix en retrait et le prix avec livraison', async () => {
+it('affiche les frais de livraison et le total livré', async () => {
   render(<ComparaisonLivraison produit={GATEAU} quantite={1} />);
 
-  expect(await bloc().findByText(/30\s000,00 Ar/)).toBeDefined();
-  expect(bloc().getByText(/25\s000,00 Ar/)).toBeDefined();
-  expect(bloc().getByText(/dont 5\s000,00 Ar de livraison/)).toBeDefined();
+  expect(await bloc().findByText(/^5\s000,00 Ar$/)).toBeDefined();
+  expect(bloc().getByText('Frais de livraison')).toBeDefined();
+  expect(bloc().getByText(/^30\s000,00 Ar$/)).toBeDefined();
   expect(bloc().getByText(/offerte dès 100\s000,00 Ar/)).toBeDefined();
+  expect(bloc().queryByText(/Retrait sur place/)).toBeNull();
 });
 
 it('suit la quantité choisie et annonce la livraison offerte au seuil', async () => {
   render(<ComparaisonLivraison produit={GATEAU} quantite={4} />);
 
-  expect(await bloc().findByText('Livraison offerte')).toBeDefined();
-  expect(bloc().getAllByText(/100\s000,00 Ar/).length).toBeGreaterThan(0);
-  expect(bloc().getByText(/4 × 25\s000,00 Ar/)).toBeDefined();
+  expect(await bloc().findByText('Offerte')).toBeDefined();
+  expect(bloc().getByText(/^100\s000,00 Ar$/)).toBeDefined();
+  expect(bloc().getByText(/4 × 25\s000,00 Ar \+ livraison/)).toBeDefined();
 });
 
-it('n’annonce aucune livraison pour un produit non livrable', () => {
+it('n’annonce aucun frais pour un produit non livrable', () => {
   render(
     <ComparaisonLivraison produit={{ ...GATEAU, est_livrable: false }} quantite={1} />
   );
 
-  expect(bloc().getByText(/retire sur place uniquement/)).toBeDefined();
-  expect(bloc().queryByText(/Avec livraison/)).toBeNull();
+  expect(bloc().getByText(/retrait sur place uniquement/)).toBeDefined();
+  expect(bloc().queryByText(/Total avec livraison/)).toBeNull();
 });
 
 it('tait le montant si le tarif ne peut pas être lu', async () => {
   vi.mocked(recupererTarifLivraison).mockRejectedValue(new Error('réseau'));
   render(<ComparaisonLivraison produit={GATEAU} quantite={1} />);
 
-  expect(
-    await bloc().findByText(/les frais s’affichent au moment de commander/)
-  ).toBeDefined();
+  expect(await bloc().findByText(/Affichés au moment de commander/)).toBeDefined();
 });
