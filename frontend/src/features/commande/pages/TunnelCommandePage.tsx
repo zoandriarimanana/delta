@@ -11,15 +11,15 @@ import { Link, useNavigate } from 'react-router';
 
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import ChoixReception from '../components/ChoixReception';
+import RecapitulatifMontants from '../components/RecapitulatifMontants';
 import { usePanier, useValidationCommande } from '../commande.hooks';
-import { formaterMontant } from '../commande.service';
-import type { Commande, TypeCommande } from '../commande.types';
-
-const TYPES: { valeur: TypeCommande; libelle: string }[] = [
-  { valeur: 'En_ligne', libelle: 'Livraison' },
-  { valeur: 'A_emporter', libelle: 'À emporter' },
-  { valeur: 'Sur_place', libelle: 'Sur place' },
-];
+import {
+  formaterMontant,
+  TYPE_PAR_MODE,
+  type ModeReception,
+} from '../commande.service';
+import type { Commande } from '../commande.types';
 
 export default function TunnelCommandePage() {
   const panier = usePanier();
@@ -27,7 +27,10 @@ export default function TunnelCommandePage() {
   const { valider, envoi, erreur } = useValidationCommande();
   const naviguer = useNavigate();
 
-  const [type, setType] = useState<TypeCommande>('En_ligne');
+  // Retrait par défaut : la commande n'est jamais bloquée par une adresse
+  // manquante, et la livraison reste un choix explicite.
+  const [mode, setMode] = useState<ModeReception>('retrait');
+  const [adresse, setAdresse] = useState('');
   const [nom, setNom] = useState('');
   const [contact, setContact] = useState('');
   const [confirmee, setConfirmee] = useState<Commande | null>(null);
@@ -38,7 +41,11 @@ export default function TunnelCommandePage() {
         <h1 className="text-2xl font-semibold text-slate-900">Commande enregistrée</h1>
         <p className="mt-2 text-slate-700">
           Votre commande n° {confirmee.id_commande} est enregistrée pour un montant de{' '}
-          {formaterMontant(confirmee.montant_total)}.
+          {formaterMontant(confirmee.montant_total)}
+          {Number(confirmee.frais_livraison) > 0 && (
+            <>, dont {formaterMontant(confirmee.frais_livraison)} de livraison</>
+          )}
+          .
         </p>
         <Link to="/produits" className="mt-6 inline-block text-slate-900 underline">
           Retour au catalogue
@@ -64,8 +71,9 @@ export default function TunnelCommandePage() {
   async function soumettre(evenement: React.FormEvent) {
     evenement.preventDefault();
     const commande = await valider(
-      type,
-      connecte ? undefined : { nom_invite: nom, contact_invite: contact }
+      TYPE_PAR_MODE[mode],
+      connecte ? undefined : { nom_invite: nom, contact_invite: contact },
+      mode === 'livraison' ? adresse : undefined
     );
     if (commande === null) {
       // Échec : le panier est intact, l'erreur est affichée, on reste ici.
@@ -96,25 +104,20 @@ export default function TunnelCommandePage() {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-right text-lg font-semibold text-slate-900">
-        Total : {formaterMontant(panier.total)}
-      </p>
+      <div className="mt-4 max-w-md sm:ml-auto">
+        <RecapitulatifMontants
+          sousTotal={panier.total}
+          avecLivraison={mode === 'livraison'}
+        />
+      </div>
 
-      <form onSubmit={soumettre} className="mt-6 max-w-md space-y-4">
-        <label className="block">
-          <span className="text-sm text-slate-700">Type de commande</span>
-          <select
-            value={type}
-            onChange={(evenement) => setType(evenement.target.value as TypeCommande)}
-            className="mt-1 block w-full rounded border border-slate-300 px-3 py-2"
-          >
-            {TYPES.map((option) => (
-              <option key={option.valeur} value={option.valeur}>
-                {option.libelle}
-              </option>
-            ))}
-          </select>
-        </label>
+      <form onSubmit={soumettre} className="mt-6 max-w-2xl space-y-4">
+        <ChoixReception
+          mode={mode}
+          adresse={adresse}
+          surMode={setMode}
+          surAdresse={setAdresse}
+        />
 
         {!connecte && (
           <>

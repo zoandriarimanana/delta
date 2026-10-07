@@ -7,7 +7,7 @@
  * ici et non dans le composant.
  */
 
-import type { StatutLivraison } from './livraison.types';
+import type { StatutLivraison, TarifLivraison } from './livraison.types';
 
 /** Ce qu'un statut dit au client, et ce qu'il lui demande. */
 export interface LibelleStatut {
@@ -89,4 +89,32 @@ export const ETAPES: readonly StatutLivraison[] = [
  */
 export function estParcoursNominal(statut: StatutLivraison): boolean {
   return ETAPES.includes(statut);
+}
+
+/**
+ * Frais de livraison pour un montant de produits — **indicatifs**.
+ *
+ * Même règle que `TarifLivraisonService.calculer_frais`, et c'est le serveur
+ * qui fait foi : le montant enregistré est calculé et figé à la commande.
+ * Le seuil se compare aux **produits seuls**, jamais à un total contenant
+ * déjà les frais.
+ */
+export function fraisLivraison(tarif: TarifLivraison, sousTotal: number): number {
+  const seuil = tarif.seuil_gratuite === null ? null : Number(tarif.seuil_gratuite);
+  if (seuil !== null && sousTotal >= seuil) {
+    return 0;
+  }
+  return Number(tarif.forfait);
+}
+
+/** Ce qu'il reste à acheter pour que la livraison soit offerte, ou `null`. */
+export function resteAvantGratuite(
+  tarif: TarifLivraison,
+  sousTotal: number
+): number | null {
+  if (tarif.seuil_gratuite === null) {
+    return null;
+  }
+  const reste = Number(tarif.seuil_gratuite) - sousTotal;
+  return reste > 0 ? reste : null;
 }

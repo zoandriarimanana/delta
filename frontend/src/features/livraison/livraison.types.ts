@@ -44,3 +44,15 @@ export interface LivraisonAdministration {
   /** `null` tant qu'aucun livreur n'est affecté. */
   id_personnel: number | null;
 }
+
+/**
+ * Tarif de livraison — miroir de `TarifLivraisonRead`. Public.
+ *
+ * Montants en **chaîne** (`Decimal` côté serveur), comme les autres prix.
+ * Forfait unique, compté **une fois par commande**, offert dès que les
+ * produits atteignent `seuil_gratuite` ; `null` : jamais offert.
+ */
+export interface TarifLivraison {
+  forfait: string;
+  seuil_gratuite: string | null;
+}

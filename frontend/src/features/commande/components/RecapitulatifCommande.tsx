@@ -31,7 +31,16 @@ export default function RecapitulatifCommande({ commande }: Proprietes) {
           />
         ))}
       </ul>
-      <p className="mt-3 text-right text-lg font-semibold text-slate-900">
+      {Number(commande.frais_livraison) > 0 ? (
+        <p className="mt-3 text-right text-sm text-slate-600">
+          Livraison : {formaterMontant(commande.frais_livraison)}
+        </p>
+      ) : (
+        commande.adresse_livraison != null && (
+          <p className="mt-3 text-right text-sm text-slate-600">Livraison : offerte</p>
+        )
+      )}
+      <p className="mt-1 text-right text-lg font-semibold text-slate-900">
         Total : {formaterMontant(commande.montant_total)}
       </p>
       <p className="mt-1 text-right text-sm text-slate-600">

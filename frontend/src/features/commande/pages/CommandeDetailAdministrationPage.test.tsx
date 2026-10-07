@@ -36,6 +36,7 @@ const COMMANDE: Commande = {
   type_commande: 'En_ligne',
   statut: 'En_attente',
   montant_total: '7000.00',
+  frais_livraison: '0.00',
   id_client: 3,
   nom_invite: null,
   contact_invite: null,

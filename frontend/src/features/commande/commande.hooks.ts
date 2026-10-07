@@ -93,7 +93,8 @@ export function usePanier(): Panier {
 export interface ValidationCommande {
   valider: (
     type: TypeCommande,
-    invite?: { nom_invite: string; contact_invite: string }
+    invite?: { nom_invite: string; contact_invite: string },
+    adresseLivraison?: string
   ) => Promise<Commande | null>;
   envoi: boolean;
   erreur: string | null;
@@ -116,19 +117,27 @@ export function useValidationCommande(): ValidationCommande {
   const valider = useCallback(
     async (
       type: TypeCommande,
-      invite?: { nom_invite: string; contact_invite: string }
+      invite?: { nom_invite: string; contact_invite: string },
+      adresseLivraison?: string
     ): Promise<Commande | null> => {
       setEnvoi(true);
       setErreur(null);
       const lignes = versLignesEnvoyees(lirePanier());
+      // L'adresse n'est envoyée que si elle est renseignée : c'est sa
+      // présence qui déclenche la livraison et ses frais côté serveur.
+      const adresse =
+        adresseLivraison !== undefined && adresseLivraison.trim() !== ''
+          ? { adresse_livraison: adresseLivraison.trim() }
+          : {};
 
       try {
         const commande =
           invite === undefined
-            ? await creerCommande({ type_commande: type, lignes })
+            ? await creerCommande({ type_commande: type, lignes, ...adresse })
             : await creerCommandeInvite({
                 type_commande: type,
                 lignes,
+                ...adresse,
                 ...invite,
               });
         panier.vider();

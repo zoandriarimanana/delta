@@ -48,6 +48,7 @@ const COMMANDE = {
   type_commande: 'Sur_place' as const,
   statut: 'En_attente' as const,
   montant_total: '3.50',
+  frais_livraison: '0.00',
   id_client: 5,
   nom_invite: null,
   contact_invite: null,

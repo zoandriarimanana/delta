@@ -23,6 +23,7 @@ import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
 import AdministrationDomainesPage from '@/features/formation/pages/AdministrationDomainesPage';
 import DomaineDetailAdministrationPage from '@/features/formation/pages/DomaineDetailAdministrationPage';
 import AdministrationFormationsPage from '@/features/formation/pages/AdministrationFormationsPage';
+import TarifLivraisonPage from '@/features/livraison/pages/TarifLivraisonPage';
 import FormationDetailAdministrationPage from '@/features/formation/pages/FormationDetailAdministrationPage';
 import FormationDetailPage from '@/features/formation/pages/FormationDetailPage';
 import FormationListPage from '@/features/formation/pages/FormationListPage';
@@ -172,6 +173,7 @@ export default function App() {
             element={<DomaineDetailAdministrationPage />}
           />
           <Route path="formations" element={<AdministrationFormationsPage />} />
+          <Route path="tarif-livraison" element={<TarifLivraisonPage />} />
           <Route
             path="formations/:idFormation"
             element={<FormationDetailAdministrationPage />}

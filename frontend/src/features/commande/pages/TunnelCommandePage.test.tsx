@@ -18,12 +18,20 @@ import {
   creerCommandeInvite,
   recupererCommandeInvitee,
 } from '../commande.api';
+import { recupererTarifLivraison } from '@/features/livraison/livraison.api';
+
 import { ecrirePanier, lirePanier, resynchroniserPanier } from '../commande.panier';
 import type { Commande } from '../commande.types';
 import CommandeInviteePage from './CommandeInviteePage';
 import TunnelCommandePage from './TunnelCommandePage';
 
 vi.mock('../commande.api');
+// Seule la lecture du tarif est simulée : la page de commande invitée appelle
+// aussi le suivi de livraison, qui doit garder son comportement réel.
+vi.mock('@/features/livraison/livraison.api', async (original) => ({
+  ...(await original<typeof import('@/features/livraison/livraison.api')>()),
+  recupererTarifLivraison: vi.fn(),
+}));
 
 const REFERENCE = '8f14e45f-ceea-467a-9f5a-1f0a1f0a1f0a';
 
@@ -34,6 +42,7 @@ const COMMANDE_INVITEE: Commande = {
   type_commande: 'A_emporter',
   statut: 'En_attente',
   montant_total: '7.00',
+  frais_livraison: '0.00',
   id_client: null,
   nom_invite: 'Rakoto Jean',
   contact_invite: '+261340000000',
@@ -86,6 +95,10 @@ beforeEach(() => {
   resynchroniserPanier();
   effacerSession();
   vi.mocked(creerCommande).mockResolvedValue(COMMANDE_CLIENT);
+  vi.mocked(recupererTarifLivraison).mockResolvedValue({
+    forfait: '5000.00',
+    seuil_gratuite: '100000.00',
+  });
   vi.mocked(creerCommandeInvite).mockResolvedValue(COMMANDE_INVITEE);
   vi.mocked(recupererCommandeInvitee).mockResolvedValue(COMMANDE_INVITEE);
 });
@@ -191,5 +204,59 @@ describe('échec de validation', () => {
     expect(lirePanier()[0]?.quantite).toBe(2);
     // Et le formulaire reste disponible pour réessayer.
     expect(screen.getByRole('button', { name: /valider/i })).toBeDefined();
+  });
+});
+
+describe('mode de réception et frais de livraison', () => {
+  it('par défaut, retrait : aucune adresse envoyée, aucun frais', async () => {
+    definirSession('client');
+    act(remplirLePanier);
+    afficher();
+
+    expect(await screen.findByText('Aucun frais', { selector: 'dd' })).toBeDefined();
+    await userEvent.click(screen.getByRole('button', { name: /valider/i }));
+
+    expect(creerCommande).toHaveBeenCalledWith({
+      type_commande: 'A_emporter',
+      lignes: [{ id_produit: 1, quantite: 2 }],
+    });
+  });
+
+  it('la livraison exige une adresse, l’envoie et annonce les frais', async () => {
+    definirSession('client');
+    act(remplirLePanier);
+    afficher();
+
+    await userEvent.click(screen.getByLabelText(/Livraison à domicile/));
+    expect(await screen.findByText(/5\s000,00 Ar/)).toBeDefined();
+    expect(screen.getByText(/Plus que .* pour une livraison offerte/)).toBeDefined();
+
+    const adresse = screen.getByLabelText(/Adresse de livraison/);
+    expect(adresse.hasAttribute('required')).toBe(true);
+    await userEvent.type(adresse, '  Lot II M 45 Antananarivo  ');
+    await userEvent.click(screen.getByRole('button', { name: /valider/i }));
+
+    expect(creerCommande).toHaveBeenCalledWith({
+      type_commande: 'En_ligne',
+      lignes: [{ id_produit: 1, quantite: 2 }],
+      adresse_livraison: 'Lot II M 45 Antananarivo',
+    });
+  });
+
+  it('la confirmation précise les frais de livraison figés', async () => {
+    vi.mocked(creerCommande).mockResolvedValue({
+      ...COMMANDE_CLIENT,
+      montant_total: '5007.00',
+      frais_livraison: '5000.00',
+    });
+    definirSession('client');
+    act(remplirLePanier);
+    afficher();
+
+    await userEvent.click(screen.getByLabelText(/Livraison à domicile/));
+    await userEvent.type(screen.getByLabelText(/Adresse de livraison/), 'Lot II M 45');
+    await userEvent.click(screen.getByRole('button', { name: /valider/i }));
+
+    expect(await screen.findByText(/dont 5\s000,00 Ar de livraison/)).toBeDefined();
   });
 });

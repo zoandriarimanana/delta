@@ -16,6 +16,7 @@ import { Check, Minus, Plus, ShoppingCart } from 'lucide-react';
 import { usePanier } from '@/features/commande/commande.hooks';
 
 import type { Produit } from '../produit.types';
+import ComparaisonLivraison from './ComparaisonLivraison';
 
 interface Proprietes {
   produit: Produit;
@@ -39,6 +40,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
 
   return (
     <div className="space-y-3">
+      <ComparaisonLivraison produit={produit} quantite={quantite} />
       <div className="flex flex-col gap-3 sm:flex-row">
         <div
           role="group"

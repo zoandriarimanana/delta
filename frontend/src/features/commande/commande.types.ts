@@ -30,7 +30,19 @@ export interface Commande {
   reference_publique: string | null;
   type_commande: TypeCommande;
   statut: StatutCommande;
+  /** Frais de livraison compris : produits + `frais_livraison`. */
   montant_total: string;
+  /**
+   * Frais de livraison **appliqués**, figés à la commande. `"0.00"` sans
+   * livraison, ou si elle était offerte (seuil atteint).
+   */
+  frais_livraison: string;
+  /**
+   * Adresse saisie au tunnel ; sa présence a créé la livraison. Facultative
+   * dans le type : seules les vues qui distinguent livraison et retrait la
+   * lisent.
+   */
+  adresse_livraison?: string | null;
   id_client: number | null;
   nom_invite: string | null;
   contact_invite: string | null;
@@ -53,6 +65,11 @@ export interface LigneCommandeEnvoyee {
 export interface CommandeEnvoyee {
   type_commande: TypeCommande;
   lignes: LigneCommandeEnvoyee[];
+  /**
+   * Sa présence, et elle seule, crée la `LIVRAISON` et les frais
+   * correspondants. Absente : retrait, aucun frais.
+   */
+  adresse_livraison?: string;
 }
 
 export interface CommandeInviteEnvoyee extends CommandeEnvoyee {

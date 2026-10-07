@@ -46,6 +46,7 @@ const LIENS_GESTION: Lien[] = [
   { vers: '/personnel/reservations', libelle: 'Réservations' },
   { vers: '/personnel/commandes/administration', libelle: 'Commandes' },
   { vers: '/personnel/abonnements', libelle: 'Abonnements' },
+  { vers: '/personnel/tarif-livraison', libelle: 'Livraison' },
   { vers: '/personnel/catalogue', libelle: 'Catalogue' },
   { vers: '/personnel/categories', libelle: 'Catégories' },
   { vers: '/personnel/salles', libelle: 'Salles' },

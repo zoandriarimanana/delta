@@ -16,6 +16,7 @@ import type {
   LivraisonAdministration,
   StatutLivraison,
   SuiviLivraison,
+  TarifLivraison,
 } from './livraison.types';
 
 /**
@@ -69,5 +70,23 @@ export async function relancerLivraison(
   const reponse = await axiosClient.post<LivraisonAdministration>(
     `/livraisons/${idLivraison}/relance`
   );
+  return reponse.data;
+}
+
+/** Tarif de livraison en vigueur. Public : affiché avant tout achat. */
+export async function recupererTarifLivraison(): Promise<TarifLivraison> {
+  const reponse = await axiosClient.get<TarifLivraison>('/tarif-livraison');
+  return reponse.data;
+}
+
+/**
+ * Règle le tarif — réservé aux administrateurs (403 sinon). Une clé absente
+ * reste inchangée ; `seuil_gratuite: null` retire la gratuité. Sans effet
+ * sur les commandes passées, dont les frais sont figés.
+ */
+export async function modifierTarifLivraison(
+  donnees: Partial<TarifLivraison>
+): Promise<TarifLivraison> {
+  const reponse = await axiosClient.put<TarifLivraison>('/tarif-livraison', donnees);
   return reponse.data;
 }

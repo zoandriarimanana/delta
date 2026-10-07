@@ -2,10 +2,14 @@
  * Hooks du module livraison : état, effets, et rien de visuel.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { recupererSuivi, recupererSuiviInvite } from './livraison.api';
-import type { SuiviLivraison } from './livraison.types';
+import {
+  recupererSuivi,
+  recupererSuiviInvite,
+  recupererTarifLivraison,
+} from './livraison.api';
+import type { SuiviLivraison, TarifLivraison } from './livraison.types';
 
 export interface EtatSuivi {
   suivi: SuiviLivraison | null;
@@ -101,4 +105,42 @@ export function useSuiviLivraisonInvitee(reference: string | null): EtatSuivi {
     () => recupererSuiviInvite(reference as string),
     reference
   );
+}
+
+export interface EtatTarif {
+  /** `null` tant qu'il n'est pas chargé, ou s'il n'a pas pu l'être. */
+  tarif: TarifLivraison | null;
+  chargement: boolean;
+  erreur: boolean;
+  recharger: () => void;
+}
+
+/**
+ * Tarif de livraison en vigueur.
+ *
+ * Un échec n'empêche rien : la fiche produit et le tunnel restent
+ * utilisables, ils taisent simplement le montant — le serveur l'appliquera
+ * de toute façon à la commande.
+ */
+export function useTarifLivraison(): EtatTarif {
+  const [tarif, setTarif] = useState<TarifLivraison | null>(null);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState(false);
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    let actif = true;
+    setChargement(true);
+    setErreur(false);
+    recupererTarifLivraison()
+      .then((lu) => actif && setTarif(lu))
+      .catch(() => actif && setErreur(true))
+      .finally(() => actif && setChargement(false));
+    return () => {
+      actif = false;
+    };
+  }, [version]);
+
+  const recharger = useCallback(() => setVersion((v) => v + 1), []);
+  return { tarif, chargement, erreur, recharger };
 }

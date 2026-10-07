@@ -202,3 +202,18 @@ export function versCibleAcheteur(
     ? { nom_invite: nom.trim(), contact_invite: contact.trim() }
     : null;
 }
+
+/** Mode de réception choisi au tunnel. */
+export type ModeReception = 'livraison' | 'retrait' | 'sur_place';
+
+/**
+ * Type de commande transmis au serveur pour chaque mode.
+ *
+ * Seule la livraison porte une adresse : c'est elle, et non le type, qui crée
+ * la `LIVRAISON` et ses frais côté serveur.
+ */
+export const TYPE_PAR_MODE: Record<ModeReception, TypeCommande> = {
+  livraison: 'En_ligne',
+  retrait: 'A_emporter',
+  sur_place: 'Sur_place',
+};

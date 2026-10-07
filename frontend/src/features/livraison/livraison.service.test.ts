@@ -2,7 +2,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { ETAPES, estParcoursNominal, libelleStatut } from './livraison.service';
+import {
+  ETAPES,
+  estParcoursNominal,
+  fraisLivraison,
+  libelleStatut,
+  resteAvantGratuite,
+} from './livraison.service';
 import type { StatutLivraison } from './livraison.types';
 
 const TOUS: StatutLivraison[] = [
@@ -67,5 +73,32 @@ describe('estParcoursNominal', () => {
     // Les afficher comme une étape parmi d'autres suggérerait que le
     // parcours continue, alors qu'il s'est arrêté.
     expect(estParcoursNominal(statut)).toBe(false);
+  });
+});
+
+describe('fraisLivraison', () => {
+  const TARIF = { forfait: '5000.00', seuil_gratuite: '100000.00' };
+
+  it('applique le forfait sous le seuil, une fois quel que soit le montant', () => {
+    expect(fraisLivraison(TARIF, 25000)).toBe(5000);
+    expect(fraisLivraison(TARIF, 99999.99)).toBe(5000);
+  });
+
+  it('offre la livraison dès le seuil atteint', () => {
+    expect(fraisLivraison(TARIF, 100000)).toBe(0);
+  });
+
+  it('sans seuil, la livraison n’est jamais offerte', () => {
+    expect(fraisLivraison({ ...TARIF, seuil_gratuite: null }, 1e9)).toBe(5000);
+  });
+});
+
+describe('resteAvantGratuite', () => {
+  const TARIF = { forfait: '5000.00', seuil_gratuite: '100000.00' };
+
+  it('dit ce qu’il reste à acheter, ou null une fois le seuil atteint', () => {
+    expect(resteAvantGratuite(TARIF, 75000)).toBe(25000);
+    expect(resteAvantGratuite(TARIF, 100000)).toBeNull();
+    expect(resteAvantGratuite({ ...TARIF, seuil_gratuite: null }, 0)).toBeNull();
   });
 });
