@@ -19,6 +19,7 @@
  */
 
 import { Link, useParams } from 'react-router';
+import { Banknote, RotateCw, X } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
 
@@ -120,7 +121,8 @@ export default function CommandeDetailAdministrationPage() {
       <div className="mt-4 flex flex-wrap gap-2">
         {peutAnnuler && (
           <Bouton
-            variante="secondaire"
+            variante="danger"
+            icone={X}
             onClick={() => void actions.annuler()}
             disabled={actions.envoi}
           >
@@ -129,7 +131,8 @@ export default function CommandeDetailAdministrationPage() {
         )}
         {livraisonEchouee.livraison !== null && (
           <Bouton
-            variante="secondaire"
+            variante="primaire"
+            icone={RotateCw}
             onClick={() => {
               const idLivraison = livraisonEchouee.livraison?.id_livraison;
               if (idLivraison !== undefined) {
@@ -142,7 +145,8 @@ export default function CommandeDetailAdministrationPage() {
           </Bouton>
         )}
         <Bouton
-          variante="secondaire"
+          variante="attention"
+          icone={Banknote}
           onClick={() => void actions.rembourser()}
           disabled={actions.envoi}
         >

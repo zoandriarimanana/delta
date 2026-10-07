@@ -159,8 +159,9 @@ export function peutAnnulerClient(reservation: Reservation, maintenant: Date): b
 
 const VARIANTES: Record<StatutReservation, VarianteBadge> = {
   En_attente: 'attente',
-  Confirmee: 'positif',
-  Honoree: 'neutre',
+  // Confirmée : acquise mais pas encore accomplie (bleu) ; honorée : faite (vert).
+  Confirmee: 'info',
+  Honoree: 'positif',
   Annulee: 'negatif',
 };
 

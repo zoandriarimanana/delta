@@ -158,7 +158,7 @@ export default function TarifLivraisonPage() {
           </p>
         )}
 
-        <Bouton type="submit" disabled={envoi}>
+        <Bouton variante="valider" type="submit" disabled={envoi}>
           {envoi ? 'Enregistrement…' : 'Enregistrer'}
         </Bouton>
       </form>

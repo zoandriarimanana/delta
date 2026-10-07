@@ -175,10 +175,10 @@ export default function FormulaireSalle({
       )}
 
       <div className="flex gap-2">
-        <Bouton type="submit" disabled={envoi || sansTarif}>
+        <Bouton variante="valider" type="submit" disabled={envoi || sansTarif}>
           {envoi ? 'Enregistrement…' : salle === undefined ? 'Créer' : 'Enregistrer'}
         </Bouton>
-        <Bouton variante="secondaire" onClick={surAnnulation}>
+        <Bouton variante="neutre" onClick={surAnnulation}>
           Annuler
         </Bouton>
       </div>

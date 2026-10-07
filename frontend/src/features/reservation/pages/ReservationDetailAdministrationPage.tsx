@@ -16,6 +16,7 @@
  */
 
 import { Link, useParams } from 'react-router';
+import { Check, X } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
 import { formaterDate } from '@/features/commande/commande.service';
@@ -145,7 +146,8 @@ export default function ReservationDetailAdministrationPage() {
       <div className="mt-4 flex flex-wrap gap-2">
         {peutMarquerHonoree(reservation) && (
           <Bouton
-            variante="secondaire"
+            variante="valider"
+            icone={Check}
             onClick={() => void actions.marquerHonoree(reservation.id_reservation)}
             disabled={actions.idEnCours === reservation.id_reservation}
           >
@@ -154,7 +156,8 @@ export default function ReservationDetailAdministrationPage() {
         )}
         {peutAnnuler(reservation) && (
           <Bouton
-            variante="secondaire"
+            variante="danger"
+            icone={X}
             onClick={() => void actions.annuler(reservation.id_reservation)}
             disabled={actions.idEnCours === reservation.id_reservation}
           >

@@ -18,6 +18,7 @@ import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
 
 import Avatar from '@/components/ui/Avatar';
+import { Plus } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 
 import FormulairePersonnel from '../components/FormulairePersonnel';
@@ -82,7 +83,11 @@ export default function AdministrationPersonnelPage() {
           Administration du personnel
         </h1>
         {edition.mode === 'ferme' && (
-          <Bouton onClick={() => setEdition({ mode: 'creation' })}>
+          <Bouton
+            variante="primaire"
+            icone={Plus}
+            onClick={() => setEdition({ mode: 'creation' })}
+          >
             Nouveau membre
           </Bouton>
         )}

@@ -128,6 +128,7 @@ export default function GestionGalerie({ bien }: Proprietes) {
             />
           </label>
           <Bouton
+            variante="valider"
             type="submit"
             disabled={fichier === null || gestion.envoi}
             className="inline-flex items-center justify-center gap-2"

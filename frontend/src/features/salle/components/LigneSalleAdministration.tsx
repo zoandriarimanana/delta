@@ -9,6 +9,7 @@
 import { Link } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 import { imagePour } from '@/lib/images';
 import {
@@ -69,7 +70,8 @@ export default function LigneSalleAdministration({
         <div className="flex justify-end gap-2">
           {archive ? (
             <Bouton
-              variante="secondaire"
+              variante="valider"
+              icone={RotateCcw}
               disabled={envoi}
               onClick={() => surRestauration(salle.id_salle)}
             >
@@ -79,13 +81,15 @@ export default function LigneSalleAdministration({
             <>
               <Bouton
                 variante="secondaire"
+                icone={Pencil}
                 disabled={envoi}
                 onClick={() => surModification(salle)}
               >
                 Modifier
               </Bouton>
               <Bouton
-                variante="secondaire"
+                variante="danger-contour"
+                icone={Archive}
                 disabled={envoi}
                 onClick={() => surArchivage(salle.id_salle)}
               >

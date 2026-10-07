@@ -1693,6 +1693,22 @@ par filtre CSS en sombre.
       un vrai navigateur (accueil, tunnel, fiche admin, mobile, persistance
       après rechargement).
 
+**Travaux hors sprint : boutons colorés par intention et refonte de
+l'administration des réservations (7 octobre 2026).** Tous les boutons du
+back-office étaient identiques (contour bleu) : il fallait lire chaque
+libellé avant d'oser cliquer. Nouvelles variantes de `Bouton` (voir
+`docs/architecture.md`, « Couleurs ») appliquées aux 37 fichiers
+d'administration. Écran des réservations refait : compteurs par statut
+cliquables, recherche (client, salle, formation), nom et photo réels de la
+cible, pastilles de statut colorées (Confirmée en bleu, Honorée en vert),
+lignes « à confirmer » surlignées, **annulation confirmée en deux temps**
+(irréversible).
+
+- [x] Frontend vert, vérifié dans un vrai navigateur (clair et sombre).
+- [ ] Même confirmation en deux temps pour l'annulation d'une commande
+      (bouton rouge, mais encore en un clic).
+
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère

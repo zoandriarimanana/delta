@@ -258,10 +258,14 @@ export default function FormulaireProduit({
       )}
 
       <div className="flex gap-2">
-        <Bouton type="submit" disabled={envoi || tarifManquant || actives.length === 0}>
+        <Bouton
+          variante="valider"
+          type="submit"
+          disabled={envoi || tarifManquant || actives.length === 0}
+        >
           {envoi ? 'Enregistrement…' : produit === undefined ? 'Créer' : 'Enregistrer'}
         </Bouton>
-        <Bouton variante="secondaire" onClick={surAnnulation}>
+        <Bouton variante="neutre" onClick={surAnnulation}>
           Annuler
         </Bouton>
       </div>

@@ -10,6 +10,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 import {
   CLASSES_LIGNE_CLIQUABLE,
@@ -118,11 +119,11 @@ export default function CategorieDetailAdministrationPage() {
                 className="rounded border border-gris-300 px-2 py-1.5"
               />
             </label>
-            <Bouton type="submit" disabled={envoi}>
+            <Bouton variante="valider" type="submit" disabled={envoi}>
               Enregistrer
             </Bouton>
             <Bouton
-              variante="secondaire"
+              variante="neutre"
               onClick={() => {
                 setLibelle(null);
                 setErreurEdition(null);
@@ -135,7 +136,8 @@ export default function CategorieDetailAdministrationPage() {
           <div className="mt-4 flex flex-wrap gap-2">
             {archive ? (
               <Bouton
-                variante="secondaire"
+                variante="valider"
+                icone={RotateCcw}
                 disabled={actions.envoi}
                 onClick={() => void actions.restaurerLaCategorie(id)}
               >
@@ -145,12 +147,14 @@ export default function CategorieDetailAdministrationPage() {
               <>
                 <Bouton
                   variante="secondaire"
+                  icone={Pencil}
                   onClick={() => setLibelle(categorie.libelle)}
                 >
                   Renommer
                 </Bouton>
                 <Bouton
-                  variante="secondaire"
+                  variante="danger-contour"
+                  icone={Archive}
                   disabled={actions.envoi}
                   onClick={() => void actions.archiverLaCategorie(id)}
                 >

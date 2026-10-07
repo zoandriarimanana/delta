@@ -217,6 +217,7 @@ export default function FormulaireAbonnement({
 
       <div className="flex gap-2">
         <Bouton
+          variante="valider"
           type="submit"
           disabled={
             envoi ||
@@ -230,7 +231,7 @@ export default function FormulaireAbonnement({
               ? 'Créer'
               : 'Enregistrer'}
         </Bouton>
-        <Bouton variante="secondaire" onClick={surAnnulation}>
+        <Bouton variante="neutre" onClick={surAnnulation}>
           Annuler
         </Bouton>
       </div>

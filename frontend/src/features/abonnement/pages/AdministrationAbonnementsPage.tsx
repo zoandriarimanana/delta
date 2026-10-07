@@ -16,6 +16,7 @@
 
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
+import { Plus } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
 
@@ -69,7 +70,11 @@ export default function AdministrationAbonnementsPage() {
           Administration des abonnements
         </h1>
         {edition.mode === 'ferme' && donnees.entreprises.length > 0 && (
-          <Bouton onClick={() => setEdition({ mode: 'creation' })}>
+          <Bouton
+            variante="primaire"
+            icone={Plus}
+            onClick={() => setEdition({ mode: 'creation' })}
+          >
             Nouvel abonnement
           </Bouton>
         )}

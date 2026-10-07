@@ -189,8 +189,56 @@ it('reprend le refus 409 tel quel', async () => {
   await screen.findByRole('button', { name: /^annuler$/i });
 
   await userEvent.click(screen.getByRole('button', { name: /^annuler$/i }));
+  await userEvent.click(
+    screen.getByRole('button', { name: /confirmer l’annulation/i })
+  );
 
   expect((await screen.findByRole('alert')).textContent).toContain(
     'Cette réservation est annulée'
   );
+});
+
+describe('annulation confirmée', () => {
+  it('n’appelle rien au premier clic, et « Garder » renonce', async () => {
+    vi.mocked(recupererReservationsAdministration).mockResolvedValue([EN_ATTENTE]);
+    afficher();
+    await userEvent.click(await screen.findByRole('button', { name: /^annuler$/i }));
+
+    expect(changerStatutAdministration).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: /garder/i }));
+    expect(screen.getByRole('button', { name: /^annuler$/i })).toBeTruthy();
+    expect(changerStatutAdministration).not.toHaveBeenCalled();
+  });
+
+  it('annule après confirmation', async () => {
+    vi.mocked(recupererReservationsAdministration).mockResolvedValue([EN_ATTENTE]);
+    vi.mocked(changerStatutAdministration).mockResolvedValue({
+      ...EN_ATTENTE,
+      statut: 'Annulee',
+    });
+    afficher();
+    await userEvent.click(await screen.findByRole('button', { name: /^annuler$/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /confirmer l’annulation/i })
+    );
+
+    await waitFor(() =>
+      expect(changerStatutAdministration).toHaveBeenCalledWith(1, 'Annulee')
+    );
+  });
+});
+
+it('compte les réservations par statut et filtre au clic', async () => {
+  vi.mocked(recupererReservationsAdministration).mockResolvedValue([
+    EN_ATTENTE,
+    HONOREE,
+    ANNULEE,
+  ]);
+  afficher();
+  await screen.findByRole('table');
+
+  await userEvent.click(screen.getByRole('button', { name: /1\s*À confirmer/ }));
+
+  expect(corpsDuTableau().getAllByText('Table').length).toBeGreaterThan(0);
+  expect(corpsDuTableau().queryByText('Salle')).toBeNull();
 });

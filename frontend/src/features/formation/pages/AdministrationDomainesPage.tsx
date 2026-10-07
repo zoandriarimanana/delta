@@ -20,6 +20,7 @@ import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 import {
   CLASSES_LIGNE_CLIQUABLE,
@@ -117,11 +118,15 @@ export default function AdministrationDomainesPage() {
               className="rounded border border-gris-300 px-2 py-1"
             />
           </label>
-          <Bouton type="submit" disabled={envoi || libelle.trim() === ''}>
+          <Bouton
+            variante="valider"
+            type="submit"
+            disabled={envoi || libelle.trim() === ''}
+          >
             {enEdition !== null ? 'Enregistrer' : 'Ajouter'}
           </Bouton>
           {enEdition !== null && (
-            <Bouton variante="secondaire" onClick={reinitialiser}>
+            <Bouton variante="neutre" onClick={reinitialiser}>
               Annuler
             </Bouton>
           )}
@@ -192,7 +197,8 @@ export default function AdministrationDomainesPage() {
               <span className="flex gap-2">
                 {archive ? (
                   <Bouton
-                    variante="secondaire"
+                    variante="valider"
+                    icone={RotateCcw}
                     disabled={actions.envoi}
                     onClick={() => void actions.restaurerLeDomaine(domaine.id_domaine)}
                   >
@@ -202,6 +208,7 @@ export default function AdministrationDomainesPage() {
                   <>
                     <Bouton
                       variante="secondaire"
+                      icone={Pencil}
                       disabled={actions.envoi}
                       onClick={() => {
                         setEnEdition(domaine);
@@ -212,7 +219,8 @@ export default function AdministrationDomainesPage() {
                       Modifier
                     </Bouton>
                     <Bouton
-                      variante="secondaire"
+                      variante="danger-contour"
+                      icone={Archive}
                       disabled={actions.envoi}
                       onClick={() => void actions.archiverLeDomaine(domaine.id_domaine)}
                     >

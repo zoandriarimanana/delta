@@ -16,6 +16,7 @@
  */
 
 import { useCallback, useState } from 'react';
+import { Plus } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
 
@@ -114,7 +115,11 @@ export default function AdministrationLogementsPage() {
         </label>
 
         {edition.mode === 'ferme' && (
-          <Bouton onClick={() => setEdition({ mode: 'creation' })}>
+          <Bouton
+            variante="primaire"
+            icone={Plus}
+            onClick={() => setEdition({ mode: 'creation' })}
+          >
             Nouveau logement
           </Bouton>
         )}

@@ -16,6 +16,7 @@
 
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
+import { Plus } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
 
@@ -115,7 +116,11 @@ export default function AdministrationProduitsPage() {
         </label>
 
         {edition.mode === 'ferme' && (
-          <Bouton onClick={() => setEdition({ mode: 'creation' })}>
+          <Bouton
+            variante="primaire"
+            icone={Plus}
+            onClick={() => setEdition({ mode: 'creation' })}
+          >
             Nouveau produit
           </Bouton>
         )}

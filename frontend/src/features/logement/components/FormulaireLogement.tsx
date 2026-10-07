@@ -163,10 +163,10 @@ export default function FormulaireLogement({
       )}
 
       <div className="flex gap-2">
-        <Bouton type="submit" disabled={envoi}>
+        <Bouton variante="valider" type="submit" disabled={envoi}>
           {envoi ? 'Enregistrement…' : logement === undefined ? 'Créer' : 'Enregistrer'}
         </Bouton>
-        <Bouton variante="secondaire" onClick={surAnnulation}>
+        <Bouton variante="neutre" onClick={surAnnulation}>
           Annuler
         </Bouton>
       </div>

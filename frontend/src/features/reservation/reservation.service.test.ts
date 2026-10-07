@@ -202,7 +202,7 @@ describe('rubriques de « Mes réservations »', () => {
   });
 
   it('choisit une variante par statut et nomme le type', () => {
-    expect(varianteStatut('Confirmee')).toBe('positif');
+    expect(varianteStatut('Confirmee')).toBe('info');
     expect(varianteStatut('Annulee')).toBe('negatif');
     expect(libelleType('Logement')).toBe('Hébergement');
   });

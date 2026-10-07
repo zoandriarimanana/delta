@@ -15,6 +15,7 @@
 
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
+import { Plus } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
 
@@ -79,7 +80,11 @@ export default function AdministrationFormationsPage() {
             Gérer les domaines
           </Link>
           {edition.mode === 'ferme' && (
-            <Bouton onClick={() => setEdition({ mode: 'creation' })}>
+            <Bouton
+              variante="primaire"
+              icone={Plus}
+              onClick={() => setEdition({ mode: 'creation' })}
+            >
               Nouvelle formation
             </Bouton>
           )}

@@ -11,6 +11,7 @@
 
 import { useCallback, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { Archive, Pencil, Plus } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
 
@@ -174,10 +175,18 @@ export default function AbonnementDetailAdministrationPage() {
           </dl>
 
           <div className="mt-4 flex gap-2">
-            <Bouton variante="secondaire" onClick={() => setModeEdition(true)}>
+            <Bouton
+              variante="secondaire"
+              icone={Pencil}
+              onClick={() => setModeEdition(true)}
+            >
               Modifier
             </Bouton>
-            <Bouton variante="secondaire" onClick={() => void archiver()}>
+            <Bouton
+              variante="danger-contour"
+              icone={Archive}
+              onClick={() => void archiver()}
+            >
               Archiver
             </Bouton>
           </div>
@@ -189,7 +198,8 @@ export default function AbonnementDetailAdministrationPage() {
           <h2 className="text-lg font-medium text-gris-700">Suivi de consommation</h2>
           {abonnement.mode_suivi === 'Individuel' && (
             <Bouton
-              variante="secondaire"
+              variante="primaire"
+              icone={Plus}
               onClick={() => setAjoutBeneficiaireOuvert((o) => !o)}
             >
               Ajouter un bénéficiaire
@@ -232,7 +242,11 @@ export default function AbonnementDetailAdministrationPage() {
                 className="rounded border border-gris-300 px-2 py-1"
               />
             </label>
-            <Bouton type="submit" disabled={beneficiaireAction.envoi}>
+            <Bouton
+              variante="valider"
+              type="submit"
+              disabled={beneficiaireAction.envoi}
+            >
               Ajouter
             </Bouton>
             {beneficiaireAction.erreur !== null && (

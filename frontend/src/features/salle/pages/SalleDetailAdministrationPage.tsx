@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 import ChampFiche from '@/components/ui/ChampFiche';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
@@ -159,7 +160,8 @@ export default function SalleDetailAdministrationPage() {
           <div className="mt-4 flex flex-wrap gap-2">
             {archive ? (
               <Bouton
-                variante="secondaire"
+                variante="valider"
+                icone={RotateCcw}
                 disabled={actions.envoi}
                 onClick={() => void actions.restaurerLaSalle(id)}
               >
@@ -167,11 +169,16 @@ export default function SalleDetailAdministrationPage() {
               </Bouton>
             ) : (
               <>
-                <Bouton variante="secondaire" onClick={() => setModeEdition(true)}>
+                <Bouton
+                  variante="secondaire"
+                  icone={Pencil}
+                  onClick={() => setModeEdition(true)}
+                >
                   Modifier
                 </Bouton>
                 <Bouton
-                  variante="secondaire"
+                  variante="danger-contour"
+                  icone={Archive}
                   disabled={actions.envoi}
                   onClick={() => void actions.archiverLaSalle(id)}
                 >

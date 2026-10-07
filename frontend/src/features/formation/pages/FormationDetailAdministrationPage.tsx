@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 import { formaterMontant } from '@/features/commande/commande.service';
 import GestionGalerie from '@/features/galerie/components/GestionGalerie';
@@ -166,11 +167,16 @@ export default function FormationDetailAdministrationPage() {
 
           {!archive && (
             <div className="mt-4 flex flex-wrap gap-2">
-              <Bouton variante="secondaire" onClick={() => setModeEdition(true)}>
+              <Bouton
+                variante="secondaire"
+                icone={Pencil}
+                onClick={() => setModeEdition(true)}
+              >
                 Modifier
               </Bouton>
               <Bouton
-                variante="secondaire"
+                variante="danger-contour"
+                icone={Archive}
                 onClick={() => void actions.archiverLaFormation(id)}
                 disabled={actions.envoi}
               >
@@ -181,7 +187,8 @@ export default function FormationDetailAdministrationPage() {
           {archive && (
             <div className="mt-4">
               <Bouton
-                variante="secondaire"
+                variante="valider"
+                icone={RotateCcw}
                 onClick={() => void actions.restaurerLaFormation(id)}
                 disabled={actions.envoi}
               >

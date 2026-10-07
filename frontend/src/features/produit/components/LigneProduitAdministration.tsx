@@ -8,6 +8,7 @@
 import { Link } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 import {
   CLASSES_LIGNE_CLIQUABLE,
@@ -67,7 +68,8 @@ export default function LigneProduitAdministration({
         <div className="flex justify-end gap-2">
           {archive ? (
             <Bouton
-              variante="secondaire"
+              variante="valider"
+              icone={RotateCcw}
               disabled={envoi}
               onClick={() => surRestauration(produit.id_produit)}
             >
@@ -77,13 +79,15 @@ export default function LigneProduitAdministration({
             <>
               <Bouton
                 variante="secondaire"
+                icone={Pencil}
                 disabled={envoi}
                 onClick={() => surModification(produit)}
               >
                 Modifier
               </Bouton>
               <Bouton
-                variante="secondaire"
+                variante="danger-contour"
+                icone={Archive}
                 disabled={envoi}
                 onClick={() => surArchivage(produit.id_produit)}
               >

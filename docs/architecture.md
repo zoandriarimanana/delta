@@ -496,6 +496,18 @@ Contrastes vérifiés au calcul WCAG (≥ 4,5 pour du texte). L'orange du logo
 (`action-vif`). La couleur n'est jamais seule porteuse d'un sens — chaque
 statut a aussi son libellé.
 
+**Boutons : une couleur par intention.** `Bouton` (`components/ui/`) porte
+des variantes nommées par ce qu'elles **font**, pas par leur teinte :
+`valider` (vert — enregistrer, restaurer, marquer honorée), `primaire`
+(bleu plein — créer, relancer), `secondaire` (contour bleu — modifier,
+consulter), `danger` (rouge plein — annuler une réservation ou une commande,
+anonymiser : irréversible), `danger-contour` (contour rouge — archiver,
+retirer : réversible), `attention` (ambre — rembourser), `neutre` (gris —
+fermer un formulaire sans rien enregistrer ; ce « Annuler »-là ne détruit
+rien, il n'est donc pas rouge). `principal` (orange du logo) reste l'action
+principale des écrans publics. Chaque variante peut porter une icône
+(`icone`), pour que le sens ne repose jamais sur la seule couleur.
+
 **Mode sombre.** Les rôles ci-dessus sont redéfinis sous la classe `.dark`
 posée sur `<html>` : aucun composant ne connaît le thème, il peint des
 rôles (`bg-surface`, `text-gris-700`, `text-sur-couleur` pour le texte posé

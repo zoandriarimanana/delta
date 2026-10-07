@@ -8,6 +8,7 @@
 import { useState } from 'react';
 
 import Badge from '@/components/ui/Badge';
+import { RefreshCw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 
 import type { EtatAdministration, Reindexation } from '../assistant.administration';
@@ -121,6 +122,8 @@ export default function PanneauEtatAssistant({ etat, reindexation }: Proprietes)
               </p>
               <div className="flex gap-2">
                 <Bouton
+                  variante="attention"
+                  icone={RefreshCw}
                   disabled={reindexation.enCours}
                   onClick={() => {
                     setConfirmation(false);
@@ -129,13 +132,15 @@ export default function PanneauEtatAssistant({ etat, reindexation }: Proprietes)
                 >
                   Confirmer
                 </Bouton>
-                <Bouton variante="secondaire" onClick={() => setConfirmation(false)}>
+                <Bouton variante="neutre" onClick={() => setConfirmation(false)}>
                   Annuler
                 </Bouton>
               </div>
             </div>
           ) : (
             <Bouton
+              variante="attention"
+              icone={RefreshCw}
               disabled={!donnees.actif || reindexation.enCours}
               onClick={() => setConfirmation(true)}
             >

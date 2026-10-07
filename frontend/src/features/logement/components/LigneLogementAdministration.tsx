@@ -15,6 +15,7 @@ import { formaterMontant } from '@/features/commande/commande.service';
 import { Link } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 import { imagePour } from '@/lib/images';
 import {
@@ -82,7 +83,8 @@ export default function LigneLogementAdministration({
         <div className="flex justify-end gap-2">
           {archive ? (
             <Bouton
-              variante="secondaire"
+              variante="valider"
+              icone={RotateCcw}
               disabled={envoi}
               onClick={() => surRestauration(logement.id_logement)}
             >
@@ -92,13 +94,15 @@ export default function LigneLogementAdministration({
             <>
               <Bouton
                 variante="secondaire"
+                icone={Pencil}
                 disabled={envoi}
                 onClick={() => surModification(logement)}
               >
                 Modifier
               </Bouton>
               <Bouton
-                variante="secondaire"
+                variante="danger-contour"
+                icone={Archive}
                 disabled={envoi}
                 onClick={() => surArchivage(logement.id_logement)}
               >

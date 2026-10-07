@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 
 import Avatar from '@/components/ui/Avatar';
+import { Archive, Download, Pencil, RotateCcw, Trash2, UserX } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 
 import FormulairePersonnel from '../components/FormulairePersonnel';
@@ -206,7 +207,8 @@ export default function PersonnelDetailAdministrationPage() {
 
       {!archiveLocalement && !modeEdition && (
         <Bouton
-          variante="secondaire"
+          variante="danger-contour"
+          icone={Trash2}
           onClick={() => void retirerPhoto()}
           disabled={envoi}
           className="mt-3"
@@ -228,7 +230,8 @@ export default function PersonnelDetailAdministrationPage() {
         <p className="mt-4 flex items-center justify-between rounded border border-gris-200 bg-surface p-3 text-sm text-gris-700">
           <span>Ce membre a été archivé.</span>
           <Bouton
-            variante="secondaire"
+            variante="valider"
+            icone={RotateCcw}
             onClick={() => void restaurer()}
             disabled={envoi}
           >
@@ -280,11 +283,16 @@ export default function PersonnelDetailAdministrationPage() {
 
           {!archiveLocalement && (
             <div className="mt-4 flex flex-wrap gap-2">
-              <Bouton variante="secondaire" onClick={() => setModeEdition(true)}>
+              <Bouton
+                variante="secondaire"
+                icone={Pencil}
+                onClick={() => setModeEdition(true)}
+              >
                 Modifier
               </Bouton>
               <Bouton
-                variante="secondaire"
+                variante="danger-contour"
+                icone={Archive}
                 onClick={() => void archiver()}
                 disabled={envoi}
               >
@@ -294,7 +302,8 @@ export default function PersonnelDetailAdministrationPage() {
                   idempotente côté serveur, aucune garde supplémentaire n'est
                   nécessaire ici. */}
               <Bouton
-                variante="secondaire"
+                variante="danger"
+                icone={UserX}
                 onClick={() => void anonymiser()}
                 disabled={envoi}
               >
@@ -302,6 +311,7 @@ export default function PersonnelDetailAdministrationPage() {
               </Bouton>
               <Bouton
                 variante="secondaire"
+                icone={Download}
                 onClick={() => void telechargerBadge()}
                 disabled={envoiBadge}
               >

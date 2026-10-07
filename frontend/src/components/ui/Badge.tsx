@@ -20,16 +20,18 @@ import type { ReactNode } from 'react';
  *
  * `positif` pour ce qui est acquis ou disponible, `attente` pour ce qui est en
  * cours ou suspendu, `negatif` pour ce qui est clos, annulé ou indisponible,
+ * `info` pour ce qui est acquis mais pas encore accompli (confirmé, à venir),
  * `neutre` quand aucune de ces lectures ne s'applique.
  *
  * Nommer l'intention plutôt que la couleur permet de changer la palette sans
  * relire chaque appelant — et empêche un module d'écrire « vert » là où il
  * voulait dire « disponible ».
  */
-export type VarianteBadge = 'positif' | 'attente' | 'negatif' | 'neutre';
+export type VarianteBadge = 'positif' | 'info' | 'attente' | 'negatif' | 'neutre';
 
 const CLASSES: Record<VarianteBadge, string> = {
   positif: 'bg-succes/15 text-succes',
+  info: 'bg-primaire/10 text-primaire',
   attente: 'bg-attente/15 text-attente',
   negatif: 'bg-danger/10 text-danger',
   neutre: 'bg-gris-200 text-gris-600',

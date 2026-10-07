@@ -10,6 +10,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 import ChampFiche from '@/components/ui/ChampFiche';
 import { formaterMontant } from '@/features/commande/commande.service';
@@ -140,11 +141,11 @@ export default function DomaineDetailAdministrationPage() {
               />
             </label>
             <div className="flex gap-2">
-              <Bouton type="submit" disabled={envoi}>
+              <Bouton variante="valider" type="submit" disabled={envoi}>
                 Enregistrer
               </Bouton>
               <Bouton
-                variante="secondaire"
+                variante="neutre"
                 onClick={() => {
                   setEdition(null);
                   setErreurEdition(null);
@@ -169,7 +170,8 @@ export default function DomaineDetailAdministrationPage() {
             <div className="mt-4 flex flex-wrap gap-2">
               {archive ? (
                 <Bouton
-                  variante="secondaire"
+                  variante="valider"
+                  icone={RotateCcw}
                   disabled={actions.envoi}
                   onClick={() => void actions.restaurerLeDomaine(id)}
                 >
@@ -179,6 +181,7 @@ export default function DomaineDetailAdministrationPage() {
                 <>
                   <Bouton
                     variante="secondaire"
+                    icone={Pencil}
                     onClick={() =>
                       setEdition({
                         libelle: domaine.libelle,
@@ -189,7 +192,8 @@ export default function DomaineDetailAdministrationPage() {
                     Modifier
                   </Bouton>
                   <Bouton
-                    variante="secondaire"
+                    variante="danger-contour"
+                    icone={Archive}
                     disabled={actions.envoi}
                     onClick={() => void actions.archiverLeDomaine(id)}
                   >

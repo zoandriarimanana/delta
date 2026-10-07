@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
+import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
 import { formaterMontant } from '@/features/commande/commande.service';
@@ -170,7 +171,8 @@ export default function ProduitDetailAdministrationPage() {
           <div className="mt-4 flex flex-wrap gap-2">
             {archive ? (
               <Bouton
-                variante="secondaire"
+                variante="valider"
+                icone={RotateCcw}
                 disabled={actions.envoi}
                 onClick={() => void actions.restaurerLeProduit(id)}
               >
@@ -178,11 +180,16 @@ export default function ProduitDetailAdministrationPage() {
               </Bouton>
             ) : (
               <>
-                <Bouton variante="secondaire" onClick={() => setModeEdition(true)}>
+                <Bouton
+                  variante="secondaire"
+                  icone={Pencil}
+                  onClick={() => setModeEdition(true)}
+                >
                   Modifier
                 </Bouton>
                 <Bouton
-                  variante="secondaire"
+                  variante="danger-contour"
+                  icone={Archive}
                   disabled={actions.envoi}
                   onClick={() => void actions.archiverLeProduit(id)}
                 >

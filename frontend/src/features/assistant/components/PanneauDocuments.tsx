@@ -9,6 +9,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 
 import Badge from '@/components/ui/Badge';
+import { Archive, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
 
 import type { BaseDeConnaissances } from '../assistant.administration';
@@ -116,6 +117,7 @@ export default function PanneauDocuments({ base }: Proprietes) {
         </label>
         <div className="md:col-span-4">
           <Bouton
+            variante="valider"
             type="submit"
             disabled={base.envoi || fichier === null || titre.trim() === ''}
           >
@@ -189,7 +191,8 @@ export default function PanneauDocuments({ base }: Proprietes) {
                   <td className="py-2 text-right">
                     {document.supprime_le === null ? (
                       <Bouton
-                        variante="secondaire"
+                        variante="danger-contour"
+                        icone={Archive}
                         disabled={base.envoi}
                         onClick={() => void base.archiver(document.id_document)}
                       >
@@ -197,7 +200,8 @@ export default function PanneauDocuments({ base }: Proprietes) {
                       </Bouton>
                     ) : (
                       <Bouton
-                        variante="secondaire"
+                        variante="valider"
+                        icone={RotateCcw}
                         disabled={base.envoi}
                         onClick={() => void base.restaurer(document.id_document)}
                       >
