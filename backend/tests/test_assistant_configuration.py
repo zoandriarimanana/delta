@@ -1,4 +1,4 @@
-"""Configuration de l'assistant IA (Sprint 12) : défaut fermé, clés exigées."""
+"""Configuration de l'assistant IA : automatique par défaut, clés exigées si forcé."""
 
 import logging
 
@@ -11,9 +11,48 @@ from app.core.exceptions import ServiceIndisponible
 from app.core.logging import get_logger
 
 
-def test_l_assistant_est_desactive_par_defaut() -> None:
-    """Défaut fermé : un déploiement qui omet la variable n'appelle personne."""
-    assert Settings.model_fields["AI_ENABLED"].default is False
+def _cles(monkeypatch: pytest.MonkeyPatch, groq: str, hf: str) -> None:
+    monkeypatch.setenv("GROQ_API_KEY", groq)
+    monkeypatch.setenv("HF_API_TOKEN", hf)
+
+
+def test_sans_reglage_l_assistant_s_allume_avec_les_deux_cles(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Décision du 7 octobre 2026 : toujours allumé dès qu'il peut l'être."""
+    _cles(monkeypatch, "gsk_x", "hf_x")
+
+    assert Settings(AI_ENABLED=None).AI_ENABLED is True
+
+
+@pytest.mark.parametrize(
+    ("groq", "hf"), [("", ""), ("gsk_x", ""), ("", "hf_x"), ("gsk_x", "   ")]
+)
+def test_sans_reglage_ni_cles_l_assistant_reste_eteint_sans_erreur(
+    monkeypatch: pytest.MonkeyPatch, groq: str, hf: str
+) -> None:
+    """Un poste sans clés démarre normalement : automatique n'est pas forcé."""
+    _cles(monkeypatch, groq, hf)
+
+    assert Settings(AI_ENABLED=None).AI_ENABLED is False
+
+
+def test_une_valeur_vide_dans_le_env_vaut_automatique(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`AI_ENABLED=` laissé vide, comme dans `.env.example`, ne bloque pas le
+    démarrage."""
+    _cles(monkeypatch, "gsk_x", "hf_x")
+    monkeypatch.setenv("AI_ENABLED", "")
+
+    assert Settings().AI_ENABLED is True
+
+
+def test_false_eteint_meme_avec_les_cles(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ce que fait la CI : l'extinction explicite l'emporte toujours."""
+    _cles(monkeypatch, "gsk_x", "hf_x")
+
+    assert Settings(AI_ENABLED=False).AI_ENABLED is False
 
 
 @pytest.mark.parametrize(

@@ -1075,6 +1075,16 @@ routeur. Ni l'un ni l'autre n'importe LangChain au chargement : désactivé
 (`AI_ENABLED=false`), l'assistant ne coûte rien, et l'application démarre même
 sans `requirements-ai.txt`.
 
+**Allumé par défaut dès qu'il peut l'être** (décision du 7 octobre 2026).
+`AI_ENABLED` absent ou vide vaut « automatique » : l'assistant s'allume si
+`GROQ_API_KEY` et `HF_API_TOKEN` sont présentes, et reste éteint sans erreur
+sinon. `false` l'éteint explicitement — c'est ce que fait la CI ; `true`
+exige les deux clés au démarrage. Sur Render, renseigner les deux clés
+suffit. Les tests l'éteignent par une fixture `autouse` (`conftest.py`),
+quel que soit le `.env` du poste : sans elle, un `pytest` local sur un poste
+qui porte les clés indexerait réellement chez Hugging Face à chaque écriture
+du catalogue.
+
 **Ce que l'index a le droit de contenir** : ce que l'API expose déjà
 anonymement — jamais une donnée personnelle, jamais une entité archivée,
 jamais un prix, un stock ou un nombre de places, valeurs qui changent à chaque

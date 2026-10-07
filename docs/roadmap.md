@@ -1095,7 +1095,8 @@ Ordre contraint par les dépendances. Une PR par tâche, vers `develop`.
 - [x] **12.1 — Infrastructure** : image `pgvector/pgvector:pg16` (compose + CI),
       migration `CREATE EXTENSION IF NOT EXISTS vector`, filtre
       `include_object` dans `alembic/env.py`, `requirements-ai.txt`,
-      réglages `AI_ENABLED` (défaut `false`), `GROQ_API_KEY`, `GROQ_MODEL`,
+      réglages `AI_ENABLED` (défaut `false` à l'origine, **automatique** depuis
+      le 7 octobre — voir plus bas), `GROQ_API_KEY`, `GROQ_MODEL`,
       `HF_API_TOKEN`, `LC_EMBEDDING_MODEL` dans `core/config.py` et
       `.env.example`. Vérifié : `alembic upgrade head` + `alembic check` sur
       base vierge.
@@ -1532,6 +1533,16 @@ Sprint 12. La seconde **modifie le schéma** — signalé avant de coder.
       simultanés, photo d'un élément archivé en 404.
       — Tests backend sur un dossier temporaire, jamais le vrai dossier du
       dépôt. Backend et frontend verts.
+
+- [x] **Assistant toujours allumé** (demande du 7 octobre 2026) :
+      `AI_ENABLED` devient automatique par défaut — allumé dès que les deux
+      clés sont présentes, éteint sans erreur sinon. `false` reste
+      l'extinction explicite (CI), `true` exige toujours les clés. Une valeur
+      vide dans `.env` vaut « automatique ». Les tests éteignent l'assistant
+      par une fixture `autouse`, indépendamment du `.env` local — trou
+      constaté en activant l'assistant sur ce poste. Cause d'origine de la
+      demande : le `.env` du worktree portait `AI_ENABLED=false`, la bulle
+      n'apparaissait pas et la page d'administration ne discutait pas.
 
 ## Traçabilité MLD → sprints (à retenir)
 

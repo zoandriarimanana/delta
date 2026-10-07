@@ -54,6 +54,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from app.core.config import settings
 from app.core.cookies import NOM_COOKIE_CSRF, NOM_COOKIE_SESSION
 from app.core.database import Base
 from app.core.database import engine as engine_application
@@ -100,6 +101,19 @@ def creer_engine_sqlite(*tables: object) -> Engine:
 
     Base.metadata.create_all(engine, tables=list(tables))  # type: ignore[arg-type]
     return engine
+
+
+@pytest.fixture(autouse=True)
+def _assistant_eteint_par_defaut(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Éteint l'assistant dans chaque test, quel que soit le `.env` local.
+
+    `AI_ENABLED` est automatique : sur un poste qui porte les clés, il vaut
+    `true`, et chaque écriture du catalogue déclencherait une vraie
+    indexation chez Hugging Face — un test lent, dépendant du réseau, et qui
+    consomme le quota. Les tests de l'assistant le rallument eux-mêmes, avec
+    de faux fournisseurs.
+    """
+    monkeypatch.setattr(settings, "AI_ENABLED", False)
 
 
 @pytest.fixture

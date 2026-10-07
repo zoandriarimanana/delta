@@ -7,7 +7,7 @@ doit être codé en dur ici.
 
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -72,11 +72,15 @@ class Settings(BaseSettings):
     ENVIRONMENT: Literal["developpement", "production"] = "production"
 
     # --- Assistant IA générative (Sprint 12) ---
-    # Interrupteur général, défaut fermé : tant qu'il vaut `false`, aucune
-    # indexation ni aucun appel aux fournisseurs — la CI, qui n'a aucune clé
-    # d'API, tourne dans cet état. Les dépendances du module vivent à part,
-    # dans `requirements-ai.txt`.
-    AI_ENABLED: bool = False
+    # Interrupteur général, **automatique par défaut** (décision du 7 octobre
+    # 2026 : l'assistant doit rester allumé sans qu'on y pense). Non renseigné,
+    # il s'allume dès que `GROQ_API_KEY` et `HF_API_TOKEN` sont présentes, et
+    # reste éteint sinon — un poste sans clés démarre sans erreur. `false`
+    # l'éteint explicitement (la CI, qui n'a aucune clé) ; `true` exige les
+    # clés au démarrage. Résolu en booléen par le validateur ci-dessous : le
+    # reste du code ne voit jamais `None`. Les dépendances du module vivent à
+    # part, dans `requirements-ai.txt`.
+    AI_ENABLED: bool | None = None
     # LLM — Groq, API distante. Modèle vérifié disponible sur le compte et
     # capable d'appel d'outils (nécessaire à l'agentique, 12.7).
     GROQ_API_KEY: str = ""
@@ -97,20 +101,32 @@ class Settings(BaseSettings):
         case_sensitive=True,
     )
 
+    @field_validator("AI_ENABLED", mode="before")
+    @classmethod
+    def _vide_signifie_automatique(cls, valeur: object) -> object:
+        """`AI_ENABLED=` laissé vide dans `.env` vaut « automatique », comme
+        une ligne absente — et non une erreur de démarrage."""
+        if isinstance(valeur, str) and not valeur.strip():
+            return None
+        return valeur
+
     @model_validator(mode="after")
     def _cles_ia_presentes_si_active(self) -> "Settings":
-        """Refuse de démarrer avec l'assistant activé mais sans ses clés.
+        """Résout le mode automatique, et refuse `true` sans les clés.
 
-        Même principe que le reste de ce fichier : une configuration
-        incomplète échoue au démarrage, avec un message clair, plutôt qu'à la
-        première question d'un visiteur.
+        Automatique (`None`) : allumé si et seulement si les deux clés sont
+        présentes. Explicitement `true` sans elles : refus de démarrer, avec un
+        message clair, plutôt qu'à la première question d'un visiteur — même
+        principe que le reste de ce fichier.
         """
-        if self.AI_ENABLED:
-            manquantes = [
-                nom
-                for nom in ("GROQ_API_KEY", "HF_API_TOKEN")
-                if not getattr(self, nom).strip()
-            ]
+        manquantes = [
+            nom
+            for nom in ("GROQ_API_KEY", "HF_API_TOKEN")
+            if not getattr(self, nom).strip()
+        ]
+        if self.AI_ENABLED is None:
+            self.AI_ENABLED = not manquantes
+        elif self.AI_ENABLED:
             if manquantes:
                 raise ValueError(
                     "AI_ENABLED=true exige " + ", ".join(manquantes) + " dans .env."
