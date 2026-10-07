@@ -132,6 +132,11 @@ it('clique « Annuler » appelle l’API puis recharge la fiche', async () => {
   await screen.findByRole('button', { name: /^annuler$/i });
 
   await userEvent.click(screen.getByRole('button', { name: /^annuler$/i }));
+  // Premier clic : rien n'est envoyé, une confirmation s'affiche.
+  expect(annulerCommandeAdministration).not.toHaveBeenCalled();
+  await userEvent.click(
+    screen.getByRole('button', { name: /confirmer l’annulation/i })
+  );
 
   await waitFor(() => expect(annulerCommandeAdministration).toHaveBeenCalledWith(7));
   await waitFor(() => expect(obtenirCommandeAdministration).toHaveBeenCalledTimes(2));
@@ -192,8 +197,23 @@ it('reprend le refus 409 tel quel', async () => {
   await screen.findByRole('button', { name: /^annuler$/i });
 
   await userEvent.click(screen.getByRole('button', { name: /^annuler$/i }));
+  await userEvent.click(
+    screen.getByRole('button', { name: /confirmer l’annulation/i })
+  );
 
   expect((await screen.findByRole('alert')).textContent).toContain(
     'Cette commande est déjà annulée.'
   );
+});
+
+it('« Garder la commande » renonce à l’annulation', async () => {
+  vi.mocked(obtenirCommandeAdministration).mockResolvedValue(COMMANDE);
+  vi.mocked(recupererLivraisonsAdministration).mockResolvedValue([]);
+  afficher();
+  await userEvent.click(await screen.findByRole('button', { name: /^annuler$/i }));
+
+  await userEvent.click(screen.getByRole('button', { name: /garder la commande/i }));
+
+  expect(annulerCommandeAdministration).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: /^annuler$/i })).toBeTruthy();
 });

@@ -362,8 +362,9 @@ export function libelleStatutCommande(statut: StatutCommande): string {
 
 const VARIANTES_STATUT: Record<StatutCommande, VarianteBadge> = {
   En_attente: 'attente',
-  Confirmee: 'positif',
-  En_preparation: 'attente',
+  // Confirmée / en préparation : acquise mais pas encore remise (bleu).
+  Confirmee: 'info',
+  En_preparation: 'info',
   Livree: 'positif',
   Servie: 'positif',
   Annulee: 'negatif',

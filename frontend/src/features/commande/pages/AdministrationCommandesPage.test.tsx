@@ -87,3 +87,60 @@ describe('liens vers les écrans existants', () => {
     expect(lienReservations.getAttribute('href')).toBe('/personnel/reservations');
   });
 });
+
+describe('lecture enrichie', () => {
+  it('nomme l’invité et son contact', async () => {
+    vi.mocked(recupererCommandesAdministration).mockResolvedValue([
+      commande({
+        id_commande: 9,
+        id_client: null,
+        nom_invite: 'Rasoa Hery',
+        contact_invite: '034 12 345 67',
+      }),
+    ]);
+    afficher();
+
+    const tableau = await screen.findByRole('table');
+    expect(within(tableau).getByText(/Rasoa Hery/)).toBeTruthy();
+    expect(within(tableau).getByText(/034 12 345 67/)).toBeTruthy();
+  });
+
+  it('compte par étape et filtre au clic', async () => {
+    vi.mocked(recupererCommandesAdministration).mockResolvedValue([
+      EN_ATTENTE,
+      ANNULEE,
+    ]);
+    afficher();
+    const tableau = await screen.findByRole('table');
+
+    await userEvent.click(screen.getByRole('button', { name: /1\s*Annulées/ }));
+
+    expect(within(tableau).queryByText('Commande n° 1')).toBeNull();
+    expect(within(tableau).getByText('Commande n° 2')).toBeTruthy();
+  });
+
+  it('recherche dans les produits', async () => {
+    vi.mocked(recupererCommandesAdministration).mockResolvedValue([
+      commande({
+        id_commande: 1,
+        lignes: [
+          {
+            id_ligne: 1,
+            id_produit: 4,
+            nom_produit: 'Éclair au chocolat',
+            quantite: 2,
+            prix_unitaire_applique: '3.50',
+          },
+        ],
+      }),
+      ANNULEE,
+    ]);
+    afficher();
+    const tableau = await screen.findByRole('table');
+
+    await userEvent.type(screen.getByRole('searchbox'), 'éclair');
+
+    expect(within(tableau).getByText('Commande n° 1')).toBeTruthy();
+    expect(within(tableau).queryByText('Commande n° 2')).toBeNull();
+  });
+});
