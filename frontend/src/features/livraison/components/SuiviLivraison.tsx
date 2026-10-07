@@ -7,6 +7,7 @@
  * rendu.
  */
 
+import { Truck } from 'lucide-react';
 import { formaterDate } from '@/features/commande/commande.service';
 
 import { estParcoursNominal, libelleStatut } from '../livraison.service';
@@ -23,13 +24,16 @@ export default function SuiviLivraison({ suivi }: Proprietes) {
   return (
     <section
       aria-label="Suivi de livraison"
-      className={`mt-4 rounded border p-4 ${
-        nominal ? 'border-slate-200 bg-slate-50' : 'border-amber-200 bg-amber-50'
+      className={`mt-4 rounded-2xl border p-5 shadow-sm ${
+        nominal ? 'border-warm-gray-200 bg-white' : 'border-amber/40 bg-amber/10'
       }`}
     >
-      <h3 className="font-medium text-slate-900">Livraison — {titre}</h3>
+      <h3 className="flex items-center gap-2 font-semibold text-warm-gray-700">
+        <Truck size={18} aria-hidden className="text-terracotta" />
+        Livraison — {titre}
+      </h3>
       <p
-        className="mt-1 text-sm text-slate-700"
+        className="mt-1 text-sm text-warm-gray-600"
         // `polite` et non `assertive` : l'information est utile, pas urgente.
         aria-live="polite"
       >

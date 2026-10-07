@@ -98,10 +98,13 @@ describe('client connecté', () => {
     afficher();
 
     expect(await screen.findByText(/Éclair × 2/)).toBeDefined();
-    // Ancré sur le libellé : le sous-total de l'unique ligne vaut ici le même
-    // montant que le total, et un `getByText` sur la seule somme serait ambigu.
-    expect(screen.getByText(/Total : 7 000,00 Ar/)).toBeDefined();
-    expect(screen.getByText(/Statut : En_attente/)).toBeDefined();
+    // Ancré sur le libellé « Total » : le sous-total de l'unique ligne vaut
+    // ici le même montant, et un `getByText` sur la seule somme serait ambigu.
+    const total = screen.getByText('Total').nextElementSibling;
+    expect(total?.textContent).toMatch(/7\s000,00 Ar/);
+    // Statut traduit, jamais l'identifiant technique « En_attente ».
+    expect(screen.getByText('En attente de confirmation')).toBeDefined();
+    expect(screen.queryByText(/En_attente/)).toBeNull();
   });
 
   it('date chaque commande', async () => {

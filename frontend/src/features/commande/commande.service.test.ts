@@ -11,6 +11,7 @@ import {
   descriptionDemande,
   formaterDate,
   formaterMontant,
+  libelleStatutCommande,
   modifierQuantite,
   nombreArticles,
   retirerDuPanier,
@@ -339,5 +340,25 @@ describe('vente à la personne', () => {
     const panier = ajouterAuPanier(ajouterAuPanier([], GATEAU, 8), eclair, 3);
 
     expect(nombreArticles(panier)).toBe(4);
+  });
+});
+
+describe('libelleStatutCommande', () => {
+  it('traduit chaque statut du domaine, sans identifiant technique', () => {
+    for (const statut of [
+      'En_attente',
+      'Confirmee',
+      'En_preparation',
+      'Livree',
+      'Servie',
+      'Annulee',
+    ] as const) {
+      expect(libelleStatutCommande(statut)).not.toContain('_');
+    }
+    expect(libelleStatutCommande('En_preparation')).toBe('En préparation');
+  });
+
+  it('retombe sur un libellé neutre pour un statut inconnu', () => {
+    expect(libelleStatutCommande('Inconnu' as never)).toBe('Statut inconnu');
   });
 });

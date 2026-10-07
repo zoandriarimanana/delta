@@ -6,6 +6,7 @@
  * Ce découpage rend ces règles testables sans rendu ni stockage.
  */
 
+import type { VarianteBadge } from '@/components/ui/Badge';
 import type {
   CheminAcheteur,
   CibleAcheteur,
@@ -338,3 +339,37 @@ export const PERSONNALISATION_VIDE: PersonnalisationPanier = {
   precisions: '',
   ingredients: '',
 };
+
+const LIBELLES_STATUT: Record<StatutCommande, string> = {
+  En_attente: 'En attente de confirmation',
+  Confirmee: 'Confirmée',
+  En_preparation: 'En préparation',
+  Livree: 'Livrée',
+  Servie: 'Servie',
+  Annulee: 'Annulée',
+};
+
+/**
+ * Statut d'une commande, lisible par le client.
+ *
+ * Les valeurs du domaine (`En_attente`…) sont des identifiants techniques : les
+ * afficher tels quels montrait « En_attente » au client. Un statut inconnu —
+ * API en avance sur le frontend — retombe sur un libellé neutre.
+ */
+export function libelleStatutCommande(statut: StatutCommande): string {
+  return LIBELLES_STATUT[statut] ?? 'Statut inconnu';
+}
+
+const VARIANTES_STATUT: Record<StatutCommande, VarianteBadge> = {
+  En_attente: 'attente',
+  Confirmee: 'positif',
+  En_preparation: 'attente',
+  Livree: 'positif',
+  Servie: 'positif',
+  Annulee: 'negatif',
+};
+
+/** Variante de pastille du statut — choisie ici, jamais par `Badge`. */
+export function varianteStatutCommande(statut: StatutCommande): VarianteBadge {
+  return VARIANTES_STATUT[statut] ?? 'neutre';
+}
