@@ -41,6 +41,8 @@ function valeursInitiales(produit?: Produit): ProduitEnvoye {
     est_personnalisable: produit?.est_personnalisable ?? false,
     supplement_personnalisation: produit?.supplement_personnalisation ?? '',
     est_livrable: produit?.est_livrable ?? true,
+    vendu_par_personne: produit?.vendu_par_personne ?? false,
+    personnes_min: produit?.personnes_min ?? null,
     // `0` n'est jamais envoyé tel quel : le composant y substitue la première
     // catégorie active, la liste n'étant pas connue de cette fonction.
     id_categorie: produit?.id_categorie ?? 0,
@@ -90,6 +92,9 @@ export default function FormulaireProduit({
           supplement_personnalisation: valeurs.est_personnalisable
             ? valeurs.supplement_personnalisation
             : null,
+          // Le minimum n'a de sens qu'en vente à la personne : il n'est pas
+          // gardé en dormance quand l'option est décochée.
+          personnes_min: valeurs.vendu_par_personne ? valeurs.personnes_min : null,
         });
       }}
     >
@@ -175,6 +180,45 @@ export default function FormulaireProduit({
         />
         Livrable
       </label>
+
+      <label className="flex items-center gap-2 text-sm text-warm-gray-700">
+        <input
+          type="checkbox"
+          checked={valeurs.vendu_par_personne ?? false}
+          onChange={(e) => {
+            modifier('vendu_par_personne', e.target.checked);
+            if (e.target.checked && (valeurs.personnes_min ?? null) === null) {
+              modifier('personnes_min', 4);
+            }
+          }}
+        />
+        Vendu à la personne (gâteau pour N personnes)
+      </label>
+
+      {valeurs.vendu_par_personne && (
+        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+          Nombre minimum de personnes
+          <input
+            type="number"
+            min={1}
+            step={1}
+            required
+            value={valeurs.personnes_min ?? ''}
+            onChange={(e) =>
+              modifier(
+                'personnes_min',
+                e.target.value === '' ? null : Math.max(1, Number(e.target.value))
+              )
+            }
+            className="rounded border border-warm-gray-300 px-2 py-1"
+          />
+          <span className="text-xs text-warm-gray-500">
+            Le prix ci-dessus est alors un prix par personne. Le client choisit le
+            nombre de personnes ; le stock compte des gâteaux entiers (une commande en
+            consomme un), et le supplément de personnalisation est compté par personne.
+          </span>
+        </label>
+      )}
 
       <label className="flex items-center gap-2 text-sm text-warm-gray-700">
         <input

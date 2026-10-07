@@ -1603,6 +1603,36 @@ manque relevé en fin de Sprint 12. Aucun changement de schéma.
       Frontend 739/739 ; vérifié dans un vrai navigateur (fiche, panier),
       sans créer de commande dans la base de développement.
 
+**Travaux hors sprint : produits vendus à la personne (demande du 7 octobre
+2026).** Plan écrit avant le code. Décisions de l'utilisateur : le client
+choisit le **nombre de personnes** (prix = personnes × prix par personne),
+un **minimum de personnes réglable par produit**, et le **stock compte des
+gâteaux entiers**. Conséquence assumée : une ligne de commande d'un tel
+produit est **un gâteau** de N personnes — le stock baisse de 1, pas de N ;
+pour deux gâteaux, deux commandes.
+
+- [x] **Schéma** : `PRODUIT.vendu_par_personne` (booléen, défaut `false`)
+      et `PRODUIT.personnes_min` (nullable), `CHECK` : un produit vendu à la
+      personne porte un minimum ≥ 1. Migration + `docs/mld.md`.
+- [x] **Commande** : `LIGNE_COMMANDE.quantite` = nombre de personnes pour
+      ces produits ; refus (422) sous le minimum ; stock réservé : 1 gâteau
+      par ligne. `prix_unitaire_applique` reste le prix par personne, le
+      supplément de personnalisation reste compté par unité (donc par
+      personne) — annoncé comme tel dans le formulaire d'administration.
+- [x] **Administration** : case « Vendu à la personne » et minimum dans le
+      formulaire produit.
+- [x] **Client** : « 5 000 Ar / personne », sélecteur « Nombre de
+      personnes » démarrant au minimum, stock affiché en gâteaux ; panier et
+      tunnel parlent en personnes, sans borne au stock sur ce nombre.
+      — Livré : migration `3af6d3fff70c`. **Défaut trouvé par les tests
+      avant livraison** : la première écriture du `CHECK` laissait passer un
+      minimum `NULL` (piège de la logique à trois valeurs de SQL), corrigée
+      avant toute application en production. Backend 1428/1428 sur base
+      vierge, frontend 747/747. Vérifié dans un vrai navigateur : le gâteau
+      d'anniversaire de la base de développement a été passé à 5 000 Ar par
+      personne, minimum 4, **par l'écran d'administration**, puis commandé
+      jusqu'au panier (6 personnes = 30 000 Ar, 1 article).
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère

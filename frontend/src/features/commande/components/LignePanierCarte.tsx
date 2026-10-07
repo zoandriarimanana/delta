@@ -25,7 +25,9 @@ export default function LignePanierCarte({
   surPersonnalisation,
 }: Proprietes) {
   const { personnalisation } = ligne;
-  const auMaximum = ligne.quantite >= ligne.stock_disponible;
+  // À la personne, le stock compte des gâteaux, pas des personnes.
+  const auMaximum =
+    !ligne.vendu_par_personne && ligne.quantite >= ligne.stock_disponible;
 
   return (
     <li className="flex gap-4 py-5">
@@ -50,6 +52,9 @@ export default function LignePanierCarte({
           </p>
           <div className="mt-3 flex items-center gap-4">
             <ChampQuantite ligne={ligne} onChangement={surQuantite} />
+            {ligne.vendu_par_personne && (
+              <span className="text-sm text-warm-gray-500">personnes</span>
+            )}
             <button
               type="button"
               onClick={surRetrait}

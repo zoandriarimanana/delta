@@ -19,9 +19,11 @@ import {
   descriptionDemande,
   formaterMontant,
   PERSONNALISATION_VIDE,
+  PERSONNES_MAX,
 } from '@/features/commande/commande.service';
 import type { PersonnalisationPanier } from '@/features/commande/commande.types';
 
+import { quantiteMinimale } from '../produit.service';
 import type { Produit } from '../produit.types';
 import ComparaisonLivraison from './ComparaisonLivraison';
 
@@ -34,7 +36,8 @@ const CLASSES_PAS =
 
 export default function AjoutPanierProduit({ produit }: Proprietes) {
   const panier = usePanier();
-  const [quantite, setQuantite] = useState(1);
+  const minimum = quantiteMinimale(produit);
+  const [quantite, setQuantite] = useState(minimum);
   const [ajoute, setAjoute] = useState(false);
   const [personnaliser, setPersonnaliser] = useState(false);
   const [personnalisation, setPersonnalisation] =
@@ -44,10 +47,13 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
     personnaliser && produit.supplement_personnalisation !== null
       ? Number(produit.supplement_personnalisation)
       : 0;
-  const maximum = produit.stock_disponible;
+  // À la personne, la quantité compte des personnes : elle n'est pas bornée au
+  // stock, qui compte des gâteaux entiers (une commande en consomme un).
+  const maximum = produit.vendu_par_personne ? PERSONNES_MAX : produit.stock_disponible;
+  const parPersonne = produit.vendu_par_personne;
 
   function changer(valeur: number) {
-    setQuantite(Math.min(Math.max(valeur, 1), maximum));
+    setQuantite(Math.min(Math.max(valeur, minimum), maximum));
     // Une nouvelle quantité appelle un nouvel ajout : la confirmation
     // précédente ne doit pas laisser croire qu'il a déjà eu lieu.
     setAjoute(false);
@@ -63,7 +69,8 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
               Personnaliser ce produit
               {produit.supplement_personnalisation !== null && (
                 <span className="font-normal text-warm-gray-500">
-                  (+{formaterMontant(produit.supplement_personnalisation)} / unité)
+                  (+{formaterMontant(produit.supplement_personnalisation)} /{' '}
+                  {parPersonne ? 'personne' : 'unité'})
                 </span>
               )}
             </span>
@@ -105,17 +112,25 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
         quantite={quantite}
         supplementUnitaire={supplement}
       />
+      {parPersonne && (
+        <p className="text-sm font-medium text-warm-gray-700">
+          Nombre de personnes{' '}
+          <span className="font-normal text-warm-gray-500">
+            (à partir de {minimum})
+          </span>
+        </p>
+      )}
       <div className="flex flex-col gap-3 sm:flex-row">
         <div
           role="group"
-          aria-label="Quantité"
+          aria-label={parPersonne ? 'Nombre de personnes' : 'Quantité'}
           className="flex w-fit items-center overflow-hidden rounded-full border border-warm-gray-300 bg-white"
         >
           <button
             type="button"
             onClick={() => changer(quantite - 1)}
-            disabled={quantite <= 1}
-            aria-label="Diminuer la quantité"
+            disabled={quantite <= minimum}
+            aria-label={parPersonne ? 'Retirer une personne' : 'Diminuer la quantité'}
             className={CLASSES_PAS}
           >
             <Minus size={16} aria-hidden />
@@ -130,7 +145,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
             type="button"
             onClick={() => changer(quantite + 1)}
             disabled={quantite >= maximum}
-            aria-label="Augmenter la quantité"
+            aria-label={parPersonne ? 'Ajouter une personne' : 'Augmenter la quantité'}
             className={CLASSES_PAS}
           >
             <Plus size={16} aria-hidden />

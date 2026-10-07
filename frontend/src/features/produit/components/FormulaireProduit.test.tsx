@@ -131,6 +131,8 @@ describe('modification', () => {
     est_personnalisable: true,
     supplement_personnalisation: '2.00',
     est_livrable: true,
+    vendu_par_personne: false,
+    personnes_min: null,
     id_categorie: 1,
     note_moyenne: null,
     nombre_avis: 0,
@@ -158,5 +160,38 @@ describe('refus', () => {
     afficher({ erreur: 'Un produit porte déjà ce nom.' });
 
     expect(screen.getByRole('alert').textContent).toBe('Un produit porte déjà ce nom.');
+  });
+});
+
+describe('vente à la personne', () => {
+  it('cocher l’option propose un minimum de 4 et l’envoie', async () => {
+    const surEnvoi = afficher();
+    await userEvent.type(screen.getByLabelText(/^nom$/i), 'Gâteau');
+
+    await userEvent.click(screen.getByLabelText(/Vendu à la personne/));
+    expect(screen.getByLabelText(/Nombre minimum de personnes/)).toHaveProperty(
+      'value',
+      '4'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /créer/i }));
+
+    await waitFor(() => expect(surEnvoi).toHaveBeenCalled());
+    expect(surEnvoi.mock.calls[0]?.[0]).toMatchObject({
+      vendu_par_personne: true,
+      personnes_min: 4,
+    });
+  });
+
+  it('sans l’option, aucun minimum n’est envoyé', async () => {
+    const surEnvoi = afficher();
+    await userEvent.type(screen.getByLabelText(/^nom$/i), 'Éclair');
+
+    await userEvent.click(screen.getByRole('button', { name: /créer/i }));
+
+    await waitFor(() => expect(surEnvoi).toHaveBeenCalled());
+    expect(surEnvoi.mock.calls[0]?.[0]).toMatchObject({
+      vendu_par_personne: false,
+      personnes_min: null,
+    });
   });
 });

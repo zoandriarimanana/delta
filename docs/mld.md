@@ -174,7 +174,7 @@ SESSION_FORMATION(id_session, date_debut, date_fin, places_restantes, statut, #i
 
 ```
 CATEGORIE_PRODUIT(id_categorie, libelle)
-PRODUIT(id_produit, nom, description, prix_unitaire, unite_mesure, stock_disponible, est_personnalisable, supplement_personnalisation, est_livrable, #id_categorie)
+PRODUIT(id_produit, nom, description, prix_unitaire, unite_mesure, stock_disponible, est_personnalisable, supplement_personnalisation, est_livrable, vendu_par_personne, personnes_min, #id_categorie)
 SALLE(id_salle, nom, capacite, tarif_horaire, tarif_journee, equipements, description)
 LOGEMENT(id_logement, type_chambre, capacite, tarif_nuitee, statut, description)
 ```
@@ -260,6 +260,32 @@ LOGEMENT(id_logement, type_chambre, capacite, tarif_nuitee, statut, description)
   reprise de données ou une correction manuelle ne doit pas pouvoir créer ce
   trou. Elle est répétée côté API pour produire un 422 lisible plutôt qu'une
   erreur d'intégrité.
+
+- `PRODUIT.vendu_par_personne` (booléen, défaut `false`) et
+  `PRODUIT.personnes_min` (nullable), ajoutés le 7 octobre 2026 (hors
+  sprint), sur décision de l'utilisateur : un gâteau se vend **au nombre de
+  personnes**. Pour un tel produit :
+
+  - `prix_unitaire` est un prix **par personne**, et
+    `LIGNE_COMMANDE.quantite` compte des **personnes** ;
+  - `stock_disponible` compte des **produits entiers** : une ligne de
+    commande en consomme **un**, quel que soit le nombre de personnes — un
+    gâteau pour 8 n'est pas 8 gâteaux. Pour deux gâteaux, deux commandes ;
+  - une commande sous `personnes_min` est refusée en 422 ;
+  - `supplement_personnalisation` reste compté par unité, donc **par
+    personne**.
+
+  ```sql
+  CHECK ((personnes_min IS NULL OR personnes_min >= 1)
+     AND (NOT vendu_par_personne OR personnes_min IS NOT NULL))
+  ```
+
+  Le `IS NOT NULL` est indispensable : une première écriture,
+  `NOT vendu_par_personne OR personnes_min >= 1`, laissait passer un minimum
+  `NULL` — la comparaison vaut alors `NULL`, et un `CHECK` à `NULL` passe.
+  Trouvé par le test qui viole la contrainte volontairement. Répétée dans
+  `ProduitCreate` et `ProduitService.modifier` pour un 422 lisible, même
+  architecture que `personnalisable_a_un_supplement`.
 
 - `PRODUIT.supplement_personnalisation` est le tarif de la personnalisation,
   **par produit et par unité** — comme `prix_unitaire`, dont il est le voisin

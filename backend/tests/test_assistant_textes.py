@@ -51,6 +51,8 @@ def _produit(**kw):
         "est_personnalisable": True,
         "supplement_personnalisation": Decimal("4321.00"),
         "est_livrable": False,
+        "vendu_par_personne": False,
+        "personnes_min": None,
         "supprime_le": None,
         "categorie": _categorie(),
     }
@@ -242,6 +244,15 @@ def test_domaine_liste_ses_seules_formations_actives() -> None:
     assert "Cuisine du monde." in texte
     assert "Formations proposées : Cuisine malgache." in texte
     assert "Ancienne" not in texte
+
+
+def test_un_produit_vendu_a_la_personne_annonce_prix_et_minimum() -> None:
+    texte = produit.construire_texte(
+        _produit(vendu_par_personne=True, personnes_min=4, unite_mesure="pièce")
+    )
+    assert "par personne" in texte
+    assert "à partir de 4 personnes" in texte
+    assert "par pièce" not in texte
 
 
 # --- SALLE ------------------------------------------------------------------

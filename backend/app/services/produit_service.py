@@ -129,6 +129,17 @@ class ProduitService:
                 "supplement_personnalisation."
             )
 
+        # Même raisonnement pour la vente à la personne : activer l'option
+        # sans minimum est légitime si le produit en porte déjà un.
+        par_personne = modifications.get(
+            "vendu_par_personne", produit.vendu_par_personne
+        )
+        minimum = modifications.get("personnes_min", produit.personnes_min)
+        if par_personne and minimum is None:
+            raise ReferenceInvalide(
+                "Un produit vendu à la personne doit porter un personnes_min."
+            )
+
     def supprimer(self, id_produit: int) -> None:
         """Supprime un produit du catalogue."""
         produit = self.obtenir(id_produit)

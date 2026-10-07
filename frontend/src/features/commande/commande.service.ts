@@ -68,10 +68,12 @@ export function ajouterAuPanier(
 
   const existante = panier.find((l) => l.id_produit === produit.id_produit);
   if (existante) {
+    // À la personne, la ligne est **un** produit : le nouveau nombre de
+    // personnes remplace l'ancien au lieu de s'y ajouter.
     const augmente = modifierQuantite(
       panier,
       produit.id_produit,
-      existante.quantite + quantite
+      produit.vendu_par_personne ? quantite : existante.quantite + quantite
     );
     // Une nouvelle personnalisation remplace l'ancienne : la ligne n'en porte
     // qu'une, appliquée à toute la quantité.
@@ -80,15 +82,23 @@ export function ajouterAuPanier(
       : definirPersonnalisation(augmente, produit.id_produit, personnalisation);
   }
 
+  const ligne: LignePanier = {
+    id_produit: produit.id_produit,
+    nom: produit.nom,
+    prix_unitaire: produit.prix_unitaire,
+    // « personne » pour un produit vendu à la personne : c'est l'unité du
+    // prix et de la quantité affichés partout ensuite.
+    unite_mesure: produit.vendu_par_personne ? 'personne' : produit.unite_mesure,
+    quantite,
+    stock_disponible: produit.stock_disponible,
+    vendu_par_personne: produit.vendu_par_personne,
+    personnes_min: produit.personnes_min,
+  };
   return [
     ...panier,
     {
-      id_produit: produit.id_produit,
-      nom: produit.nom,
-      prix_unitaire: produit.prix_unitaire,
-      unite_mesure: produit.unite_mesure,
-      quantite: Math.min(quantite, produit.stock_disponible),
-      stock_disponible: produit.stock_disponible,
+      ...ligne,
+      quantite: bornerQuantite(ligne, quantite),
       supplement_personnalisation: produit.supplement_personnalisation,
       ...(personnalisation === undefined ? {} : { personnalisation }),
     },
@@ -174,9 +184,27 @@ export function modifierQuantite(
   }
   return panier.map((ligne) =>
     ligne.id_produit === idProduit
-      ? { ...ligne, quantite: Math.min(quantite, ligne.stock_disponible) }
+      ? { ...ligne, quantite: bornerQuantite(ligne, quantite) }
       : ligne
   );
+}
+
+/**
+ * Plafond du nombre de personnes d'un produit vendu à la personne : une
+ * borne de saisie, pas une règle métier — le serveur n'en impose aucune.
+ */
+export const PERSONNES_MAX = 500;
+
+/** Bornes de quantité d'une ligne : au stock à l'unité, au minimum et au plafond à la personne. */
+export function bornesQuantite(ligne: LignePanier): { min: number; max: number } {
+  return ligne.vendu_par_personne
+    ? { min: ligne.personnes_min ?? 1, max: PERSONNES_MAX }
+    : { min: 1, max: ligne.stock_disponible };
+}
+
+function bornerQuantite(ligne: LignePanier, quantite: number): number {
+  const { min, max } = bornesQuantite(ligne);
+  return Math.min(Math.max(quantite, min), max);
 }
 
 export function retirerDuPanier(
@@ -188,7 +216,11 @@ export function retirerDuPanier(
 
 /** Nombre d'articles, toutes lignes confondues. Alimente le compteur de la nav. */
 export function nombreArticles(panier: LignePanier[]): number {
-  return panier.reduce((total, ligne) => total + ligne.quantite, 0);
+  // Un gâteau pour 8 personnes est **un** article, pas huit.
+  return panier.reduce(
+    (total, ligne) => total + (ligne.vendu_par_personne ? 1 : ligne.quantite),
+    0
+  );
 }
 
 /**

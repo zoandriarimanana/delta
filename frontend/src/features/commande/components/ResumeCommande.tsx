@@ -64,7 +64,9 @@ export default function ResumeCommande({
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium text-warm-gray-700">
-                {ligne.nom} × {ligne.quantite}
+                {ligne.vendu_par_personne
+                  ? `${ligne.nom} — ${ligne.quantite} personnes`
+                  : `${ligne.nom} × ${ligne.quantite}`}
               </span>
               <span className="block text-xs text-warm-gray-500">
                 {formaterMontant(ligne.prix_unitaire)} / {ligne.unite_mesure}

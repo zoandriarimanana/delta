@@ -20,13 +20,20 @@ def construire_texte(produit: Produit) -> str:
     ]
     if produit.description:
         lignes.append(f"Description : {produit.description}")
-    lignes.append(
-        f"Prix : {formater_ariary(produit.prix_unitaire)} par {produit.unite_mesure}"
-    )
+    # Vendu à la personne : l'unité est la personne, quel que soit
+    # `unite_mesure`, et le minimum fait partie de l'offre.
+    par_personne = produit.vendu_par_personne
+    unite = "personne" if par_personne else produit.unite_mesure
+    lignes.append(f"Prix : {formater_ariary(produit.prix_unitaire)} par {unite}")
+    if par_personne:
+        lignes.append(
+            "Vendu à la personne : le client choisit le nombre de personnes, "
+            f"à partir de {produit.personnes_min} personnes."
+        )
     if produit.est_personnalisable:
         supplement = produit.supplement_personnalisation
         detail = (
-            f", supplément de {formater_ariary(supplement)} par {produit.unite_mesure}"
+            f", supplément de {formater_ariary(supplement)} par {unite}"
             if supplement is not None
             else ""
         )

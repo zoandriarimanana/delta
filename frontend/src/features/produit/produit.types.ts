@@ -26,6 +26,14 @@ export interface Produit {
    */
   supplement_personnalisation: string | null;
   est_livrable: boolean;
+  /**
+   * Vendu au nombre de personnes : le prix est **par personne**, la quantité
+   * commandée compte des personnes, et `stock_disponible` des produits
+   * entiers — une commande en consomme un.
+   */
+  vendu_par_personne: boolean;
+  /** Minimum de personnes ; `null` pour un produit vendu à l'unité. */
+  personnes_min: number | null;
   id_categorie: number;
   /**
    * Calculée à la demande, **uniquement sur la fiche** (`GET /produits/{id}`) —
@@ -73,6 +81,8 @@ export interface ProduitEnvoye {
   est_personnalisable: boolean;
   supplement_personnalisation?: string | null;
   est_livrable: boolean;
+  vendu_par_personne?: boolean;
+  personnes_min?: number | null;
   id_categorie: number;
 }
 

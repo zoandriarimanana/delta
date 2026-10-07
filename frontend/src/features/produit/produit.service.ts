@@ -24,15 +24,33 @@ export type FiltreCategorie = number | typeof TOUTES_CATEGORIES;
  * inattendue que masquer une anomalie de données.
  */
 export function formaterPrix(produit: Produit): string {
+  const unite = uniteDeVente(produit);
   const valeur = Number(produit.prix_unitaire);
   if (Number.isNaN(valeur)) {
-    return `${produit.prix_unitaire} ${DEVISE} / ${produit.unite_mesure}`;
+    return `${produit.prix_unitaire} ${DEVISE} / ${unite}`;
   }
   const montant = new Intl.NumberFormat('fr-FR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(valeur);
-  return `${montant} ${DEVISE} / ${produit.unite_mesure}`;
+  return `${montant} ${DEVISE} / ${unite}`;
+}
+
+/**
+ * Unité affichée : « personne » pour un produit vendu à la personne, quelle
+ * que soit `unite_mesure` — c'est le nombre de personnes que le client choisit.
+ */
+export function uniteDeVente(
+  produit: Pick<Produit, 'vendu_par_personne' | 'unite_mesure'>
+): string {
+  return produit.vendu_par_personne ? 'personne' : produit.unite_mesure;
+}
+
+/** Quantité de départ et minimum du sélecteur : le minimum de personnes, ou 1. */
+export function quantiteMinimale(
+  produit: Pick<Produit, 'vendu_par_personne' | 'personnes_min'>
+): number {
+  return produit.vendu_par_personne ? (produit.personnes_min ?? 1) : 1;
 }
 
 /** Un produit est disponible s'il reste du stock. */

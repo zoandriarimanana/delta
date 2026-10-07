@@ -132,16 +132,24 @@ function Fiche({
 
         <dl className="grid gap-2 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm">
           <Ligne terme="Disponibilité">
-            {disponible ? `En stock (${produit.stock_disponible})` : 'Épuisé'}
+            {!disponible
+              ? 'Épuisé'
+              : produit.vendu_par_personne
+                ? `En stock (${produit.stock_disponible} disponible${produit.stock_disponible > 1 ? 's' : ''})`
+                : `En stock (${produit.stock_disponible})`}
           </Ligne>
-          <Ligne terme="Unité de vente">{produit.unite_mesure}</Ligne>
+          <Ligne terme="Unité de vente">
+            {produit.vendu_par_personne
+              ? `par personne, à partir de ${produit.personnes_min ?? 1} personnes`
+              : produit.unite_mesure}
+          </Ligne>
           <Ligne terme="Livraison">
             {produit.est_livrable ? 'Possible' : 'Non, retrait sur place uniquement'}
           </Ligne>
           <Ligne terme="Personnalisation">
             {produit.est_personnalisable
               ? produit.supplement_personnalisation !== null
-                ? `Oui, +${formaterMontant(produit.supplement_personnalisation)} par unité`
+                ? `Oui, +${formaterMontant(produit.supplement_personnalisation)} par ${produit.vendu_par_personne ? 'personne' : 'unité'}`
                 : 'Oui'
               : 'Non'}
           </Ligne>

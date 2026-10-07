@@ -31,6 +31,9 @@ class ProduitCreate(BaseModel):
         default=None, ge=0, max_digits=PRIX_MAX_CHIFFRES, decimal_places=PRIX_DECIMALES
     )
     est_livrable: bool = True
+    #: Vendu au nombre de personnes ; exige `personnes_min` (validateur).
+    vendu_par_personne: bool = False
+    personnes_min: int | None = Field(default=None, ge=1)
     id_categorie: int
 
     @model_validator(mode="after")
@@ -49,6 +52,16 @@ class ProduitCreate(BaseModel):
             raise ValueError(
                 "Un produit personnalisable doit porter un "
                 "supplement_personnalisation."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _exiger_un_minimum_si_vendu_par_personne(self) -> "ProduitCreate":
+        """Refuse un produit vendu à la personne sans minimum — 422 lisible
+        avant le `CHECK` en base, qui reste la garantie réelle."""
+        if self.vendu_par_personne and self.personnes_min is None:
+            raise ValueError(
+                "Un produit vendu à la personne doit porter un personnes_min."
             )
         return self
 
@@ -75,6 +88,8 @@ class ProduitUpdate(BaseModel):
         default=None, ge=0, max_digits=PRIX_MAX_CHIFFRES, decimal_places=PRIX_DECIMALES
     )
     est_livrable: bool | None = None
+    vendu_par_personne: bool | None = None
+    personnes_min: int | None = Field(default=None, ge=1)
     id_categorie: int | None = None
 
 
@@ -93,6 +108,9 @@ class ProduitRead(BaseModel):
     #: `None` pour un produit non personnalisable.
     supplement_personnalisation: Decimal | None = None
     est_livrable: bool
+    vendu_par_personne: bool = False
+    #: `None` pour un produit vendu à l'unité.
+    personnes_min: int | None = None
     id_categorie: int
     #: Calculée à la demande sur la fiche produit (`GET /produits/{id}`),
     #: jamais sur la liste — cf. `docs/roadmap.md`, 8.3. `None` tant qu'aucun

@@ -30,6 +30,8 @@ const GATEAU = {
   est_personnalisable: true,
   supplement_personnalisation: '5000.00',
   est_livrable: false,
+  vendu_par_personne: false,
+  personnes_min: null,
   id_categorie: 1,
   note_moyenne: null,
   nombre_avis: 0,

@@ -159,6 +159,13 @@ export interface LignePanier {
    * seulement : le serveur le relit et le fige à la commande.
    */
   supplement_personnalisation?: string | null;
+  /**
+   * Vendu à la personne : la ligne est **un** produit pour `quantite`
+   * personnes. Sa quantité part du minimum et n'est pas bornée au stock, qui
+   * compte des produits entiers.
+   */
+  vendu_par_personne?: boolean;
+  personnes_min?: number | null;
 }
 
 /**

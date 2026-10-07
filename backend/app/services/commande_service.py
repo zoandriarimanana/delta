@@ -198,6 +198,22 @@ class CommandeService:
             )
         return produit
 
+    def _verifier_nombre_de_personnes(self, produit: Produit, quantite: int) -> None:
+        """Refuse en 422 un produit vendu à la personne sous son minimum.
+
+        422 : la valeur fautive vient du corps de la requête, au même titre
+        qu'une quantité négative.
+        """
+        if (
+            produit.vendu_par_personne
+            and produit.personnes_min is not None
+            and quantite < produit.personnes_min
+        ):
+            raise ReferenceInvalide(
+                f"« {produit.nom} » se commande pour {produit.personnes_min} "
+                f"personnes au minimum ({quantite} demandée(s))."
+            )
+
     def _reserver_le_stock(self, produit: Produit, quantite: int) -> None:
         """Décrémente le stock, ou lève un conflit.
 
@@ -420,7 +436,12 @@ class CommandeService:
         montant = Decimal("0")
         for ligne in donnees.lignes:
             produit = self._produit_commandable(ligne)
-            self._reserver_le_stock(produit, ligne.quantite)
+            self._verifier_nombre_de_personnes(produit, ligne.quantite)
+            # Vendu à la personne : la ligne est **un** produit pour N
+            # personnes, le stock compte des produits entiers.
+            self._reserver_le_stock(
+                produit, 1 if produit.vendu_par_personne else ligne.quantite
+            )
             ligne_creee = self.lignes.create(
                 {
                     "id_commande": commande.id_commande,

@@ -35,6 +35,9 @@ export default function ComparaisonLivraison({
 }: Proprietes) {
   const { tarif } = useTarifLivraison();
   const sousTotal = (Number(produit.prix_unitaire) + supplementUnitaire) * quantite;
+  const multiplicateur = produit.vendu_par_personne
+    ? `${quantite} personnes`
+    : `${quantite}`;
 
   return (
     <div
@@ -63,9 +66,9 @@ export default function ComparaisonLivraison({
           sousTotal={sousTotal}
           detailQuantite={
             supplementUnitaire > 0
-              ? `${quantite} × (${formaterMontant(produit.prix_unitaire)} + ${formaterMontant(supplementUnitaire)} de personnalisation) + livraison`
+              ? `${multiplicateur} × (${formaterMontant(produit.prix_unitaire)} + ${formaterMontant(supplementUnitaire)} de personnalisation) + livraison`
               : quantite > 1
-                ? `${quantite} × ${formaterMontant(produit.prix_unitaire)} + livraison`
+                ? `${multiplicateur} × ${formaterMontant(produit.prix_unitaire)} + livraison`
                 : null
           }
         />

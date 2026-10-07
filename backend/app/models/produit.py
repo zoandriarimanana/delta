@@ -42,6 +42,20 @@ class Produit(SoftDeleteMixin, Base):
             "NOT est_personnalisable OR supplement_personnalisation IS NOT NULL",
             name="personnalisable_a_un_supplement",
         ),
+        # Un produit vendu à la personne porte toujours un minimum, au moins 1 :
+        # sans lui, rien ne dirait à partir de combien de personnes il se
+        # commande. Implication et non équivalence, même raisonnement que
+        # ci-dessus : un minimum dormant est toléré sur un produit à l'unité.
+        #
+        # `IS NOT NULL` explicite, et non `personnes_min >= 1` seul : avec un
+        # minimum `NULL`, cette comparaison vaut `NULL`, que PostgreSQL laisse
+        # passer — la première version de cette contrainte n'interdisait donc
+        # rien. Trouvé par le test qui la viole volontairement.
+        CheckConstraint(
+            "(personnes_min IS NULL OR personnes_min >= 1)"
+            " AND (NOT vendu_par_personne OR personnes_min IS NOT NULL)",
+            name="vendu_par_personne_a_un_minimum",
+        ),
     )
 
     id_produit: Mapped[int] = mapped_column(primary_key=True)
@@ -54,6 +68,15 @@ class Produit(SoftDeleteMixin, Base):
         nullable=False, server_default="false"
     )
     est_livrable: Mapped[bool] = mapped_column(nullable=False, server_default="true")
+    #: Vendu au nombre de personnes (un gâteau pour 8, par exemple) : le prix
+    #: est alors **par personne**, et `LIGNE_COMMANDE.quantite` compte des
+    #: personnes. `stock_disponible` compte toujours des produits entiers —
+    #: une ligne de commande en consomme **un** (décision du 7 octobre 2026).
+    vendu_par_personne: Mapped[bool] = mapped_column(
+        nullable=False, server_default="false"
+    )
+    #: Nombre minimum de personnes pour un produit vendu à la personne.
+    personnes_min: Mapped[int | None] = mapped_column(default=None)
     #: Tarif de la personnalisation, par unité — comme `prix_unitaire`, dont il
     #: est le voisin direct. Recopié dans `DEMANDE_PERSONNALISATION.supplement_prix`
     #: à la commande, puis figé : une évolution du catalogue ne rétroagit pas.

@@ -69,6 +69,8 @@ CHECKS_ATTENDUS = [
     ("document_connaissance", "ck_document_connaissance_public_cible_document"),
     # Une seule ligne de tarif : une deuxième ne dirait pas laquelle appliquer.
     ("tarif_livraison", "ck_tarif_livraison_ligne_unique"),
+    # Un produit vendu à la personne porte toujours un minimum de personnes.
+    ("produit", "ck_produit_vendu_par_personne_a_un_minimum"),
     ("commande", "ck_commande_type_commande"),
     ("commande", "ck_commande_statut_commande"),
 ]

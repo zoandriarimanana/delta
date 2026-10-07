@@ -22,6 +22,8 @@ const PRODUIT: Produit = {
   est_personnalisable: true,
   supplement_personnalisation: null,
   est_livrable: true,
+  vendu_par_personne: false,
+  personnes_min: null,
   id_categorie: 1,
   note_moyenne: '4.5000000000000000',
   nombre_avis: 8,
@@ -163,4 +165,28 @@ it('un produit personnalisable se commande avec la demande du client', async () 
   fireEvent.click(screen.getByRole('button', { name: /ajouter au panier/i }));
 
   expect(lirePanier()[0]?.personnalisation?.message).toBe('Joyeux anniversaire');
+});
+
+it('un gâteau vendu à la personne se commande en nombre de personnes', async () => {
+  vi.mocked(recupererProduit).mockResolvedValue({
+    ...PRODUIT,
+    prix_unitaire: '5000.00',
+    stock_disponible: 3,
+    est_personnalisable: false,
+    vendu_par_personne: true,
+    personnes_min: 4,
+  });
+  afficher('/produits/1');
+
+  expect(await screen.findByText(/5\s000,00 Ar \/ personne/)).toBeDefined();
+  expect(screen.getByText(/par personne, à partir de 4 personnes/)).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Retirer une personne' })).toHaveProperty(
+    'disabled',
+    true
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: 'Ajouter une personne' }));
+  fireEvent.click(screen.getByRole('button', { name: /ajouter au panier/i }));
+
+  expect(lirePanier()[0]).toMatchObject({ quantite: 5, unite_mesure: 'personne' });
 });

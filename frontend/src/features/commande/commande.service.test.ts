@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   PERSONNALISATION_VIDE,
+  PERSONNES_MAX,
   ajouterAuPanier,
+  bornesQuantite,
   definirPersonnalisation,
   descriptionDemande,
   formaterDate,
@@ -32,6 +34,8 @@ function produit(surcharge: Partial<Produit> = {}): Produit {
     est_personnalisable: false,
     supplement_personnalisation: null,
     est_livrable: true,
+    vendu_par_personne: false,
+    personnes_min: null,
     id_categorie: 1,
     note_moyenne: null,
     nombre_avis: 0,
@@ -289,5 +293,51 @@ describe('personnalisation', () => {
     expect(resultat).toHaveLength(1);
     expect(resultat[0]?.quantite).toBe(2);
     expect(resultat[0]?.personnalisation).toEqual(autre);
+  });
+});
+
+describe('vente à la personne', () => {
+  const GATEAU = produit({
+    id_produit: 12,
+    prix_unitaire: '5000.00',
+    unite_mesure: 'pièce',
+    stock_disponible: 2,
+    vendu_par_personne: true,
+    personnes_min: 4,
+  });
+
+  it('une ligne est un gâteau : quantité en personnes, au minimum, unité « personne »', () => {
+    const panier = ajouterAuPanier([], GATEAU, 2);
+
+    expect(panier[0]?.quantite).toBe(4);
+    expect(panier[0]?.unite_mesure).toBe('personne');
+    expect(totalPanier(panier)).toBe(20000);
+  });
+
+  it('le nombre de personnes n’est pas borné au stock de gâteaux', () => {
+    const panier = ajouterAuPanier([], GATEAU, 30);
+
+    expect(panier[0]?.quantite).toBe(30);
+    expect(bornesQuantite(panier[0]!)).toEqual({ min: 4, max: PERSONNES_MAX });
+  });
+
+  it('un nouvel ajout remplace le nombre de personnes au lieu de l’ajouter', () => {
+    const panier = ajouterAuPanier(ajouterAuPanier([], GATEAU, 8), GATEAU, 6);
+
+    expect(panier).toHaveLength(1);
+    expect(panier[0]?.quantite).toBe(6);
+  });
+
+  it('modifier sous le minimum ramène au minimum', () => {
+    const panier = modifierQuantite(ajouterAuPanier([], GATEAU, 8), 12, 2);
+
+    expect(panier[0]?.quantite).toBe(4);
+  });
+
+  it('un gâteau pour 8 personnes compte pour un article', () => {
+    const eclair = produit({ id_produit: 13, stock_disponible: 10 });
+    const panier = ajouterAuPanier(ajouterAuPanier([], GATEAU, 8), eclair, 3);
+
+    expect(nombreArticles(panier)).toBe(4);
   });
 });

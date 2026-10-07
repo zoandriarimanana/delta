@@ -19,6 +19,9 @@ Ouvrez « Produits » : le catalogue se filtre par catégorie. Sur la fiche d'un
 
 Sur la fiche d'un produit livrable, deux prix sont affichés : « Retrait sur place », sans frais, et « Avec livraison », frais compris. Pour être livré, choisissez « Livraison à domicile » sur la page « Commande » et indiquez votre « Adresse de livraison » : elle est obligatoire. Les frais de livraison sont un forfait compté une seule fois par commande, quel que soit le nombre d'articles, et la livraison est offerte à partir d'un certain montant d'achat. Le montant exact des frais et le seuil de gratuité s'affichent sur la fiche du produit et sur la page « Commande », avec le total. « Retrait en boutique » et « Sur place » ne coûtent aucun frais. Un produit marqué non livrable se retire uniquement sur place.
 
+## Gâteaux vendus à la personne
+Certains produits, comme les gâteaux, se vendent au nombre de personnes : leur prix est indiqué « par personne », par exemple « 5 000,00 Ar / personne ». Sur la fiche, choisissez le « Nombre de personnes » au lieu d'une quantité : il commence au minimum indiqué (« à partir de 4 personnes », par exemple). Le prix est multiplié par ce nombre : un gâteau pour 6 personnes à 5 000 Ar par personne coûte 30 000 Ar. Une commande correspond à un gâteau ; pour deux gâteaux, passez deux commandes. Si le gâteau est personnalisé, le supplément est lui aussi compté par personne.
+
 ## Commander sans compte
 Vous pouvez commander sans créer de compte : suivez les étapes de « Commander des produits ». Sur la page « Commande », remplissez en plus les champs « Nom » et « Téléphone ou e-mail », pour que Delta puisse vous recontacter, puis cliquez sur « Valider la commande ». Une référence de commande s'affiche alors, sous « Conservez cette référence » : notez-la, c'est le seul moyen de retrouver votre commande, sa page de suivi s'ouvre avec ce lien. Une commande passée sans compte ne peut pas être rattachée ensuite à un compte créé plus tard.
 

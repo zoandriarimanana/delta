@@ -15,6 +15,7 @@
 import { useEffect, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 
+import { bornesQuantite } from '../commande.service';
 import type { LignePanier } from '../commande.types';
 
 interface Proprietes {
@@ -27,6 +28,8 @@ const CLASSES_PAS =
 
 export default function ChampQuantite({ ligne, onChangement }: Proprietes) {
   const [saisie, setSaisie] = useState(String(ligne.quantite));
+  const { min, max } = bornesQuantite(ligne);
+  const objet = ligne.vendu_par_personne ? 'le nombre de personnes' : 'la quantité';
 
   // Resynchronise si la quantité change ailleurs — bornage au stock, ou
   // modification depuis un autre onglet.
@@ -39,18 +42,22 @@ export default function ChampQuantite({ ligne, onChangement }: Proprietes) {
       <button
         type="button"
         onClick={() => onChangement(ligne.quantite - 1)}
-        disabled={ligne.quantite <= 1}
-        aria-label={`Diminuer la quantité de ${ligne.nom}`}
+        disabled={ligne.quantite <= min}
+        aria-label={`Diminuer ${objet} de ${ligne.nom}`}
         className={CLASSES_PAS}
       >
         <Minus size={14} aria-hidden />
       </button>
       <input
         type="number"
-        min={1}
-        max={ligne.stock_disponible}
+        min={min}
+        max={max}
         value={saisie}
-        aria-label={`Quantité pour ${ligne.nom}`}
+        aria-label={
+          ligne.vendu_par_personne
+            ? `Nombre de personnes pour ${ligne.nom}`
+            : `Quantité pour ${ligne.nom}`
+        }
         onChange={(evenement) => {
           const brut = evenement.target.value;
           setSaisie(brut);
@@ -65,8 +72,8 @@ export default function ChampQuantite({ ligne, onChangement }: Proprietes) {
       <button
         type="button"
         onClick={() => onChangement(ligne.quantite + 1)}
-        disabled={ligne.quantite >= ligne.stock_disponible}
-        aria-label={`Augmenter la quantité de ${ligne.nom}`}
+        disabled={ligne.quantite >= max}
+        aria-label={`Augmenter ${objet} de ${ligne.nom}`}
         className={CLASSES_PAS}
       >
         <Plus size={14} aria-hidden />
