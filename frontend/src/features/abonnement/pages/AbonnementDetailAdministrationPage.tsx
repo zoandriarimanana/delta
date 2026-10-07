@@ -81,7 +81,7 @@ export default function AbonnementDetailAdministrationPage() {
 
   if (detail.chargement) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -91,7 +91,7 @@ export default function AbonnementDetailAdministrationPage() {
     return (
       <p
         role="alert"
-        className="rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+        className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
       >
         {detail.erreur ?? 'Abonnement introuvable.'}
       </p>
@@ -102,7 +102,7 @@ export default function AbonnementDetailAdministrationPage() {
 
   return (
     <section>
-      <h1 className="text-2xl font-semibold text-warm-gray-700">
+      <h1 className="text-2xl font-semibold text-gris-700">
         Abonnement #{abonnement.id_abonnement}
       </h1>
 
@@ -111,15 +111,15 @@ export default function AbonnementDetailAdministrationPage() {
         // bénéficiaire actif » dit quoi corriger.
         <p
           role="alert"
-          className="mt-4 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="mt-4 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {actions.erreur}
         </p>
       )}
 
       {modeEdition ? (
-        <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
-          <h2 className="mb-4 text-lg font-medium text-warm-gray-700">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+          <h2 className="mb-4 text-lg font-medium text-gris-700">
             Modifier l'abonnement
           </h2>
           <FormulaireAbonnement
@@ -132,38 +132,38 @@ export default function AbonnementDetailAdministrationPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
           <dl className="grid gap-3 sm:grid-cols-2">
             <div>
-              <dt className="text-sm text-warm-gray-500">Période</dt>
-              <dd className="text-warm-gray-700">
+              <dt className="text-sm text-gris-500">Période</dt>
+              <dd className="text-gris-700">
                 {abonnement.date_debut} → {abonnement.date_fin}
               </dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Type de facturation</dt>
-              <dd className="text-warm-gray-700">
+              <dt className="text-sm text-gris-500">Type de facturation</dt>
+              <dd className="text-gris-700">
                 {abonnement.type_facturation === 'Forfait'
                   ? 'Forfait'
                   : 'Consommation réelle'}
               </dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Mode de suivi</dt>
-              <dd className="text-warm-gray-700">{abonnement.mode_suivi}</dd>
+              <dt className="text-sm text-gris-500">Mode de suivi</dt>
+              <dd className="text-gris-700">{abonnement.mode_suivi}</dd>
             </div>
             {solde !== null && (
               <div>
-                <dt className="text-sm text-warm-gray-500">Montant facturé</dt>
-                <dd className="text-warm-gray-700">{solde.montant_facture}</dd>
+                <dt className="text-sm text-gris-500">Montant facturé</dt>
+                <dd className="text-gris-700">{solde.montant_facture}</dd>
               </div>
             )}
             {solde?.repas_restants !== null && solde?.repas_restants !== undefined && (
               <div>
-                <dt className="text-sm text-warm-gray-500">Repas restants</dt>
+                <dt className="text-sm text-gris-500">Repas restants</dt>
                 <dd
                   className={
-                    solde.repas_restants < 0 ? 'text-terracotta' : 'text-warm-gray-700'
+                    solde.repas_restants < 0 ? 'text-primaire' : 'text-gris-700'
                   }
                 >
                   {solde.repas_restants}
@@ -186,9 +186,7 @@ export default function AbonnementDetailAdministrationPage() {
 
       <div className="mt-8">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-warm-gray-700">
-            Suivi de consommation
-          </h2>
+          <h2 className="text-lg font-medium text-gris-700">Suivi de consommation</h2>
           {abonnement.mode_suivi === 'Individuel' && (
             <Bouton
               variante="secondaire"
@@ -201,44 +199,44 @@ export default function AbonnementDetailAdministrationPage() {
 
         {ajoutBeneficiaireOuvert && (
           <form
-            className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-warm-gray-200 bg-white p-4"
+            className="mt-4 flex flex-wrap items-end gap-3 rounded-xl border border-gris-200 bg-white p-4"
             onSubmit={(e) => {
               e.preventDefault();
               void ajouterBeneficiaire();
             }}
           >
-            <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+            <label className="flex flex-col gap-1 text-sm text-gris-700">
               Nom
               <input
                 required
                 value={nomBadge.nom}
                 onChange={(e) => setNomBadge((v) => ({ ...v, nom: e.target.value }))}
-                className="rounded border border-warm-gray-300 px-2 py-1"
+                className="rounded border border-gris-300 px-2 py-1"
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+            <label className="flex flex-col gap-1 text-sm text-gris-700">
               Prénom
               <input
                 required
                 value={nomBadge.prenom}
                 onChange={(e) => setNomBadge((v) => ({ ...v, prenom: e.target.value }))}
-                className="rounded border border-warm-gray-300 px-2 py-1"
+                className="rounded border border-gris-300 px-2 py-1"
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+            <label className="flex flex-col gap-1 text-sm text-gris-700">
               Badge
               <input
                 required
                 value={nomBadge.badge}
                 onChange={(e) => setNomBadge((v) => ({ ...v, badge: e.target.value }))}
-                className="rounded border border-warm-gray-300 px-2 py-1"
+                className="rounded border border-gris-300 px-2 py-1"
               />
             </label>
             <Bouton type="submit" disabled={beneficiaireAction.envoi}>
               Ajouter
             </Bouton>
             {beneficiaireAction.erreur !== null && (
-              <p role="alert" className="w-full text-sm text-terracotta">
+              <p role="alert" className="w-full text-sm text-danger">
                 {beneficiaireAction.erreur}
               </p>
             )}

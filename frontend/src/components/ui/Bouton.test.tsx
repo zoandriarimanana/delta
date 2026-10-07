@@ -64,6 +64,6 @@ describe('état désactivé', () => {
     const classes = container.firstElementChild?.className ?? '';
 
     expect(classes).toContain('cursor-not-allowed');
-    expect(classes).not.toContain('bg-terracotta');
+    expect(classes).not.toContain('bg-action');
   });
 });

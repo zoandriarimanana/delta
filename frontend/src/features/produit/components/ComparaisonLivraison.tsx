@@ -43,7 +43,7 @@ export default function ComparaisonLivraison({
     <div
       role="group"
       aria-label="Frais de livraison"
-      className="divide-y divide-warm-gray-200 rounded-xl border border-warm-gray-200 bg-white text-sm"
+      className="divide-y divide-gris-200 rounded-xl border border-gris-200 bg-white text-sm"
     >
       {!produit.est_livrable ? (
         <Ligne
@@ -107,7 +107,7 @@ function AvecLivraison({
         montant={formaterMontant(sousTotal + frais)}
       />
       {tarif.seuil_gratuite !== null && frais > 0 && (
-        <p className="px-4 py-2 text-xs leading-relaxed text-sage">
+        <p className="px-4 py-2 text-xs leading-relaxed text-succes">
           Livraison offerte dès {formaterMontant(tarif.seuil_gratuite)} d’achat. Le
           retrait en boutique reste gratuit.
         </p>
@@ -132,19 +132,19 @@ function Ligne({
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-3">
       <div className="flex items-center gap-3">
-        <span className="text-terracotta">{icone}</span>
+        <span className="text-primaire">{icone}</span>
         <div>
-          <p className="font-medium text-warm-gray-700">{libelle}</p>
+          <p className="font-medium text-gris-700">{libelle}</p>
           {detail !== null && (
             <p
-              className={`text-xs ${miseEnAvant ? 'font-medium text-sage' : 'text-warm-gray-500'}`}
+              className={`text-xs ${miseEnAvant ? 'font-medium text-succes' : 'text-gris-500'}`}
             >
               {detail}
             </p>
           )}
         </div>
       </div>
-      <p className="whitespace-nowrap text-base font-semibold text-warm-gray-700">
+      <p className="whitespace-nowrap text-base font-semibold text-gris-700">
         {montant}
       </p>
     </div>

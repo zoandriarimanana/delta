@@ -38,7 +38,7 @@ export default function FormationDetailPage() {
     return (
       <section>
         <BoutonRetour vers="/formations">Retour aux formations</BoutonRetour>
-        <p role="alert" className="mt-6 text-warm-gray-700">
+        <p role="alert" className="mt-6 text-gris-700">
           Cette formation est introuvable.
         </p>
       </section>
@@ -47,7 +47,7 @@ export default function FormationDetailPage() {
 
   if (formation.chargement || formation.donnees === null) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -75,8 +75,8 @@ export default function FormationDetailPage() {
       </article>
 
       <section className="mt-10">
-        <h2 className="text-xl font-semibold text-warm-gray-700">Description</h2>
-        <p className="mt-3 whitespace-pre-line leading-relaxed text-warm-gray-600">
+        <h2 className="text-xl font-semibold text-gris-700">Description</h2>
+        <p className="mt-3 whitespace-pre-line leading-relaxed text-gris-600">
           {fiche.description ??
             `Formation de ${formaterDuree(fiche.duree_heures)}` +
               (fiche.niveau !== null ? `, niveau ${fiche.niveau}` : '') +
@@ -85,8 +85,8 @@ export default function FormationDetailPage() {
               'cette formation.'}
         </p>
         {domaine?.description != null && (
-          <p className="mt-3 text-sm leading-relaxed text-warm-gray-500">
-            <span className="font-medium text-warm-gray-600">
+          <p className="mt-3 text-sm leading-relaxed text-gris-500">
+            <span className="font-medium text-gris-600">
               À propos du domaine « {domaine.libelle} » :
             </span>{' '}
             {domaine.description}
@@ -95,24 +95,24 @@ export default function FormationDetailPage() {
       </section>
 
       <section aria-labelledby="titre-sessions" className="mt-10">
-        <h2 id="titre-sessions" className="text-xl font-semibold text-warm-gray-700">
+        <h2 id="titre-sessions" className="text-xl font-semibold text-gris-700">
           Sessions et inscriptions
         </h2>
 
         {sessions.chargement && (
-          <p role="status" className="mt-4 text-warm-gray-500">
+          <p role="status" className="mt-4 text-gris-500">
             Chargement…
           </p>
         )}
 
         {sessions.erreur !== null && (
-          <p role="alert" className="mt-4 text-terracotta">
+          <p role="alert" className="mt-4 text-danger">
             {sessions.erreur}
           </p>
         )}
 
         {sessions.donnees !== null && sessions.donnees.length === 0 && (
-          <p className="mt-4 rounded-xl border border-warm-gray-200 bg-white p-4 text-warm-gray-600">
+          <p className="mt-4 rounded-xl border border-gris-200 bg-white p-4 text-gris-600">
             Aucune session n’est programmée pour le moment. Revenez prochainement : les
             nouvelles dates sont annoncées ici dès leur planification.
           </p>
@@ -146,12 +146,10 @@ function Presentation({
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p className="text-sm font-medium uppercase tracking-wide text-terracotta">
+        <p className="text-sm font-medium uppercase tracking-wide text-primaire">
           {domaine ?? 'Formation'}
         </p>
-        <h1 className="mt-1 text-3xl font-semibold text-warm-gray-700">
-          {formation.titre}
-        </h1>
+        <h1 className="mt-1 text-3xl font-semibold text-gris-700">{formation.titre}</h1>
         <div className="mt-2">
           <NoteMoyenne
             moyenne={formation.note_moyenne}
@@ -160,9 +158,9 @@ function Presentation({
         </div>
       </div>
 
-      <p className="text-2xl font-bold text-terracotta">
+      <p className="text-2xl font-bold text-primaire">
         {formaterMontant(formation.prix)}{' '}
-        <span className="text-base font-medium text-warm-gray-500">par personne</span>
+        <span className="text-base font-medium text-gris-500">par personne</span>
       </p>
 
       {/* Le module choisit ses libellés et ses variantes : la pastille ne
@@ -195,14 +193,14 @@ function Presentation({
       <div
         className={`rounded-xl border p-4 ${
           ouvertes !== null && ouvertes > 0
-            ? 'border-sage/30 bg-sage/10'
-            : 'border-amber/30 bg-amber/10'
+            ? 'border-succes/30 bg-succes/10'
+            : 'border-attente/30 bg-attente/10'
         }`}
       >
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-warm-gray-600">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-gris-600">
           Inscription
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-warm-gray-600">
+        <p className="mt-2 text-sm leading-relaxed text-gris-600">
           {ouvertes !== null && ouvertes > 0
             ? 'Des places sont disponibles. Choisissez votre session plus bas : ' +
               'votre place est retenue dès l’envoi de la demande.'
@@ -215,7 +213,7 @@ function Presentation({
         </p>
       </div>
 
-      <dl className="grid gap-2 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm">
+      <dl className="grid gap-2 rounded-xl border border-gris-200 bg-white p-4 text-sm">
         <Ligne terme="Durée" valeur={formaterDuree(formation.duree_heures)} />
         <Ligne terme="Niveau" valeur={formation.niveau ?? 'Tous niveaux'} />
         <Ligne
@@ -234,8 +232,8 @@ function Presentation({
 function Ligne({ terme, valeur }: { terme: string; valeur: string }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="text-warm-gray-500">{terme}</dt>
-      <dd className="text-right font-medium text-warm-gray-700">{valeur}</dd>
+      <dt className="text-gris-500">{terme}</dt>
+      <dd className="text-right font-medium text-gris-700">{valeur}</dd>
     </div>
   );
 }

@@ -43,14 +43,14 @@ export default function GestionGalerie({ bien }: Proprietes) {
   }
 
   return (
-    <section className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
+    <section className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-medium text-warm-gray-700">Photos</h2>
-        <span className="text-sm text-warm-gray-500">
+        <h2 className="text-lg font-medium text-gris-700">Photos</h2>
+        <span className="text-sm text-gris-500">
           {galerie.photos.length} / {NOMBRE_MAX_PHOTOS}
         </span>
       </div>
-      <p className="mt-1 text-sm text-warm-gray-500">
+      <p className="mt-1 text-sm text-gris-500">
         Affichées sur la fiche publique, dans cet ordre. La première sert de couverture.
         Rangées sur le serveur dans{' '}
         <code className="text-xs">static/upload/{partieDe(bien)}/</code>.
@@ -59,18 +59,18 @@ export default function GestionGalerie({ bien }: Proprietes) {
       {gestion.erreur !== null && (
         <p
           role="alert"
-          className="mt-3 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="mt-3 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {gestion.erreur}
         </p>
       )}
 
       {galerie.chargement ? (
-        <p role="status" className="mt-3 text-sm text-warm-gray-500">
+        <p role="status" className="mt-3 text-sm text-gris-500">
           Chargement des photos…
         </p>
       ) : galerie.photos.length === 0 ? (
-        <p className="mt-3 text-sm text-warm-gray-500">
+        <p className="mt-3 text-sm text-gris-500">
           Aucune photo pour l’instant : la fiche publique affiche une illustration.
         </p>
       ) : (
@@ -78,7 +78,7 @@ export default function GestionGalerie({ bien }: Proprietes) {
           {galerie.photos.map((photo, rang) => (
             <li
               key={photo.fichier}
-              className="overflow-hidden rounded-lg border border-warm-gray-200"
+              className="overflow-hidden rounded-lg border border-gris-200"
             >
               <img
                 src={urlPhoto(bien, photo.fichier)}
@@ -86,7 +86,7 @@ export default function GestionGalerie({ bien }: Proprietes) {
                 className="aspect-[4/3] w-full object-cover"
               />
               <div className="flex items-center justify-between gap-2 p-2">
-                <span className="truncate text-xs text-warm-gray-600">
+                <span className="truncate text-xs text-gris-600">
                   {photo.fichier}
                   {rang === 0 && ' · couverture'}
                 </span>
@@ -95,7 +95,7 @@ export default function GestionGalerie({ bien }: Proprietes) {
                   disabled={gestion.envoi}
                   onClick={() => void gestion.retirer(photo.fichier)}
                   aria-label={`Retirer la photo ${rang + 1}`}
-                  className="rounded p-1 text-terracotta hover:bg-terracotta/10 disabled:opacity-40"
+                  className="rounded p-1 text-danger hover:bg-danger/10 disabled:opacity-40"
                 >
                   <Trash2 size={16} aria-hidden />
                 </button>
@@ -106,7 +106,7 @@ export default function GestionGalerie({ bien }: Proprietes) {
       )}
 
       {pleine ? (
-        <p className="mt-4 text-sm text-warm-gray-500">
+        <p className="mt-4 text-sm text-gris-500">
           La galerie est complète. Retirez une photo pour en ajouter une autre.
         </p>
       ) : (
@@ -117,7 +117,7 @@ export default function GestionGalerie({ bien }: Proprietes) {
             void envoyer();
           }}
         >
-          <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+          <label className="flex flex-col gap-1 text-sm text-gris-700">
             <span>Image (JPEG, PNG ou WebP, 5 Mio max.)</span>
             <input
               ref={selecteur}

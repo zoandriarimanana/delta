@@ -61,8 +61,8 @@ export default function ChoixReception({
             key={valeur}
             className={`flex cursor-pointer items-start gap-3 rounded-xl border-2 bg-white p-3 transition-colors ${
               mode === valeur
-                ? 'border-terracotta'
-                : 'border-warm-gray-200 hover:border-warm-gray-300'
+                ? 'border-primaire'
+                : 'border-gris-200 hover:border-gris-300'
             }`}
           >
             <input
@@ -73,12 +73,12 @@ export default function ChoixReception({
               onChange={() => surMode(valeur)}
               className="sr-only"
             />
-            <Icone size={20} aria-hidden className="mt-0.5 shrink-0 text-terracotta" />
+            <Icone size={20} aria-hidden className="mt-0.5 shrink-0 text-primaire" />
             <span>
-              <span className="block text-sm font-semibold text-warm-gray-700">
+              <span className="block text-sm font-semibold text-gris-700">
                 {libelle}
               </span>
-              <span className="block text-xs text-warm-gray-500">{detail}</span>
+              <span className="block text-xs text-gris-500">{detail}</span>
             </span>
           </label>
         ))}
@@ -86,7 +86,7 @@ export default function ChoixReception({
 
       {mode === 'livraison' && (
         <label className="block">
-          <span className="flex items-center gap-1.5 text-sm text-warm-gray-700">
+          <span className="flex items-center gap-1.5 text-sm text-gris-700">
             <MapPin size={16} aria-hidden />
             Adresse de livraison
           </span>
@@ -97,7 +97,7 @@ export default function ChoixReception({
             value={adresse}
             onChange={(evenement) => surAdresse(evenement.target.value)}
             placeholder="Lot, quartier, ville — et un repère si besoin"
-            className="mt-1 block w-full rounded-lg border border-warm-gray-300 px-3 py-2"
+            className="mt-1 block w-full rounded-lg border border-gris-300 px-3 py-2"
           />
         </label>
       )}

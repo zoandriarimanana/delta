@@ -46,20 +46,16 @@ export default function LigneProduitAdministration({
   return (
     <tr
       onClick={naviguerAuClic(fiche)}
-      className={`${archive ? 'bg-warm-gray-100/60' : ''} ${CLASSES_LIGNE_CLIQUABLE}`}
+      className={`${archive ? 'bg-gris-100/60' : ''} ${CLASSES_LIGNE_CLIQUABLE}`}
     >
       <td className="px-3 py-2 text-sm">
-        <Link to={fiche} className="text-warm-gray-700 hover:underline">
+        <Link to={fiche} className="text-gris-700 hover:underline">
           {produit.nom}
         </Link>
       </td>
-      <td className="px-3 py-2 text-sm text-warm-gray-600">
-        {categorie?.libelle ?? '—'}
-      </td>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">{formaterPrix(produit)}</td>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">
-        {produit.stock_disponible}
-      </td>
+      <td className="px-3 py-2 text-sm text-gris-600">{categorie?.libelle ?? '—'}</td>
+      <td className="px-3 py-2 text-sm text-gris-700">{formaterPrix(produit)}</td>
+      <td className="px-3 py-2 text-sm text-gris-700">{produit.stock_disponible}</td>
       <td className="px-3 py-2">
         {/* Le libellé et la variante viennent d'ici, pas de la pastille : elle
             ne connaît aucune entité. */}

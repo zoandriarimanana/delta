@@ -18,11 +18,11 @@ export default function CarteFormation({ formation }: { formation: Formation }) 
         description={`${formaterDuree(formation.duree_heures)}${formation.niveau ? ` • Niveau ${formation.niveau}` : ''}`}
         pied={
           <div className="flex items-center justify-between">
-            <span className="text-lg font-semibold text-terracotta">
+            <span className="text-lg font-semibold text-primaire">
               {formaterMontant(formation.prix)}
             </span>
             {formation.propose_hebergement && (
-              <span className="text-xs bg-sage/15 text-sage px-2 py-1 rounded-full">
+              <span className="text-xs bg-succes/15 text-succes px-2 py-1 rounded-full">
                 🏨 Hébergement
               </span>
             )}

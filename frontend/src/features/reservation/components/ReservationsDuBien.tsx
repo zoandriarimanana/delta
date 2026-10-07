@@ -62,44 +62,36 @@ export default function ReservationsDuBien({ bien }: Proprietes) {
 
   return (
     <div className="mt-8">
-      <h2 className="text-lg font-medium text-warm-gray-700">Réservations</h2>
+      <h2 className="text-lg font-medium text-gris-700">Réservations</h2>
       {donnees.erreur !== null && (
         <p
           role="alert"
-          className="mt-2 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="mt-2 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {donnees.erreur}
         </p>
       )}
       {donnees.chargement ? (
-        <p role="status" className="mt-2 text-sm text-warm-gray-500">
+        <p role="status" className="mt-2 text-sm text-gris-500">
           Chargement…
         </p>
       ) : reservations.length === 0 ? (
-        <p className="mt-2 text-sm text-warm-gray-500">
-          Aucune réservation pour le moment.
-        </p>
+        <p className="mt-2 text-sm text-gris-500">Aucune réservation pour le moment.</p>
       ) : (
         <>
-          <p className="mt-1 text-sm text-warm-gray-600">
+          <p className="mt-1 text-sm text-gris-600">
             {reservations.length} réservation(s), dont {aVenir} à venir.
           </p>
           <table className="mt-3 w-full border-collapse rounded-xl bg-white shadow-sm">
             <thead>
               <tr className="text-left">
-                <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">N°</th>
-                <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
-                  Début
-                </th>
-                <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
-                  Fin
-                </th>
-                <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
+                <th className="px-3 py-2 text-sm font-medium text-gris-600">N°</th>
+                <th className="px-3 py-2 text-sm font-medium text-gris-600">Début</th>
+                <th className="px-3 py-2 text-sm font-medium text-gris-600">Fin</th>
+                <th className="px-3 py-2 text-sm font-medium text-gris-600">
                   Personnes
                 </th>
-                <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
-                  Statut
-                </th>
+                <th className="px-3 py-2 text-sm font-medium text-gris-600">Statut</th>
               </tr>
             </thead>
             <tbody>
@@ -109,20 +101,20 @@ export default function ReservationsDuBien({ bien }: Proprietes) {
                   <tr
                     key={reservation.id_reservation}
                     onClick={naviguerAuClic(fiche)}
-                    className={`border-t border-warm-gray-100 ${CLASSES_LIGNE_CLIQUABLE}`}
+                    className={`border-t border-gris-100 ${CLASSES_LIGNE_CLIQUABLE}`}
                   >
                     <td className="px-3 py-2 text-sm">
-                      <Link to={fiche} className="text-warm-gray-700 hover:underline">
+                      <Link to={fiche} className="text-gris-700 hover:underline">
                         #{reservation.id_reservation}
                       </Link>
                     </td>
-                    <td className="px-3 py-2 text-sm text-warm-gray-700">
+                    <td className="px-3 py-2 text-sm text-gris-700">
                       {formaterDate(reservation.date_debut)}
                     </td>
-                    <td className="px-3 py-2 text-sm text-warm-gray-700">
+                    <td className="px-3 py-2 text-sm text-gris-700">
                       {formaterDate(reservation.date_fin)}
                     </td>
-                    <td className="px-3 py-2 text-sm text-warm-gray-700">
+                    <td className="px-3 py-2 text-sm text-gris-700">
                       {reservation.nombre_personnes}
                     </td>
                     <td className="px-3 py-2">

@@ -69,14 +69,14 @@ export default function TarifLivraisonPage() {
 
   if (chargement && tarif === null) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
   }
   if (erreur || tarif === null) {
     return (
-      <p role="alert" className="text-terracotta">
+      <p role="alert" className="text-danger">
         Le tarif de livraison n’a pas pu être chargé.
       </p>
     );
@@ -84,14 +84,14 @@ export default function TarifLivraisonPage() {
 
   return (
     <section className="max-w-xl">
-      <h1 className="text-2xl font-semibold text-warm-gray-700">Tarif de livraison</h1>
-      <p className="mt-2 text-sm text-warm-gray-500">
+      <h1 className="text-2xl font-semibold text-gris-700">Tarif de livraison</h1>
+      <p className="mt-2 text-sm text-gris-500">
         Un forfait unique, compté une seule fois par commande quel que soit le nombre
         d’articles. Les commandes déjà passées gardent les frais du jour où elles ont
         été faites.
       </p>
 
-      <div className="mt-4 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm text-warm-gray-600">
+      <div className="mt-4 rounded-xl border border-gris-200 bg-white p-4 text-sm text-gris-600">
         Actuellement : <strong>{formaterMontant(tarif.forfait)}</strong> par livraison
         {tarif.seuil_gratuite !== null ? (
           <>
@@ -105,9 +105,9 @@ export default function TarifLivraisonPage() {
 
       <form
         onSubmit={(e) => void enregistrer(e)}
-        className="mt-6 space-y-4 rounded-xl border border-warm-gray-200 bg-white p-4"
+        className="mt-6 space-y-4 rounded-xl border border-gris-200 bg-white p-4"
       >
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Forfait de livraison (Ar)
           <input
             type="number"
@@ -116,11 +116,11 @@ export default function TarifLivraisonPage() {
             step="0.01"
             value={forfait}
             onChange={(e) => setForfait(e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex items-center gap-2 text-sm text-warm-gray-700">
+        <label className="flex items-center gap-2 text-sm text-gris-700">
           <input
             type="checkbox"
             checked={avecSeuil}
@@ -130,7 +130,7 @@ export default function TarifLivraisonPage() {
         </label>
 
         {avecSeuil && (
-          <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+          <label className="flex flex-col gap-1 text-sm text-gris-700">
             Livraison offerte dès (Ar)
             <input
               type="number"
@@ -139,9 +139,9 @@ export default function TarifLivraisonPage() {
               step="0.01"
               value={seuil}
               onChange={(e) => setSeuil(e.target.value)}
-              className="rounded border border-warm-gray-300 px-2 py-1"
+              className="rounded border border-gris-300 px-2 py-1"
             />
-            <span className="text-xs text-warm-gray-500">
+            <span className="text-xs text-gris-500">
               Comparé au montant des produits seuls, hors frais de livraison.
             </span>
           </label>
@@ -151,7 +151,7 @@ export default function TarifLivraisonPage() {
           <p
             role={retour.ok ? 'status' : 'alert'}
             className={`rounded p-3 text-sm ${
-              retour.ok ? 'bg-sage/10 text-sage' : 'bg-terracotta/10 text-terracotta'
+              retour.ok ? 'bg-succes/10 text-succes' : 'bg-danger/10 text-danger'
             }`}
           >
             {retour.texte}

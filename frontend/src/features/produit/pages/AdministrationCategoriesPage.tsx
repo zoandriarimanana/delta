@@ -73,8 +73,8 @@ export default function AdministrationCategoriesPage() {
   return (
     <section>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-warm-gray-700">Catégories</h1>
-        <Link to="/personnel/catalogue" className="text-sm text-terracotta underline">
+        <h1 className="text-2xl font-semibold text-gris-700">Catégories</h1>
+        <Link to="/personnel/catalogue" className="text-sm text-primaire underline">
           Retour au catalogue
         </Link>
       </div>
@@ -86,14 +86,14 @@ export default function AdministrationCategoriesPage() {
           void enregistrer();
         }}
       >
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Libellé
           <input
             type="text"
             required
             value={libelle}
             onChange={(evenement) => setLibelle(evenement.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
         <Bouton type="submit" disabled={envoi || libelle.trim() === ''}>
@@ -115,14 +115,14 @@ export default function AdministrationCategoriesPage() {
             <p
               key={index}
               role="alert"
-              className="mt-4 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+              className="mt-4 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
             >
               {message}
             </p>
           )
       )}
 
-      <label className="mt-6 flex items-center gap-2 text-sm text-warm-gray-700">
+      <label className="mt-6 flex items-center gap-2 text-sm text-gris-700">
         <input
           type="checkbox"
           checked={avecArchives}
@@ -132,7 +132,7 @@ export default function AdministrationCategoriesPage() {
       </label>
 
       {catalogue.chargement && (
-        <p role="status" className="mt-4 text-warm-gray-500">
+        <p role="status" className="mt-4 text-gris-500">
           Chargement…
         </p>
       )}
@@ -146,11 +146,11 @@ export default function AdministrationCategoriesPage() {
               onClick={naviguerAuClic(
                 `/personnel/categories/${categorie.id_categorie}`
               )}
-              className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warm-gray-200 bg-white p-3 ${
-                archive ? 'bg-warm-gray-100/60' : ''
+              className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gris-200 bg-white p-3 ${
+                archive ? 'bg-gris-100/60' : ''
               } ${CLASSES_LIGNE_CLIQUABLE}`}
             >
-              <span className="flex items-center gap-3 text-sm text-warm-gray-700">
+              <span className="flex items-center gap-3 text-sm text-gris-700">
                 <Link
                   to={`/personnel/categories/${categorie.id_categorie}`}
                   className="hover:underline"

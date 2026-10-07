@@ -29,24 +29,22 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
   return (
     <aside
       aria-labelledby="titre-recapitulatif"
-      className="rounded-2xl border border-warm-gray-200 bg-white p-6 shadow-sm lg:sticky lg:top-6"
+      className="rounded-2xl border border-gris-200 bg-white p-6 shadow-sm lg:sticky lg:top-6"
     >
-      <h2 id="titre-recapitulatif" className="text-lg font-semibold text-warm-gray-700">
+      <h2 id="titre-recapitulatif" className="text-lg font-semibold text-gris-700">
         Récapitulatif
       </h2>
 
       <dl className="mt-4 space-y-3 text-sm">
         <div className="flex justify-between">
-          <dt className="text-warm-gray-500">
+          <dt className="text-gris-500">
             Sous-total ({nombreArticles} article{nombreArticles > 1 ? 's' : ''})
           </dt>
-          <dd className="font-medium text-warm-gray-700">
-            {formaterMontant(sousTotal)}
-          </dd>
+          <dd className="font-medium text-gris-700">{formaterMontant(sousTotal)}</dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-warm-gray-500">Livraison</dt>
-          <dd className="text-right text-warm-gray-700">
+          <dt className="text-gris-500">Livraison</dt>
+          <dd className="text-right text-gris-700">
             {tarif === null
               ? 'Choisie à l’étape suivante'
               : reste === null && seuil !== null
@@ -57,8 +55,8 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
       </dl>
 
       {tarif !== null && seuil !== null && (
-        <div className="mt-4 rounded-xl bg-sage/10 p-3">
-          <p className="text-xs font-medium text-sage">
+        <div className="mt-4 rounded-xl bg-succes/10 p-3">
+          <p className="text-xs font-medium text-succes">
             {reste === null
               ? 'Bravo, la livraison vous est offerte !'
               : `Plus que ${formaterMontant(reste)} pour la livraison offerte`}
@@ -72,50 +70,50 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
             className="mt-2 h-2 overflow-hidden rounded-full bg-white"
           >
             <div
-              className="h-full rounded-full bg-sage transition-all"
+              className="h-full rounded-full bg-succes transition-all"
               style={{ width: `${progression}%` }}
             />
           </div>
         </div>
       )}
 
-      <div className="mt-5 flex items-baseline justify-between border-t border-warm-gray-200 pt-4">
-        <span className="font-semibold text-warm-gray-700">Total estimé</span>
-        <span className="text-2xl font-bold text-terracotta">
+      <div className="mt-5 flex items-baseline justify-between border-t border-gris-200 pt-4">
+        <span className="font-semibold text-gris-700">Total estimé</span>
+        <span className="text-2xl font-bold text-primaire">
           {formaterMontant(sousTotal)}
         </span>
       </div>
       {/* Indicatif : le serveur recalcule à partir des prix du catalogue. */}
-      <p className="mt-1 text-xs text-warm-gray-500">
+      <p className="mt-1 text-xs text-gris-500">
         Montant indicatif, confirmé à la validation. Frais de livraison ajoutés à
         l’étape suivante si vous choisissez d’être livré.
       </p>
 
       <Link
         to="/commande"
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-terracotta px-6 py-3 font-semibold text-white no-underline shadow-md transition-all hover:-translate-y-0.5 hover:bg-burgundy hover:shadow-lg"
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white no-underline shadow-md transition-all hover:-translate-y-0.5 hover:bg-action-fonce hover:shadow-lg"
       >
         Valider la commande
         <ArrowRight size={18} aria-hidden />
       </Link>
       <Link
         to="/produits"
-        className="mt-3 block text-center text-sm font-medium text-warm-gray-600 no-underline hover:text-terracotta"
+        className="mt-3 block text-center text-sm font-medium text-gris-600 no-underline hover:text-primaire"
       >
         Continuer mes achats
       </Link>
 
-      <ul className="mt-6 space-y-2 border-t border-warm-gray-200 pt-4 text-xs text-warm-gray-500">
+      <ul className="mt-6 space-y-2 border-t border-gris-200 pt-4 text-xs text-gris-500">
         <li className="flex items-center gap-2">
-          <ShieldCheck size={16} aria-hidden className="text-sage" />
+          <ShieldCheck size={16} aria-hidden className="text-succes" />
           Commande possible avec ou sans compte
         </li>
         <li className="flex items-center gap-2">
-          <PackageCheck size={16} aria-hidden className="text-sage" />
+          <PackageCheck size={16} aria-hidden className="text-succes" />
           Suivi de votre commande en ligne
         </li>
         <li className="flex items-center gap-2">
-          <Store size={16} aria-hidden className="text-sage" />
+          <Store size={16} aria-hidden className="text-succes" />
           Retrait en boutique gratuit
         </li>
       </ul>

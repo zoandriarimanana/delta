@@ -28,14 +28,14 @@ export default function RecapitulatifMontants({
     avecLivraison && tarif !== null ? resteAvantGratuite(tarif, sousTotal) : null;
 
   return (
-    <dl className="space-y-1 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm">
+    <dl className="space-y-1 rounded-xl border border-gris-200 bg-white p-4 text-sm">
       <div className="flex justify-between">
-        <dt className="text-warm-gray-500">Produits</dt>
-        <dd className="text-warm-gray-700">{formaterMontant(sousTotal)}</dd>
+        <dt className="text-gris-500">Produits</dt>
+        <dd className="text-gris-700">{formaterMontant(sousTotal)}</dd>
       </div>
       <div className="flex justify-between">
-        <dt className="text-warm-gray-500">Livraison</dt>
-        <dd className="text-warm-gray-700">
+        <dt className="text-gris-500">Livraison</dt>
+        <dd className="text-gris-700">
           {!avecLivraison
             ? 'Aucun frais'
             : tarif === null
@@ -46,11 +46,11 @@ export default function RecapitulatifMontants({
         </dd>
       </div>
       {reste !== null && frais > 0 && (
-        <p className="text-xs text-sage">
+        <p className="text-xs text-succes">
           Plus que {formaterMontant(reste)} d’achat pour une livraison offerte.
         </p>
       )}
-      <div className="flex justify-between border-t border-warm-gray-200 pt-2 text-base font-semibold text-warm-gray-700">
+      <div className="flex justify-between border-t border-gris-200 pt-2 text-base font-semibold text-gris-700">
         <dt>Total</dt>
         <dd>{formaterMontant(sousTotal + frais)}</dd>
       </div>

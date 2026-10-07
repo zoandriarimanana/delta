@@ -38,37 +38,35 @@ export default function TableauConsommation({
   beneficiaires,
 }: Proprietes) {
   if (consommations.length === 0) {
-    return <p className="mt-4 text-warm-gray-600">Aucune consommation enregistrée.</p>;
+    return <p className="mt-4 text-gris-600">Aucune consommation enregistrée.</p>;
   }
 
   return (
     <div className="mt-4 overflow-x-auto">
       <table className="w-full border-collapse rounded-xl bg-white shadow-sm">
         <thead>
-          <tr className="border-b border-warm-gray-200 text-left">
-            <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">Date</th>
+          <tr className="border-b border-gris-200 text-left">
+            <th className="px-3 py-2 text-sm font-medium text-gris-600">Date</th>
             {modeSuivi === 'Individuel' && (
-              <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
+              <th className="px-3 py-2 text-sm font-medium text-gris-600">
                 Bénéficiaire
               </th>
             )}
-            <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
-              Quantité
-            </th>
+            <th className="px-3 py-2 text-sm font-medium text-gris-600">Quantité</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-warm-gray-200">
+        <tbody className="divide-y divide-gris-200">
           {consommations.map((consommation) => (
             <tr key={consommation.id_consommation}>
-              <td className="px-3 py-2 text-sm text-warm-gray-700">
+              <td className="px-3 py-2 text-sm text-gris-700">
                 {consommation.date_consommation}
               </td>
               {modeSuivi === 'Individuel' && (
-                <td className="px-3 py-2 text-sm text-warm-gray-700">
+                <td className="px-3 py-2 text-sm text-gris-700">
                   {nomBeneficiaire(consommation.id_beneficiaire, beneficiaires)}
                 </td>
               )}
-              <td className="px-3 py-2 text-sm text-warm-gray-700">
+              <td className="px-3 py-2 text-sm text-gris-700">
                 {consommation.quantite}
               </td>
             </tr>

@@ -42,10 +42,10 @@ export default function ProduitDetailPage() {
     return (
       <section>
         <LienRetour />
-        <h1 className="mt-6 text-2xl font-semibold text-warm-gray-700">
+        <h1 className="mt-6 text-2xl font-semibold text-gris-700">
           Produit introuvable
         </h1>
-        <p className="mt-2 text-warm-gray-500">Cette référence n’est pas valide.</p>
+        <p className="mt-2 text-gris-500">Cette référence n’est pas valide.</p>
       </section>
     );
   }
@@ -88,18 +88,16 @@ function Fiche({
 
       <div className="flex flex-col gap-5">
         <div>
-          <p className="text-sm font-medium uppercase tracking-wide text-terracotta">
+          <p className="text-sm font-medium uppercase tracking-wide text-primaire">
             {categorie ?? 'Catégorie non précisée'}
           </p>
-          <h1 className="mt-1 text-3xl font-semibold text-warm-gray-700">
-            {produit.nom}
-          </h1>
+          <h1 className="mt-1 text-3xl font-semibold text-gris-700">{produit.nom}</h1>
           <div className="mt-2">
             <NoteMoyenne moyenne={produit.note_moyenne} nombre={produit.nombre_avis} />
           </div>
         </div>
 
-        <p className="text-2xl font-bold text-terracotta">{formaterPrix(produit)}</p>
+        <p className="text-2xl font-bold text-primaire">{formaterPrix(produit)}</p>
 
         {/* Le module choisit ses libellés et ses variantes : la pastille ne
             connaît ni le stock ni la livraison. */}
@@ -122,15 +120,15 @@ function Fiche({
         </ul>
 
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-warm-gray-500">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gris-500">
             Description
           </h2>
-          <p className="mt-2 leading-relaxed text-warm-gray-600">
+          <p className="mt-2 leading-relaxed text-gris-600">
             {produit.description ?? 'Aucune description pour ce produit.'}
           </p>
         </div>
 
-        <dl className="grid gap-2 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm">
+        <dl className="grid gap-2 rounded-xl border border-gris-200 bg-white p-4 text-sm">
           <Ligne terme="Disponibilité">
             {!disponible
               ? 'Épuisé'
@@ -160,7 +158,7 @@ function Fiche({
         {disponible ? (
           <AjoutPanierProduit produit={produit} />
         ) : (
-          <p className="rounded-lg bg-terracotta/10 px-4 py-3 text-terracotta">
+          <p className="rounded-lg bg-danger/10 px-4 py-3 text-danger">
             Ce produit est épuisé, il ne peut pas être commandé.
           </p>
         )}
@@ -172,8 +170,8 @@ function Fiche({
 function Ligne({ terme, children }: { terme: string; children: ReactNode }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="text-warm-gray-500">{terme}</dt>
-      <dd className="text-right font-medium text-warm-gray-700">{children}</dd>
+      <dt className="text-gris-500">{terme}</dt>
+      <dd className="text-right font-medium text-gris-700">{children}</dd>
     </div>
   );
 }

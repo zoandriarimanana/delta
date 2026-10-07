@@ -10,8 +10,8 @@ interface Proprietes {
 export default function ChampFiche({ intitule, children }: Proprietes) {
   return (
     <div>
-      <dt className="text-sm text-warm-gray-500">{intitule}</dt>
-      <dd className="text-warm-gray-700">{children}</dd>
+      <dt className="text-sm text-gris-500">{intitule}</dt>
+      <dd className="text-gris-700">{children}</dd>
     </div>
   );
 }

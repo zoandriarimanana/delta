@@ -49,26 +49,26 @@ export default function AdministrationCommandesPage() {
 
   return (
     <section>
-      <h1 className="text-2xl font-semibold text-warm-gray-700">
+      <h1 className="text-2xl font-semibold text-gris-700">
         Administration des commandes
       </h1>
 
       <nav className="mt-4 flex flex-wrap gap-4 text-sm">
-        <Link to="/personnel/abonnements" className="text-terracotta underline">
+        <Link to="/personnel/abonnements" className="text-primaire underline">
           Voir les abonnements
         </Link>
-        <Link to="/personnel/reservations" className="text-terracotta underline">
+        <Link to="/personnel/reservations" className="text-primaire underline">
           Voir les réservations
         </Link>
       </nav>
 
       <div className="mt-4 flex flex-wrap gap-4">
-        <label className="flex items-center gap-2 text-sm text-warm-gray-700">
+        <label className="flex items-center gap-2 text-sm text-gris-700">
           Statut
           <select
             value={filtreStatut}
             onChange={(e) => setFiltreStatut(e.target.value as StatutCommande | '')}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           >
             <option value="">Tous</option>
             {STATUTS.map((valeur) => (
@@ -83,46 +83,38 @@ export default function AdministrationCommandesPage() {
       {donnees.erreur !== null && (
         <p
           role="alert"
-          className="mt-4 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="mt-4 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {donnees.erreur}
         </p>
       )}
 
       {donnees.chargement && (
-        <p role="status" className="mt-6 text-warm-gray-500">
+        <p role="status" className="mt-6 text-gris-500">
           Chargement…
         </p>
       )}
 
       {!donnees.chargement && commandesFiltrees.length === 0 && (
-        <p className="mt-6 text-warm-gray-600">Aucune commande à afficher.</p>
+        <p className="mt-6 text-gris-600">Aucune commande à afficher.</p>
       )}
 
       {commandesFiltrees.length > 0 && (
         <div className="mt-6 overflow-x-auto">
           <table className="w-full border-collapse rounded-xl bg-white shadow-sm">
             <thead>
-              <tr className="border-b border-warm-gray-200 text-left">
-                <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
+              <tr className="border-b border-gris-200 text-left">
+                <th className="px-3 py-2 text-sm font-medium text-gris-600">
                   Commande
                 </th>
-                <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
-                  Date
-                </th>
-                <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
-                  Type
-                </th>
-                <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
-                  Montant
-                </th>
-                <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
-                  Statut
-                </th>
+                <th className="px-3 py-2 text-sm font-medium text-gris-600">Date</th>
+                <th className="px-3 py-2 text-sm font-medium text-gris-600">Type</th>
+                <th className="px-3 py-2 text-sm font-medium text-gris-600">Montant</th>
+                <th className="px-3 py-2 text-sm font-medium text-gris-600">Statut</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-warm-gray-200">
+            <tbody className="divide-y divide-gris-200">
               {commandesFiltrees.map((commande) => (
                 <LigneCommande key={commande.id_commande} commande={commande} />
               ))}
@@ -137,26 +129,26 @@ export default function AdministrationCommandesPage() {
 function LigneCommande({ commande }: { commande: Commande }) {
   return (
     <tr>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">
+      <td className="px-3 py-2 text-sm text-gris-700">
         Commande n° {commande.id_commande}
       </td>
-      <td className="px-3 py-2 text-sm text-warm-gray-600">
+      <td className="px-3 py-2 text-sm text-gris-600">
         {formaterDate(commande.date_commande)}
       </td>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">{commande.type_commande}</td>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">
+      <td className="px-3 py-2 text-sm text-gris-700">{commande.type_commande}</td>
+      <td className="px-3 py-2 text-sm text-gris-700">
         {formaterMontant(commande.montant_total)}
       </td>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">
+      <td className="px-3 py-2 text-sm text-gris-700">
         {commande.statut}
         {commande.rembourse_le !== null && (
-          <span className="ml-2 text-xs text-warm-gray-500">(remboursée)</span>
+          <span className="ml-2 text-xs text-gris-500">(remboursée)</span>
         )}
       </td>
       <td className="px-3 py-2 text-right">
         <Link
           to={`/personnel/commandes/administration/${commande.id_commande}`}
-          className="text-sm text-terracotta underline"
+          className="text-sm text-primaire underline"
         >
           Voir le détail
         </Link>

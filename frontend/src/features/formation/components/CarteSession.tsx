@@ -32,12 +32,12 @@ export default function CarteSession({ session, proposeHebergement }: Proprietes
   return (
     <li
       className={`rounded-2xl border bg-white p-5 shadow-sm ${
-        reservable ? 'border-sage/40' : 'border-warm-gray-200'
+        reservable ? 'border-succes/40' : 'border-gris-200'
       }`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="flex items-center gap-2 font-semibold text-warm-gray-700">
-          <CalendarDays size={18} aria-hidden className="text-terracotta" />
+        <p className="flex items-center gap-2 font-semibold text-gris-700">
+          <CalendarDays size={18} aria-hidden className="text-primaire" />
           <span>
             Du{' '}
             <time dateTime={session.date_debut}>
@@ -51,7 +51,7 @@ export default function CarteSession({ session, proposeHebergement }: Proprietes
         </Badge>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-warm-gray-600">
+      <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-gris-600">
         <p className="flex items-center gap-1.5">
           <Users size={16} aria-hidden />
           {session.places_restantes} place(s) restante(s)
@@ -70,7 +70,7 @@ export default function CarteSession({ session, proposeHebergement }: Proprietes
       {/* Une session complète reste visible : le client doit pouvoir constater
           qu'elle existe et attendre la suivante. Elle n'est simplement pas
           réservable, et le dit — en détail. */}
-      <p className="mt-3 text-sm leading-relaxed text-warm-gray-500">
+      <p className="mt-3 text-sm leading-relaxed text-gris-500">
         {explicationSession(session)}
       </p>
 

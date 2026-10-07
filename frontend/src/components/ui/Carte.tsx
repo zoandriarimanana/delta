@@ -55,7 +55,7 @@ export default function Carte({
       tabIndex={cliquable ? 0 : undefined}
     >
       {image !== undefined && (
-        <div className="h-48 w-full overflow-hidden bg-warm-gray-200">
+        <div className="h-48 w-full overflow-hidden bg-gris-200">
           {/* `alt` vide et non le titre : l'image est décorative, le titre est
               déjà lu juste en dessous. Le répéter ferait entendre deux fois la
               même chose à un lecteur d'écran. */}
@@ -64,9 +64,9 @@ export default function Carte({
       )}
 
       <div className="p-4">
-        <h3 className="mb-2 text-lg font-semibold text-warm-gray-700">{titre}</h3>
+        <h3 className="mb-2 text-lg font-semibold text-gris-700">{titre}</h3>
         {description !== null && description !== undefined && (
-          <p className="mb-3 text-sm text-warm-gray-500">{description}</p>
+          <p className="mb-3 text-sm text-gris-500">{description}</p>
         )}
         {children}
       </div>

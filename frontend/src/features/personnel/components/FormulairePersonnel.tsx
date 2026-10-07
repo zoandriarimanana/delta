@@ -114,7 +114,7 @@ export default function FormulairePersonnel({
               aucune ambiguïté à lever, "Photo actuelle" serait même
               trompeur (aucune photo n'existe encore). */}
           {(previsualisation !== null || personnel !== undefined) && (
-            <span className="text-xs text-warm-gray-500">
+            <span className="text-xs text-gris-500">
               {previsualisation !== null ? 'Nouvel aperçu' : 'Photo actuelle'}
             </span>
           )}
@@ -124,47 +124,45 @@ export default function FormulairePersonnel({
             taille="grande"
           />
         </div>
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
-          Photo de profil <span className="text-warm-gray-500">(facultatif)</span>
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
+          Photo de profil <span className="text-gris-500">(facultatif)</span>
           <input
             type="file"
             accept={TYPES_ACCEPTES}
             onChange={(e) => choisirPhoto(e.target.files?.[0] ?? null)}
             className="text-sm"
           />
-          <span className="text-xs text-warm-gray-500">
-            JPEG ou PNG, 2 Mio maximum.
-          </span>
+          <span className="text-xs text-gris-500">JPEG ou PNG, 2 Mio maximum.</span>
         </label>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Nom
           <input
             required
             value={valeurs.nom}
             onChange={(e) => modifier('nom', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Prénom
           <input
             required
             value={valeurs.prenom}
             onChange={(e) => modifier('prenom', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Fonction
           <select
             value={valeurs.fonction}
             onChange={(e) => modifier('fonction', e.target.value as FonctionPersonnel)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           >
             {FONCTIONS.map((valeur) => (
               <option key={valeur} value={valeur}>
@@ -174,53 +172,53 @@ export default function FormulairePersonnel({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           E-mail professionnel
           <input
             type="email"
             required
             value={valeurs.email}
             onChange={(e) => modifier('email', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
-          Téléphone <span className="text-warm-gray-500">(facultatif)</span>
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
+          Téléphone <span className="text-gris-500">(facultatif)</span>
           <input
             value={valeurs.telephone ?? ''}
             onChange={(e) => modifier('telephone', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
-          Date d'embauche <span className="text-warm-gray-500">(facultatif)</span>
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
+          Date d'embauche <span className="text-gris-500">(facultatif)</span>
           <input
             type="date"
             value={valeurs.date_embauche ?? ''}
             onChange={(e) => modifier('date_embauche', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
         {/* N'a de sens que pour un formateur, mais reste libre : le MLD ne
             conditionne pas ce champ à la fonction (cf. docs/mld.md). */}
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
-          Spécialité <span className="text-warm-gray-500">(facultatif)</span>
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
+          Spécialité <span className="text-gris-500">(facultatif)</span>
           <input
             value={valeurs.specialite ?? ''}
             onChange={(e) => modifier('specialite', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
-          Zone de livraison <span className="text-warm-gray-500">(facultatif)</span>
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
+          Zone de livraison <span className="text-gris-500">(facultatif)</span>
           <input
             value={valeurs.zone_livraison ?? ''}
             onChange={(e) => modifier('zone_livraison', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
       </div>
@@ -228,7 +226,7 @@ export default function FormulairePersonnel({
       {erreur !== null && (
         <p
           role="alert"
-          className="rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {erreur}
         </p>

@@ -28,8 +28,8 @@ export default function AdministrationAssistantPage() {
 
   return (
     <section>
-      <h1 className="text-2xl font-semibold text-warm-gray-700">Assistant IA</h1>
-      <p className="mt-1 text-sm text-warm-gray-500">
+      <h1 className="text-2xl font-semibold text-gris-700">Assistant IA</h1>
+      <p className="mt-1 text-sm text-gris-500">
         Répond aux visiteurs à partir du catalogue, du guide de la plateforme et des
         documents destinés aux clients — jamais à partir des stocks ni des données des
         clients ou du personnel. Le personnel dispose de son propre assistant.
@@ -38,14 +38,14 @@ export default function AdministrationAssistantPage() {
       {etat.erreur !== null && (
         <p
           role="alert"
-          className="mt-4 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="mt-4 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {etat.erreur}
         </p>
       )}
 
       {etat.chargement && etat.etat === null && (
-        <p role="status" className="mt-6 text-warm-gray-500">
+        <p role="status" className="mt-6 text-gris-500">
           Chargement…
         </p>
       )}

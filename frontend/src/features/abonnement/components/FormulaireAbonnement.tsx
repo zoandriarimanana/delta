@@ -95,12 +95,12 @@ export default function FormulaireAbonnement({
       }}
     >
       {abonnement === undefined && (
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Entreprise cliente
           <select
             value={valeurs.id_client_entreprise}
             onChange={(e) => modifier('id_client_entreprise', Number(e.target.value))}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           >
             {entreprises.map((entreprise) => (
               <option key={entreprise.id_client} value={entreprise.id_client}>
@@ -112,48 +112,48 @@ export default function FormulaireAbonnement({
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Date de début
           <input
             type="date"
             required
             value={valeurs.date_debut}
             onChange={(e) => modifier('date_debut', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Date de fin
           <input
             type="date"
             required
             value={valeurs.date_fin}
             onChange={(e) => modifier('date_fin', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Type de facturation
           <select
             value={valeurs.type_facturation}
             onChange={(e) =>
               modifier('type_facturation', e.target.value as TypeFacturation)
             }
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           >
             <option value="Forfait">Forfait</option>
             <option value="Consommation_reelle">Consommation réelle</option>
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Mode de suivi
           <select
             value={valeurs.mode_suivi}
             onChange={(e) => modifier('mode_suivi', e.target.value as ModeSuivi)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           >
             <option value="Global">Global</option>
             <option value="Individuel">Individuel</option>
@@ -162,7 +162,7 @@ export default function FormulaireAbonnement({
 
         {valeurs.type_facturation === 'Forfait' ? (
           <>
-            <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+            <label className="flex flex-col gap-1 text-sm text-gris-700">
               Tarif forfait
               <input
                 type="number"
@@ -171,12 +171,11 @@ export default function FormulaireAbonnement({
                 required
                 value={valeurs.tarif_forfait ?? ''}
                 onChange={(e) => modifier('tarif_forfait', e.target.value)}
-                className="rounded border border-warm-gray-300 px-2 py-1"
+                className="rounded border border-gris-300 px-2 py-1"
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
-              Nombre de repas inclus{' '}
-              <span className="text-warm-gray-500">(facultatif)</span>
+            <label className="flex flex-col gap-1 text-sm text-gris-700">
+              Nombre de repas inclus <span className="text-gris-500">(facultatif)</span>
               <input
                 type="number"
                 min={1}
@@ -187,12 +186,12 @@ export default function FormulaireAbonnement({
                     e.target.value === '' ? undefined : Number(e.target.value)
                   )
                 }
-                className="rounded border border-warm-gray-300 px-2 py-1"
+                className="rounded border border-gris-300 px-2 py-1"
               />
             </label>
           </>
         ) : (
-          <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+          <label className="flex flex-col gap-1 text-sm text-gris-700">
             Tarif unitaire par repas
             <input
               type="number"
@@ -201,7 +200,7 @@ export default function FormulaireAbonnement({
               required
               value={valeurs.tarif_unitaire_repas ?? ''}
               onChange={(e) => modifier('tarif_unitaire_repas', e.target.value)}
-              className="rounded border border-warm-gray-300 px-2 py-1"
+              className="rounded border border-gris-300 px-2 py-1"
             />
           </label>
         )}
@@ -210,7 +209,7 @@ export default function FormulaireAbonnement({
       {erreur !== null && (
         <p
           role="alert"
-          className="rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {erreur}
         </p>

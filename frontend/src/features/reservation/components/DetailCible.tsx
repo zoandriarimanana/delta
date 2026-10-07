@@ -64,21 +64,21 @@ function DetailSalle({ idSalle }: { idSalle: number }) {
   return (
     <dl className="grid gap-3 sm:grid-cols-2">
       <div>
-        <dt className="text-sm text-warm-gray-500">Nom</dt>
-        <dd className="text-warm-gray-700">{salle.nom}</dd>
+        <dt className="text-sm text-gris-500">Nom</dt>
+        <dd className="text-gris-700">{salle.nom}</dd>
       </div>
       <div>
-        <dt className="text-sm text-warm-gray-500">Capacité</dt>
-        <dd className="text-warm-gray-700">{salle.capacite} personnes</dd>
+        <dt className="text-sm text-gris-500">Capacité</dt>
+        <dd className="text-gris-700">{salle.capacite} personnes</dd>
       </div>
       <div>
-        <dt className="text-sm text-warm-gray-500">Tarif</dt>
-        <dd className="text-warm-gray-700">{libelleTarif(salle)}</dd>
+        <dt className="text-sm text-gris-500">Tarif</dt>
+        <dd className="text-gris-700">{libelleTarif(salle)}</dd>
       </div>
       {salle.equipements !== null && (
         <div>
-          <dt className="text-sm text-warm-gray-500">Équipements</dt>
-          <dd className="text-warm-gray-700">{salle.equipements}</dd>
+          <dt className="text-sm text-gris-500">Équipements</dt>
+          <dd className="text-gris-700">{salle.equipements}</dd>
         </div>
       )}
     </dl>
@@ -103,22 +103,22 @@ function DetailLogement({ idLogement }: { idLogement: number }) {
   return (
     <dl className="grid gap-3 sm:grid-cols-2">
       <div>
-        <dt className="text-sm text-warm-gray-500">Type de chambre</dt>
-        <dd className="text-warm-gray-700">{logement.type_chambre}</dd>
+        <dt className="text-sm text-gris-500">Type de chambre</dt>
+        <dd className="text-gris-700">{logement.type_chambre}</dd>
       </div>
       <div>
-        <dt className="text-sm text-warm-gray-500">Capacité</dt>
-        <dd className="text-warm-gray-700">{logement.capacite} personnes</dd>
+        <dt className="text-sm text-gris-500">Capacité</dt>
+        <dd className="text-gris-700">{logement.capacite} personnes</dd>
       </div>
       <div>
-        <dt className="text-sm text-warm-gray-500">Tarif</dt>
-        <dd className="text-warm-gray-700">
+        <dt className="text-sm text-gris-500">Tarif</dt>
+        <dd className="text-gris-700">
           {formaterMontant(logement.tarif_nuitee)} / nuitée
         </dd>
       </div>
       <div>
-        <dt className="text-sm text-warm-gray-500">État du bien</dt>
-        <dd className="text-warm-gray-700">{libelleStatutLogement(logement.statut)}</dd>
+        <dt className="text-sm text-gris-500">État du bien</dt>
+        <dd className="text-gris-700">{libelleStatutLogement(logement.statut)}</dd>
       </div>
     </dl>
   );
@@ -152,22 +152,22 @@ function DetailFormation({ idSession }: { idSession: number }) {
   return (
     <dl className="grid gap-3 sm:grid-cols-2">
       <div>
-        <dt className="text-sm text-warm-gray-500">Titre</dt>
-        <dd className="text-warm-gray-700">{formation.titre}</dd>
+        <dt className="text-sm text-gris-500">Titre</dt>
+        <dd className="text-gris-700">{formation.titre}</dd>
       </div>
       {formation.niveau !== null && (
         <div>
-          <dt className="text-sm text-warm-gray-500">Niveau</dt>
-          <dd className="text-warm-gray-700">{formation.niveau}</dd>
+          <dt className="text-sm text-gris-500">Niveau</dt>
+          <dd className="text-gris-700">{formation.niveau}</dd>
         </div>
       )}
       <div>
-        <dt className="text-sm text-warm-gray-500">Durée</dt>
-        <dd className="text-warm-gray-700">{formation.duree_heures} heures</dd>
+        <dt className="text-sm text-gris-500">Durée</dt>
+        <dd className="text-gris-700">{formation.duree_heures} heures</dd>
       </div>
       <div>
-        <dt className="text-sm text-warm-gray-500">Prix</dt>
-        <dd className="text-warm-gray-700">{formaterMontant(formation.prix)}</dd>
+        <dt className="text-sm text-gris-500">Prix</dt>
+        <dd className="text-gris-700">{formaterMontant(formation.prix)}</dd>
       </div>
     </dl>
   );

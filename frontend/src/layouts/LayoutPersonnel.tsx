@@ -59,12 +59,12 @@ const LIENS_GESTION: Lien[] = [
 function classeLien({ isActive }: { isActive: boolean }): string {
   const base = 'block rounded-lg px-3 py-2 text-sm font-medium transition-colors';
   return isActive
-    ? `${base} bg-terracotta text-white`
-    : `${base} text-warm-gray-700 hover:bg-warm-gray-100`;
+    ? `${base} bg-primaire text-white`
+    : `${base} text-gris-700 hover:bg-gris-100`;
 }
 
 function classeEnTeteSection(): string {
-  return 'px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-warm-gray-500';
+  return 'px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-gris-500';
 }
 
 interface ContenuSidebarProps {
@@ -122,21 +122,21 @@ export default function LayoutPersonnel() {
   }
 
   return (
-    <div className="flex min-h-screen bg-cream">
+    <div className="flex min-h-screen bg-fond">
       {/* Sidebar fixe, visible à partir de md. */}
-      <aside className="hidden w-64 flex-col border-r-2 border-warm-gray-200 bg-white md:flex">
+      <aside className="hidden w-64 flex-col border-r-2 border-gris-200 bg-white md:flex">
         <NavLink
           to="/"
-          className="border-b border-warm-gray-200 px-4 py-5 transition-opacity hover:opacity-80"
+          className="border-b border-gris-200 px-4 py-5 transition-opacity hover:opacity-80"
         >
           <LogoDelta />
         </NavLink>
         <ContenuSidebar estAdministrateur={estAdministrateur} />
-        <div className="border-t border-warm-gray-200 p-3">
+        <div className="border-t border-gris-200 p-3">
           <button
             type="button"
             onClick={seDeconnecter}
-            className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-warm-gray-700 transition-colors hover:bg-warm-gray-100"
+            className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-gris-700 transition-colors hover:bg-gris-100"
           >
             Déconnexion
           </button>
@@ -146,14 +146,14 @@ export default function LayoutPersonnel() {
       <div className="flex flex-1 flex-col">
         {/* Barre mobile : logo + bouton d'ouverture, la sidebar devenant un
             tiroir plutôt qu'une colonne fixe sous md. */}
-        <header className="flex items-center justify-between border-b-2 border-warm-gray-200 bg-white px-4 py-4 md:hidden">
+        <header className="flex items-center justify-between border-b-2 border-gris-200 bg-white px-4 py-4 md:hidden">
           <NavLink to="/" className="transition-opacity hover:opacity-80">
             <LogoDelta />
           </NavLink>
           <button
             type="button"
             onClick={() => setMenuOuvert(!menuOuvert)}
-            className="rounded-lg p-2 text-warm-gray-700 transition-colors hover:bg-warm-gray-100"
+            className="rounded-lg p-2 text-gris-700 transition-colors hover:bg-gris-100"
             aria-label={menuOuvert ? 'Fermer le menu' : 'Ouvrir le menu'}
             aria-expanded={menuOuvert}
           >
@@ -162,7 +162,7 @@ export default function LayoutPersonnel() {
         </header>
 
         {menuOuvert && (
-          <nav className="flex flex-col border-b border-warm-gray-200 bg-white px-3 py-2 md:hidden">
+          <nav className="flex flex-col border-b border-gris-200 bg-white px-3 py-2 md:hidden">
             <ContenuSidebar
               estAdministrateur={estAdministrateur}
               onNaviguer={() => setMenuOuvert(false)}
@@ -173,7 +173,7 @@ export default function LayoutPersonnel() {
                 setMenuOuvert(false);
                 seDeconnecter();
               }}
-              className="mt-2 block w-full rounded-lg border-t border-warm-gray-200 px-3 py-2 pt-4 text-left text-sm font-medium text-warm-gray-700 transition-colors hover:bg-warm-gray-100"
+              className="mt-2 block w-full rounded-lg border-t border-gris-200 px-3 py-2 pt-4 text-left text-sm font-medium text-gris-700 transition-colors hover:bg-gris-100"
             >
               Déconnexion
             </button>

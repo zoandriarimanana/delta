@@ -57,7 +57,7 @@ export default function MenuCompte({ surDeconnexion }: Proprietes) {
         onClick={() => setOuvert((valeur) => !valeur)}
         aria-expanded={ouvert}
         aria-haspopup="menu"
-        className="flex items-center gap-2 rounded-full border border-warm-gray-300 px-3 py-2 text-sm font-medium text-warm-gray-700 transition-colors hover:border-terracotta hover:text-terracotta"
+        className="flex items-center gap-2 rounded-full border border-gris-300 px-3 py-2 text-sm font-medium text-gris-700 transition-colors hover:border-primaire hover:text-primaire"
       >
         <UserRound size={18} aria-hidden />
         Mon compte
@@ -72,7 +72,7 @@ export default function MenuCompte({ surDeconnexion }: Proprietes) {
         <div
           role="menu"
           aria-label="Mon compte"
-          className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-warm-gray-200 bg-white py-1 shadow-lg"
+          className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-gris-200 bg-white py-1 shadow-lg"
         >
           {ENTREES.map(({ vers, libelle, icone: Icone }) => (
             <NavLink
@@ -83,8 +83,8 @@ export default function MenuCompte({ surDeconnexion }: Proprietes) {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 text-sm no-underline transition-colors ${
                   isActive
-                    ? 'bg-terracotta/10 font-semibold text-terracotta'
-                    : 'text-warm-gray-700 hover:bg-warm-gray-100'
+                    ? 'bg-primaire/10 font-semibold text-primaire'
+                    : 'text-gris-700 hover:bg-gris-100'
                 }`
               }
             >
@@ -92,7 +92,7 @@ export default function MenuCompte({ surDeconnexion }: Proprietes) {
               {libelle}
             </NavLink>
           ))}
-          <div className="my-1 border-t border-warm-gray-200" />
+          <div className="my-1 border-t border-gris-200" />
           <button
             type="button"
             role="menuitem"
@@ -100,7 +100,7 @@ export default function MenuCompte({ surDeconnexion }: Proprietes) {
               setOuvert(false);
               surDeconnexion();
             }}
-            className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-warm-gray-700 transition-colors hover:bg-warm-gray-100"
+            className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gris-700 transition-colors hover:bg-gris-100"
           >
             <LogOut size={16} aria-hidden />
             Déconnexion

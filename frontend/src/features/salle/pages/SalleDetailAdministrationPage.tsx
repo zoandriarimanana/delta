@@ -31,7 +31,7 @@ import { modifierSalle, recupererSalle } from '../salle.api';
 import type { SalleEnvoyee } from '../salle.types';
 
 const CLASSES_ALERTE =
-  'rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta';
+  'rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger';
 
 export default function SalleDetailAdministrationPage() {
   const { idSalle } = useParams<{ idSalle: string }>();
@@ -63,7 +63,7 @@ export default function SalleDetailAdministrationPage() {
 
   if (liste.chargement && salle === null) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -85,12 +85,12 @@ export default function SalleDetailAdministrationPage() {
             alt=""
             className="h-16 w-16 rounded object-cover"
           />
-          <h1 className="text-2xl font-semibold text-warm-gray-700">{salle.nom}</h1>
+          <h1 className="text-2xl font-semibold text-gris-700">{salle.nom}</h1>
           <Badge variante={archive ? 'negatif' : 'positif'}>
             {archive ? 'Archivée' : 'Active'}
           </Badge>
         </div>
-        <Link to="/personnel/salles" className="text-sm text-terracotta underline">
+        <Link to="/personnel/salles" className="text-sm text-primaire underline">
           Retour à la liste
         </Link>
       </div>
@@ -102,10 +102,8 @@ export default function SalleDetailAdministrationPage() {
       )}
 
       {modeEdition ? (
-        <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
-          <h2 className="mb-4 text-lg font-medium text-warm-gray-700">
-            Modifier la salle
-          </h2>
+        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+          <h2 className="mb-4 text-lg font-medium text-gris-700">Modifier la salle</h2>
           <FormulaireSalle
             salle={salle}
             envoi={envoi}
@@ -118,7 +116,7 @@ export default function SalleDetailAdministrationPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
           <dl className="grid gap-3 sm:grid-cols-2">
             <ChampFiche intitule="Capacité">{salle.capacite} personnes</ChampFiche>
             <ChampFiche intitule="Tarif horaire">
@@ -135,7 +133,7 @@ export default function SalleDetailAdministrationPage() {
               {note.disponible ? (
                 <NoteMoyenne moyenne={note.moyenne} nombre={note.nombre} />
               ) : (
-                <span className="text-sm text-warm-gray-500">
+                <span className="text-sm text-gris-500">
                   {archive ? 'Non calculé pour une salle archivée' : '—'}
                 </span>
               )}
@@ -143,7 +141,7 @@ export default function SalleDetailAdministrationPage() {
             <div className="sm:col-span-2">
               <ChampFiche intitule="Équipements">
                 {salle.equipements ?? (
-                  <span className="text-warm-gray-500">Non renseignés</span>
+                  <span className="text-gris-500">Non renseignés</span>
                 )}
               </ChampFiche>
             </div>
@@ -152,7 +150,7 @@ export default function SalleDetailAdministrationPage() {
                 {salle.description !== null ? (
                   <span className="whitespace-pre-line">{salle.description}</span>
                 ) : (
-                  <span className="text-warm-gray-500">Non rédigée</span>
+                  <span className="text-gris-500">Non rédigée</span>
                 )}
               </ChampFiche>
             </div>
@@ -186,7 +184,7 @@ export default function SalleDetailAdministrationPage() {
       )}
 
       {archive ? (
-        <p className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm text-warm-gray-500">
+        <p className="mt-6 rounded-xl border border-gris-200 bg-white p-4 text-sm text-gris-500">
           Les photos d’une salle archivée sont conservées, mais ne se gèrent qu’une fois
           restaurée.
         </p>

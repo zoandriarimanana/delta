@@ -30,18 +30,18 @@ export default function ReferencePublique({ reference }: Proprietes) {
   }
 
   return (
-    <div className="rounded-2xl border border-amber/50 bg-amber/10 p-5">
-      <h2 className="flex items-center gap-2 font-semibold text-warm-gray-700">
-        <Bookmark size={18} aria-hidden className="text-amber" />
+    <div className="rounded-2xl border border-attente/50 bg-attente/10 p-5">
+      <h2 className="flex items-center gap-2 font-semibold text-gris-700">
+        <Bookmark size={18} aria-hidden className="text-attente" />
         Conservez cette référence
       </h2>
-      <p className="mt-1 text-sm text-warm-gray-600">
+      <p className="mt-1 text-sm text-gris-600">
         Vous avez commandé sans compte : c’est le seul moyen de retrouver votre
         commande. Ajoutez cette page à vos favoris ou copiez son lien.
       </p>
       <code
         data-testid="reference-publique"
-        className="mt-3 block select-all break-all rounded-lg border border-warm-gray-200 bg-white px-3 py-2 font-mono text-sm text-warm-gray-700"
+        className="mt-3 block select-all break-all rounded-lg border border-gris-200 bg-white px-3 py-2 font-mono text-sm text-gris-700"
       >
         {reference}
       </code>
@@ -49,12 +49,12 @@ export default function ReferencePublique({ reference }: Proprietes) {
         <button
           type="button"
           onClick={() => void copier()}
-          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-warm-gray-700 shadow-sm ring-1 ring-warm-gray-300 transition-colors hover:text-terracotta hover:ring-terracotta"
+          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-gris-700 shadow-sm ring-1 ring-gris-300 transition-colors hover:text-primaire hover:ring-primaire"
         >
           {copie ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />}
           {copie ? 'Lien copié' : 'Copier le lien'}
         </button>
-        <a href={lien} className="break-all text-xs text-warm-gray-500 underline">
+        <a href={lien} className="break-all text-xs text-gris-500 underline">
           {lien}
         </a>
       </div>

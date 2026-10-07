@@ -68,16 +68,14 @@ export default function AccueilPage() {
     <div className="space-y-12">
       {/* Hero section */}
       <section className="text-center py-8">
-        <h1 className="text-4xl md:text-5xl font-serif font-bold text-terracotta mb-4">
+        <h1 className="text-4xl md:text-5xl font-serif font-bold text-primaire mb-4">
           Bienvenue chez Delta
         </h1>
-        <p className="text-lg text-warm-gray-600 max-w-2xl mx-auto mb-2">
+        <p className="text-lg text-gris-600 max-w-2xl mx-auto mb-2">
           Plateforme artisanale pour la pâtisserie, restauration, formation culinaire et
           hébergement.
         </p>
-        <p className="text-sm text-warm-gray-500">
-          Qualité, tradition et professionnalisme
-        </p>
+        <p className="text-sm text-gris-500">Qualité, tradition et professionnalisme</p>
       </section>
 
       {/* Grille de modules */}
@@ -97,17 +95,17 @@ export default function AccueilPage() {
       </section>
 
       {/* CTA section */}
-      <section className="bg-terracotta rounded-xl p-8 text-center">
+      <section className="bg-primaire rounded-xl p-8 text-center">
         <h2 className="text-2xl font-serif font-bold text-white mb-3">
           Découvrez notre offre
         </h2>
-        <p className="text-warm-gray-100 mb-6">
+        <p className="text-gris-100 mb-6">
           Explorez notre catalogue de produits, formations et services. Tous les détails
           vous attendent.
         </p>
         <a
           href="/produits"
-          className="inline-block px-6 py-3 bg-white text-terracotta font-semibold rounded-lg hover:bg-warm-gray-100 transition-colors"
+          className="inline-block px-6 py-3 bg-white text-primaire font-semibold rounded-lg hover:bg-gris-100 transition-colors"
         >
           Commencer à explorer
         </a>
@@ -145,10 +143,10 @@ function ModuleCard({
   };
 
   const baseClasses =
-    'p-6 bg-white rounded-xl border-l-4 border-terracotta cursor-pointer transition-all duration-300';
+    'p-6 bg-white rounded-xl border-l-4 border-primaire cursor-pointer transition-all duration-300';
   const selectedClasses = isSelected
     ? 'scale-105 shadow-xl'
-    : 'shadow-md hover:shadow-xl hover:-translate-y-1 focus:ring-2 focus:ring-terracotta';
+    : 'shadow-md hover:shadow-xl hover:-translate-y-1 focus:ring-2 focus:ring-primaire';
   const fadeClasses = otherSelected ? 'opacity-60' : '';
 
   return (
@@ -159,9 +157,9 @@ function ModuleCard({
       onKeyDown={handleKeyDown}
       className={`${baseClasses} ${selectedClasses} ${fadeClasses}`}
     >
-      <Icon className="w-8 h-8 text-terracotta mb-3" />
-      <h3 className="text-lg font-serif font-bold text-terracotta mb-2">{title}</h3>
-      <p className="text-sm text-warm-gray-600">{description}</p>
+      <Icon className="w-8 h-8 text-primaire mb-3" />
+      <h3 className="text-lg font-serif font-bold text-primaire mb-2">{title}</h3>
+      <p className="text-sm text-gris-600">{description}</p>
     </div>
   );
 }

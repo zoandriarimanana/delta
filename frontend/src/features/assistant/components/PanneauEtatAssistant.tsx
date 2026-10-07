@@ -14,7 +14,7 @@ import type { EtatAdministration, Reindexation } from '../assistant.administrati
 import { libelleType } from '../assistant.service';
 
 const CLASSES_ALERTE =
-  'mt-4 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta';
+  'mt-4 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger';
 
 interface Proprietes {
   etat: EtatAdministration;
@@ -33,11 +33,11 @@ export default function PanneauEtatAssistant({ etat, reindexation }: Proprietes)
 
   return (
     <div className="mt-6 grid gap-4 md:grid-cols-2">
-      <div className="rounded-xl border border-warm-gray-200 bg-white p-4">
-        <h2 className="text-lg font-medium text-warm-gray-700">État</h2>
+      <div className="rounded-xl border border-gris-200 bg-white p-4">
+        <h2 className="text-lg font-medium text-gris-700">État</h2>
         <dl className="mt-3 space-y-2 text-sm">
           <div className="flex items-center justify-between gap-2">
-            <dt className="text-warm-gray-500">Assistant</dt>
+            <dt className="text-gris-500">Assistant</dt>
             <dd>
               <Badge variante={donnees.actif ? 'positif' : 'neutre'}>
                 {donnees.actif ? 'Activé' : 'Désactivé'}
@@ -45,7 +45,7 @@ export default function PanneauEtatAssistant({ etat, reindexation }: Proprietes)
             </dd>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <dt className="text-warm-gray-500">Modèle de langage (Groq)</dt>
+            <dt className="text-gris-500">Modèle de langage (Groq)</dt>
             <dd>
               <Badge
                 variante={
@@ -65,29 +65,29 @@ export default function PanneauEtatAssistant({ etat, reindexation }: Proprietes)
             </dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="text-warm-gray-500">Modèle de réponse</dt>
-            <dd className="truncate font-mono text-xs text-warm-gray-700">
+            <dt className="text-gris-500">Modèle de réponse</dt>
+            <dd className="truncate font-mono text-xs text-gris-700">
               {donnees.modele_llm}
             </dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="text-warm-gray-500">Modèle d’indexation</dt>
-            <dd className="truncate font-mono text-xs text-warm-gray-700">
+            <dt className="text-gris-500">Modèle d’indexation</dt>
+            <dd className="truncate font-mono text-xs text-gris-700">
               {donnees.modele_embeddings}
             </dd>
           </div>
         </dl>
         {!donnees.actif && (
-          <p className="mt-3 text-xs text-warm-gray-500">
+          <p className="mt-3 text-xs text-gris-500">
             L’assistant s’active côté serveur (<code>AI_ENABLED=true</code> et les clés
             d’API) : la bulle n’apparaît sur le site qu’une fois activé.
           </p>
         )}
       </div>
 
-      <div className="rounded-xl border border-warm-gray-200 bg-white p-4">
-        <h2 className="text-lg font-medium text-warm-gray-700">Index</h2>
-        <p className="mt-1 text-sm text-warm-gray-500">
+      <div className="rounded-xl border border-gris-200 bg-white p-4">
+        <h2 className="text-lg font-medium text-gris-700">Index</h2>
+        <p className="mt-1 text-sm text-gris-500">
           {donnees.total_fragments} fragment(s) indexé(s). L’index se met à jour seul à
           chaque modification du catalogue ou de la base de connaissances.
         </p>
@@ -95,9 +95,9 @@ export default function PanneauEtatAssistant({ etat, reindexation }: Proprietes)
           <table className="mt-3 w-full text-sm">
             <tbody>
               {types.map(([type, nombre]) => (
-                <tr key={type} className="border-t border-warm-gray-100">
-                  <td className="py-1.5 text-warm-gray-700">{libelleType(type)}</td>
-                  <td className="py-1.5 text-right tabular-nums text-warm-gray-700">
+                <tr key={type} className="border-t border-gris-100">
+                  <td className="py-1.5 text-gris-700">{libelleType(type)}</td>
+                  <td className="py-1.5 text-right tabular-nums text-gris-700">
                     {nombre}
                   </td>
                 </tr>
@@ -106,7 +106,7 @@ export default function PanneauEtatAssistant({ etat, reindexation }: Proprietes)
           </table>
         ) : (
           donnees.actif && (
-            <p className="mt-3 text-sm text-amber">
+            <p className="mt-3 text-sm text-attente">
               L’index est vide : lancez une réindexation complète.
             </p>
           )
@@ -115,7 +115,7 @@ export default function PanneauEtatAssistant({ etat, reindexation }: Proprietes)
         <div className="mt-4">
           {confirmation ? (
             <div className="space-y-2">
-              <p className="text-sm text-warm-gray-600">
+              <p className="text-sm text-gris-600">
                 Reconstruire tout l’index ? Cela peut prendre une minute ; les réponses
                 restent possibles pendant ce temps.
               </p>
@@ -152,7 +152,7 @@ export default function PanneauEtatAssistant({ etat, reindexation }: Proprietes)
           </p>
         )}
         {reindexation.resultat !== null && (
-          <p role="status" className="mt-3 text-sm text-sage">
+          <p role="status" className="mt-3 text-sm text-succes">
             Réindexation terminée : {reindexation.resultat.total_fragments} fragment(s).
           </p>
         )}

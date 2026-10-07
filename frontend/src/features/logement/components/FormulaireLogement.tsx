@@ -78,19 +78,19 @@ export default function FormulaireLogement({
         );
       }}
     >
-      <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         Type de chambre
         <input
           type="text"
           required
           value={valeurs.type_chambre ?? ''}
           onChange={(e) => modifier('type_chambre', e.target.value)}
-          className="rounded border border-warm-gray-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Capacité
           <input
             type="number"
@@ -100,11 +100,11 @@ export default function FormulaireLogement({
             onChange={(e) =>
               modifier('capacite', Math.max(1, Number(e.target.value) || 1))
             }
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Tarif à la nuitée
           <input
             type="number"
@@ -113,18 +113,18 @@ export default function FormulaireLogement({
             step="0.01"
             value={valeurs.tarif_nuitee ?? ''}
             onChange={(e) => modifier('tarif_nuitee', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
       </div>
 
       {logement !== undefined && (
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Statut
           <select
             value={valeurs.statut ?? logement.statut}
             onChange={(e) => modifier('statut', e.target.value as StatutLogement)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           >
             {STATUTS.map((statut) => (
               <option key={statut} value={statut}>
@@ -135,9 +135,9 @@ export default function FormulaireLogement({
         </label>
       )}
 
-      <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         <span>
-          Description <span className="text-warm-gray-500">(facultative)</span>
+          Description <span className="text-gris-500">(facultative)</span>
         </span>
         <textarea
           rows={6}
@@ -145,9 +145,9 @@ export default function FormulaireLogement({
           value={valeurs.description ?? ''}
           onChange={(e) => modifier('description', e.target.value)}
           placeholder="Présentez le lieu : ambiance, agencement, usages conseillés…"
-          className="rounded border border-warm-gray-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
-        <span className="text-xs text-warm-gray-500">
+        <span className="text-xs text-gris-500">
           Affichée sur la fiche publique. Les retours à la ligne sont conservés.
         </span>
       </label>
@@ -156,7 +156,7 @@ export default function FormulaireLogement({
         // Le message du serveur est repris tel quel : il dit quoi corriger.
         <p
           role="alert"
-          className="rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {erreur}
         </p>

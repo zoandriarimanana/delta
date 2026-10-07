@@ -32,7 +32,7 @@ interface Proprietes {
 }
 
 const CLASSES_PAS =
-  'flex h-11 w-11 items-center justify-center text-warm-gray-600 transition-colors hover:bg-warm-gray-100 disabled:cursor-not-allowed disabled:opacity-40';
+  'flex h-11 w-11 items-center justify-center text-gris-600 transition-colors hover:bg-gris-100 disabled:cursor-not-allowed disabled:opacity-40';
 
 export default function AjoutPanierProduit({ produit }: Proprietes) {
   const panier = usePanier();
@@ -62,13 +62,13 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
   return (
     <div className="space-y-3">
       {produit.est_personnalisable && (
-        <div className="rounded-xl border border-warm-gray-200 bg-white">
+        <div className="rounded-xl border border-gris-200 bg-white">
           <label className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
-            <span className="flex items-center gap-2 text-sm font-semibold text-warm-gray-700">
-              <Sparkles size={18} aria-hidden className="text-amber" />
+            <span className="flex items-center gap-2 text-sm font-semibold text-gris-700">
+              <Sparkles size={18} aria-hidden className="text-attente" />
               Personnaliser ce produit
               {produit.supplement_personnalisation !== null && (
-                <span className="font-normal text-warm-gray-500">
+                <span className="font-normal text-gris-500">
                   (+{formaterMontant(produit.supplement_personnalisation)} /{' '}
                   {parPersonne ? 'personne' : 'unité'})
                 </span>
@@ -82,12 +82,12 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
                 setErreurPersonnalisation(false);
                 setAjoute(false);
               }}
-              className="h-5 w-5 accent-terracotta"
+              className="h-5 w-5 accent-primaire"
             />
           </label>
           {personnaliser && (
-            <div className="border-t border-warm-gray-200 px-4 py-4">
-              <p className="mb-3 text-xs text-warm-gray-500">
+            <div className="border-t border-gris-200 px-4 py-4">
+              <p className="mb-3 text-xs text-gris-500">
                 Décrivez votre demande : notre équipe la reçoit avec la commande.
               </p>
               <ChampsPersonnalisation
@@ -99,7 +99,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
                 }}
               />
               {erreurPersonnalisation && (
-                <p role="alert" className="mt-3 text-sm text-terracotta">
+                <p role="alert" className="mt-3 text-sm text-danger">
                   Indiquez au moins un message, un thème ou une précision.
                 </p>
               )}
@@ -113,18 +113,16 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
         supplementUnitaire={supplement}
       />
       {parPersonne && (
-        <p className="text-sm font-medium text-warm-gray-700">
+        <p className="text-sm font-medium text-gris-700">
           Nombre de personnes{' '}
-          <span className="font-normal text-warm-gray-500">
-            (à partir de {minimum})
-          </span>
+          <span className="font-normal text-gris-500">(à partir de {minimum})</span>
         </p>
       )}
       <div className="flex flex-col gap-3 sm:flex-row">
         <div
           role="group"
           aria-label={parPersonne ? 'Nombre de personnes' : 'Quantité'}
-          className="flex w-fit items-center overflow-hidden rounded-full border border-warm-gray-300 bg-white"
+          className="flex w-fit items-center overflow-hidden rounded-full border border-gris-300 bg-white"
         >
           <button
             type="button"
@@ -137,7 +135,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
           </button>
           <span
             aria-live="polite"
-            className="min-w-10 text-center font-semibold text-warm-gray-700"
+            className="min-w-10 text-center font-semibold text-gris-700"
           >
             {quantite}
           </span>
@@ -168,7 +166,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
             }
             setAjoute(true);
           }}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-terracotta px-6 py-3 font-semibold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-burgundy hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta active:translate-y-0"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-action-fonce hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaire active:translate-y-0"
         >
           <ShoppingCart size={20} aria-hidden />
           Ajouter au panier
@@ -178,7 +176,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
       {ajoute && (
         <p
           role="status"
-          className="flex flex-wrap items-center gap-2 rounded-lg bg-sage/15 px-4 py-2 text-sm text-sage"
+          className="flex flex-wrap items-center gap-2 rounded-lg bg-succes/15 px-4 py-2 text-sm text-succes"
         >
           <Check size={16} aria-hidden />
           Ajouté au panier.

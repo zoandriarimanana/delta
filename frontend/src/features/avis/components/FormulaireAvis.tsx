@@ -64,7 +64,7 @@ export default function FormulaireAvis({ cible, idCible }: Proprietes) {
 
   if (reussite !== null) {
     return (
-      <p role="status" className="mt-2 text-sm text-sage">
+      <p role="status" className="mt-2 text-sm text-succes">
         Merci, votre avis a été enregistré.
       </p>
     );
@@ -72,18 +72,18 @@ export default function FormulaireAvis({ cible, idCible }: Proprietes) {
 
   return (
     <form
-      className="mt-2 space-y-2 rounded border border-warm-gray-200 bg-white p-3"
+      className="mt-2 space-y-2 rounded border border-gris-200 bg-white p-3"
       onSubmit={(evenement) => {
         evenement.preventDefault();
         void deposer(charge(cible, idCible, note, commentaire));
       }}
     >
-      <label className="flex items-center gap-2 text-sm text-warm-gray-700">
+      <label className="flex items-center gap-2 text-sm text-gris-700">
         Note
         <select
           value={note}
           onChange={(evenement) => setNote(Number(evenement.target.value))}
-          className="rounded border border-warm-gray-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         >
           {NOTES.map((valeur) => (
             <option key={valeur} value={valeur}>
@@ -93,13 +93,13 @@ export default function FormulaireAvis({ cible, idCible }: Proprietes) {
         </select>
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         Commentaire (facultatif)
         <textarea
           value={commentaire}
           onChange={(evenement) => setCommentaire(evenement.target.value)}
           rows={2}
-          className="rounded border border-warm-gray-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
@@ -109,7 +109,7 @@ export default function FormulaireAvis({ cible, idCible }: Proprietes) {
         // générique non — même traitement que `reservation.hooks.ts`.
         <p
           role="alert"
-          className="rounded border border-terracotta/30 bg-terracotta/10 p-2 text-sm text-terracotta"
+          className="rounded border border-danger/30 bg-danger/10 p-2 text-sm text-danger"
         >
           {erreur}
         </p>
@@ -118,7 +118,7 @@ export default function FormulaireAvis({ cible, idCible }: Proprietes) {
       <button
         type="submit"
         disabled={envoi}
-        className="rounded bg-terracotta px-3 py-1.5 text-sm text-white disabled:opacity-50"
+        className="rounded bg-action px-3 py-1.5 text-sm text-white disabled:opacity-50"
       >
         {envoi ? 'Envoi…' : 'Déposer mon avis'}
       </button>

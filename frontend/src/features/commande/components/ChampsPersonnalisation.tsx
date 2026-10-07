@@ -19,7 +19,7 @@ interface Proprietes {
 }
 
 const CLASSES_CHAMP =
-  'mt-1 block w-full rounded-lg border border-warm-gray-300 bg-white px-3 py-2 text-sm text-warm-gray-700 focus:border-terracotta focus:outline-none focus:ring-2 focus:ring-terracotta/20';
+  'mt-1 block w-full rounded-lg border border-gris-300 bg-white px-3 py-2 text-sm text-gris-700 focus:border-primaire focus:outline-none focus:ring-2 focus:ring-primaire/20';
 
 export default function ChampsPersonnalisation({ valeurs, surChangement }: Proprietes) {
   function modifier(champ: keyof PersonnalisationPanier, valeur: string) {
@@ -29,9 +29,9 @@ export default function ChampsPersonnalisation({ valeurs, surChangement }: Propr
   return (
     <div className="space-y-3">
       <label className="block">
-        <span className="text-sm font-medium text-warm-gray-700">
+        <span className="text-sm font-medium text-gris-700">
           Message à écrire{' '}
-          <span className="font-normal text-warm-gray-500">(facultatif)</span>
+          <span className="font-normal text-gris-500">(facultatif)</span>
         </span>
         <input
           maxLength={LONGUEUR_MESSAGE}
@@ -42,9 +42,9 @@ export default function ChampsPersonnalisation({ valeurs, surChangement }: Propr
         />
       </label>
       <label className="block">
-        <span className="text-sm font-medium text-warm-gray-700">
+        <span className="text-sm font-medium text-gris-700">
           Thème et couleurs{' '}
-          <span className="font-normal text-warm-gray-500">(facultatif)</span>
+          <span className="font-normal text-gris-500">(facultatif)</span>
         </span>
         <input
           maxLength={LONGUEUR_RUBRIQUE}
@@ -55,9 +55,9 @@ export default function ChampsPersonnalisation({ valeurs, surChangement }: Propr
         />
       </label>
       <label className="block">
-        <span className="text-sm font-medium text-warm-gray-700">
+        <span className="text-sm font-medium text-gris-700">
           Autres précisions{' '}
-          <span className="font-normal text-warm-gray-500">(facultatif)</span>
+          <span className="font-normal text-gris-500">(facultatif)</span>
         </span>
         <textarea
           rows={3}
@@ -69,9 +69,9 @@ export default function ChampsPersonnalisation({ valeurs, surChangement }: Propr
         />
       </label>
       <label className="block">
-        <span className="text-sm font-medium text-warm-gray-700">
+        <span className="text-sm font-medium text-gris-700">
           Ingrédients à éviter ou allergies{' '}
-          <span className="font-normal text-warm-gray-500">(facultatif)</span>
+          <span className="font-normal text-gris-500">(facultatif)</span>
         </span>
         <input
           maxLength={LONGUEUR_RUBRIQUE}

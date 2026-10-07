@@ -26,18 +26,16 @@ export default function LogementListPage() {
   return (
     <section>
       <div className="mb-8">
-        <h1 className="text-4xl font-serif font-bold text-terracotta mb-2">
+        <h1 className="text-4xl font-serif font-bold text-primaire mb-2">
           Nos hébergements
         </h1>
-        <p className="text-warm-gray-600">
-          Chambres disponibles à la nuitée, sur place
-        </p>
+        <p className="text-gris-600">Chambres disponibles à la nuitée, sur place</p>
       </div>
 
       <div className="mb-8">
         <label
           htmlFor="filtre-capacite"
-          className="block mb-2 font-medium text-warm-gray-700"
+          className="block mb-2 font-medium text-gris-700"
         >
           Capacité minimale
         </label>
@@ -50,13 +48,13 @@ export default function LogementListPage() {
             const saisie = Number(evenement.target.value);
             setCapacite(Number.isInteger(saisie) && saisie > 0 ? saisie : null);
           }}
-          className="w-32 rounded-lg border-2 border-warm-gray-200 px-3 py-2 bg-white text-warm-gray-700 hover:border-terracotta transition-colors"
+          className="w-32 rounded-lg border-2 border-gris-200 px-3 py-2 bg-white text-gris-700 hover:border-primaire transition-colors"
           placeholder="Personnes"
         />
       </div>
 
       {chargement && (
-        <p role="status" className="text-center py-8 text-warm-gray-500">
+        <p role="status" className="text-center py-8 text-gris-500">
           ⏳ Chargement des hébergements…
         </p>
       )}
@@ -64,7 +62,7 @@ export default function LogementListPage() {
       {erreur !== null && (
         <div
           role="alert"
-          className="rounded-lg bg-terracotta/10 border-2 border-terracotta p-4 text-terracotta"
+          className="rounded-lg bg-danger/10 border-2 border-danger p-4 text-danger"
         >
           ⚠️ {erreur}
         </div>
@@ -72,12 +70,12 @@ export default function LogementListPage() {
 
       {donnees !== null && donnees.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-warm-gray-600 mb-4">
+          <p className="text-gris-600 mb-4">
             Aucun hébergement ne correspond à cette capacité.
           </p>
           <button
             onClick={() => setCapacite(null)}
-            className="text-terracotta hover:text-burgundy font-medium transition-colors underline"
+            className="text-primaire hover:text-primaire-fonce font-medium transition-colors underline"
           >
             Voir tous les hébergements
           </button>
@@ -97,7 +95,7 @@ export default function LogementListPage() {
               description={`${logement.capacite} personne(s)`}
               pied={
                 <div className="flex items-center justify-between">
-                  <span className="text-lg font-semibold text-terracotta">
+                  <span className="text-lg font-semibold text-primaire">
                     {formaterMontant(logement.tarif_nuitee)} / nuit
                   </span>
                   {/* Le libellé et la variante viennent du module : la

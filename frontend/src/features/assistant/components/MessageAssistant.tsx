@@ -22,7 +22,7 @@ export default function MessageAssistant({ message, surNavigation }: Proprietes)
   if (message.auteur === 'visiteur') {
     return (
       <div className="flex justify-end">
-        <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-burgundy px-3 py-2 text-sm text-white">
+        <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-primaire px-3 py-2 text-sm text-white">
           {message.texte}
         </p>
       </div>
@@ -37,12 +37,12 @@ export default function MessageAssistant({ message, surNavigation }: Proprietes)
       <div
         className={`max-w-[85%] rounded-2xl rounded-bl-sm px-3 py-2 text-sm ${
           message.erreur
-            ? 'border border-terracotta/30 bg-terracotta/10 text-terracotta'
-            : 'bg-warm-gray-100 text-warm-gray-700'
+            ? 'border border-danger/30 bg-danger/10 text-danger'
+            : 'bg-gris-100 text-gris-700'
         }`}
       >
         {enAttente ? (
-          <span role="status" className="text-warm-gray-500">
+          <span role="status" className="text-gris-500">
             L’assistant réfléchit…
           </span>
         ) : (
@@ -58,15 +58,15 @@ export default function MessageAssistant({ message, surNavigation }: Proprietes)
         )}
 
         {sources.length > 0 && (
-          <div className="mt-2 border-t border-warm-gray-200 pt-2">
-            <p className="text-xs font-medium text-warm-gray-500">Voir la fiche :</p>
+          <div className="mt-2 border-t border-gris-200 pt-2">
+            <p className="text-xs font-medium text-gris-500">Voir la fiche :</p>
             <ul className="mt-1 flex flex-wrap gap-1.5">
               {sources.map((source) => (
                 <li key={`${source.type_contenu}-${source.id_contenu}`}>
                   <Link
                     to={lienSource(source) ?? '/'}
                     onClick={surNavigation}
-                    className="inline-block rounded-full border border-warm-gray-300 bg-white px-2.5 py-0.5 text-xs text-burgundy hover:border-burgundy"
+                    className="inline-block rounded-full border border-gris-300 bg-white px-2.5 py-0.5 text-xs text-primaire hover:border-primaire"
                   >
                     {libelleSource(source)}
                   </Link>

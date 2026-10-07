@@ -18,16 +18,16 @@ export default function FormationListPage() {
   return (
     <section>
       <div className="mb-8">
-        <h1 className="text-4xl font-serif font-bold text-terracotta mb-2">
+        <h1 className="text-4xl font-serif font-bold text-primaire mb-2">
           Nos formations
         </h1>
-        <p className="text-warm-gray-600">
+        <p className="text-gris-600">
           Découvrez nos ateliers et sessions de formation culinaire
         </p>
       </div>
 
       <div className="mb-8 flex items-center gap-3">
-        <label htmlFor="filtre-domaine" className="font-medium text-warm-gray-700">
+        <label htmlFor="filtre-domaine" className="font-medium text-gris-700">
           Filtrer par domaine:
         </label>
         <select
@@ -38,7 +38,7 @@ export default function FormationListPage() {
               evenement.target.value === '' ? null : Number(evenement.target.value)
             )
           }
-          className="rounded-lg border-2 border-warm-gray-200 px-3 py-2 bg-white text-warm-gray-700 hover:border-terracotta transition-colors"
+          className="rounded-lg border-2 border-gris-200 px-3 py-2 bg-white text-gris-700 hover:border-primaire transition-colors"
         >
           <option value="">Tous les domaines</option>
           {(domaines.donnees ?? []).map((domaine) => (
@@ -50,7 +50,7 @@ export default function FormationListPage() {
       </div>
 
       {formations.chargement && (
-        <p role="status" className="text-center py-8 text-warm-gray-500">
+        <p role="status" className="text-center py-8 text-gris-500">
           ⏳ Chargement des formations…
         </p>
       )}
@@ -58,7 +58,7 @@ export default function FormationListPage() {
       {formations.erreur !== null && (
         <div
           role="alert"
-          className="rounded-lg bg-terracotta/10 border-2 border-terracotta p-4 text-terracotta"
+          className="rounded-lg bg-danger/10 border-2 border-danger p-4 text-danger"
         >
           ⚠️ {formations.erreur}
         </div>
@@ -66,12 +66,12 @@ export default function FormationListPage() {
 
       {formations.donnees !== null && formations.donnees.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-warm-gray-600 mb-4">
+          <p className="text-gris-600 mb-4">
             Aucune formation ne correspond à votre recherche.
           </p>
           <button
             onClick={() => setIdDomaine(null)}
-            className="text-terracotta hover:text-burgundy font-medium transition-colors underline"
+            className="text-primaire hover:text-primaire-fonce font-medium transition-colors underline"
           >
             Voir toutes les formations
           </button>

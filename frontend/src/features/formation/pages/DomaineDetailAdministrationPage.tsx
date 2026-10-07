@@ -28,7 +28,7 @@ import {
 } from '../formation.administration';
 
 const CLASSES_ALERTE =
-  'rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta';
+  'rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger';
 
 interface Edition {
   libelle: string;
@@ -74,7 +74,7 @@ export default function DomaineDetailAdministrationPage() {
 
   if (domaines.chargement && domaine === null) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -97,16 +97,14 @@ export default function DomaineDetailAdministrationPage() {
     <section>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-semibold text-warm-gray-700">
-            {domaine.libelle}
-          </h1>
+          <h1 className="text-2xl font-semibold text-gris-700">{domaine.libelle}</h1>
           <Badge variante={archive ? 'negatif' : 'positif'}>
             {archive ? 'Archivé' : 'Actif'}
           </Badge>
         </div>
         <Link
           to="/personnel/domaines-formation"
-          className="text-sm text-terracotta underline"
+          className="text-sm text-primaire underline"
         >
           Retour à la liste
         </Link>
@@ -118,19 +116,19 @@ export default function DomaineDetailAdministrationPage() {
         </p>
       )}
 
-      <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
+      <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
         {edition !== null ? (
           <form onSubmit={(e) => void enregistrer(e)} className="grid gap-3">
-            <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+            <label className="flex flex-col gap-1 text-sm text-gris-700">
               Libellé
               <input
                 value={edition.libelle}
                 onChange={(e) => setEdition({ ...edition, libelle: e.target.value })}
                 required
-                className="rounded border border-warm-gray-300 px-2 py-1.5"
+                className="rounded border border-gris-300 px-2 py-1.5"
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+            <label className="flex flex-col gap-1 text-sm text-gris-700">
               Description (facultative)
               <textarea
                 value={edition.description}
@@ -138,7 +136,7 @@ export default function DomaineDetailAdministrationPage() {
                   setEdition({ ...edition, description: e.target.value })
                 }
                 rows={3}
-                className="rounded border border-warm-gray-300 px-2 py-1.5"
+                className="rounded border border-gris-300 px-2 py-1.5"
               />
             </label>
             <div className="flex gap-2">
@@ -164,9 +162,7 @@ export default function DomaineDetailAdministrationPage() {
               </ChampFiche>
               <div className="sm:col-span-2">
                 <ChampFiche intitule="Description">
-                  {domaine.description ?? (
-                    <span className="text-warm-gray-500">Aucune</span>
-                  )}
+                  {domaine.description ?? <span className="text-gris-500">Aucune</span>}
                 </ChampFiche>
               </div>
             </dl>
@@ -211,25 +207,17 @@ export default function DomaineDetailAdministrationPage() {
         )}
       </div>
 
-      <h2 className="mt-8 text-lg font-medium text-warm-gray-700">
-        Formations du domaine
-      </h2>
+      <h2 className="mt-8 text-lg font-medium text-gris-700">Formations du domaine</h2>
       {sesFormations.length === 0 ? (
-        <p className="mt-2 text-sm text-warm-gray-500">
-          Aucune formation dans ce domaine.
-        </p>
+        <p className="mt-2 text-sm text-gris-500">Aucune formation dans ce domaine.</p>
       ) : (
         <table className="mt-3 w-full border-collapse rounded-xl bg-white shadow-sm">
           <thead>
             <tr className="text-left">
-              <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
-                Titre
-              </th>
-              <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
-                Niveau
-              </th>
-              <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">Prix</th>
-              <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">État</th>
+              <th className="px-3 py-2 text-sm font-medium text-gris-600">Titre</th>
+              <th className="px-3 py-2 text-sm font-medium text-gris-600">Niveau</th>
+              <th className="px-3 py-2 text-sm font-medium text-gris-600">Prix</th>
+              <th className="px-3 py-2 text-sm font-medium text-gris-600">État</th>
             </tr>
           </thead>
           <tbody>
@@ -240,17 +228,17 @@ export default function DomaineDetailAdministrationPage() {
                 <tr
                   key={formation.id_formation}
                   onClick={naviguerAuClic(fiche)}
-                  className={`border-t border-warm-gray-100 ${CLASSES_LIGNE_CLIQUABLE}`}
+                  className={`border-t border-gris-100 ${CLASSES_LIGNE_CLIQUABLE}`}
                 >
                   <td className="px-3 py-2 text-sm">
-                    <Link to={fiche} className="text-warm-gray-700 hover:underline">
+                    <Link to={fiche} className="text-gris-700 hover:underline">
                       {formation.titre}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 text-sm text-warm-gray-700">
+                  <td className="px-3 py-2 text-sm text-gris-700">
                     {formation.niveau ?? '—'}
                   </td>
-                  <td className="px-3 py-2 text-sm text-warm-gray-700">
+                  <td className="px-3 py-2 text-sm text-gris-700">
                     {formaterMontant(formation.prix)}
                   </td>
                   <td className="px-3 py-2">

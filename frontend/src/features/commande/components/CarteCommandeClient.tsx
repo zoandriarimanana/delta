@@ -50,11 +50,11 @@ export default function CarteCommandeClient({
   const autres = commande.lignes.length - VIGNETTES_MAX;
 
   return (
-    <li className="overflow-hidden rounded-2xl border border-warm-gray-200 bg-white shadow-sm">
+    <li className="overflow-hidden rounded-2xl border border-gris-200 bg-white shadow-sm">
       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold text-warm-gray-700">
+            <h2 className="text-lg font-semibold text-gris-700">
               Commande n° {commande.id_commande}
             </h2>
             <Badge variante={varianteStatutCommande(commande.statut)}>
@@ -64,14 +64,14 @@ export default function CarteCommandeClient({
           {/* La date répond à « quand ai-je commandé ? », ce qu'un numéro ne
               dit pas. `<time>` porte la valeur brute pour les lecteurs
               d'écran et les outils, le texte reste lisible. */}
-          <p className="mt-1 text-sm text-warm-gray-500">
+          <p className="mt-1 text-sm text-gris-500">
             Passée le{' '}
             <time dateTime={commande.date_commande}>
               {formaterDate(commande.date_commande)}
             </time>
           </p>
-          <p className="mt-2 flex items-center gap-2 text-sm text-warm-gray-600">
-            <IconeMode size={16} aria-hidden className="text-terracotta" />
+          <p className="mt-2 flex items-center gap-2 text-sm text-gris-600">
+            <IconeMode size={16} aria-hidden className="text-primaire" />
             {libelleModeReception(commande.type_commande)} · {articles} article
             {articles > 1 ? 's' : ''}
           </p>
@@ -86,7 +86,7 @@ export default function CarteCommandeClient({
               </li>
             ))}
             {autres > 0 && (
-              <li className="flex h-12 w-12 items-center justify-center rounded-xl bg-warm-gray-100 text-sm font-medium text-warm-gray-600">
+              <li className="flex h-12 w-12 items-center justify-center rounded-xl bg-gris-100 text-sm font-medium text-gris-600">
                 +{autres}
               </li>
             )}
@@ -94,14 +94,14 @@ export default function CarteCommandeClient({
         </div>
 
         <div className="flex flex-row items-center justify-between gap-3 sm:flex-col sm:items-end">
-          <p className="text-2xl font-bold text-terracotta">
+          <p className="text-2xl font-bold text-primaire">
             {formaterMontant(commande.montant_total)}
           </p>
           <button
             type="button"
             onClick={() => setOuverte((valeur) => !valeur)}
             aria-expanded={ouverte}
-            className="inline-flex items-center gap-1 text-sm font-medium text-warm-gray-600 hover:text-terracotta"
+            className="inline-flex items-center gap-1 text-sm font-medium text-gris-600 hover:text-primaire"
           >
             {ouverte ? 'Masquer le détail' : 'Voir le détail'}
             <ChevronDown
@@ -114,12 +114,12 @@ export default function CarteCommandeClient({
       </div>
 
       {commande.statut === 'En_attente' && (
-        <div className="border-t border-amber/30 bg-amber/10 px-5 py-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-warm-gray-700">
-            <CreditCard size={16} aria-hidden className="text-amber" />
+        <div className="border-t border-attente/30 bg-attente/10 px-5 py-4">
+          <p className="flex items-center gap-2 text-sm font-semibold text-gris-700">
+            <CreditCard size={16} aria-hidden className="text-attente" />
             Paiement en attente
           </p>
-          <p className="mt-1 text-xs text-warm-gray-500">
+          <p className="mt-1 text-xs text-gris-500">
             Réglez votre commande en ligne pour qu’elle soit confirmée.
           </p>
           <FormulairePaiement
@@ -130,7 +130,7 @@ export default function CarteCommandeClient({
       )}
 
       {ouverte && (
-        <div className="border-t border-warm-gray-200 px-5 pb-5">
+        <div className="border-t border-gris-200 px-5 pb-5">
           <RecapitulatifCommande commande={commande} afficherStatut={false} />
           {/* N'affiche rien pour une commande à retirer. */}
           <EncartSuiviCommande idCommande={commande.id_commande} />

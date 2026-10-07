@@ -35,7 +35,7 @@ export default function LigneFormationAdministration({
   const domaine = domaines.find((d) => d.id_domaine === formation.id_domaine);
 
   return (
-    <tr className={archive ? 'bg-warm-gray-100/60' : undefined}>
+    <tr className={archive ? 'bg-gris-100/60' : undefined}>
       <td className="px-3 py-2">
         <img
           src={imagePour('formation', formation.id_formation)}
@@ -43,11 +43,9 @@ export default function LigneFormationAdministration({
           className="h-12 w-12 rounded object-cover"
         />
       </td>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">{formation.titre}</td>
-      <td className="px-3 py-2 text-sm text-warm-gray-600">
-        {domaine?.libelle ?? '—'}
-      </td>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">
+      <td className="px-3 py-2 text-sm text-gris-700">{formation.titre}</td>
+      <td className="px-3 py-2 text-sm text-gris-600">{domaine?.libelle ?? '—'}</td>
+      <td className="px-3 py-2 text-sm text-gris-700">
         {formaterMontant(formation.prix)}
       </td>
       <td className="px-3 py-2">
@@ -58,7 +56,7 @@ export default function LigneFormationAdministration({
       <td className="px-3 py-2 text-right">
         <Link
           to={`/personnel/formations/${formation.id_formation}`}
-          className="text-sm text-terracotta underline"
+          className="text-sm text-primaire underline"
         >
           Voir la fiche
         </Link>

@@ -37,7 +37,7 @@ describe('rendu', () => {
   it('retombe sur la variante neutre par défaut', () => {
     const { container } = render(<Badge>x</Badge>);
 
-    expect(container.firstElementChild?.className).toContain('warm-gray');
+    expect(container.firstElementChild?.className).toContain('gris');
   });
 });
 

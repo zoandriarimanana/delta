@@ -19,7 +19,7 @@ const ELEMENTS_INTERACTIFS =
   'a, button, input, select, textarea, label, [role="button"]';
 
 /** Classes à poser sur la ligne : curseur et survol. */
-export const CLASSES_LIGNE_CLIQUABLE = 'cursor-pointer hover:bg-cream';
+export const CLASSES_LIGNE_CLIQUABLE = 'cursor-pointer hover:bg-fond';
 
 export function useNavigationAuClic(): (
   chemin: string

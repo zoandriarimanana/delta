@@ -45,7 +45,7 @@ export default function CommandeDetailAdministrationPage() {
 
   if (detail.chargement) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -55,7 +55,7 @@ export default function CommandeDetailAdministrationPage() {
     return (
       <p
         role="alert"
-        className="rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+        className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
       >
         {detail.erreur ?? 'Commande introuvable.'}
       </p>
@@ -71,12 +71,12 @@ export default function CommandeDetailAdministrationPage() {
   return (
     <section>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-warm-gray-700">
+        <h1 className="text-2xl font-semibold text-gris-700">
           Commande n° {commande.id_commande}
         </h1>
         <Link
           to="/personnel/commandes/administration"
-          className="text-sm text-terracotta underline"
+          className="text-sm text-primaire underline"
         >
           Retour à la liste
         </Link>
@@ -84,7 +84,7 @@ export default function CommandeDetailAdministrationPage() {
 
       <time
         dateTime={commande.date_commande}
-        className="mt-1 block text-sm text-warm-gray-500"
+        className="mt-1 block text-sm text-gris-500"
       >
         {formaterDate(commande.date_commande)}
       </time>
@@ -92,7 +92,7 @@ export default function CommandeDetailAdministrationPage() {
       {actions.erreur !== null && (
         <p
           role="alert"
-          className="mt-4 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="mt-4 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {actions.erreur}
         </p>
@@ -101,19 +101,19 @@ export default function CommandeDetailAdministrationPage() {
       {relance.erreur !== null && (
         <p
           role="alert"
-          className="mt-4 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="mt-4 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {relance.erreur}
         </p>
       )}
 
       {commande.rembourse_le !== null && (
-        <p className="mt-4 rounded border border-warm-gray-200 bg-white p-3 text-sm text-warm-gray-700">
+        <p className="mt-4 rounded border border-gris-200 bg-white p-3 text-sm text-gris-700">
           Remboursée le {formaterDate(commande.rembourse_le)}.
         </p>
       )}
 
-      <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
+      <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
         <RecapitulatifCommande commande={commande} />
       </div>
 

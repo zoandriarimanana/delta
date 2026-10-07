@@ -37,11 +37,9 @@ export default function PanneauConversation() {
   const mode = MODES.find((m) => m.profil === profil) ?? MODES[0]!;
 
   return (
-    <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white">
-      <div className="border-b border-warm-gray-200 p-4">
-        <h2 className="text-lg font-medium text-warm-gray-700">
-          Interroger l’assistant
-        </h2>
+    <div className="mt-6 rounded-xl border border-gris-200 bg-white">
+      <div className="border-b border-gris-200 p-4">
+        <h2 className="text-lg font-medium text-gris-700">Interroger l’assistant</h2>
         <div
           role="tablist"
           aria-label="Profil de l’assistant"
@@ -56,15 +54,15 @@ export default function PanneauConversation() {
               onClick={() => setProfil(m.profil)}
               className={`rounded-full px-3 py-1 text-sm ${
                 m.profil === profil
-                  ? 'bg-burgundy text-white'
-                  : 'border border-warm-gray-300 text-warm-gray-700 hover:border-burgundy'
+                  ? 'bg-primaire text-white'
+                  : 'border border-gris-300 text-gris-700 hover:border-primaire'
               }`}
             >
               {m.libelle}
             </button>
           ))}
         </div>
-        <p className="mt-2 text-sm text-warm-gray-500">{mode.description}</p>
+        <p className="mt-2 text-sm text-gris-500">{mode.description}</p>
       </div>
       <FenetreConversation
         key={profil}

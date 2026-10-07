@@ -22,7 +22,7 @@ const ETOILES = 5;
 
 export default function NoteMoyenne({ moyenne, nombre }: Proprietes) {
   if (moyenne === null) {
-    return <p className="text-sm text-warm-gray-500">Pas encore noté</p>;
+    return <p className="text-sm text-gris-500">Pas encore noté</p>;
   }
 
   const valeur = Number(moyenne);
@@ -30,10 +30,10 @@ export default function NoteMoyenne({ moyenne, nombre }: Proprietes) {
 
   return (
     <p
-      className="flex items-center gap-2 text-sm text-warm-gray-700"
+      className="flex items-center gap-2 text-sm text-gris-700"
       aria-label={`Note moyenne : ${valeur} sur 5, ${nombre} avis`}
     >
-      <span aria-hidden="true" className="text-amber">
+      <span aria-hidden="true" className="text-attente">
         {Array.from({ length: ETOILES }, (_, index) =>
           index < pleines ? '★' : '☆'
         ).join('')}

@@ -59,7 +59,7 @@ export default function FormationDetailAdministrationPage() {
 
   if (detail.chargement) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -69,7 +69,7 @@ export default function FormationDetailAdministrationPage() {
     return (
       <p
         role="alert"
-        className="rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+        className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
       >
         {detail.erreur ?? 'Formation introuvable.'}
       </p>
@@ -89,14 +89,12 @@ export default function FormationDetailAdministrationPage() {
             alt=""
             className="h-16 w-16 rounded object-cover"
           />
-          <h1 className="text-2xl font-semibold text-warm-gray-700">
-            {formation.titre}
-          </h1>
+          <h1 className="text-2xl font-semibold text-gris-700">{formation.titre}</h1>
           <Badge variante={archive ? 'negatif' : 'positif'}>
             {archive ? 'Archivée' : 'Active'}
           </Badge>
         </div>
-        <Link to="/personnel/formations" className="text-sm text-terracotta underline">
+        <Link to="/personnel/formations" className="text-sm text-primaire underline">
           Retour à la liste
         </Link>
       </div>
@@ -104,15 +102,15 @@ export default function FormationDetailAdministrationPage() {
       {actions.erreur !== null && (
         <p
           role="alert"
-          className="mt-4 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="mt-4 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {actions.erreur}
         </p>
       )}
 
       {modeEdition ? (
-        <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
-          <h2 className="mb-4 text-lg font-medium text-warm-gray-700">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+          <h2 className="mb-4 text-lg font-medium text-gris-700">
             Modifier la formation
           </h2>
           <FormulaireFormation
@@ -128,41 +126,39 @@ export default function FormationDetailAdministrationPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
           <dl className="grid gap-3 sm:grid-cols-2">
             <div>
-              <dt className="text-sm text-warm-gray-500">Domaine</dt>
-              <dd className="text-warm-gray-700">{domaine?.libelle ?? '—'}</dd>
+              <dt className="text-sm text-gris-500">Domaine</dt>
+              <dd className="text-gris-700">{domaine?.libelle ?? '—'}</dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Niveau</dt>
-              <dd className="text-warm-gray-700">{formation.niveau ?? '—'}</dd>
+              <dt className="text-sm text-gris-500">Niveau</dt>
+              <dd className="text-gris-700">{formation.niveau ?? '—'}</dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Durée</dt>
-              <dd className="text-warm-gray-700">
-                {formaterDuree(formation.duree_heures)}
-              </dd>
+              <dt className="text-sm text-gris-500">Durée</dt>
+              <dd className="text-gris-700">{formaterDuree(formation.duree_heures)}</dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Prix</dt>
-              <dd className="text-warm-gray-700">{formaterMontant(formation.prix)}</dd>
+              <dt className="text-sm text-gris-500">Prix</dt>
+              <dd className="text-gris-700">{formaterMontant(formation.prix)}</dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Capacité maximale</dt>
-              <dd className="text-warm-gray-700">{formation.capacite_max}</dd>
+              <dt className="text-sm text-gris-500">Capacité maximale</dt>
+              <dd className="text-gris-700">{formation.capacite_max}</dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Hébergement</dt>
-              <dd className="text-warm-gray-700">
+              <dt className="text-sm text-gris-500">Hébergement</dt>
+              <dd className="text-gris-700">
                 {formation.propose_hebergement ? 'Proposé' : 'Non proposé'}
               </dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-sm text-warm-gray-500">Description</dt>
-              <dd className="whitespace-pre-line text-warm-gray-700">
+              <dt className="text-sm text-gris-500">Description</dt>
+              <dd className="whitespace-pre-line text-gris-700">
                 {formation.description ?? (
-                  <span className="text-warm-gray-500">Non rédigée</span>
+                  <span className="text-gris-500">Non rédigée</span>
                 )}
               </dd>
             </div>
@@ -197,7 +193,7 @@ export default function FormationDetailAdministrationPage() {
       )}
 
       {archive ? (
-        <p className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm text-warm-gray-500">
+        <p className="mt-6 rounded-xl border border-gris-200 bg-white p-4 text-sm text-gris-500">
           Les photos d’une formation archivée sont conservées, mais ne se gèrent qu’une
           fois restaurée.
         </p>

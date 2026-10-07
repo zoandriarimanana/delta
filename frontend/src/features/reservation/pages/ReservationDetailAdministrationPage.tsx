@@ -42,7 +42,7 @@ export default function ReservationDetailAdministrationPage() {
 
   if (detail.chargement) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -52,7 +52,7 @@ export default function ReservationDetailAdministrationPage() {
     return (
       <p
         role="alert"
-        className="rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+        className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
       >
         {detail.erreur ?? 'Réservation introuvable.'}
       </p>
@@ -65,13 +65,10 @@ export default function ReservationDetailAdministrationPage() {
   return (
     <section>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-warm-gray-700">
+        <h1 className="text-2xl font-semibold text-gris-700">
           Réservation n° {reservation.id_reservation}
         </h1>
-        <Link
-          to="/personnel/reservations"
-          className="text-sm text-terracotta underline"
-        >
+        <Link to="/personnel/reservations" className="text-sm text-primaire underline">
           Retour à la liste
         </Link>
       </div>
@@ -79,13 +76,13 @@ export default function ReservationDetailAdministrationPage() {
       {actions.erreur !== null && (
         <p
           role="alert"
-          className="mt-4 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="mt-4 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {actions.erreur}
         </p>
       )}
 
-      <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
+      <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
         <div className="flex gap-4">
           {image !== null && (
             <img
@@ -96,45 +93,41 @@ export default function ReservationDetailAdministrationPage() {
           )}
           <dl className="grid gap-3 sm:grid-cols-2">
             <div>
-              <dt className="text-sm text-warm-gray-500">Client</dt>
-              <dd className="text-warm-gray-700">Client n° {reservation.id_client}</dd>
+              <dt className="text-sm text-gris-500">Client</dt>
+              <dd className="text-gris-700">Client n° {reservation.id_client}</dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Type</dt>
-              <dd className="text-warm-gray-700">{reservation.type_reservation}</dd>
+              <dt className="text-sm text-gris-500">Type</dt>
+              <dd className="text-gris-700">{reservation.type_reservation}</dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Cible</dt>
-              <dd className="text-warm-gray-700">{libelleCible(reservation)}</dd>
+              <dt className="text-sm text-gris-500">Cible</dt>
+              <dd className="text-gris-700">{libelleCible(reservation)}</dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Statut</dt>
-              <dd className="text-warm-gray-700">
+              <dt className="text-sm text-gris-500">Statut</dt>
+              <dd className="text-gris-700">
                 {libelleStatut(reservation.statut, reservation.type_reservation)}
               </dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Début</dt>
-              <dd className="text-warm-gray-700">
-                {formaterDate(reservation.date_debut)}
-              </dd>
+              <dt className="text-sm text-gris-500">Début</dt>
+              <dd className="text-gris-700">{formaterDate(reservation.date_debut)}</dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Fin</dt>
-              <dd className="text-warm-gray-700">
-                {formaterDate(reservation.date_fin)}
-              </dd>
+              <dt className="text-sm text-gris-500">Fin</dt>
+              <dd className="text-gris-700">{formaterDate(reservation.date_fin)}</dd>
             </div>
             <div>
-              <dt className="text-sm text-warm-gray-500">Personnes</dt>
-              <dd className="text-warm-gray-700">{reservation.nombre_personnes}</dd>
+              <dt className="text-sm text-gris-500">Personnes</dt>
+              <dd className="text-gris-700">{reservation.nombre_personnes}</dd>
             </div>
             {reservation.avec_hebergement && (
               <div>
-                <dt className="text-sm text-warm-gray-500">Hébergement</dt>
+                <dt className="text-sm text-gris-500">Hébergement</dt>
                 {/* Le drapeau dit un souhait, pas une chambre attribuée — la
                     formulation le reflète (cf. `docs/mld.md`). */}
-                <dd className="text-warm-gray-700">
+                <dd className="text-gris-700">
                   {reservation.id_reservation_hebergement !== null
                     ? 'Attribué'
                     : 'Demandé, aucune chambre disponible'}
@@ -144,7 +137,7 @@ export default function ReservationDetailAdministrationPage() {
           </dl>
         </div>
 
-        <div className="mt-4 border-t border-warm-gray-200 pt-4">
+        <div className="mt-4 border-t border-gris-200 pt-4">
           <DetailCible reservation={reservation} />
         </div>
       </div>

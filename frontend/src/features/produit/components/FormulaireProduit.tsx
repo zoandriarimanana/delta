@@ -98,28 +98,28 @@ export default function FormulaireProduit({
         });
       }}
     >
-      <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         Nom
         <input
           type="text"
           required
           value={valeurs.nom}
           onChange={(e) => modifier('nom', e.target.value)}
-          className="rounded border border-warm-gray-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
-        Description <span className="text-warm-gray-500">(facultative)</span>
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
+        Description <span className="text-gris-500">(facultative)</span>
         <textarea
           value={valeurs.description ?? ''}
           onChange={(e) => modifier('description', e.target.value)}
-          className="rounded border border-warm-gray-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Prix unitaire
           <input
             type="number"
@@ -128,22 +128,22 @@ export default function FormulaireProduit({
             step="0.01"
             value={valeurs.prix_unitaire}
             onChange={(e) => modifier('prix_unitaire', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Unité de mesure
           <input
             type="text"
             required
             value={valeurs.unite_mesure}
             onChange={(e) => modifier('unite_mesure', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Stock disponible
           <input
             type="number"
@@ -152,16 +152,16 @@ export default function FormulaireProduit({
             onChange={(e) =>
               modifier('stock_disponible', Math.max(0, Number(e.target.value) || 0))
             }
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Catégorie
           <select
             value={valeurs.id_categorie}
             onChange={(e) => modifier('id_categorie', Number(e.target.value))}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           >
             {actives.map((categorie) => (
               <option key={categorie.id_categorie} value={categorie.id_categorie}>
@@ -172,7 +172,7 @@ export default function FormulaireProduit({
         </label>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-warm-gray-700">
+      <label className="flex items-center gap-2 text-sm text-gris-700">
         <input
           type="checkbox"
           checked={valeurs.est_livrable}
@@ -181,7 +181,7 @@ export default function FormulaireProduit({
         Livrable
       </label>
 
-      <label className="flex items-center gap-2 text-sm text-warm-gray-700">
+      <label className="flex items-center gap-2 text-sm text-gris-700">
         <input
           type="checkbox"
           checked={valeurs.vendu_par_personne ?? false}
@@ -196,7 +196,7 @@ export default function FormulaireProduit({
       </label>
 
       {valeurs.vendu_par_personne && (
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Nombre minimum de personnes
           <input
             type="number"
@@ -210,9 +210,9 @@ export default function FormulaireProduit({
                 e.target.value === '' ? null : Math.max(1, Number(e.target.value))
               )
             }
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
-          <span className="text-xs text-warm-gray-500">
+          <span className="text-xs text-gris-500">
             Le prix ci-dessus est alors un prix par personne. Le client choisit le
             nombre de personnes ; le stock compte des gâteaux entiers (une commande en
             consomme un), et le supplément de personnalisation est compté par personne.
@@ -220,7 +220,7 @@ export default function FormulaireProduit({
         </label>
       )}
 
-      <label className="flex items-center gap-2 text-sm text-warm-gray-700">
+      <label className="flex items-center gap-2 text-sm text-gris-700">
         <input
           type="checkbox"
           checked={valeurs.est_personnalisable}
@@ -230,7 +230,7 @@ export default function FormulaireProduit({
       </label>
 
       {valeurs.est_personnalisable && (
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Supplément de personnalisation, par unité
           <input
             type="number"
@@ -239,9 +239,9 @@ export default function FormulaireProduit({
             required
             value={valeurs.supplement_personnalisation ?? ''}
             onChange={(e) => modifier('supplement_personnalisation', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
-          <span className="text-xs text-warm-gray-500">
+          <span className="text-xs text-gris-500">
             Obligatoire dès qu’un produit est personnalisable.
           </span>
         </label>
@@ -251,7 +251,7 @@ export default function FormulaireProduit({
         // Le message du serveur est repris tel quel : il dit quoi corriger.
         <p
           role="alert"
-          className="rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {erreur}
         </p>

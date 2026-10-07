@@ -99,20 +99,20 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
   if (paiement === null) {
     return (
       <form
-        className="mt-2 space-y-2 rounded border border-warm-gray-200 bg-white p-3"
+        className="mt-2 space-y-2 rounded border border-gris-200 bg-white p-3"
         onSubmit={(evenement) => {
           evenement.preventDefault();
           void initier(idCommande, { methode, fournisseur });
         }}
       >
-        <label className="flex items-center gap-2 text-sm text-warm-gray-700">
+        <label className="flex items-center gap-2 text-sm text-gris-700">
           Méthode
           <select
             value={methode}
             onChange={(evenement) =>
               setMethode(evenement.target.value as MethodePaiement)
             }
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           >
             {METHODES.map((valeur) => (
               <option key={valeur} value={valeur}>
@@ -122,14 +122,14 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
           </select>
         </label>
 
-        <label className="flex items-center gap-2 text-sm text-warm-gray-700">
+        <label className="flex items-center gap-2 text-sm text-gris-700">
           Fournisseur
           <select
             value={fournisseur}
             onChange={(evenement) =>
               setFournisseur(evenement.target.value as FournisseurPaiement)
             }
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           >
             {FOURNISSEURS.map((valeur) => (
               <option key={valeur} value={valeur}>
@@ -145,7 +145,7 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
           // traitement que `FormulaireAvis`.
           <p
             role="alert"
-            className="rounded border border-terracotta/30 bg-terracotta/10 p-2 text-sm text-terracotta"
+            className="rounded border border-danger/30 bg-danger/10 p-2 text-sm text-danger"
           >
             {erreur}
           </p>
@@ -154,7 +154,7 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
         <button
           type="submit"
           disabled={envoi}
-          className="rounded bg-terracotta px-3 py-1.5 text-sm text-white disabled:opacity-50"
+          className="rounded bg-action px-3 py-1.5 text-sm text-white disabled:opacity-50"
         >
           {envoi ? 'Envoi…' : 'Payer cette commande'}
         </button>
@@ -163,15 +163,15 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
   }
 
   return (
-    <div className="mt-2 space-y-2 rounded border border-warm-gray-200 bg-white p-3">
-      <p className="text-sm text-warm-gray-700">
+    <div className="mt-2 space-y-2 rounded border border-gris-200 bg-white p-3">
+      <p className="text-sm text-gris-700">
         Statut du paiement : {LIBELLES_STATUT[paiement.statut] ?? paiement.statut}
       </p>
 
       {erreur !== null && (
         <p
           role="alert"
-          className="rounded border border-terracotta/30 bg-terracotta/10 p-2 text-sm text-terracotta"
+          className="rounded border border-danger/30 bg-danger/10 p-2 text-sm text-danger"
         >
           {erreur}
         </p>
@@ -182,7 +182,7 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
           type="button"
           onClick={() => void simuler()}
           disabled={envoi}
-          className="rounded border border-warm-gray-300 px-3 py-1.5 text-sm text-warm-gray-700 disabled:opacity-50"
+          className="rounded border border-gris-300 px-3 py-1.5 text-sm text-gris-700 disabled:opacity-50"
         >
           {envoi
             ? 'Envoi…'
@@ -191,7 +191,7 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
       )}
 
       {paiement.statut === 'Reussi' && (
-        <p role="status" className="text-sm text-sage">
+        <p role="status" className="text-sm text-succes">
           Merci, votre paiement a été confirmé.
         </p>
       )}

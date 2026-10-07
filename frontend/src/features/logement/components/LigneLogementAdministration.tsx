@@ -48,7 +48,7 @@ export default function LigneLogementAdministration({
   return (
     <tr
       onClick={naviguerAuClic(fiche)}
-      className={`${archive ? 'bg-warm-gray-100/60' : ''} ${CLASSES_LIGNE_CLIQUABLE}`}
+      className={`${archive ? 'bg-gris-100/60' : ''} ${CLASSES_LIGNE_CLIQUABLE}`}
     >
       <td className="px-3 py-2">
         <img
@@ -58,14 +58,12 @@ export default function LigneLogementAdministration({
         />
       </td>
       <td className="px-3 py-2 text-sm">
-        <Link to={fiche} className="text-warm-gray-700 hover:underline">
+        <Link to={fiche} className="text-gris-700 hover:underline">
           {logement.type_chambre}
         </Link>
       </td>
-      <td className="px-3 py-2 text-sm text-warm-gray-600">
-        {logement.capacite} pers.
-      </td>
-      <td className="px-3 py-2 text-sm text-warm-gray-700">
+      <td className="px-3 py-2 text-sm text-gris-600">{logement.capacite} pers.</td>
+      <td className="px-3 py-2 text-sm text-gris-700">
         {formaterMontant(logement.tarif_nuitee)} / nuit
       </td>
       <td className="px-3 py-2">

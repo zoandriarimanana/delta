@@ -20,15 +20,15 @@ export default function PanierPage() {
       <EtapesCommande courante="Panier" />
 
       <div className="mt-6 flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-3xl font-semibold text-warm-gray-700">Mon panier</h1>
-        <p className="text-sm text-warm-gray-500">
+        <h1 className="text-3xl font-semibold text-gris-700">Mon panier</h1>
+        <p className="text-sm text-gris-500">
           {panier.nombre} article{panier.nombre > 1 ? 's' : ''}
         </p>
       </div>
 
       <div className="mt-6 grid items-start gap-8 lg:grid-cols-[1fr_22rem]">
-        <div className="rounded-2xl border border-warm-gray-200 bg-white px-5 shadow-sm">
-          <ul className="divide-y divide-warm-gray-200">
+        <div className="rounded-2xl border border-gris-200 bg-white px-5 shadow-sm">
+          <ul className="divide-y divide-gris-200">
             {panier.lignes.map((ligne) => (
               <LignePanierCarte
                 key={ligne.id_produit}
@@ -41,11 +41,11 @@ export default function PanierPage() {
               />
             ))}
           </ul>
-          <div className="flex justify-end border-t border-warm-gray-200 py-4">
+          <div className="flex justify-end border-t border-gris-200 py-4">
             <button
               type="button"
               onClick={panier.vider}
-              className="text-sm text-warm-gray-500 underline-offset-2 transition-colors hover:text-terracotta hover:underline"
+              className="text-sm text-gris-500 underline-offset-2 transition-colors hover:text-primaire hover:underline"
             >
               Vider le panier
             </button>
@@ -61,25 +61,25 @@ export default function PanierPage() {
 function PanierVide() {
   return (
     <section className="mx-auto max-w-lg py-12 text-center">
-      <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-terracotta/10 text-terracotta">
+      <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primaire/10 text-primaire">
         <ShoppingBag size={36} aria-hidden />
       </span>
-      <h1 className="mt-6 text-3xl font-semibold text-warm-gray-700">Mon panier</h1>
-      <p className="mt-3 text-warm-gray-500">
+      <h1 className="mt-6 text-3xl font-semibold text-gris-700">Mon panier</h1>
+      <p className="mt-3 text-gris-500">
         Votre panier est vide. Laissez-vous tenter par nos pâtisseries, pains et
         confitures maison.
       </p>
       <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link
           to="/produits"
-          className="inline-flex items-center gap-2 rounded-full bg-terracotta px-6 py-3 font-semibold text-white no-underline shadow-md transition-all hover:-translate-y-0.5 hover:bg-burgundy"
+          className="inline-flex items-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white no-underline shadow-md transition-all hover:-translate-y-0.5 hover:bg-action-fonce"
         >
           <ShoppingBag size={18} aria-hidden />
           Découvrir nos produits
         </Link>
         <Link
           to="/formations"
-          className="inline-flex items-center gap-2 rounded-full border border-warm-gray-300 bg-white px-6 py-3 font-medium text-warm-gray-700 no-underline transition-colors hover:border-terracotta hover:text-terracotta"
+          className="inline-flex items-center gap-2 rounded-full border border-gris-300 bg-white px-6 py-3 font-medium text-gris-700 no-underline transition-colors hover:border-primaire hover:text-primaire"
         >
           <GraduationCap size={18} aria-hidden />
           Voir les formations

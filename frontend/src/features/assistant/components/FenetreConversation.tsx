@@ -82,7 +82,7 @@ export default function FenetreConversation({
     <div className={`flex min-h-0 flex-col ${className}`}>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3" aria-live="polite">
         {messages.length === 0 ? (
-          <div className="space-y-3 text-sm text-warm-gray-600">
+          <div className="space-y-3 text-sm text-gris-600">
             <p>{accueil.message}</p>
             <ul className="space-y-2">
               {accueil.suggestions.map((suggestion) => (
@@ -90,7 +90,7 @@ export default function FenetreConversation({
                   <button
                     type="button"
                     onClick={() => void envoyer(suggestion)}
-                    className="w-full rounded-lg border border-warm-gray-200 bg-white px-3 py-2 text-left text-sm text-warm-gray-700 hover:border-burgundy"
+                    className="w-full rounded-lg border border-gris-200 bg-white px-3 py-2 text-left text-sm text-gris-700 hover:border-primaire"
                   >
                     {suggestion}
                   </button>
@@ -110,7 +110,7 @@ export default function FenetreConversation({
         <div ref={finDeListe} />
       </div>
 
-      <form onSubmit={soumettre} className="border-t border-warm-gray-200 p-3">
+      <form onSubmit={soumettre} className="border-t border-gris-200 p-3">
         <label htmlFor="question-assistant" className="sr-only">
           Votre question
         </label>
@@ -122,33 +122,33 @@ export default function FenetreConversation({
             onChange={(evenement) => setSaisie(evenement.target.value)}
             onKeyDown={surTouche}
             placeholder="Écrivez votre question…"
-            className="min-h-[2.5rem] flex-1 resize-none rounded-lg border border-warm-gray-300 px-3 py-2 text-sm focus:border-burgundy focus:outline-none"
+            className="min-h-[2.5rem] flex-1 resize-none rounded-lg border border-gris-300 px-3 py-2 text-sm focus:border-primaire focus:outline-none"
           />
           <button
             type="submit"
             disabled={!envoyable}
             aria-label="Envoyer la question"
-            className="rounded-lg bg-burgundy p-2.5 text-white transition-opacity disabled:opacity-40"
+            className="rounded-lg bg-primaire p-2.5 text-white transition-opacity disabled:opacity-40"
           >
             <Send size={18} aria-hidden />
           </button>
         </div>
-        <div className="mt-1 flex items-center justify-between text-xs text-warm-gray-500">
-          <span className={trop ? 'text-terracotta' : undefined}>
+        <div className="mt-1 flex items-center justify-between text-xs text-gris-500">
+          <span className={trop ? 'text-primaire' : undefined}>
             {saisie.length}/{LONGUEUR_MAX_QUESTION}
           </span>
           {messages.length > 0 && (
             <button
               type="button"
               onClick={reinitialiser}
-              className="inline-flex items-center gap-1 hover:text-warm-gray-700"
+              className="inline-flex items-center gap-1 hover:text-gris-700"
             >
               <RotateCcw size={12} aria-hidden />
               Nouvelle conversation
             </button>
           )}
         </div>
-        <p className="mt-1 text-[11px] leading-tight text-warm-gray-400">
+        <p className="mt-1 text-[11px] leading-tight text-gris-400">
           {accueil.avertissement}
         </p>
       </form>

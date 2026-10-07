@@ -27,7 +27,7 @@ export default function ProduitCarte({ produit }: Proprietes) {
         description={produit.description}
         pied={
           <div className="flex items-center justify-between">
-            <span className="text-lg font-semibold text-terracotta">
+            <span className="text-lg font-semibold text-primaire">
               {formaterPrix(produit)}
             </span>
             {/* Le module choisit **son** libellé et **sa** variante : la

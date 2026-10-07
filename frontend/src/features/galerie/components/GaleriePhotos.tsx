@@ -26,7 +26,7 @@ interface Proprietes {
 }
 
 const CLASSES_FLECHE =
-  'absolute top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-warm-gray-700 shadow-md transition hover:bg-white';
+  'absolute top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-gris-700 shadow-md transition hover:bg-white';
 
 export default function GaleriePhotos({ bien, photos, repli, nomBien }: Proprietes) {
   const [index, setIndex] = useState(0);
@@ -53,7 +53,7 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
 
   if (photo === undefined) {
     return (
-      <div className="self-start overflow-hidden rounded-2xl bg-warm-gray-200 shadow-md">
+      <div className="self-start overflow-hidden rounded-2xl bg-gris-200 shadow-md">
         {/* Décorative : `alt` vide, le nom du bien est lu juste à côté. */}
         <img src={repli} alt="" className="aspect-[4/3] w-full object-cover" />
       </div>
@@ -64,7 +64,7 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
 
   return (
     <div className="self-start space-y-3">
-      <div className="relative overflow-hidden rounded-2xl bg-warm-gray-200 shadow-md">
+      <div className="relative overflow-hidden rounded-2xl bg-gris-200 shadow-md">
         <button
           type="button"
           onClick={() => setPleinEcran(true)}
@@ -116,7 +116,7 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
                 aria-current={rang === courant}
                 className={`block overflow-hidden rounded-lg border-2 transition ${
                   rang === courant
-                    ? 'border-terracotta'
+                    ? 'border-primaire'
                     : 'border-transparent opacity-70 hover:opacity-100'
                 }`}
               >

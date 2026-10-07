@@ -29,10 +29,10 @@ import type { ReactNode } from 'react';
 export type VarianteBadge = 'positif' | 'attente' | 'negatif' | 'neutre';
 
 const CLASSES: Record<VarianteBadge, string> = {
-  positif: 'bg-sage/15 text-sage',
-  attente: 'bg-amber/15 text-amber',
-  negatif: 'bg-terracotta/15 text-terracotta',
-  neutre: 'bg-warm-gray-200 text-warm-gray-600',
+  positif: 'bg-succes/15 text-succes',
+  attente: 'bg-attente/15 text-attente',
+  negatif: 'bg-danger/10 text-danger',
+  neutre: 'bg-gris-200 text-gris-600',
 };
 
 interface Proprietes {

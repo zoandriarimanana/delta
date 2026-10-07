@@ -64,9 +64,9 @@ export default function BulleAssistant({ profil = 'client' }: Proprietes) {
         <section
           id="fenetre-assistant"
           aria-label={presentation.titre}
-          className="flex h-[min(34rem,calc(100vh-7rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-warm-gray-200 bg-cream shadow-xl"
+          className="flex h-[min(34rem,calc(100vh-7rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-gris-200 bg-fond shadow-xl"
         >
-          <header className="flex items-center justify-between bg-burgundy px-4 py-3 text-white">
+          <header className="flex items-center justify-between bg-primaire px-4 py-3 text-white">
             <div>
               <h2 className="text-sm font-semibold">{presentation.titre}</h2>
               <p className="text-xs text-white/80">{presentation.sousTitre}</p>
@@ -97,7 +97,7 @@ export default function BulleAssistant({ profil = 'client' }: Proprietes) {
         aria-label={ouverte ? 'Fermer l’assistant' : 'Ouvrir l’assistant'}
         aria-expanded={ouverte}
         aria-controls="fenetre-assistant"
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-burgundy text-white shadow-lg transition-transform hover:scale-105"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-primaire text-white shadow-lg transition-transform hover:scale-105"
       >
         {ouverte ? (
           <X size={24} aria-hidden />

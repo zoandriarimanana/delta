@@ -26,7 +26,7 @@ import { modifierCategorie } from '../produit.api';
 import { formaterPrix } from '../produit.service';
 
 const CLASSES_ALERTE =
-  'rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta';
+  'rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger';
 
 export default function CategorieDetailAdministrationPage() {
   const { idCategorie } = useParams<{ idCategorie: string }>();
@@ -59,7 +59,7 @@ export default function CategorieDetailAdministrationPage() {
 
   if (catalogue.chargement && categorie === null) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -83,14 +83,12 @@ export default function CategorieDetailAdministrationPage() {
     <section>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-semibold text-warm-gray-700">
-            {categorie.libelle}
-          </h1>
+          <h1 className="text-2xl font-semibold text-gris-700">{categorie.libelle}</h1>
           <Badge variante={archive ? 'negatif' : 'positif'}>
             {archive ? 'Archivée' : 'Active'}
           </Badge>
         </div>
-        <Link to="/personnel/categories" className="text-sm text-terracotta underline">
+        <Link to="/personnel/categories" className="text-sm text-primaire underline">
           Retour à la liste
         </Link>
       </div>
@@ -101,8 +99,8 @@ export default function CategorieDetailAdministrationPage() {
         </p>
       )}
 
-      <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
-        <p className="text-sm text-warm-gray-600">
+      <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+        <p className="text-sm text-gris-600">
           {produits.length} produit(s) dans cette catégorie, dont {actifs} actif(s).
         </p>
 
@@ -111,13 +109,13 @@ export default function CategorieDetailAdministrationPage() {
             onSubmit={(e) => void renommer(e)}
             className="mt-4 flex flex-wrap items-end gap-2"
           >
-            <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+            <label className="flex flex-col gap-1 text-sm text-gris-700">
               Libellé
               <input
                 value={libelle}
                 onChange={(e) => setLibelle(e.target.value)}
                 required
-                className="rounded border border-warm-gray-300 px-2 py-1.5"
+                className="rounded border border-gris-300 px-2 py-1.5"
               />
             </label>
             <Bouton type="submit" disabled={envoi}>
@@ -169,23 +167,21 @@ export default function CategorieDetailAdministrationPage() {
         )}
       </div>
 
-      <h2 className="mt-8 text-lg font-medium text-warm-gray-700">
+      <h2 className="mt-8 text-lg font-medium text-gris-700">
         Produits de la catégorie
       </h2>
       {produits.length === 0 ? (
-        <p className="mt-2 text-sm text-warm-gray-500">
+        <p className="mt-2 text-sm text-gris-500">
           Aucun produit dans cette catégorie.
         </p>
       ) : (
         <table className="mt-3 w-full border-collapse rounded-xl bg-white shadow-sm">
           <thead>
             <tr className="text-left">
-              <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">Nom</th>
-              <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">Prix</th>
-              <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">
-                Stock
-              </th>
-              <th className="px-3 py-2 text-sm font-medium text-warm-gray-600">État</th>
+              <th className="px-3 py-2 text-sm font-medium text-gris-600">Nom</th>
+              <th className="px-3 py-2 text-sm font-medium text-gris-600">Prix</th>
+              <th className="px-3 py-2 text-sm font-medium text-gris-600">Stock</th>
+              <th className="px-3 py-2 text-sm font-medium text-gris-600">État</th>
             </tr>
           </thead>
           <tbody>
@@ -195,20 +191,20 @@ export default function CategorieDetailAdministrationPage() {
                 <tr
                   key={produit.id_produit}
                   onClick={naviguerAuClic(`/personnel/catalogue/${produit.id_produit}`)}
-                  className={`border-t border-warm-gray-100 ${CLASSES_LIGNE_CLIQUABLE}`}
+                  className={`border-t border-gris-100 ${CLASSES_LIGNE_CLIQUABLE}`}
                 >
                   <td className="px-3 py-2 text-sm">
                     <Link
                       to={`/personnel/catalogue/${produit.id_produit}`}
-                      className="text-warm-gray-700 hover:underline"
+                      className="text-gris-700 hover:underline"
                     >
                       {produit.nom}
                     </Link>
                   </td>
-                  <td className="px-3 py-2 text-sm text-warm-gray-700">
+                  <td className="px-3 py-2 text-sm text-gris-700">
                     {formaterPrix(produit)}
                   </td>
-                  <td className="px-3 py-2 text-sm text-warm-gray-700">
+                  <td className="px-3 py-2 text-sm text-gris-700">
                     {produit.stock_disponible}
                   </td>
                   <td className="px-3 py-2">

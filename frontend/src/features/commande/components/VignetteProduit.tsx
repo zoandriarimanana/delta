@@ -30,7 +30,7 @@ export default function VignetteProduit({
       : imageProduit(idProduit, nom);
 
   return (
-    <span className={`block overflow-hidden rounded-xl bg-warm-gray-200 ${className}`}>
+    <span className={`block overflow-hidden rounded-xl bg-gris-200 ${className}`}>
       <img src={image} alt="" className="h-full w-full object-cover" />
     </span>
   );

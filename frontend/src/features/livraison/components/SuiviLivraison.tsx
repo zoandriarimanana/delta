@@ -25,15 +25,15 @@ export default function SuiviLivraison({ suivi }: Proprietes) {
     <section
       aria-label="Suivi de livraison"
       className={`mt-4 rounded-2xl border p-5 shadow-sm ${
-        nominal ? 'border-warm-gray-200 bg-white' : 'border-amber/40 bg-amber/10'
+        nominal ? 'border-gris-200 bg-white' : 'border-attente/40 bg-attente/10'
       }`}
     >
-      <h3 className="flex items-center gap-2 font-semibold text-warm-gray-700">
-        <Truck size={18} aria-hidden className="text-terracotta" />
+      <h3 className="flex items-center gap-2 font-semibold text-gris-700">
+        <Truck size={18} aria-hidden className="text-primaire" />
         Livraison — {titre}
       </h3>
       <p
-        className="mt-1 text-sm text-warm-gray-600"
+        className="mt-1 text-sm text-gris-600"
         // `polite` et non `assertive` : l'information est utile, pas urgente.
         aria-live="polite"
       >

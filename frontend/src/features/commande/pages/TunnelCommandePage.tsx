@@ -28,7 +28,7 @@ import type { Commande } from '../commande.types';
 const ID_FORMULAIRE = 'formulaire-commande';
 
 const CLASSES_CHAMP =
-  'mt-1 block w-full rounded-lg border border-warm-gray-300 bg-white px-3 py-2.5 text-warm-gray-700 focus:border-terracotta focus:outline-none focus:ring-2 focus:ring-terracotta/20';
+  'mt-1 block w-full rounded-lg border border-gris-300 bg-white px-3 py-2.5 text-gris-700 focus:border-primaire focus:outline-none focus:ring-2 focus:ring-primaire/20';
 
 export default function TunnelCommandePage() {
   const panier = usePanier();
@@ -51,16 +51,16 @@ export default function TunnelCommandePage() {
   if (panier.lignes.length === 0) {
     return (
       <section className="mx-auto max-w-lg py-12 text-center">
-        <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-terracotta/10 text-terracotta">
+        <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primaire/10 text-primaire">
           <ShoppingBag size={36} aria-hidden />
         </span>
-        <h1 className="mt-6 text-3xl font-semibold text-warm-gray-700">Commande</h1>
-        <p className="mt-3 text-warm-gray-500">
+        <h1 className="mt-6 text-3xl font-semibold text-gris-700">Commande</h1>
+        <p className="mt-3 text-gris-500">
           Votre panier est vide, il n’y a rien à commander.
         </p>
         <Link
           to="/produits"
-          className="mt-8 inline-flex items-center gap-2 rounded-full bg-terracotta px-6 py-3 font-semibold text-white no-underline shadow-md hover:bg-burgundy"
+          className="mt-8 inline-flex items-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white no-underline shadow-md hover:bg-action-fonce"
         >
           Parcourir le catalogue
         </Link>
@@ -91,7 +91,7 @@ export default function TunnelCommandePage() {
   return (
     <section>
       <EtapesCommande courante="Commande" />
-      <h1 className="mt-6 text-3xl font-semibold text-warm-gray-700">
+      <h1 className="mt-6 text-3xl font-semibold text-gris-700">
         Finaliser ma commande
       </h1>
 
@@ -108,23 +108,23 @@ export default function TunnelCommandePage() {
 
           <Etape numero={2} titre="Vos coordonnées">
             {connecte ? (
-              <p className="flex items-center gap-2 text-sm text-warm-gray-600">
-                <UserRound size={18} aria-hidden className="text-sage" />
+              <p className="flex items-center gap-2 text-sm text-gris-600">
+                <UserRound size={18} aria-hidden className="text-succes" />
                 Vous êtes connecté : la commande sera rattachée à votre compte et
                 visible dans « Mes commandes ».
               </p>
             ) : (
               <div className="space-y-4">
-                <p className="text-sm text-warm-gray-500">
+                <p className="text-sm text-gris-500">
                   Vous commandez sans compte. Ces informations nous permettent de vous
                   recontacter.{' '}
-                  <Link to="/connexion" className="font-medium text-terracotta">
+                  <Link to="/connexion" className="font-medium text-primaire">
                     Déjà client ? Se connecter
                   </Link>
                 </p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
-                    <span className="text-sm font-medium text-warm-gray-700">Nom</span>
+                    <span className="text-sm font-medium text-gris-700">Nom</span>
                     <input
                       required
                       autoComplete="name"
@@ -134,7 +134,7 @@ export default function TunnelCommandePage() {
                     />
                   </label>
                   <label className="block">
-                    <span className="text-sm font-medium text-warm-gray-700">
+                    <span className="text-sm font-medium text-gris-700">
                       Téléphone ou e-mail
                     </span>
                     <input
@@ -153,7 +153,7 @@ export default function TunnelCommandePage() {
           {erreur !== null && (
             <p
               role="alert"
-              className="rounded-xl border border-terracotta/30 bg-terracotta/10 p-4 text-sm text-terracotta"
+              className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger"
             >
               {erreur}
             </p>
@@ -182,9 +182,9 @@ function Etape({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-warm-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="flex items-center gap-3 text-lg font-semibold text-warm-gray-700">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-terracotta text-sm text-white">
+    <section className="rounded-2xl border border-gris-200 bg-white p-6 shadow-sm">
+      <h2 className="flex items-center gap-3 text-lg font-semibold text-gris-700">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primaire text-sm text-white">
           {numero}
         </span>
         {titre}

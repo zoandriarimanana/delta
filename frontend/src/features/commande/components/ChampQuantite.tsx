@@ -24,7 +24,7 @@ interface Proprietes {
 }
 
 const CLASSES_PAS =
-  'flex h-9 w-9 items-center justify-center text-warm-gray-600 transition-colors hover:bg-warm-gray-100 disabled:cursor-not-allowed disabled:opacity-40';
+  'flex h-9 w-9 items-center justify-center text-gris-600 transition-colors hover:bg-gris-100 disabled:cursor-not-allowed disabled:opacity-40';
 
 export default function ChampQuantite({ ligne, onChangement }: Proprietes) {
   const [saisie, setSaisie] = useState(String(ligne.quantite));
@@ -38,7 +38,7 @@ export default function ChampQuantite({ ligne, onChangement }: Proprietes) {
   }, [ligne.quantite]);
 
   return (
-    <div className="flex w-fit items-center overflow-hidden rounded-full border border-warm-gray-300 bg-white">
+    <div className="flex w-fit items-center overflow-hidden rounded-full border border-gris-300 bg-white">
       <button
         type="button"
         onClick={() => onChangement(ligne.quantite - 1)}
@@ -67,7 +67,7 @@ export default function ChampQuantite({ ligne, onChangement }: Proprietes) {
           }
         }}
         onBlur={() => setSaisie(String(ligne.quantite))}
-        className="w-12 appearance-none border-x border-warm-gray-200 bg-transparent py-1.5 text-center text-sm font-semibold text-warm-gray-700 [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="w-12 appearance-none border-x border-gris-200 bg-transparent py-1.5 text-center text-sm font-semibold text-gris-700 [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
       <button
         type="button"

@@ -19,19 +19,16 @@ export default function ProduitListPage() {
     <section>
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-serif font-bold text-terracotta mb-2">
+          <h1 className="text-4xl font-serif font-bold text-primaire mb-2">
             Catalogue
           </h1>
-          <p className="text-warm-gray-600">
+          <p className="text-gris-600">
             Pâtisserie, boulangerie, confiture et spécialités
           </p>
         </div>
         {categories.donnees !== null && (
           <div className="flex items-center gap-3">
-            <label
-              htmlFor="filtre-categorie"
-              className="font-medium text-warm-gray-700"
-            >
+            <label htmlFor="filtre-categorie" className="font-medium text-gris-700">
               Catégorie
             </label>
             <select
@@ -44,7 +41,7 @@ export default function ProduitListPage() {
                     : (Number(e.target.value) as FiltreCategorie)
                 )
               }
-              className="rounded-lg border-2 border-warm-gray-200 px-3 py-2 bg-white text-warm-gray-700 hover:border-terracotta transition-colors"
+              className="rounded-lg border-2 border-gris-200 px-3 py-2 bg-white text-gris-700 hover:border-primaire transition-colors"
             >
               <option value="">Tous</option>
               {categories.donnees.map((cat) => (
@@ -58,7 +55,7 @@ export default function ProduitListPage() {
       </div>
 
       {produits.chargement && (
-        <p role="status" className="text-center py-8 text-warm-gray-500">
+        <p role="status" className="text-center py-8 text-gris-500">
           ⏳ Chargement des produits…
         </p>
       )}
@@ -66,7 +63,7 @@ export default function ProduitListPage() {
       {produits.erreur !== null && (
         <div
           role="alert"
-          className="rounded-lg bg-terracotta/10 border-2 border-terracotta p-4 text-terracotta"
+          className="rounded-lg bg-danger/10 border-2 border-danger p-4 text-danger"
         >
           ⚠️ {produits.erreur}
         </div>
@@ -74,10 +71,10 @@ export default function ProduitListPage() {
 
       {produits.donnees !== null && produits.donnees.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-warm-gray-600 mb-4">Aucun produit dans cette catégorie.</p>
+          <p className="text-gris-600 mb-4">Aucun produit dans cette catégorie.</p>
           <button
             onClick={() => setFiltre(TOUTES_CATEGORIES)}
-            className="text-terracotta hover:text-burgundy font-medium transition-colors underline"
+            className="text-primaire hover:text-primaire-fonce font-medium transition-colors underline"
           >
             Voir tous les produits
           </button>

@@ -1,21 +1,41 @@
 /* Tailwind v4 : configuration en CSS, plus de tailwind.config.js.
-   Le thème se personnalise ici via `@theme { ... }`, et le scan des classes est
-   automatique — plus de tableau `content` à tenir à jour. */
+   Le thème se personnalise ici via le bloc `@theme`, et le scan des classes
+   est automatique — plus de tableau `content` à tenir à jour. */
 @import 'tailwindcss';
 
 @theme {
-  --color-cream: #faf6f0;
-  --color-terracotta: #9c4a3c;
-  --color-burgundy: #6b2737;
-  --color-sage: #6b9e7f;
-  --color-amber: #d4a574;
-  --color-warm-gray-100: #f5f3f0;
-  --color-warm-gray-200: #e8e4df;
-  --color-warm-gray-300: #d4cfc7;
-  --color-warm-gray-400: #a89d93;
-  --color-warm-gray-500: #7d7470;
-  --color-warm-gray-600: #5c544b;
-  --color-warm-gray-700: #3d3531;
+  /* Palette tirée du logo Delta (bleu roi #014AB1, orange #FE6400), nommée
+     par **rôle** et non par couleur : changer une teinte ne doit jamais
+     obliger à relire chaque composant, et un nom ne doit jamais mentir sur
+     la couleur qu'il porte (cf. docs/architecture.md, « Couleurs »).
+
+     Contrastes mesurés sur blanc (WCAG, minimum 4,5 pour du texte) :
+     primaire 8,0 · action (texte blanc dessus) 5,2 · danger 6,5 ·
+     succès 5,0 · attente 5,0 · gris-500 4,8 · gris-700 14,0. */
+
+  /* Navigation, liens, onglets et étapes actifs, prix, icônes de marque. */
+  --color-primaire: #014ab1;
+  --color-primaire-fonce: #013a8c;
+  /* Action principale — un seul bouton orange par écran. L'orange du logo
+     (#FE6400) n'offre que 3,0 de contraste avec du texte blanc : celui-ci,
+     de la même famille, atteint 5,2. */
+  --color-action: #c2410c;
+  --color-action-fonce: #9a3412;
+  --color-action-vif: #fe6400;
+  /* États : jamais orange, pour qu'un statut ne se confonde pas avec un
+     bouton. */
+  --color-succes: #15803d;
+  --color-attente: #b45309;
+  --color-danger: #b91c1c;
+  /* Fond de page et gris neutres (texte, bordures). */
+  --color-fond: #f8fafc;
+  --color-gris-100: #f1f5f9;
+  --color-gris-200: #e2e8f0;
+  --color-gris-300: #cbd5e1;
+  --color-gris-400: #94a3b8;
+  --color-gris-500: #64748b;
+  --color-gris-600: #475569;
+  --color-gris-700: #1f2937;
 
   --font-serif: 'Fraunces', serif;
   --font-sans: 'Inter', sans-serif;
@@ -36,5 +56,5 @@ h6 {
 }
 
 body {
-  @apply bg-cream text-warm-gray-700;
+  @apply bg-fond text-gris-700;
 }

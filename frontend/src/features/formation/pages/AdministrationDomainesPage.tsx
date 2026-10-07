@@ -84,10 +84,8 @@ export default function AdministrationDomainesPage() {
   return (
     <section>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-warm-gray-700">
-          Domaines de formation
-        </h1>
-        <Link to="/personnel/formations" className="text-sm text-terracotta underline">
+        <h1 className="text-2xl font-semibold text-gris-700">Domaines de formation</h1>
+        <Link to="/personnel/formations" className="text-sm text-primaire underline">
           Retour aux formations
         </Link>
       </div>
@@ -100,23 +98,23 @@ export default function AdministrationDomainesPage() {
         }}
       >
         <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+          <label className="flex flex-col gap-1 text-sm text-gris-700">
             Libellé
             <input
               type="text"
               required
               value={libelle}
               onChange={(evenement) => setLibelle(evenement.target.value)}
-              className="rounded border border-warm-gray-300 px-2 py-1"
+              className="rounded border border-gris-300 px-2 py-1"
             />
           </label>
-          <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
-            Description <span className="text-warm-gray-500">(facultative)</span>
+          <label className="flex flex-col gap-1 text-sm text-gris-700">
+            Description <span className="text-gris-500">(facultative)</span>
             <input
               type="text"
               value={description}
               onChange={(evenement) => setDescription(evenement.target.value)}
-              className="rounded border border-warm-gray-300 px-2 py-1"
+              className="rounded border border-gris-300 px-2 py-1"
             />
           </label>
           <Bouton type="submit" disabled={envoi || libelle.trim() === ''}>
@@ -139,14 +137,14 @@ export default function AdministrationDomainesPage() {
             <p
               key={index}
               role="alert"
-              className="mt-4 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+              className="mt-4 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
             >
               {message}
             </p>
           )
       )}
 
-      <label className="mt-6 flex items-center gap-2 text-sm text-warm-gray-700">
+      <label className="mt-6 flex items-center gap-2 text-sm text-gris-700">
         <input
           type="checkbox"
           checked={avecArchives}
@@ -156,7 +154,7 @@ export default function AdministrationDomainesPage() {
       </label>
 
       {catalogue.chargement && (
-        <p role="status" className="mt-4 text-warm-gray-500">
+        <p role="status" className="mt-4 text-gris-500">
           Chargement…
         </p>
       )}
@@ -170,11 +168,11 @@ export default function AdministrationDomainesPage() {
               onClick={naviguerAuClic(
                 `/personnel/domaines-formation/${domaine.id_domaine}`
               )}
-              className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warm-gray-200 bg-white p-3 ${
-                archive ? 'bg-warm-gray-100/60' : ''
+              className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gris-200 bg-white p-3 ${
+                archive ? 'bg-gris-100/60' : ''
               } ${CLASSES_LIGNE_CLIQUABLE}`}
             >
-              <span className="flex flex-col gap-1 text-sm text-warm-gray-700">
+              <span className="flex flex-col gap-1 text-sm text-gris-700">
                 <span className="flex items-center gap-3">
                   <Link
                     to={`/personnel/domaines-formation/${domaine.id_domaine}`}
@@ -187,9 +185,7 @@ export default function AdministrationDomainesPage() {
                   </Badge>
                 </span>
                 {domaine.description !== null && (
-                  <span className="text-xs text-warm-gray-500">
-                    {domaine.description}
-                  </span>
+                  <span className="text-xs text-gris-500">{domaine.description}</span>
                 )}
               </span>
 

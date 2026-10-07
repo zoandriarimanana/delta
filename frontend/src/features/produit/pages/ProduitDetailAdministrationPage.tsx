@@ -32,7 +32,7 @@ import { formaterPrix } from '../produit.service';
 import type { ProduitEnvoye } from '../produit.types';
 
 const CLASSES_ALERTE =
-  'rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta';
+  'rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger';
 
 export default function ProduitDetailAdministrationPage() {
   const { idProduit } = useParams<{ idProduit: string }>();
@@ -64,7 +64,7 @@ export default function ProduitDetailAdministrationPage() {
 
   if (catalogue.chargement && produit === null) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -91,12 +91,12 @@ export default function ProduitDetailAdministrationPage() {
             alt=""
             className="h-16 w-16 rounded object-cover"
           />
-          <h1 className="text-2xl font-semibold text-warm-gray-700">{produit.nom}</h1>
+          <h1 className="text-2xl font-semibold text-gris-700">{produit.nom}</h1>
           <Badge variante={archive ? 'negatif' : 'positif'}>
             {archive ? 'Archivé' : 'Actif'}
           </Badge>
         </div>
-        <Link to="/personnel/catalogue" className="text-sm text-terracotta underline">
+        <Link to="/personnel/catalogue" className="text-sm text-primaire underline">
           Retour à la liste
         </Link>
       </div>
@@ -108,8 +108,8 @@ export default function ProduitDetailAdministrationPage() {
       )}
 
       {modeEdition ? (
-        <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
-          <h2 className="mb-4 text-lg font-medium text-warm-gray-700">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+          <h2 className="mb-4 text-lg font-medium text-gris-700">
             Modifier le produit
           </h2>
           <FormulaireProduit
@@ -125,13 +125,13 @@ export default function ProduitDetailAdministrationPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
           <dl className="grid gap-3 sm:grid-cols-2">
             <ChampFiche intitule="Catégorie">
               {categorie !== undefined ? (
                 <Link
                   to={`/personnel/categories/${categorie.id_categorie}`}
-                  className="text-terracotta underline"
+                  className="text-primaire underline"
                 >
                   {categorie.libelle}
                 </Link>
@@ -155,16 +155,14 @@ export default function ProduitDetailAdministrationPage() {
               {note.disponible ? (
                 <NoteMoyenne moyenne={note.moyenne} nombre={note.nombre} />
               ) : (
-                <span className="text-sm text-warm-gray-500">
+                <span className="text-sm text-gris-500">
                   {archive ? 'Non calculé pour un produit archivé' : '—'}
                 </span>
               )}
             </ChampFiche>
             <div className="sm:col-span-2">
               <ChampFiche intitule="Description">
-                {produit.description ?? (
-                  <span className="text-warm-gray-500">Aucune</span>
-                )}
+                {produit.description ?? <span className="text-gris-500">Aucune</span>}
               </ChampFiche>
             </div>
           </dl>
@@ -197,7 +195,7 @@ export default function ProduitDetailAdministrationPage() {
       )}
 
       {archive ? (
-        <p className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm text-warm-gray-500">
+        <p className="mt-6 rounded-xl border border-gris-200 bg-white p-4 text-sm text-gris-500">
           Les photos d’un produit archivé sont conservées, mais ne se gèrent qu’une fois
           restauré.
         </p>

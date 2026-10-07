@@ -86,34 +86,34 @@ export default function FormulaireFormation({
         });
       }}
     >
-      <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         Titre
         <input
           type="text"
           required
           value={valeurs.titre}
           onChange={(e) => modifier('titre', e.target.value)}
-          className="rounded border border-warm-gray-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
-          Niveau <span className="text-warm-gray-500">(facultatif)</span>
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
+          Niveau <span className="text-gris-500">(facultatif)</span>
           <input
             type="text"
             value={valeurs.niveau ?? ''}
             onChange={(e) => modifier('niveau', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Domaine
           <select
             value={valeurs.id_domaine}
             onChange={(e) => modifier('id_domaine', Number(e.target.value))}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           >
             {actifs.map((domaine) => (
               <option key={domaine.id_domaine} value={domaine.id_domaine}>
@@ -123,7 +123,7 @@ export default function FormulaireFormation({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Durée (heures)
           <input
             type="number"
@@ -133,11 +133,11 @@ export default function FormulaireFormation({
             onChange={(e) =>
               modifier('duree_heures', Math.max(1, Number(e.target.value) || 1))
             }
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Prix
           <input
             type="number"
@@ -146,11 +146,11 @@ export default function FormulaireFormation({
             step="0.01"
             value={valeurs.prix}
             onChange={(e) => modifier('prix', e.target.value)}
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
 
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Capacité maximale
           <input
             type="number"
@@ -160,12 +160,12 @@ export default function FormulaireFormation({
             onChange={(e) =>
               modifier('capacite_max', Math.max(1, Number(e.target.value) || 1))
             }
-            className="rounded border border-warm-gray-300 px-2 py-1"
+            className="rounded border border-gris-300 px-2 py-1"
           />
         </label>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-warm-gray-700">
+      <label className="flex items-center gap-2 text-sm text-gris-700">
         <input
           type="checkbox"
           checked={valeurs.propose_hebergement ?? false}
@@ -174,9 +174,9 @@ export default function FormulaireFormation({
         Propose un hébergement
       </label>
 
-      <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
         <span>
-          Description <span className="text-warm-gray-500">(facultative)</span>
+          Description <span className="text-gris-500">(facultative)</span>
         </span>
         <textarea
           rows={6}
@@ -184,9 +184,9 @@ export default function FormulaireFormation({
           value={valeurs.description ?? ''}
           onChange={(e) => modifier('description', e.target.value)}
           placeholder="Programme, public visé, prérequis, matériel fourni…"
-          className="rounded border border-warm-gray-300 px-2 py-1"
+          className="rounded border border-gris-300 px-2 py-1"
         />
-        <span className="text-xs text-warm-gray-500">
+        <span className="text-xs text-gris-500">
           Affichée sur la fiche publique. Les retours à la ligne sont conservés.
         </span>
       </label>
@@ -195,7 +195,7 @@ export default function FormulaireFormation({
         // Le message du serveur est repris tel quel : il dit quoi corriger.
         <p
           role="alert"
-          className="rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta"
+          className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
         >
           {erreur}
         </p>

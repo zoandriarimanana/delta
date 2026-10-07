@@ -29,20 +29,16 @@ export default function EtapesCommande({ courante }: Proprietes) {
             <span
               aria-current={active ? 'step' : undefined}
               className={`flex items-center gap-2 font-medium ${
-                active
-                  ? 'text-terracotta'
-                  : faite
-                    ? 'text-warm-gray-600'
-                    : 'text-warm-gray-400'
+                active ? 'text-primaire' : faite ? 'text-gris-600' : 'text-gris-400'
               }`}
             >
               <span
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
                   active
-                    ? 'bg-terracotta text-white'
+                    ? 'bg-primaire text-white'
                     : faite
-                      ? 'bg-sage text-white'
-                      : 'bg-warm-gray-200 text-warm-gray-500'
+                      ? 'bg-succes text-white'
+                      : 'bg-gris-200 text-gris-500'
                 }`}
               >
                 {faite ? <Check size={14} aria-hidden /> : rang + 1}
@@ -50,7 +46,7 @@ export default function EtapesCommande({ courante }: Proprietes) {
               <span className="hidden sm:inline">{etape}</span>
             </span>
             {rang < ETAPES.length - 1 && (
-              <span aria-hidden className="h-px w-6 bg-warm-gray-300 sm:w-10" />
+              <span aria-hidden className="h-px w-6 bg-gris-300 sm:w-10" />
             )}
           </li>
         );

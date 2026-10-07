@@ -43,30 +43,30 @@ export default function LignePanierCarte({
         <div className="min-w-0">
           <Link
             to={`/produits/${ligne.id_produit}`}
-            className="font-semibold text-warm-gray-700 no-underline hover:text-terracotta"
+            className="font-semibold text-gris-700 no-underline hover:text-primaire"
           >
             {ligne.nom}
           </Link>
-          <p className="mt-1 text-sm text-warm-gray-500">
+          <p className="mt-1 text-sm text-gris-500">
             {formaterMontant(ligne.prix_unitaire)} / {ligne.unite_mesure}
           </p>
           <div className="mt-3 flex items-center gap-4">
             <ChampQuantite ligne={ligne} onChangement={surQuantite} />
             {ligne.vendu_par_personne && (
-              <span className="text-sm text-warm-gray-500">personnes</span>
+              <span className="text-sm text-gris-500">personnes</span>
             )}
             <button
               type="button"
               onClick={surRetrait}
               aria-label={`Retirer ${ligne.nom}`}
-              className="inline-flex items-center gap-1.5 text-sm text-warm-gray-500 transition-colors hover:text-terracotta"
+              className="inline-flex items-center gap-1.5 text-sm text-gris-500 transition-colors hover:text-primaire"
             >
               <Trash2 size={16} aria-hidden />
               Retirer
             </button>
           </div>
           {auMaximum && (
-            <p className="mt-2 text-xs text-amber">
+            <p className="mt-2 text-xs text-attente">
               Quantité maximale disponible en stock.
             </p>
           )}
@@ -78,7 +78,7 @@ export default function LignePanierCarte({
           )}
         </div>
 
-        <p className="whitespace-nowrap text-lg font-semibold text-warm-gray-700 sm:text-right">
+        <p className="whitespace-nowrap text-lg font-semibold text-gris-700 sm:text-right">
           {formaterMontant(
             Number(ligne.prix_unitaire) * ligne.quantite + supplementLigne(ligne)
           )}

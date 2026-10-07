@@ -16,7 +16,7 @@ import type { DocumentConnaissance, PublicCible } from '../assistant.types';
 
 const FORMATS_ACCEPTES = '.pdf,.docx,.txt,.md';
 const CLASSES_ALERTE =
-  'mt-3 rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta';
+  'mt-3 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger';
 
 const LIBELLES_PUBLIC: Record<PublicCible, string> = {
   Client: 'Clients',
@@ -70,9 +70,9 @@ export default function PanneauDocuments({ base }: Proprietes) {
   }
 
   return (
-    <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
-      <h2 className="text-lg font-medium text-warm-gray-700">Base de connaissances</h2>
-      <p className="mt-1 text-sm text-warm-gray-500">
+    <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+      <h2 className="text-lg font-medium text-gris-700">Base de connaissances</h2>
+      <p className="mt-1 text-sm text-gris-500">
         Ajoutez des documents (PDF, Word, texte, Markdown — 5 Mio maximum) : ils sont
         lus, découpés et indexés automatiquement. Un document « Personnel » ne ressort
         jamais dans la bulle du site public.
@@ -82,7 +82,7 @@ export default function PanneauDocuments({ base }: Proprietes) {
         onSubmit={(e) => void soumettre(e)}
         className="mt-4 grid gap-3 md:grid-cols-4"
       >
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700 md:col-span-2">
+        <label className="flex flex-col gap-1 text-sm text-gris-700 md:col-span-2">
           Titre
           <input
             value={titre}
@@ -90,21 +90,21 @@ export default function PanneauDocuments({ base }: Proprietes) {
             maxLength={200}
             required
             placeholder="Ex. : Horaires et conditions de livraison"
-            className="rounded border border-warm-gray-300 px-2 py-1.5"
+            className="rounded border border-gris-300 px-2 py-1.5"
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Public
           <select
             value={publicCible}
             onChange={(e) => setPublicCible(e.target.value as PublicCible)}
-            className="rounded border border-warm-gray-300 px-2 py-1.5"
+            className="rounded border border-gris-300 px-2 py-1.5"
           >
             <option value="Client">{LIBELLES_PUBLIC.Client}</option>
             <option value="Personnel">{LIBELLES_PUBLIC.Personnel}</option>
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm text-warm-gray-700">
+        <label className="flex flex-col gap-1 text-sm text-gris-700">
           Fichier
           <input
             ref={champFichier}
@@ -135,7 +135,7 @@ export default function PanneauDocuments({ base }: Proprietes) {
         </p>
       )}
 
-      <label className="mt-5 flex items-center gap-2 text-sm text-warm-gray-700">
+      <label className="mt-5 flex items-center gap-2 text-sm text-gris-700">
         <input
           type="checkbox"
           checked={avecArchives}
@@ -145,17 +145,15 @@ export default function PanneauDocuments({ base }: Proprietes) {
       </label>
 
       {base.chargement && base.documents.length === 0 ? (
-        <p role="status" className="mt-3 text-warm-gray-500">
+        <p role="status" className="mt-3 text-gris-500">
           Chargement…
         </p>
       ) : visibles.length === 0 ? (
-        <p className="mt-3 text-sm text-warm-gray-500">
-          Aucun document pour le moment.
-        </p>
+        <p className="mt-3 text-sm text-gris-500">Aucun document pour le moment.</p>
       ) : (
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="text-warm-gray-500">
+            <thead className="text-gris-500">
               <tr>
                 <th className="py-2 pr-3 font-medium">Titre</th>
                 <th className="py-2 pr-3 font-medium">Public</th>
@@ -170,18 +168,18 @@ export default function PanneauDocuments({ base }: Proprietes) {
               {visibles.map((document) => (
                 <tr
                   key={document.id_document}
-                  className="border-t border-warm-gray-100 align-top"
+                  className="border-t border-gris-100 align-top"
                 >
                   <td className="py-2 pr-3">
-                    <p className="font-medium text-warm-gray-700">{document.titre}</p>
-                    <p className="line-clamp-2 text-xs text-warm-gray-500">
+                    <p className="font-medium text-gris-700">{document.titre}</p>
+                    <p className="line-clamp-2 text-xs text-gris-500">
                       {document.apercu}
                     </p>
                   </td>
-                  <td className="py-2 pr-3 text-warm-gray-700">
+                  <td className="py-2 pr-3 text-gris-700">
                     {LIBELLES_PUBLIC[document.public_cible]}
                   </td>
-                  <td className="py-2 pr-3 text-xs text-warm-gray-600">
+                  <td className="py-2 pr-3 text-xs text-gris-600">
                     {document.nom_fichier}
                     <br />
                     {document.type_fichier.toUpperCase()} ·{' '}

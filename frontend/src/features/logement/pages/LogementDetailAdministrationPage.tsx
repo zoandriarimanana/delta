@@ -33,7 +33,7 @@ import { libelleStatut, varianteStatut } from '../logement.service';
 import type { LogementModifie } from '../logement.types';
 
 const CLASSES_ALERTE =
-  'rounded border border-terracotta/30 bg-terracotta/10 p-3 text-sm text-terracotta';
+  'rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger';
 
 export default function LogementDetailAdministrationPage() {
   const { idLogement } = useParams<{ idLogement: string }>();
@@ -65,7 +65,7 @@ export default function LogementDetailAdministrationPage() {
 
   if (liste.chargement && logement === null) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -87,14 +87,14 @@ export default function LogementDetailAdministrationPage() {
             alt=""
             className="h-16 w-16 rounded object-cover"
           />
-          <h1 className="text-2xl font-semibold text-warm-gray-700">
+          <h1 className="text-2xl font-semibold text-gris-700">
             Chambre {logement.type_chambre}
           </h1>
           <Badge variante={archive ? 'negatif' : 'positif'}>
             {archive ? 'Archivé' : 'Actif'}
           </Badge>
         </div>
-        <Link to="/personnel/logements" className="text-sm text-terracotta underline">
+        <Link to="/personnel/logements" className="text-sm text-primaire underline">
           Retour à la liste
         </Link>
       </div>
@@ -106,8 +106,8 @@ export default function LogementDetailAdministrationPage() {
       )}
 
       {modeEdition ? (
-        <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
-          <h2 className="mb-4 text-lg font-medium text-warm-gray-700">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
+          <h2 className="mb-4 text-lg font-medium text-gris-700">
             Modifier le logement
           </h2>
           <FormulaireLogement
@@ -122,7 +122,7 @@ export default function LogementDetailAdministrationPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4">
+        <div className="mt-6 rounded-xl border border-gris-200 bg-white p-4">
           <dl className="grid gap-3 sm:grid-cols-2">
             <ChampFiche intitule="Type de chambre">{logement.type_chambre}</ChampFiche>
             <ChampFiche intitule="Capacité">{logement.capacite} personne(s)</ChampFiche>
@@ -138,7 +138,7 @@ export default function LogementDetailAdministrationPage() {
               {note.disponible ? (
                 <NoteMoyenne moyenne={note.moyenne} nombre={note.nombre} />
               ) : (
-                <span className="text-sm text-warm-gray-500">
+                <span className="text-sm text-gris-500">
                   {archive ? 'Non calculé pour un logement archivé' : '—'}
                 </span>
               )}
@@ -148,7 +148,7 @@ export default function LogementDetailAdministrationPage() {
                 {logement.description !== null ? (
                   <span className="whitespace-pre-line">{logement.description}</span>
                 ) : (
-                  <span className="text-warm-gray-500">Non rédigée</span>
+                  <span className="text-gris-500">Non rédigée</span>
                 )}
               </ChampFiche>
             </div>
@@ -182,7 +182,7 @@ export default function LogementDetailAdministrationPage() {
       )}
 
       {archive ? (
-        <p className="mt-6 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm text-warm-gray-500">
+        <p className="mt-6 rounded-xl border border-gris-200 bg-white p-4 text-sm text-gris-500">
           Les photos d’un logement archivé sont conservées, mais ne se gèrent qu’une
           fois restauré.
         </p>

@@ -42,7 +42,7 @@ export default function LogementDetailPage() {
     return (
       <section>
         <BoutonRetour vers="/logements">Retour aux hébergements</BoutonRetour>
-        <p role="alert" className="mt-6 text-warm-gray-700">
+        <p role="alert" className="mt-6 text-gris-700">
           Cet hébergement est introuvable.
         </p>
       </section>
@@ -51,7 +51,7 @@ export default function LogementDetailPage() {
 
   if (chargement || donnees === null) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -72,8 +72,8 @@ export default function LogementDetailPage() {
       </article>
 
       <section className="mt-10">
-        <h2 className="text-xl font-semibold text-warm-gray-700">Description</h2>
-        <p className="mt-3 whitespace-pre-line leading-relaxed text-warm-gray-600">
+        <h2 className="text-xl font-semibold text-gris-700">Description</h2>
+        <p className="mt-3 whitespace-pre-line leading-relaxed text-gris-600">
           {donnees.description ??
             `Chambre ${donnees.type_chambre} pour ${donnees.capacite} ` +
               'personne(s). Aucune présentation détaillée n’a encore été ' +
@@ -83,9 +83,9 @@ export default function LogementDetailPage() {
 
       <section
         aria-labelledby="titre-reserver"
-        className="mt-10 rounded-2xl border border-warm-gray-200 bg-white p-6 shadow-sm"
+        className="mt-10 rounded-2xl border border-gris-200 bg-white p-6 shadow-sm"
       >
-        <h2 id="titre-reserver" className="text-xl font-semibold text-warm-gray-700">
+        <h2 id="titre-reserver" className="text-xl font-semibold text-gris-700">
           Réserver ce logement
         </h2>
         <FormulaireReservationCreneau
@@ -102,21 +102,21 @@ export default function LogementDetailPage() {
 function Presentation({ logement }: { logement: Logement }) {
   const variante = varianteStatut(logement.statut);
   // Le cadre du statut reprend l'intention de la pastille : vert si l'on peut
-  // réserver, ambre si le bien revient, terracotta s'il est retiré.
+  // réserver, ambre si le bien revient, rouge s'il est retiré.
   const cadre =
     variante === 'positif'
-      ? 'border-sage/30 bg-sage/10'
+      ? 'border-succes/30 bg-succes/10'
       : variante === 'attente'
-        ? 'border-amber/30 bg-amber/10'
-        : 'border-terracotta/30 bg-terracotta/10';
+        ? 'border-attente/30 bg-attente/10'
+        : 'border-danger/30 bg-danger/10';
 
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p className="text-sm font-medium uppercase tracking-wide text-terracotta">
+        <p className="text-sm font-medium uppercase tracking-wide text-primaire">
           Hébergement
         </p>
-        <h1 className="mt-1 text-3xl font-semibold text-warm-gray-700">
+        <h1 className="mt-1 text-3xl font-semibold text-gris-700">
           Chambre {logement.type_chambre}
         </h1>
         <div className="mt-2">
@@ -124,7 +124,7 @@ function Presentation({ logement }: { logement: Logement }) {
         </div>
       </div>
 
-      <p className="text-2xl font-bold text-terracotta">
+      <p className="text-2xl font-bold text-primaire">
         {formaterMontant(logement.tarif_nuitee)} / nuit
       </p>
 
@@ -138,30 +138,30 @@ function Presentation({ logement }: { logement: Logement }) {
       </ul>
 
       <div className={`rounded-xl border p-4 ${cadre}`}>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-warm-gray-600">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-gris-600">
           Statut : {libelleStatut(logement.statut)}
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-warm-gray-600">
+        <p className="mt-2 text-sm leading-relaxed text-gris-600">
           {explicationStatut(logement.statut)}
         </p>
       </div>
 
-      <dl className="grid gap-2 rounded-xl border border-warm-gray-200 bg-white p-4 text-sm">
+      <dl className="grid gap-2 rounded-xl border border-gris-200 bg-white p-4 text-sm">
         <div className="flex justify-between gap-4">
-          <dt className="text-warm-gray-500">Type de chambre</dt>
-          <dd className="text-right font-medium text-warm-gray-700">
+          <dt className="text-gris-500">Type de chambre</dt>
+          <dd className="text-right font-medium text-gris-700">
             {logement.type_chambre}
           </dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-warm-gray-500">Capacité</dt>
-          <dd className="text-right font-medium text-warm-gray-700">
+          <dt className="text-gris-500">Capacité</dt>
+          <dd className="text-right font-medium text-gris-700">
             {logement.capacite} personne(s)
           </dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-warm-gray-500">Tarif</dt>
-          <dd className="text-right font-medium text-warm-gray-700">
+          <dt className="text-gris-500">Tarif</dt>
+          <dd className="text-right font-medium text-gris-700">
             {formaterMontant(logement.tarif_nuitee)} par nuit
           </dd>
         </div>

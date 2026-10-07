@@ -24,22 +24,22 @@ export default function DemandePersonnalisationLue({
   const supplement = Number(personnalisation.supplement_prix);
 
   return (
-    <div className="mt-2 rounded-lg border border-amber/40 bg-amber/10 p-3 text-sm">
-      <p className="flex items-center gap-1.5 font-semibold text-warm-gray-700">
-        <Sparkles size={15} aria-hidden className="text-amber" />
+    <div className="mt-2 rounded-lg border border-attente/40 bg-attente/10 p-3 text-sm">
+      <p className="flex items-center gap-1.5 font-semibold text-gris-700">
+        <Sparkles size={15} aria-hidden className="text-attente" />
         Personnalisation demandée
       </p>
-      <p className="mt-1 whitespace-pre-line text-warm-gray-700">
+      <p className="mt-1 whitespace-pre-line text-gris-700">
         {personnalisation.description_demande}
       </p>
       {personnalisation.ingredients_specifiques !== null && (
-        <p className="mt-1 text-warm-gray-700">
+        <p className="mt-1 text-gris-700">
           <span className="font-medium">Ingrédients à éviter ou allergies :</span>{' '}
           {personnalisation.ingredients_specifiques}
         </p>
       )}
       {supplement > 0 && (
-        <p className="mt-1 text-xs text-warm-gray-500">
+        <p className="mt-1 text-xs text-gris-500">
           Supplément : {formaterMontant(supplement)} × {quantite} ={' '}
           {formaterMontant(supplement * quantite)}
         </p>

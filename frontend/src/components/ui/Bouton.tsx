@@ -11,8 +11,8 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 export type VarianteBouton = 'principal' | 'secondaire';
 
 const CLASSES: Record<VarianteBouton, string> = {
-  principal: 'bg-terracotta text-white shadow-sm hover:bg-burgundy',
-  secondaire: 'border-2 border-terracotta text-terracotta hover:bg-warm-gray-100',
+  principal: 'bg-action text-white shadow-sm hover:bg-action-fonce',
+  secondaire: 'border-2 border-primaire text-primaire hover:bg-gris-100',
 };
 
 interface Proprietes extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -31,7 +31,7 @@ export default function Bouton({
   // l'emporter, sans quoi un bouton principal désactivé garderait sa couleur
   // pleine et paraîtrait cliquable.
   const apparence = disabled
-    ? 'cursor-not-allowed bg-warm-gray-300 text-warm-gray-500 border-transparent'
+    ? 'cursor-not-allowed bg-gris-300 text-gris-500 border-transparent'
     : CLASSES[variante];
 
   return (

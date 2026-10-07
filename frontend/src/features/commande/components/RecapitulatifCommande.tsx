@@ -57,7 +57,7 @@ export default function RecapitulatifCommande({
 
   return (
     <div>
-      <ul className="divide-y divide-warm-gray-200">
+      <ul className="divide-y divide-gris-200">
         {commande.lignes.map((ligne) => (
           <LigneAvecAvis
             key={ligne.id_ligne}
@@ -67,28 +67,28 @@ export default function RecapitulatifCommande({
         ))}
       </ul>
 
-      <dl className="mt-4 space-y-1.5 border-t border-warm-gray-200 pt-4 text-sm">
+      <dl className="mt-4 space-y-1.5 border-t border-gris-200 pt-4 text-sm">
         <div className="flex justify-between">
-          <dt className="text-warm-gray-500">Produits</dt>
-          <dd className="text-warm-gray-700">{formaterMontant(produits)}</dd>
+          <dt className="text-gris-500">Produits</dt>
+          <dd className="text-gris-700">{formaterMontant(produits)}</dd>
         </div>
         {(frais > 0 || livree) && (
           <div className="flex justify-between">
-            <dt className="text-warm-gray-500">Livraison</dt>
-            <dd className="text-warm-gray-700">
+            <dt className="text-gris-500">Livraison</dt>
+            <dd className="text-gris-700">
               {frais > 0 ? formaterMontant(commande.frais_livraison) : 'Offerte'}
             </dd>
           </div>
         )}
-        <div className="flex items-baseline justify-between border-t border-warm-gray-200 pt-2">
-          <dt className="font-semibold text-warm-gray-700">Total</dt>
-          <dd className="text-xl font-bold text-terracotta">
+        <div className="flex items-baseline justify-between border-t border-gris-200 pt-2">
+          <dt className="font-semibold text-gris-700">Total</dt>
+          <dd className="text-xl font-bold text-primaire">
             {formaterMontant(commande.montant_total)}
           </dd>
         </div>
         {afficherStatut && (
           <div className="flex items-center justify-between pt-1">
-            <dt className="text-warm-gray-500">Statut</dt>
+            <dt className="text-gris-500">Statut</dt>
             <dd>
               <Badge variante={varianteStatutCommande(commande.statut)}>
                 {libelleStatutCommande(commande.statut)}
@@ -120,14 +120,14 @@ function LigneAvecAvis({
         />
         <div className="min-w-0 flex-1">
           <div className="flex justify-between gap-3">
-            <span className="font-medium text-warm-gray-700">
+            <span className="font-medium text-gris-700">
               {ligne.nom_produit} × {ligne.quantite}
             </span>
-            <span className="whitespace-nowrap font-semibold text-warm-gray-700">
+            <span className="whitespace-nowrap font-semibold text-gris-700">
               {formaterMontant(montantLigne(ligne))}
             </span>
           </div>
-          <p className="text-xs text-warm-gray-500">
+          <p className="text-xs text-gris-500">
             {formaterMontant(ligne.prix_unitaire_applique)} l’unité
           </p>
           {ligne.personnalisation != null && (
@@ -140,7 +140,7 @@ function LigneAvecAvis({
             <button
               type="button"
               onClick={() => setOuvert(true)}
-              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-terracotta hover:underline"
+              className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primaire hover:underline"
             >
               <Star size={14} aria-hidden />
               Déposer un avis

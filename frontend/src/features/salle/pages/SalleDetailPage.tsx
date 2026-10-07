@@ -39,7 +39,7 @@ export default function SalleDetailPage() {
     return (
       <section>
         <BoutonRetour vers="/salles">Retour aux salles</BoutonRetour>
-        <p role="alert" className="mt-6 text-warm-gray-700">
+        <p role="alert" className="mt-6 text-gris-700">
           Cette salle est introuvable.
         </p>
       </section>
@@ -48,7 +48,7 @@ export default function SalleDetailPage() {
 
   if (chargement || donnees === null) {
     return (
-      <p role="status" className="text-warm-gray-500">
+      <p role="status" className="text-gris-500">
         Chargement…
       </p>
     );
@@ -69,8 +69,8 @@ export default function SalleDetailPage() {
       </article>
 
       <section className="mt-10">
-        <h2 className="text-xl font-semibold text-warm-gray-700">Description</h2>
-        <p className="mt-3 whitespace-pre-line leading-relaxed text-warm-gray-600">
+        <h2 className="text-xl font-semibold text-gris-700">Description</h2>
+        <p className="mt-3 whitespace-pre-line leading-relaxed text-gris-600">
           {donnees.description ??
             `${donnees.nom} peut accueillir jusqu’à ${donnees.capacite} ` +
               'personne(s). Aucune présentation détaillée n’a encore été ' +
@@ -80,9 +80,9 @@ export default function SalleDetailPage() {
 
       <section
         aria-labelledby="titre-reserver"
-        className="mt-10 rounded-2xl border border-warm-gray-200 bg-white p-6 shadow-sm"
+        className="mt-10 rounded-2xl border border-gris-200 bg-white p-6 shadow-sm"
       >
-        <h2 id="titre-reserver" className="text-xl font-semibold text-warm-gray-700">
+        <h2 id="titre-reserver" className="text-xl font-semibold text-gris-700">
           Réserver cette salle
         </h2>
         <FormulaireReservationCreneau
@@ -101,16 +101,16 @@ function Presentation({ salle }: { salle: Salle }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <p className="text-sm font-medium uppercase tracking-wide text-terracotta">
+        <p className="text-sm font-medium uppercase tracking-wide text-primaire">
           Salle à louer
         </p>
-        <h1 className="mt-1 text-3xl font-semibold text-warm-gray-700">{salle.nom}</h1>
+        <h1 className="mt-1 text-3xl font-semibold text-gris-700">{salle.nom}</h1>
         <div className="mt-2">
           <NoteMoyenne moyenne={salle.note_moyenne} nombre={salle.nombre_avis} />
         </div>
       </div>
 
-      <p className="text-2xl font-bold text-terracotta">{libelleTarif(salle)}</p>
+      <p className="text-2xl font-bold text-primaire">{libelleTarif(salle)}</p>
 
       {/* Le module choisit ses libellés et ses variantes : la pastille ne
           connaît pas la salle. Aucune pastille « libre » : la disponibilité
@@ -129,17 +129,17 @@ function Presentation({ salle }: { salle: Salle }) {
         ))}
       </ul>
 
-      <div className="rounded-xl border border-sage/30 bg-sage/10 p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-sage">
+      <div className="rounded-xl border border-succes/30 bg-succes/10 p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-succes">
           Conditions de location
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-warm-gray-600">
+        <p className="mt-2 text-sm leading-relaxed text-gris-600">
           {explicationLocation(salle)}
         </p>
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-warm-gray-500">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-gris-500">
           Équipements
         </h2>
         {equipements.length > 0 ? (
@@ -147,14 +147,14 @@ function Presentation({ salle }: { salle: Salle }) {
             {equipements.map((equipement) => (
               <li
                 key={equipement}
-                className="rounded-lg border border-warm-gray-200 bg-white px-3 py-1 text-sm text-warm-gray-700"
+                className="rounded-lg border border-gris-200 bg-white px-3 py-1 text-sm text-gris-700"
               >
                 {equipement}
               </li>
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-sm text-warm-gray-500">
+          <p className="mt-2 text-sm text-gris-500">
             Aucun équipement particulier n’est renseigné.
           </p>
         )}

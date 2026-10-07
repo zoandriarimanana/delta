@@ -1664,6 +1664,22 @@ permet. Aucun changement d'API ni de schéma.
 - [x] Fournisseurs de paiement sous leur nom commercial (« Orange Money »
       et non « Orange money ») — manque relevé en fin de Sprint 12.
 
+**Travaux hors sprint : palette aux couleurs du logo (7 octobre 2026).**
+Le site était en terracotta / bordeaux / crème, le logo en bleu roi et
+orange. Palette nommée par rôle dans `index.css` (voir
+`docs/architecture.md`, « Couleurs ») et migration des 92 fichiers qui
+portaient les anciens noms : boutons d'action en orange, navigation, liens
+et prix en bleu, erreurs en rouge, fond gris très clair. Fait par une passe
+outillée **par contexte** (fond plein d'un bouton → action, alerte →
+danger, reste → primaire), puis relue : trois attributions corrigées à la
+main (pastille « négatif », panier actif, compteurs d'onglets).
+
+- [x] Palette et migration, frontend 765/765, build ; vérifié dans un vrai
+      navigateur (accueil, fiche produit, « Mes commandes »).
+- [ ] Police des titres : Fraunces (empattements, ton « artisanal ») gardée
+      en attendant la décision de l'utilisateur ; une sans-empattement
+      épaisse serait plus proche du mot « DELTA » du logo.
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère

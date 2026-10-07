@@ -56,16 +56,16 @@ function classeLien({ isActive }: { isActive: boolean }): string {
   const base =
     'relative whitespace-nowrap px-3 py-2 text-sm font-medium no-underline transition-colors after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded-full after:transition-colors';
   return isActive
-    ? `${base} text-terracotta after:bg-terracotta`
-    : `${base} text-warm-gray-700 hover:text-terracotta after:bg-transparent`;
+    ? `${base} text-primaire after:bg-primaire`
+    : `${base} text-gris-700 hover:text-primaire after:bg-transparent`;
 }
 
 function classeLienMobile({ isActive }: { isActive: boolean }): string {
   const base =
     'block w-full rounded-lg px-3 py-2 text-left text-base font-medium transition-colors';
   return isActive
-    ? `${base} bg-terracotta text-white`
-    : `${base} text-warm-gray-700 hover:bg-warm-gray-100`;
+    ? `${base} bg-primaire text-white`
+    : `${base} text-gris-700 hover:bg-gris-100`;
 }
 
 export default function MainLayout() {
@@ -95,15 +95,15 @@ export default function MainLayout() {
   const pastillePanier = nombre > 0 && (
     <span
       data-testid="compteur-panier"
-      className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-terracotta px-1 text-xs font-semibold text-white"
+      className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-action px-1 text-xs font-semibold text-white"
     >
       {nombre}
     </span>
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-cream">
-      <header className="sticky top-0 z-20 border-b border-warm-gray-200 bg-white/95 shadow-sm backdrop-blur">
+    <div className="flex min-h-screen flex-col bg-fond">
+      <header className="sticky top-0 z-20 border-b border-gris-200 bg-white/95 shadow-sm backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <NavLink to="/" className="shrink-0 transition-opacity hover:opacity-80">
             <LogoDelta />
@@ -132,8 +132,8 @@ export default function MainLayout() {
               className={({ isActive }) =>
                 `relative rounded-full p-2.5 transition-colors ${
                   isActive
-                    ? 'bg-terracotta/10 text-terracotta'
-                    : 'text-warm-gray-700 hover:bg-warm-gray-100 hover:text-terracotta'
+                    ? 'bg-primaire/10 text-primaire'
+                    : 'text-gris-700 hover:bg-gris-100 hover:text-primaire'
                 }`
               }
             >
@@ -147,7 +147,7 @@ export default function MainLayout() {
               ) : (
                 <NavLink
                   to="/connexion"
-                  className="flex items-center gap-2 rounded-full bg-terracotta px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors hover:bg-burgundy"
+                  className="flex items-center gap-2 rounded-full bg-action px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors hover:bg-action-fonce"
                 >
                   <UserRound size={18} aria-hidden />
                   Connexion
@@ -158,7 +158,7 @@ export default function MainLayout() {
             <button
               type="button"
               onClick={() => setMenuOuvert(!menuOuvert)}
-              className="rounded-lg p-2 text-warm-gray-700 transition-colors hover:bg-warm-gray-100 lg:hidden"
+              className="rounded-lg p-2 text-gris-700 transition-colors hover:bg-gris-100 lg:hidden"
               aria-label={menuOuvert ? 'Fermer le menu' : 'Ouvrir le menu'}
               aria-expanded={menuOuvert}
             >
@@ -170,7 +170,7 @@ export default function MainLayout() {
         {menuOuvert && (
           <nav
             aria-label="Menu"
-            className="flex flex-col gap-1 border-t border-warm-gray-200 bg-white px-4 py-4 lg:hidden"
+            className="flex flex-col gap-1 border-t border-gris-200 bg-white px-4 py-4 lg:hidden"
           >
             {[...LIENS_PUBLICS, ...(connecte ? LIENS_COMPTE : [])].map((lien) => (
               <NavLink
@@ -183,7 +183,7 @@ export default function MainLayout() {
                 {lien.libelle}
               </NavLink>
             ))}
-            <div className="my-2 border-t border-warm-gray-200" />
+            <div className="my-2 border-t border-gris-200" />
             {connecte ? (
               <button
                 type="button"
@@ -191,7 +191,7 @@ export default function MainLayout() {
                   fermerMenu();
                   seDeconnecter();
                 }}
-                className="block w-full rounded-lg px-3 py-2 text-left text-base font-medium text-warm-gray-700 transition-colors hover:bg-warm-gray-100"
+                className="block w-full rounded-lg px-3 py-2 text-left text-base font-medium text-gris-700 transition-colors hover:bg-gris-100"
               >
                 Déconnexion
               </button>
@@ -218,8 +218,8 @@ export default function MainLayout() {
           fonctionnement — elle ne s'affiche que si l'assistant est activé. */}
       <BulleAssistant />
 
-      <footer className="border-t border-warm-gray-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-4 text-sm text-warm-gray-500">
+      <footer className="border-t border-gris-200 bg-white">
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-4 text-sm text-gris-500">
           <LogoDelta forme="symbole" className="h-6" />
           <span>Delta</span>
         </div>

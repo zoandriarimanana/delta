@@ -59,7 +59,7 @@ export default function Avatar({ src, alt, taille = 'petite' }: Proprietes) {
       <span
         role="img"
         aria-label={alt}
-        className={`inline-flex ${DIMENSIONS[taille]} shrink-0 items-center justify-center rounded-full bg-warm-gray-200 text-warm-gray-500`}
+        className={`inline-flex ${DIMENSIONS[taille]} shrink-0 items-center justify-center rounded-full bg-gris-200 text-gris-500`}
       >
         <User className={DIMENSIONS_ICONE[taille]} />
       </span>

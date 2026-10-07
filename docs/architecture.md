@@ -480,6 +480,22 @@ consomme sans rien savoir de son implémentation.
 n'appartient à aucun module. Ce n'est pas non plus un `src/components/`
 fourre-tout — seule la structure de page y a sa place.
 
+### Couleurs : une palette par rôle, tirée du logo
+
+Les couleurs vivent dans `src/index.css` (`@theme`) et sont nommées par
+**rôle**, jamais par teinte : `primaire` (bleu du logo — navigation, liens,
+onglets et étapes actifs, prix), `action` (orange — **le** bouton principal
+d'un écran), `succes`, `attente`, `danger` (états, jamais orange pour ne pas
+se confondre avec un bouton), `fond` et `gris-*` (neutres). Changer une
+teinte se fait à un seul endroit ; un nom ne ment jamais sur sa couleur,
+comme le faisait `terracotta` le jour où l'on aurait voulu du bleu.
+
+Contrastes vérifiés au calcul WCAG (≥ 4,5 pour du texte). L'orange du logo
+(`#FE6400`) n'offre que 3,0 avec du texte blanc : les boutons utilisent
+`#C2410C` (5,2), même famille ; l'orange vif reste au logo
+(`action-vif`). La couleur n'est jamais seule porteuse d'un sens — chaque
+statut a aussi son libellé.
+
 ### `src/components/ui/` — l'exception, et son critère
 
 Cette phrase interdisait un `src/components/` fourre-tout, et l'interdiction
