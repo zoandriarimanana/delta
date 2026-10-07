@@ -7,7 +7,8 @@
  * n'interroge l'API que lorsqu'une session est ouverte.
  */
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -164,5 +165,49 @@ describe('client connecté', () => {
 
     const alerte = await screen.findByRole('alert');
     expect(alerte.textContent).not.toContain('500');
+  });
+});
+
+describe('présentation en rubriques', () => {
+  beforeEach(() => {
+    definirSession('client');
+    vi.mocked(recupererHistorique).mockResolvedValue([
+      commande({ id_commande: 9, statut: 'Livree' }),
+      commande({ id_commande: 8, statut: 'Annulee' }),
+      commande({ id_commande: 7, statut: 'En_attente' }),
+    ]);
+  });
+
+  it('range les commandes en onglets, avec leur nombre', async () => {
+    afficher();
+
+    const onglets = await screen.findByRole('tablist', {
+      name: 'Rubriques de commandes',
+    });
+    expect(within(onglets).getByRole('tab', { name: /En cours\s*1/ })).toBeDefined();
+    expect(within(onglets).getByRole('tab', { name: /Terminées\s*1/ })).toBeDefined();
+    expect(within(onglets).getByRole('tab', { name: /Annulées\s*1/ })).toBeDefined();
+    expect(screen.getByText(/commande n° 7/i)).toBeDefined();
+    expect(screen.queryByText(/commande n° 9/i)).toBeNull();
+  });
+
+  it('ne propose le paiement qu’à une commande en attente', async () => {
+    afficher();
+
+    expect(await screen.findByText('Paiement en attente')).toBeDefined();
+    await userEvent.click(screen.getByRole('tab', { name: /Terminées/ }));
+
+    expect(screen.getByText(/commande n° 9/i)).toBeDefined();
+    expect(screen.queryByText('Paiement en attente')).toBeNull();
+  });
+
+  it('replie le détail d’une commande terminée, dépliable à la demande', async () => {
+    afficher();
+    await userEvent.click(await screen.findByRole('tab', { name: /Terminées/ }));
+
+    expect(screen.queryByText(/Éclair × 2/)).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /Voir le détail/ }));
+
+    expect(screen.getByText(/Éclair × 2/)).toBeDefined();
   });
 });

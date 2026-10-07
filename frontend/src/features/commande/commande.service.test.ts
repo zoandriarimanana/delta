@@ -9,8 +9,10 @@ import {
   bornesQuantite,
   definirPersonnalisation,
   descriptionDemande,
+  etapeCommande,
   formaterDate,
   formaterMontant,
+  libelleModeReception,
   libelleStatutCommande,
   modifierQuantite,
   nombreArticles,
@@ -360,5 +362,26 @@ describe('libelleStatutCommande', () => {
 
   it('retombe sur un libellé neutre pour un statut inconnu', () => {
     expect(libelleStatutCommande('Inconnu' as never)).toBe('Statut inconnu');
+  });
+});
+
+describe('etapeCommande', () => {
+  it('suit le statut terminal du type de commande', () => {
+    expect(etapeCommande({ statut: 'En_preparation', type_commande: 'En_ligne' })).toBe(
+      'en_cours'
+    );
+    expect(etapeCommande({ statut: 'Livree', type_commande: 'En_ligne' })).toBe(
+      'terminee'
+    );
+    expect(etapeCommande({ statut: 'Servie', type_commande: 'Sur_place' })).toBe(
+      'terminee'
+    );
+    expect(etapeCommande({ statut: 'Annulee', type_commande: 'A_emporter' })).toBe(
+      'annulee'
+    );
+  });
+
+  it('nomme le mode de réception', () => {
+    expect(libelleModeReception('A_emporter')).toBe('Retrait en boutique');
   });
 });

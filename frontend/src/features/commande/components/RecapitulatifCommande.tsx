@@ -31,6 +31,11 @@ import type { Commande, LigneCommandeLue } from '../commande.types';
 
 interface Proprietes {
   commande: Commande;
+  /**
+   * `false` quand l'écran montre déjà le statut ailleurs — l'en-tête d'une
+   * carte de « Mes commandes » — pour ne pas l'afficher deux fois.
+   */
+  afficherStatut?: boolean;
 }
 
 /** Montant d'une ligne, supplément de personnalisation compris. */
@@ -42,7 +47,10 @@ function montantLigne(ligne: LigneCommandeLue): number {
   );
 }
 
-export default function RecapitulatifCommande({ commande }: Proprietes) {
+export default function RecapitulatifCommande({
+  commande,
+  afficherStatut = true,
+}: Proprietes) {
   const frais = Number(commande.frais_livraison);
   const produits = commande.lignes.reduce((total, l) => total + montantLigne(l), 0);
   const livree = commande.adresse_livraison != null;
@@ -78,14 +86,16 @@ export default function RecapitulatifCommande({ commande }: Proprietes) {
             {formaterMontant(commande.montant_total)}
           </dd>
         </div>
-        <div className="flex items-center justify-between pt-1">
-          <dt className="text-warm-gray-500">Statut</dt>
-          <dd>
-            <Badge variante={varianteStatutCommande(commande.statut)}>
-              {libelleStatutCommande(commande.statut)}
-            </Badge>
-          </dd>
-        </div>
+        {afficherStatut && (
+          <div className="flex items-center justify-between pt-1">
+            <dt className="text-warm-gray-500">Statut</dt>
+            <dd>
+              <Badge variante={varianteStatutCommande(commande.statut)}>
+                {libelleStatutCommande(commande.statut)}
+              </Badge>
+            </dd>
+          </div>
+        )}
       </dl>
     </div>
   );

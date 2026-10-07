@@ -1650,6 +1650,20 @@ permet. Aucun changement d'API ni de schéma.
       une réservation à venir pas encore commencée ; refus du serveur repris
       tel quel. Guide client de l'assistant mis à jour (et son test).
 
+**Travaux hors sprint : « Mes commandes » côté client (demande du 7 octobre
+2026).** Refonte de la page, sans changement d'API.
+
+- [x] Onglets « En cours », « Terminées », « Annulées » avec leurs nombres
+      (statut terminal lu dans `STATUT_TERMINAL`, via `estTerminee`) ; ordre
+      du serveur conservé dans chaque onglet.
+- [x] Carte par commande : numéro, date, statut en pastille, mode de
+      réception, vignettes, total ; détail déplié pour une commande en
+      cours, replié pour les autres.
+- [x] **Paiement proposé seulement pour une commande en attente** — il
+      l'était pour toute commande non annulée, y compris livrée.
+- [x] Fournisseurs de paiement sous leur nom commercial (« Orange Money »
+      et non « Orange money ») — manque relevé en fin de Sprint 12.
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère

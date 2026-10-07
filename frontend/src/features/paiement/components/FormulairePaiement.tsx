@@ -43,6 +43,14 @@ const FOURNISSEURS: FournisseurPaiement[] = [
   'Stripe',
 ];
 
+/** Nom commercial de chaque fournisseur — la valeur du domaine reste technique. */
+const NOMS_FOURNISSEURS: Record<FournisseurPaiement, string> = {
+  Mvola: 'MVola',
+  Orange_money: 'Orange Money',
+  Airtel_money: 'Airtel Money',
+  Stripe: 'Stripe',
+};
+
 const LIBELLES_STATUT: Record<string, string> = {
   En_attente: 'En attente de confirmation',
   Reussi: 'Paiement réussi',
@@ -125,7 +133,7 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
           >
             {FOURNISSEURS.map((valeur) => (
               <option key={valeur} value={valeur}>
-                {valeur.replace('_', ' ')}
+                {NOMS_FOURNISSEURS[valeur]}
               </option>
             ))}
           </select>

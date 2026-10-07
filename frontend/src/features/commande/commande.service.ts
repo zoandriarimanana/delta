@@ -373,3 +373,25 @@ const VARIANTES_STATUT: Record<StatutCommande, VarianteBadge> = {
 export function varianteStatutCommande(statut: StatutCommande): VarianteBadge {
   return VARIANTES_STATUT[statut] ?? 'neutre';
 }
+
+const MODES_RECEPTION: Record<TypeCommande, string> = {
+  En_ligne: 'Livraison à domicile',
+  A_emporter: 'Retrait en boutique',
+  Sur_place: 'Sur place',
+};
+
+/** Mode de réception lisible, déduit du type de commande. */
+export function libelleModeReception(type: TypeCommande): string {
+  return MODES_RECEPTION[type] ?? type;
+}
+
+/** Rubrique de « Mes commandes ». */
+export type EtapeCommande = 'en_cours' | 'terminee' | 'annulee';
+
+/** En cours jusqu'au statut terminal de son type ; annulée à part. */
+export function etapeCommande(
+  commande: Pick<Commande, 'statut' | 'type_commande'>
+): EtapeCommande {
+  if (commande.statut === 'Annulee') return 'annulee';
+  return estTerminee(commande) ? 'terminee' : 'en_cours';
+}
