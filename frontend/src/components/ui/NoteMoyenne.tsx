@@ -13,6 +13,10 @@
  * avis actif », distinct de `0`, qui serait une moyenne valide.
  */
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_UI } from './ui.textes';
+
 interface Proprietes {
   moyenne: string | null;
   nombre: number;
@@ -21,8 +25,9 @@ interface Proprietes {
 const ETOILES = 5;
 
 export default function NoteMoyenne({ moyenne, nombre }: Proprietes) {
+  const t = useTextes(TEXTES_UI);
   if (moyenne === null) {
-    return <p className="text-sm text-gris-500">Pas encore noté</p>;
+    return <p className="text-sm text-gris-500">{t.pasEncoreNote}</p>;
   }
 
   const valeur = Number(moyenne);
@@ -31,16 +36,14 @@ export default function NoteMoyenne({ moyenne, nombre }: Proprietes) {
   return (
     <p
       className="flex items-center gap-2 text-sm text-gris-700"
-      aria-label={`Note moyenne : ${valeur} sur 5, ${nombre} avis`}
+      aria-label={t.noteAccessible(valeur, nombre)}
     >
       <span aria-hidden="true" className="text-attente">
         {Array.from({ length: ETOILES }, (_, index) =>
           index < pleines ? '★' : '☆'
         ).join('')}
       </span>
-      <span>
-        {valeur.toFixed(1)} sur 5 · {nombre} avis
-      </span>
+      <span>{t.note(valeur.toFixed(1), nombre)}</span>
     </p>
   );
 }

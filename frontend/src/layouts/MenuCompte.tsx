@@ -20,16 +20,21 @@ import {
   UserRound,
 } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_LAYOUT } from './layout.textes';
+
 interface Proprietes {
   surDeconnexion: () => void;
 }
 
 const ENTREES = [
-  { vers: '/commandes', libelle: 'Mes commandes', icone: ClipboardList },
-  { vers: '/reservations', libelle: 'Mes réservations', icone: CalendarCheck },
+  { vers: '/commandes', cle: 'mesCommandes' as const, icone: ClipboardList },
+  { vers: '/reservations', cle: 'mesReservations' as const, icone: CalendarCheck },
 ] as const;
 
 export default function MenuCompte({ surDeconnexion }: Proprietes) {
+  const t = useTextes(TEXTES_LAYOUT);
   const [ouvert, setOuvert] = useState(false);
   const conteneur = useRef<HTMLDivElement>(null);
 
@@ -60,7 +65,7 @@ export default function MenuCompte({ surDeconnexion }: Proprietes) {
         className="flex items-center gap-2 rounded-full border border-gris-300 px-3 py-2 text-sm font-medium text-gris-700 transition-colors hover:border-primaire hover:text-primaire"
       >
         <UserRound size={18} aria-hidden />
-        Mon compte
+        {t.monCompte}
         <ChevronDown
           size={16}
           aria-hidden
@@ -71,10 +76,10 @@ export default function MenuCompte({ surDeconnexion }: Proprietes) {
       {ouvert && (
         <div
           role="menu"
-          aria-label="Mon compte"
+          aria-label={t.monCompte}
           className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-gris-200 bg-surface py-1 shadow-lg"
         >
-          {ENTREES.map(({ vers, libelle, icone: Icone }) => (
+          {ENTREES.map(({ vers, cle, icone: Icone }) => (
             <NavLink
               key={vers}
               to={vers}
@@ -89,7 +94,7 @@ export default function MenuCompte({ surDeconnexion }: Proprietes) {
               }
             >
               <Icone size={16} aria-hidden />
-              {libelle}
+              {t[cle]}
             </NavLink>
           ))}
           <div className="my-1 border-t border-gris-200" />
@@ -103,7 +108,7 @@ export default function MenuCompte({ surDeconnexion }: Proprietes) {
             className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gris-700 transition-colors hover:bg-gris-100"
           >
             <LogOut size={16} aria-hidden />
-            Déconnexion
+            {t.deconnexion}
           </button>
         </div>
       )}

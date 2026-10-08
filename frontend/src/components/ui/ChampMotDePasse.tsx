@@ -18,9 +18,14 @@
 import { useState, type InputHTMLAttributes } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_UI } from './ui.textes';
+
 type Proprietes = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>;
 
 export default function ChampMotDePasse({ className = '', ...reste }: Proprietes) {
+  const t = useTextes(TEXTES_UI);
   const [visible, setVisible] = useState(false);
 
   return (
@@ -37,9 +42,9 @@ export default function ChampMotDePasse({ className = '', ...reste }: Proprietes
         // par son libellé (`getByLabelText(/mot de passe/i)`, ou un lecteur
         // d'écran qui liste les champs) trouverait aussi ce bouton. L'infobulle,
         // elle, reste explicite.
-        aria-label={visible ? 'Masquer la saisie' : 'Afficher la saisie'}
+        aria-label={visible ? t.masquerSaisie : t.afficherSaisie}
         aria-pressed={visible}
-        title={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+        title={visible ? t.masquerMotDePasse : t.afficherMotDePasse}
         className="absolute inset-y-0 right-0 flex items-center px-2.5 text-gris-500 hover:text-gris-700"
       >
         {visible ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}

@@ -22,7 +22,9 @@ import {
 import type { PersonnalisationPanier } from '@/features/commande/commande.types';
 import ChampsPersonnalisation from '@/features/commande/components/ChampsPersonnalisation';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_PRODUIT } from '../produit.textes';
 import { quantiteMinimale } from '../produit.service';
 import type { Produit } from '../produit.types';
 import ComparaisonLivraison from './ComparaisonLivraison';
@@ -35,6 +37,7 @@ const CLASSES_PAS =
   'flex h-11 w-11 items-center justify-center text-gris-600 transition-colors hover:bg-gris-100 disabled:cursor-not-allowed disabled:opacity-40';
 
 export default function AjoutPanierProduit({ produit }: Proprietes) {
+  const t = useTextes(TEXTES_PRODUIT);
   const prix = useFormaterPrix();
   const panier = usePanier();
   const minimum = quantiteMinimale(produit);
@@ -67,11 +70,11 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
           <label className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
             <span className="flex items-center gap-2 text-sm font-semibold text-gris-700">
               <Sparkles size={18} aria-hidden className="text-attente" />
-              Personnaliser ce produit
+              {t.personnaliserProduit}
               {produit.supplement_personnalisation !== null && (
                 <span className="font-normal text-gris-500">
                   (+{prix(produit.supplement_personnalisation)} /{' '}
-                  {parPersonne ? 'personne' : 'unité'})
+                  {parPersonne ? t.personne : t.unite})
                 </span>
               )}
             </span>
@@ -88,9 +91,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
           </label>
           {personnaliser && (
             <div className="border-t border-gris-200 px-4 py-4">
-              <p className="mb-3 text-xs text-gris-500">
-                Décrivez votre demande : notre équipe la reçoit avec la commande.
-              </p>
+              <p className="mb-3 text-xs text-gris-500">{t.decrireDemande}</p>
               <ChampsPersonnalisation
                 valeurs={personnalisation}
                 surChangement={(valeurs) => {
@@ -101,7 +102,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
               />
               {erreurPersonnalisation && (
                 <p role="alert" className="mt-3 text-sm text-danger">
-                  Indiquez au moins un message, un thème ou une précision.
+                  {t.personnalisationVide}
                 </p>
               )}
             </div>
@@ -115,21 +116,21 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
       />
       {parPersonne && (
         <p className="text-sm font-medium text-gris-700">
-          Nombre de personnes{' '}
-          <span className="font-normal text-gris-500">(à partir de {minimum})</span>
+          {t.nombrePersonnes}{' '}
+          <span className="font-normal text-gris-500">{t.aPartirDe(minimum)}</span>
         </p>
       )}
       <div className="flex flex-col gap-3 sm:flex-row">
         <div
           role="group"
-          aria-label={parPersonne ? 'Nombre de personnes' : 'Quantité'}
+          aria-label={parPersonne ? t.nombrePersonnes : t.quantite}
           className="flex w-fit items-center overflow-hidden rounded-full border border-gris-300 bg-surface"
         >
           <button
             type="button"
             onClick={() => changer(quantite - 1)}
             disabled={quantite <= minimum}
-            aria-label={parPersonne ? 'Retirer une personne' : 'Diminuer la quantité'}
+            aria-label={parPersonne ? t.retirerPersonne : t.diminuer}
             className={CLASSES_PAS}
           >
             <Minus size={16} aria-hidden />
@@ -144,7 +145,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
             type="button"
             onClick={() => changer(quantite + 1)}
             disabled={quantite >= maximum}
-            aria-label={parPersonne ? 'Ajouter une personne' : 'Augmenter la quantité'}
+            aria-label={parPersonne ? t.ajouterPersonne : t.augmenter}
             className={CLASSES_PAS}
           >
             <Plus size={16} aria-hidden />
@@ -170,7 +171,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
           className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-action-fonce hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaire active:translate-y-0"
         >
           <ShoppingCart size={20} aria-hidden />
-          Ajouter au panier
+          {t.ajouterAuPanier}
         </button>
       </div>
 
@@ -180,9 +181,9 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
           className="flex flex-wrap items-center gap-2 rounded-lg bg-succes/15 px-4 py-2 text-sm text-succes"
         >
           <Check size={16} aria-hidden />
-          Ajouté au panier.
+          {t.ajoute}
           <Link to="/panier" className="font-semibold underline">
-            Voir le panier
+            {t.voirPanier}
           </Link>
         </p>
       )}

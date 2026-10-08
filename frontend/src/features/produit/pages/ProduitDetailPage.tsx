@@ -6,12 +6,13 @@ import { useParams } from 'react-router';
 import Badge from '@/components/ui/Badge';
 import BoutonRetour from '@/components/ui/BoutonRetour';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
-import { formaterMontant } from '@/features/commande/commande.service';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import GaleriePhotos from '@/features/galerie/components/GaleriePhotos';
 import { useGalerie } from '@/features/galerie/galerie.hooks';
 import { imageProduit } from '@/lib/images';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_PRODUIT } from '../produit.textes';
 import AjoutPanierProduit from '../components/AjoutPanierProduit';
 import EtatRequete from '../components/EtatRequete';
 import { useCategories, useProduit } from '../produit.hooks';
@@ -33,6 +34,7 @@ function identifiantValide(brut: string | undefined): number | null {
 }
 
 export default function ProduitDetailPage() {
+  const t = useTextes(TEXTES_PRODUIT);
   const { idProduit } = useParams();
   const identifiant = identifiantValide(idProduit);
   // `null` désactive la requête : voir `useProduit`.
@@ -44,9 +46,9 @@ export default function ProduitDetailPage() {
       <section>
         <LienRetour />
         <h1 className="mt-6 text-2xl font-semibold text-gris-700">
-          Produit introuvable
+          {t.produitIntrouvable}
         </h1>
-        <p className="mt-2 text-gris-500">Cette référence n’est pas valide.</p>
+        <p className="mt-2 text-gris-500">{t.referenceInvalide}</p>
       </section>
     );
   }
@@ -75,6 +77,7 @@ function Fiche({
   produit: Produit;
   categorie: string | undefined;
 }) {
+  const t = useTextes(TEXTES_PRODUIT);
   const prix = useFormaterPrix();
   const disponible = estDisponible(produit);
   const galerie = useGalerie({ produit: produit.id_produit });
@@ -91,7 +94,7 @@ function Fiche({
       <div className="flex flex-col gap-5">
         <div>
           <p className="text-sm font-medium uppercase tracking-wide text-primaire">
-            {categorie ?? 'Catégorie non précisée'}
+            {categorie ?? t.categorieNonPrecisee}
           </p>
           <h1 className="mt-1 text-3xl font-semibold text-gris-700">{produit.nom}</h1>
           <div className="mt-2">
@@ -105,55 +108,58 @@ function Fiche({
 
         {/* Le module choisit ses libellés et ses variantes : la pastille ne
             connaît ni le stock ni la livraison. */}
-        <ul aria-label="Statuts du produit" className="flex flex-wrap gap-2">
+        <ul aria-label={t.statutsProduit} className="flex flex-wrap gap-2">
           <li>
             <Badge variante={disponible ? 'positif' : 'negatif'}>
-              {disponible ? 'Disponible' : 'Épuisé'}
+              {disponible ? t.disponible : t.epuise}
             </Badge>
           </li>
           <li>
             <Badge variante={produit.est_livrable ? 'positif' : 'neutre'}>
-              {produit.est_livrable ? 'Livrable' : 'Retrait sur place'}
+              {produit.est_livrable ? t.livrable : t.retraitSurPlace}
             </Badge>
           </li>
           {produit.est_personnalisable && (
             <li>
-              <Badge variante="attente">Personnalisable</Badge>
+              <Badge variante="attente">{t.personnalisable}</Badge>
             </li>
           )}
         </ul>
 
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gris-500">
-            Description
+            {t.description}
           </h2>
           <p className="mt-2 leading-relaxed text-gris-600">
-            {produit.description ?? 'Aucune description pour ce produit.'}
+            {produit.description ?? t.aucuneDescription}
           </p>
         </div>
 
         <dl className="grid gap-2 rounded-xl border border-gris-200 bg-surface p-4 text-sm">
-          <Ligne terme="Disponibilité">
+          <Ligne terme={t.disponibilite}>
             {!disponible
-              ? 'Épuisé'
+              ? t.epuise
               : produit.vendu_par_personne
-                ? `En stock (${produit.stock_disponible} disponible${produit.stock_disponible > 1 ? 's' : ''})`
-                : `En stock (${produit.stock_disponible})`}
+                ? t.enStockPersonnes(produit.stock_disponible)
+                : t.enStock(produit.stock_disponible)}
           </Ligne>
-          <Ligne terme="Unité de vente">
+          <Ligne terme={t.uniteDeVente}>
             {produit.vendu_par_personne
-              ? `par personne, à partir de ${produit.personnes_min ?? 1} personnes`
+              ? t.parPersonneDes(produit.personnes_min ?? 1)
               : produit.unite_mesure}
           </Ligne>
-          <Ligne terme="Livraison">
-            {produit.est_livrable ? 'Possible' : 'Non, retrait sur place uniquement'}
+          <Ligne terme={t.livraison}>
+            {produit.est_livrable ? t.livraisonPossible : t.livraisonImpossible}
           </Ligne>
-          <Ligne terme="Personnalisation">
+          <Ligne terme={t.personnalisation}>
             {produit.est_personnalisable
               ? produit.supplement_personnalisation !== null
-                ? `Oui, +${formaterMontant(produit.supplement_personnalisation)} par ${produit.vendu_par_personne ? 'personne' : 'unité'}`
-                : 'Oui'
-              : 'Non'}
+                ? t.supplement(
+                    prix(produit.supplement_personnalisation),
+                    produit.vendu_par_personne
+                  )
+                : t.oui
+              : t.non}
           </Ligne>
         </dl>
 
@@ -163,7 +169,7 @@ function Fiche({
           <AjoutPanierProduit produit={produit} />
         ) : (
           <p className="rounded-lg bg-danger/10 px-4 py-3 text-danger">
-            Ce produit est épuisé, il ne peut pas être commandé.
+            {t.produitEpuise}
           </p>
         )}
       </div>
@@ -181,5 +187,6 @@ function Ligne({ terme, children }: { terme: string; children: ReactNode }) {
 }
 
 function LienRetour() {
-  return <BoutonRetour vers="/produits">Retour au catalogue</BoutonRetour>;
+  const t = useTextes(TEXTES_PRODUIT);
+  return <BoutonRetour vers="/produits">{t.retourCatalogue}</BoutonRetour>;
 }

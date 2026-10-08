@@ -8,7 +8,9 @@ import Carte from '@/components/ui/Carte';
 import { usePanier } from '@/features/commande/commande.hooks';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import { imageProduit } from '@/lib/images';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_PRODUIT } from '../produit.textes';
 import { estDisponible, formaterPrix } from '../produit.service';
 import type { Produit } from '../produit.types';
 
@@ -17,6 +19,7 @@ interface Proprietes {
 }
 
 export default function ProduitCarte({ produit }: Proprietes) {
+  const t = useTextes(TEXTES_PRODUIT);
   const prix = useFormaterPrix();
   const disponible = estDisponible(produit);
   const panier = usePanier();
@@ -35,7 +38,7 @@ export default function ProduitCarte({ produit }: Proprietes) {
             {/* Le module choisit **son** libellé et **sa** variante : la
                 pastille ne connaît ni le stock ni le produit. */}
             <Badge variante={disponible ? 'positif' : 'negatif'}>
-              {disponible ? 'Disponible' : 'Épuisé'}
+              {disponible ? t.disponible : t.epuise}
             </Badge>
           </div>
         }
@@ -50,7 +53,7 @@ export default function ProduitCarte({ produit }: Proprietes) {
             }}
             className="mt-3 w-full"
           >
-            Ajouter au panier
+            {t.ajouterAuPanier}
           </Bouton>
         )}
       </Carte>

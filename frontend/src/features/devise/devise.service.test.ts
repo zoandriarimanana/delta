@@ -2,9 +2,10 @@
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { definirLangue } from '@/lib/langue';
+
 import {
   convertir,
-  definirLocaleNombres,
   formaterConverti,
   formaterDevise,
   montantAPayer,
@@ -27,7 +28,7 @@ const TAUX: TauxChange[] = [
 /** Espaces insécables de `Intl` ramenées à des espaces ordinaires. */
 const net = (texte: string) => texte.replace(/[  ]/g, ' ');
 
-afterEach(() => definirLocaleNombres('fr-FR'));
+afterEach(() => definirLangue('fr'));
 
 describe('convertir', () => {
   it('laisse l’Ariary tel quel', () => {
@@ -53,7 +54,7 @@ describe('mise en forme', () => {
   it('écrit l’euro et le dollar selon la locale', () => {
     expect(net(formaterDevise(4, 'EUR'))).toBe('4,00 €');
     expect(net(formaterDevise(4, 'USD'))).toBe('4,00 $');
-    definirLocaleNombres('en-US');
+    definirLangue('en');
     expect(formaterDevise(4, 'USD')).toBe('$4.00');
   });
 

@@ -6,11 +6,15 @@
 
 import { useState } from 'react';
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_PRODUIT } from '../produit.textes';
 import ProduitCarte from '../components/ProduitCarte';
 import { useCategories, useProduits } from '../produit.hooks';
 import { TOUTES_CATEGORIES, type FiltreCategorie } from '../produit.service';
 
 export default function ProduitListPage() {
+  const t = useTextes(TEXTES_PRODUIT);
   const [filtre, setFiltre] = useState<FiltreCategorie>(TOUTES_CATEGORIES);
   const produits = useProduits(filtre);
   const categories = useCategories();
@@ -20,16 +24,14 @@ export default function ProduitListPage() {
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-serif font-bold text-primaire mb-2">
-            Catalogue
+            {t.catalogue}
           </h1>
-          <p className="text-gris-600">
-            Pâtisserie, boulangerie, confiture et spécialités
-          </p>
+          <p className="text-gris-600">{t.catalogueSousTitre}</p>
         </div>
         {categories.donnees !== null && (
           <div className="flex items-center gap-3">
             <label htmlFor="filtre-categorie" className="font-medium text-gris-700">
-              Catégorie
+              {t.categorie}
             </label>
             <select
               id="filtre-categorie"
@@ -43,7 +45,7 @@ export default function ProduitListPage() {
               }
               className="rounded-lg border-2 border-gris-200 px-3 py-2 bg-surface text-gris-700 hover:border-primaire transition-colors"
             >
-              <option value="">Tous</option>
+              <option value="">{t.tous}</option>
               {categories.donnees.map((cat) => (
                 <option key={cat.id_categorie} value={cat.id_categorie}>
                   {cat.libelle}
@@ -56,7 +58,7 @@ export default function ProduitListPage() {
 
       {produits.chargement && (
         <p role="status" className="text-center py-8 text-gris-500">
-          ⏳ Chargement des produits…
+          {t.chargementProduits}
         </p>
       )}
 
@@ -71,12 +73,12 @@ export default function ProduitListPage() {
 
       {produits.donnees !== null && produits.donnees.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gris-600 mb-4">Aucun produit dans cette catégorie.</p>
+          <p className="text-gris-600 mb-4">{t.aucunProduit}</p>
           <button
             onClick={() => setFiltre(TOUTES_CATEGORIES)}
             className="text-primaire hover:text-primaire-fonce font-medium transition-colors underline"
           >
-            Voir tous les produits
+            {t.voirTous}
           </button>
         </div>
       )}

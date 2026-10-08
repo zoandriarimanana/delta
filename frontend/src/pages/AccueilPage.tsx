@@ -2,60 +2,67 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Croissant, ChefHat, Building2, Bed, ShoppingCart, User } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
-const MODULES = [
-  {
-    href: '/produits',
-    title: 'Produits',
-    description: 'Pâtisserie, boulangerie, confiture et spécialités',
-    icon: Croissant,
-  },
-  {
-    href: '/formations',
-    title: 'Formations',
-    description: 'Ateliers et sessions de formation culinaire',
-    icon: ChefHat,
-  },
-  {
-    href: '/salles',
-    title: 'Salles',
-    description: "Location d'espaces pour vos réunions et événements",
-    icon: Building2,
-  },
-  {
-    href: '/logements',
-    title: 'Hébergement',
-    description: 'Chambres confortables pour vos séjours',
-    icon: Bed,
-  },
-  {
-    href: '/panier',
-    title: 'Panier',
-    description: 'Passez votre commande en ligne',
-    icon: ShoppingCart,
-  },
-];
+import { TEXTES_PAGES } from './pages.textes';
 
-/** Carte « Mon compte » : connexion pour un visiteur, ses commandes pour un client. */
-const CARTE_VISITEUR = {
-  href: '/connexion',
-  title: 'Mon compte',
-  description: 'Connectez-vous pour gérer vos réservations',
-  icon: User,
-};
-const CARTE_CLIENT = {
-  href: '/commandes',
-  title: 'Mon compte',
-  description: 'Retrouvez vos commandes et vos réservations',
-  icon: User,
-};
+type Textes = (typeof TEXTES_PAGES)['fr'];
+
+function modules(t: Textes, connecte: boolean) {
+  return [
+    {
+      href: '/produits',
+      title: t.produits,
+      description: t.produitsDescription,
+      icon: Croissant,
+    },
+    {
+      href: '/formations',
+      title: t.formations,
+      description: t.formationsDescription,
+      icon: ChefHat,
+    },
+    {
+      href: '/salles',
+      title: t.salles,
+      description: t.sallesDescription,
+      icon: Building2,
+    },
+    {
+      href: '/logements',
+      title: t.hebergement,
+      description: t.hebergementDescription,
+      icon: Bed,
+    },
+    {
+      href: '/panier',
+      title: t.panier,
+      description: t.panierDescription,
+      icon: ShoppingCart,
+    },
+    connecte
+      ? {
+          href: '/commandes',
+          title: t.monCompte,
+          description: t.compteClient,
+          icon: User,
+        }
+      : {
+          href: '/connexion',
+          title: t.monCompte,
+          description: t.compteVisiteur,
+          icon: User,
+        },
+  ];
+}
 
 export default function AccueilPage() {
+  const t = useTextes(TEXTES_PAGES);
   const [selectedHref, setSelectedHref] = useState<string | null>(null);
   const navigate = useNavigate();
   const connecte = useEstConnecte();
-  const modules = [...MODULES, connecte ? CARTE_CLIENT : CARTE_VISITEUR];
+  const liste = modules(t, connecte);
 
   const handleModuleClick = (href: string) => {
     setSelectedHref(href);
@@ -69,18 +76,15 @@ export default function AccueilPage() {
       {/* Hero section */}
       <section className="text-center py-8">
         <h1 className="text-4xl md:text-5xl font-serif font-bold text-primaire mb-4">
-          Bienvenue chez Delta
+          {t.bienvenue}
         </h1>
-        <p className="text-lg text-gris-600 max-w-2xl mx-auto mb-2">
-          Plateforme artisanale pour la pâtisserie, restauration, formation culinaire et
-          hébergement.
-        </p>
-        <p className="text-sm text-gris-500">Qualité, tradition et professionnalisme</p>
+        <p className="text-lg text-gris-600 max-w-2xl mx-auto mb-2">{t.accroche}</p>
+        <p className="text-sm text-gris-500">{t.devise}</p>
       </section>
 
       {/* Grille de modules */}
       <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {modules.map((module) => (
+        {liste.map((module) => (
           <ModuleCard
             key={module.href}
             href={module.href}
@@ -97,17 +101,14 @@ export default function AccueilPage() {
       {/* CTA section */}
       <section className="bg-primaire rounded-xl p-8 text-center">
         <h2 className="text-2xl font-serif font-bold text-sur-couleur mb-3">
-          Découvrez notre offre
+          {t.decouvrir}
         </h2>
-        <p className="text-sur-couleur/85 mb-6">
-          Explorez notre catalogue de produits, formations et services. Tous les détails
-          vous attendent.
-        </p>
+        <p className="text-sur-couleur/85 mb-6">{t.decouvrirTexte}</p>
         <a
           href="/produits"
           className="inline-block px-6 py-3 bg-surface text-primaire font-semibold rounded-lg hover:bg-gris-100 transition-colors"
         >
-          Commencer à explorer
+          {t.explorer}
         </a>
       </section>
     </div>

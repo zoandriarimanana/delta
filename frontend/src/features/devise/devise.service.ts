@@ -8,6 +8,8 @@
  * l'indication et le montant final coïncident tant que le taux ne bouge pas.
  */
 
+import { localeCourante } from '@/lib/langue';
+
 import type { Devise, TauxChange } from './devise.types';
 
 export const DEVISES: Devise[] = ['MGA', 'EUR', 'USD'];
@@ -25,16 +27,6 @@ export const SYMBOLES_DEVISES: Record<Devise, string> = {
   USD: '$',
 };
 
-/** Locale des nombres. Unique point à faire varier avec la langue. */
-let localeNombres = 'fr-FR';
-
-export function definirLocaleNombres(locale: string): void {
-  localeNombres = locale;
-}
-
-export function lireLocaleNombres(): string {
-  return localeNombres;
-}
 
 /**
  * Convertit un montant en Ariary dans `devise`.
@@ -60,13 +52,13 @@ export function formaterDevise(montant: number | string, devise: Devise): string
   const nombre = Number(montant);
   if (Number.isNaN(nombre)) return `${montant} ${SYMBOLES_DEVISES[devise]}`;
   if (devise === 'MGA') {
-    const valeur = new Intl.NumberFormat(localeNombres, {
+    const valeur = new Intl.NumberFormat(localeCourante(), {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(nombre);
     return `${valeur} Ar`;
   }
-  return new Intl.NumberFormat(localeNombres, {
+  return new Intl.NumberFormat(localeCourante(), {
     style: 'currency',
     currency: devise,
     currencyDisplay: 'narrowSymbol',

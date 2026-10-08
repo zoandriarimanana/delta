@@ -7,7 +7,10 @@
 
 import { Moon, Sun } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
 import { useTheme } from '@/lib/theme';
+
+import { TEXTES_LAYOUT } from './layout.textes';
 
 interface Proprietes {
   /** Avec libellé visible (barre latérale) ou icône seule (en-tête). */
@@ -21,7 +24,8 @@ export default function BoutonTheme({
 }: Proprietes) {
   const { theme, basculer } = useTheme();
   const versSombre = theme === 'clair';
-  const libelle = versSombre ? 'Activer le mode sombre' : 'Activer le mode clair';
+  const t = useTextes(TEXTES_LAYOUT);
+  const libelle = versSombre ? t.activerSombre : t.activerClair;
   const Icone = versSombre ? Moon : Sun;
 
   return (
@@ -35,7 +39,7 @@ export default function BoutonTheme({
       <Icone size={20} aria-hidden />
       {avecLibelle && (
         <span className="text-sm font-medium">
-          {versSombre ? 'Mode sombre' : 'Mode clair'}
+          {versSombre ? t.modeSombre : t.modeClair}
         </span>
       )}
     </button>

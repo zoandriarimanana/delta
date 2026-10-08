@@ -27,29 +27,41 @@ import BulleAssistant from '@/features/assistant/components/BulleAssistant';
 import { useDeconnexion } from '@/features/auth/auth.hooks';
 import { usePanier } from '@/features/commande/commande.hooks';
 import SelecteurDevise from '@/features/devise/components/SelecteurDevise';
+import { useLangue, useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import BoutonLangue from './BoutonLangue';
 import BoutonTheme from './BoutonTheme';
+import { TEXTES_LAYOUT } from './layout.textes';
 import MenuCompte from './MenuCompte';
+
+type CleLien =
+  | 'accueil'
+  | 'produits'
+  | 'formations'
+  | 'salles'
+  | 'hebergements'
+  | 'mesCommandes'
+  | 'mesReservations';
 
 interface Lien {
   vers: string;
-  libelle: string;
+  cle: CleLien;
   exact?: boolean;
 }
 
 const LIENS_PUBLICS: Lien[] = [
-  { vers: '/', libelle: 'Accueil', exact: true },
-  { vers: '/produits', libelle: 'Produits' },
-  { vers: '/formations', libelle: 'Formations' },
-  { vers: '/salles', libelle: 'Salles' },
-  { vers: '/logements', libelle: 'Hébergements' },
+  { vers: '/', cle: 'accueil', exact: true },
+  { vers: '/produits', cle: 'produits' },
+  { vers: '/formations', cle: 'formations' },
+  { vers: '/salles', cle: 'salles' },
+  { vers: '/logements', cle: 'hebergements' },
 ];
 
 /** Pages du client connecté — dans « Mon compte » sur grand écran, à plat sur mobile. */
 const LIENS_COMPTE: Lien[] = [
-  { vers: '/commandes', libelle: 'Mes commandes' },
-  { vers: '/reservations', libelle: 'Mes réservations' },
+  { vers: '/commandes', cle: 'mesCommandes' },
+  { vers: '/reservations', cle: 'mesReservations' },
 ];
 
 function classeLien({ isActive }: { isActive: boolean }): string {
@@ -80,6 +92,8 @@ export default function MainLayout() {
   // `MainLayout` ne soit monté — donc ce booléen distingue, ici, « client
   // connecté » de « personne », rien d'autre à exclure.
   const connecte = useEstConnecte();
+  const langue = useLangue();
+  const t = useTextes(TEXTES_LAYOUT);
 
   const [menuOuvert, setMenuOuvert] = useState(false);
   const fermerMenu = () => setMenuOuvert(false);
@@ -112,7 +126,7 @@ export default function MainLayout() {
           </NavLink>
 
           <nav
-            aria-label="Navigation principale"
+            aria-label={t.navigationPrincipale}
             className="hidden items-center lg:flex"
           >
             {LIENS_PUBLICS.map((lien) => (
@@ -122,7 +136,7 @@ export default function MainLayout() {
                 end={lien.exact}
                 className={classeLien}
               >
-                {lien.libelle}
+                {t[lien.cle]}
               </NavLink>
             ))}
           </nav>
@@ -131,10 +145,11 @@ export default function MainLayout() {
             {/* Sur mobile, la devise se choisit dans le menu : la barre est
                 trop étroite pour un sélecteur de plus. */}
             <SelecteurDevise className="hidden sm:inline-flex" />
+            <BoutonLangue />
             <BoutonTheme />
             <NavLink
               to="/panier"
-              aria-label={nombre > 0 ? `Panier, ${nombre} article(s)` : 'Panier'}
+              aria-label={nombre > 0 ? t.panierArticles(nombre) : t.panier}
               className={({ isActive }) =>
                 `relative rounded-full p-2.5 transition-colors ${
                   isActive
@@ -156,7 +171,7 @@ export default function MainLayout() {
                   className="flex items-center gap-2 rounded-full bg-action px-4 py-2 text-sm font-semibold text-white no-underline shadow-sm transition-colors hover:bg-action-fonce"
                 >
                   <UserRound size={18} aria-hidden />
-                  Connexion
+                  {t.connexion}
                 </NavLink>
               )}
             </div>
@@ -165,7 +180,7 @@ export default function MainLayout() {
               type="button"
               onClick={() => setMenuOuvert(!menuOuvert)}
               className="rounded-lg p-2 text-gris-700 transition-colors hover:bg-gris-100 lg:hidden"
-              aria-label={menuOuvert ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-label={menuOuvert ? t.fermerMenu : t.ouvrirMenu}
               aria-expanded={menuOuvert}
             >
               {menuOuvert ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -175,7 +190,7 @@ export default function MainLayout() {
 
         {menuOuvert && (
           <nav
-            aria-label="Menu"
+            aria-label={t.menu}
             className="flex flex-col gap-1 border-t border-gris-200 bg-surface px-4 py-4 lg:hidden"
           >
             {[...LIENS_PUBLICS, ...(connecte ? LIENS_COMPTE : [])].map((lien) => (
@@ -186,12 +201,12 @@ export default function MainLayout() {
                 className={classeLienMobile}
                 onClick={fermerMenu}
               >
-                {lien.libelle}
+                {t[lien.cle]}
               </NavLink>
             ))}
             <div className="my-2 border-t border-gris-200" />
             <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-base font-medium text-gris-700">Devise</span>
+              <span className="text-base font-medium text-gris-700">{t.devise}</span>
               <SelecteurDevise />
             </div>
             {connecte ? (
@@ -203,7 +218,7 @@ export default function MainLayout() {
                 }}
                 className="block w-full rounded-lg px-3 py-2 text-left text-base font-medium text-gris-700 transition-colors hover:bg-gris-100"
               >
-                Déconnexion
+                {t.deconnexion}
               </button>
             ) : (
               <NavLink
@@ -211,7 +226,7 @@ export default function MainLayout() {
                 className={classeLienMobile}
                 onClick={fermerMenu}
               >
-                Connexion
+                {t.connexion}
               </NavLink>
             )}
           </nav>
@@ -219,8 +234,11 @@ export default function MainLayout() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-        {/* Le routeur injecte ici la page correspondant à l'URL. */}
-        <Outlet />
+        {/* Le routeur injecte ici la page correspondant à l'URL. Elle est
+            remontée au changement de langue : les libellés calculés hors
+            composant (statuts, dates) se relisent alors dans la nouvelle
+            langue, sans que chaque page ait à s'y abonner. */}
+        <Outlet key={langue} />
       </main>
 
       {/* Bulle de l'assistant IA (Sprint 12) : composant du module

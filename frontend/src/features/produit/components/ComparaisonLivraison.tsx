@@ -18,7 +18,9 @@ import { PackageCheck, Store, Truck } from 'lucide-react';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import { useTarifLivraison } from '@/features/livraison/livraison.hooks';
 import { fraisLivraison } from '@/features/livraison/livraison.service';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_PRODUIT } from '../produit.textes';
 import type { Produit } from '../produit.types';
 
 interface Proprietes {
@@ -33,32 +35,33 @@ export default function ComparaisonLivraison({
   quantite,
   supplementUnitaire = 0,
 }: Proprietes) {
+  const t = useTextes(TEXTES_PRODUIT);
   const prix = useFormaterPrix();
   const { tarif } = useTarifLivraison();
   const sousTotal = (Number(produit.prix_unitaire) + supplementUnitaire) * quantite;
   const multiplicateur = produit.vendu_par_personne
-    ? `${quantite} personnes`
+    ? t.personnes(quantite)
     : `${quantite}`;
 
   return (
     <div
       role="group"
-      aria-label="Frais de livraison"
+      aria-label={t.fraisLivraison}
       className="divide-y divide-gris-200 rounded-xl border border-gris-200 bg-surface text-sm"
     >
       {!produit.est_livrable ? (
         <Ligne
           icone={<Store size={18} aria-hidden />}
-          libelle="Frais de livraison"
-          detail="Ce produit n’est pas livrable : retrait sur place uniquement."
+          libelle={t.fraisLivraison}
+          detail={t.nonLivrable}
           montant="—"
         />
       ) : tarif === null ? (
         // Tarif indisponible : on tait le montant plutôt que d'en inventer un.
         <Ligne
           icone={<Truck size={18} aria-hidden />}
-          libelle="Frais de livraison"
-          detail="Affichés au moment de commander."
+          libelle={t.fraisLivraison}
+          detail={t.fraisAuCheckout}
           montant="—"
         />
       ) : (
@@ -67,9 +70,13 @@ export default function ComparaisonLivraison({
           sousTotal={sousTotal}
           detailQuantite={
             supplementUnitaire > 0
-              ? `${multiplicateur} × (${prix(produit.prix_unitaire)} + ${prix(supplementUnitaire)} de personnalisation) + livraison`
+              ? t.detailAvecPerso(
+                  multiplicateur,
+                  prix(produit.prix_unitaire),
+                  prix(supplementUnitaire)
+                )
               : quantite > 1
-                ? `${multiplicateur} × ${prix(produit.prix_unitaire)} + livraison`
+                ? t.detailSimple(multiplicateur, prix(produit.prix_unitaire))
                 : null
           }
         />
@@ -87,31 +94,27 @@ function AvecLivraison({
   sousTotal: number;
   detailQuantite: string | null;
 }) {
+  const t = useTextes(TEXTES_PRODUIT);
   const prix = useFormaterPrix();
   const frais = fraisLivraison(tarif, sousTotal);
   return (
     <>
       <Ligne
         icone={<Truck size={18} aria-hidden />}
-        libelle="Frais de livraison"
-        detail={
-          frais === 0
-            ? 'Livraison offerte pour cet achat'
-            : 'Comptés une seule fois par commande'
-        }
-        montant={frais === 0 ? 'Offerte' : prix(frais)}
+        libelle={t.fraisLivraison}
+        detail={frais === 0 ? t.livraisonOfferteAchat : t.uneFoisParCommande}
+        montant={frais === 0 ? t.offerte : prix(frais)}
         miseEnAvant={frais === 0}
       />
       <Ligne
         icone={<PackageCheck size={18} aria-hidden />}
-        libelle="Total avec livraison"
+        libelle={t.totalAvecLivraison}
         detail={detailQuantite}
         montant={prix(sousTotal + frais)}
       />
       {tarif.seuil_gratuite !== null && frais > 0 && (
         <p className="px-4 py-2 text-xs leading-relaxed text-succes">
-          Livraison offerte dès {prix(tarif.seuil_gratuite)} d’achat. Le retrait en
-          boutique reste gratuit.
+          {t.seuilGratuite(prix(tarif.seuil_gratuite))}
         </p>
       )}
     </>

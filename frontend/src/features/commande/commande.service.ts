@@ -19,6 +19,7 @@ import type {
   TypeCommande,
 } from './commande.types';
 import type { Produit } from '@/features/produit/produit.types';
+import { localeCourante } from '@/lib/langue';
 
 export const DEVISE = 'Ar';
 
@@ -245,7 +246,7 @@ export function formaterMontant(valeur: number | string): string {
   if (Number.isNaN(nombre)) {
     return `${valeur} ${DEVISE}`;
   }
-  const montant = new Intl.NumberFormat('fr-FR', {
+  const montant = new Intl.NumberFormat(localeCourante(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(nombre);
@@ -284,7 +285,7 @@ export function formaterDate(valeur: string): string {
   if (Number.isNaN(date.getTime())) {
     return valeur;
   }
-  return new Intl.DateTimeFormat('fr-FR', {
+  return new Intl.DateTimeFormat(localeCourante(), {
     dateStyle: 'long',
     timeStyle: 'short',
   }).format(date);

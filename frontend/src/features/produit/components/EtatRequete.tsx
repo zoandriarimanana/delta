@@ -5,6 +5,10 @@
  * finirait par les oublier, laissant une page blanche sur une erreur d'API.
  */
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_PRODUIT } from '../produit.textes';
+
 interface Proprietes {
   chargement: boolean;
   erreur: string | null;
@@ -21,10 +25,11 @@ export default function EtatRequete({
   estVide = false,
   children,
 }: Proprietes) {
+  const t = useTextes(TEXTES_PRODUIT);
   if (chargement) {
     return (
       <p role="status" className="text-gris-500">
-        Chargement…
+        {t.chargement}
       </p>
     );
   }

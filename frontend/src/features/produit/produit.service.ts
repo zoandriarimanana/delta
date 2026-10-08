@@ -6,6 +6,9 @@
  * pages consomment ces fonctions, elles ne les réimplémentent pas.
  */
 
+import { localeCourante, textesCourants } from '@/lib/langue';
+
+import { TEXTES_PRODUIT } from './produit.textes';
 import type { CategorieProduit, Produit } from './produit.types';
 
 export const DEVISE = 'Ar';
@@ -37,7 +40,7 @@ export function formaterPrix(
   if (Number.isNaN(valeur)) {
     return `${produit.prix_unitaire} ${DEVISE} / ${unite}`;
   }
-  const montant = new Intl.NumberFormat('fr-FR', {
+  const montant = new Intl.NumberFormat(localeCourante(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(valeur);
@@ -51,7 +54,9 @@ export function formaterPrix(
 export function uniteDeVente(
   produit: Pick<Produit, 'vendu_par_personne' | 'unite_mesure'>
 ): string {
-  return produit.vendu_par_personne ? 'personne' : produit.unite_mesure;
+  return produit.vendu_par_personne
+    ? textesCourants(TEXTES_PRODUIT).personne
+    : produit.unite_mesure;
 }
 
 /** Quantité de départ et minimum du sélecteur : le minimum de personnes, ou 1. */

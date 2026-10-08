@@ -1,0 +1,58 @@
+/** Textes des layouts publics — une version par langue (cf. `lib/langue.ts`). */
+
+import type { Textes } from '@/lib/langue';
+
+const fr = {
+  accueil: 'Accueil',
+  produits: 'Produits',
+  formations: 'Formations',
+  salles: 'Salles',
+  hebergements: 'Hébergements',
+  mesCommandes: 'Mes commandes',
+  mesReservations: 'Mes réservations',
+  monCompte: 'Mon compte',
+  connexion: 'Connexion',
+  deconnexion: 'Déconnexion',
+  navigationPrincipale: 'Navigation principale',
+  menu: 'Menu',
+  ouvrirMenu: 'Ouvrir le menu',
+  fermerMenu: 'Fermer le menu',
+  panier: 'Panier',
+  panierArticles: (n: number) => `Panier, ${n} article(s)`,
+  devise: 'Devise',
+  langue: 'Langue',
+  modeSombre: 'Mode sombre',
+  modeClair: 'Mode clair',
+  activerSombre: 'Activer le mode sombre',
+  activerClair: 'Activer le mode clair',
+  basculerLangue: 'Switch to English',
+};
+
+export const TEXTES_LAYOUT: Textes<typeof fr> = {
+  fr,
+  en: {
+    accueil: 'Home',
+    produits: 'Products',
+    formations: 'Training',
+    salles: 'Rooms',
+    hebergements: 'Accommodation',
+    mesCommandes: 'My orders',
+    mesReservations: 'My bookings',
+    monCompte: 'My account',
+    connexion: 'Sign in',
+    deconnexion: 'Sign out',
+    navigationPrincipale: 'Main navigation',
+    menu: 'Menu',
+    ouvrirMenu: 'Open menu',
+    fermerMenu: 'Close menu',
+    panier: 'Cart',
+    panierArticles: (n: number) => `Cart, ${n} item(s)`,
+    devise: 'Currency',
+    langue: 'Language',
+    modeSombre: 'Dark mode',
+    modeClair: 'Light mode',
+    activerSombre: 'Switch to dark mode',
+    activerClair: 'Switch to light mode',
+    basculerLangue: 'Passer en français',
+  },
+};
