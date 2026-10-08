@@ -3,9 +3,23 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.models.paiement import FournisseurPaiement, MethodePaiement, StatutPaiement
+from app.models.taux_change import Devise
+
+#: Fournisseurs de chaque méthode : la carte internationale passe par Stripe,
+#: le mobile money par les trois opérateurs malgaches.
+FOURNISSEURS_PAR_METHODE: dict[MethodePaiement, frozenset[FournisseurPaiement]] = {
+    MethodePaiement.CARTE: frozenset({FournisseurPaiement.STRIPE}),
+    MethodePaiement.MOBILE_MONEY: frozenset(
+        {
+            FournisseurPaiement.MVOLA,
+            FournisseurPaiement.ORANGE_MONEY,
+            FournisseurPaiement.AIRTEL_MONEY,
+        }
+    ),
+}
 
 
 class PaiementCreate(BaseModel):
@@ -19,6 +33,17 @@ class PaiementCreate(BaseModel):
 
     methode: MethodePaiement
     fournisseur: FournisseurPaiement
+
+    @model_validator(mode="after")
+    def _fournisseur_de_la_methode(self) -> "PaiementCreate":
+        # Une carte ne passe pas par Mvola, ni un mobile money par Stripe :
+        # la combinaison serait impayable, autant la refuser en 422.
+        if self.fournisseur not in FOURNISSEURS_PAR_METHODE[self.methode]:
+            raise ValueError(
+                f"Le fournisseur {self.fournisseur.value} ne traite pas les "
+                f"paiements de type {self.methode.value}."
+            )
+        return self
 
 
 class WebhookPaiement(BaseModel):
@@ -40,7 +65,9 @@ class PaiementRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id_paiement: int
+    #: Exprimé dans `devise`, celle de la commande.
     montant: Decimal
+    devise: Devise = Devise.MGA
     methode: MethodePaiement
     fournisseur: FournisseurPaiement
     statut: StatutPaiement

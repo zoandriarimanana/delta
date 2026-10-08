@@ -49,6 +49,9 @@ def _commande(
         type_commande=TypeCommande.SUR_PLACE,
         statut=statut,
         montant_total=Decimal("5000.00"),
+        # Commande en Ariary : son montant dans la devise est son montant
+        # tout court — c'est lui que le paiement encaisse.
+        montant_total_devise=Decimal("5000.00"),
         id_client=client.id_client,
     )
     db.add(commande)
@@ -79,7 +82,8 @@ def test_initier_recopie_le_montant_de_la_commande(db: Session) -> None:
 
     paiement = service.initier(commande, _donnees())
 
-    assert paiement.montant == commande.montant_total
+    assert paiement.montant == commande.montant_total_devise
+    assert paiement.devise == commande.devise
 
 
 def test_initier_retourne_toujours_en_attente(db: Session) -> None:

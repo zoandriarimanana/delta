@@ -95,6 +95,9 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/photos/{{partie}}/{{fichier}}",
         # Frais de livraison : lecture publique, réglage administrateur.
         f"{prefixe}/tarif-livraison",
+        # Taux de change : lecture publique, réglage administrateur.
+        f"{prefixe}/taux-change",
+        f"{prefixe}/taux-change/{{devise}}",
         f"{prefixe}/reservations",
         f"{prefixe}/reservations/administration",
         f"{prefixe}/reservations/administration/{{id_reservation}}",

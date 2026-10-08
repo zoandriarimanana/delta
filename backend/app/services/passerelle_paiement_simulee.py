@@ -16,6 +16,7 @@ from enum import StrEnum
 from uuid import uuid4
 
 from app.models.paiement import FournisseurPaiement, MethodePaiement, StatutPaiement
+from app.models.taux_change import Devise
 from app.services.passerelle_paiement import ResultatInitiation
 
 #: Dev uniquement — n'a jamais vocation à protéger quoi que ce soit de réel :
@@ -59,6 +60,7 @@ class PasserelleSimulee:
         montant: Decimal,
         methode: MethodePaiement,
         fournisseur: FournisseurPaiement,
+        devise: Devise = Devise.MGA,
     ) -> ResultatInitiation:
         return ResultatInitiation(
             reference_externe=f"SIM-{uuid4().hex}",

@@ -17,11 +17,12 @@ import pytest
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlalchemy.orm import configure_mappers
 
-import app.models  # noqa: F401  (peuple Base.metadata avec les 23 entités)
+import app.models  # noqa: F401  (peuple Base.metadata avec les 24 entités)
 from app.core.database import Base
 
-# Les 23 tables du MLD (`docs/mld.md`) — `document_connaissance` depuis le
-# Sprint 12 (12.9), `tarif_livraison` depuis les frais de livraison. Les
+# Les 24 tables du MLD (`docs/mld.md`) — `document_connaissance` depuis le
+# Sprint 12 (12.9), `tarif_livraison` depuis les frais de livraison,
+# `taux_change` depuis l'ouverture internationale. Les
 # photos du catalogue n'ont pas de table : elles vivent sur disque
 # (`static/upload/`, voir `GalerieService`).
 # Les tables `langchain_pg_*` de l'index vectoriel, elles, sont hors MLD et
@@ -51,6 +52,7 @@ TABLES_ATTENDUES = frozenset(
         "salle",
         "session_formation",
         "tarif_livraison",
+        "taux_change",
     }
 )
 
@@ -142,8 +144,8 @@ def test_mappers_configurables() -> None:
 
 
 def test_nombre_de_tables() -> None:
-    """Les 23 tables du MLD sont bien enregistrées dans `Base.metadata`."""
-    assert len(Base.metadata.tables) == 23
+    """Les 24 tables du MLD sont bien enregistrées dans `Base.metadata`."""
+    assert len(Base.metadata.tables) == 24
 
 
 def test_liste_des_tables() -> None:

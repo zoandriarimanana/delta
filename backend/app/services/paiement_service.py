@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflitMetier, ReferenceInvalide
 from app.models.commande import Commande, StatutCommande
-from app.models.paiement import Paiement, StatutPaiement
+from app.models.paiement import MethodePaiement, Paiement, StatutPaiement
+from app.models.taux_change import Devise
 from app.repositories.paiement_repository import PaiementRepository
 from app.schemas.paiement import PaiementCreate
 from app.services.passerelle_paiement import PasserellePaiement
@@ -75,12 +76,30 @@ class PaiementService:
         if self.paiements.existe_reussi_pour_commande(commande.id_commande):
             raise ConflitMetier(MESSAGE_DEJA_PAYEE)
 
+        # Les portefeuilles mobile money malgaches n'opèrent qu'en Ariary : une
+        # commande en EUR ou USD se paie par carte internationale.
+        if (
+            donnees.methode == MethodePaiement.MOBILE_MONEY
+            and commande.devise != Devise.MGA
+        ):
+            raise ReferenceInvalide(
+                "Le mobile money ne fonctionne qu'en Ariary. Cette commande est "
+                f"en {commande.devise.value} : payez par carte bancaire "
+                "internationale."
+            )
+
+        # La commande a figé son montant dans sa devise : c'est lui qui est
+        # encaissé, jamais un montant recalculé au taux du jour.
         resultat = self.passerelle.initier(
-            commande.montant_total, donnees.methode, donnees.fournisseur
+            commande.montant_total_devise,
+            donnees.methode,
+            donnees.fournisseur,
+            commande.devise,
         )
 
         paiement = Paiement(
-            montant=commande.montant_total,
+            montant=commande.montant_total_devise,
+            devise=commande.devise,
             methode=donnees.methode,
             fournisseur=donnees.fournisseur,
             statut=resultat.statut,

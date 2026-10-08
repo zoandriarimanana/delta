@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Index, String, text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, SoftDeleteMixin
@@ -38,6 +38,11 @@ class ClientEntreprise(SoftDeleteMixin, Base):
             postgresql_where=text("supprime_le IS NULL"),
             sqlite_where=text("supprime_le IS NULL"),
         ),
+        # Code ISO 3166-1 alpha-2 : deux lettres majuscules. Écrit sans
+        # expression régulière pour rester valable aussi sous SQLite (tests).
+        CheckConstraint(
+            "length(pays) = 2 AND pays = upper(pays)", name="pays_code_iso"
+        ),
     )
 
     id_client: Mapped[int] = mapped_column(
@@ -47,6 +52,10 @@ class ClientEntreprise(SoftDeleteMixin, Base):
     numero_id_fiscal: Mapped[str] = mapped_column(String(50), nullable=False)
     secteur_activite: Mapped[str | None] = mapped_column(String(100))
     nom_contact_referent: Mapped[str | None] = mapped_column(String(150))
+    #: Pays de la société, code ISO 3166-1 alpha-2 (`MG`, `FR`, `US`…) —
+    #: ouverture internationale (8 octobre 2026). `MG` pour les sociétés déjà
+    #: inscrites, toutes malgaches jusqu'ici.
+    pays: Mapped[str] = mapped_column(String(2), nullable=False, server_default="MG")
 
     client: Mapped[Client] = relationship(back_populates="entreprise")
     abonnements: Mapped[list[Abonnement]] = relationship(

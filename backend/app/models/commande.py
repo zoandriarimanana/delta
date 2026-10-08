@@ -22,6 +22,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, SoftDeleteMixin
+from app.models.taux_change import Devise, type_devise
 
 if TYPE_CHECKING:
     from app.models.client import Client
@@ -83,6 +84,11 @@ class Commande(SoftDeleteMixin, Base):
             "(id_client IS NOT NULL) <> (nom_invite IS NOT NULL)",
             name="client_ou_invite",
         ),
+        # L'Ariary se convertit en lui-même : un autre taux serait un mensonge.
+        CheckConstraint(
+            "devise <> 'MGA' OR taux_change = 1", name="taux_coherent_avec_devise"
+        ),
+        CheckConstraint("taux_change > 0", name="taux_strictement_positif"),
     )
 
     id_commande: Mapped[int] = mapped_column(primary_key=True)
@@ -151,6 +157,24 @@ class Commande(SoftDeleteMixin, Base):
     #: `montant_total` : c'est le total que `PAIEMENT` encaisse.
     frais_livraison: Mapped[Decimal] = mapped_column(
         Numeric(10, 2), nullable=False, server_default="0"
+    )
+    #: Devise dans laquelle le client **paie** (ouverture internationale, 8
+    #: octobre 2026). Choisie par lui ; `MGA` par défaut, et pour toutes les
+    #: commandes antérieures.
+    devise: Mapped[Devise] = mapped_column(
+        type_devise("devise_commande"), nullable=False, server_default="MGA"
+    )
+    #: Ariary pour une unité de `devise`, **recopié** de `TAUX_CHANGE` à la
+    #: commande puis figé, jamais accepté de la requête — même règle que
+    #: `frais_livraison`. 1 pour une commande en Ariary.
+    taux_change: Mapped[Decimal] = mapped_column(
+        Numeric(14, 4), nullable=False, server_default="1"
+    )
+    #: `montant_total` converti dans `devise`, arrondi au centime, **figé** :
+    #: c'est ce que le client paie et ce que `PAIEMENT` encaisse.
+    #: `montant_total` reste la référence comptable en Ariary.
+    montant_total_devise: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, server_default="0"
     )
     id_client: Mapped[int | None] = mapped_column(ForeignKey("client.id_client"))
     id_reservation: Mapped[int | None] = mapped_column(

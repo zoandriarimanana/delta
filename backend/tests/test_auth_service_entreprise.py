@@ -8,6 +8,7 @@ relève du particulier et ce qui relève de l'entreprise.
 from collections.abc import Iterator
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.integrite import viole_contrainte
@@ -278,3 +279,29 @@ def test_archivage_dun_compte_actif_ne_libere_pas_pour_autant(
 
     with pytest.raises(NumeroFiscalDejaUtilise):
         service.inscrire_entreprise(_entreprise(email="autre@societe.mg"))
+
+
+# --- Pays (ouverture internationale) --------------------------------------------
+
+
+def test_une_societe_etrangere_garde_son_pays(
+    service: AuthService, db: Session
+) -> None:
+    donnees = _entreprise(email="contact@societe.fr", fiscal="FR12345678901")
+    donnees.identite.pays = "FR"
+
+    client = service.inscrire_entreprise(donnees)
+
+    assert db.get(ClientEntreprise, client.id_client).pays == "FR"
+
+
+def test_le_pays_par_defaut_est_madagascar(service: AuthService, db: Session) -> None:
+    client = service.inscrire_entreprise(_entreprise())
+
+    assert db.get(ClientEntreprise, client.id_client).pays == "MG"
+
+
+@pytest.mark.parametrize("pays", ["fr", "FRA", "F1", ""])
+def test_un_pays_hors_code_iso_est_refuse(pays: str) -> None:
+    with pytest.raises(ValidationError):
+        ClientEntrepriseCreate(raison_sociale="X", numero_id_fiscal="1", pays=pays)

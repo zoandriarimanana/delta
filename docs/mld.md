@@ -8,7 +8,7 @@ Notation : `TABLE(cle_primaire, attribut, ..., #cle_etrangere)`.
 ```
 CLIENT(id_client, type_client, email, telephone, adresse, mot_de_passe, date_creation_compte)
 CLIENT_PARTICULIER(#id_client, nom, prenom, date_naissance)
-CLIENT_ENTREPRISE(#id_client, raison_sociale, numero_id_fiscal, secteur_activite, nom_contact_referent)
+CLIENT_ENTREPRISE(#id_client, raison_sociale, numero_id_fiscal, secteur_activite, nom_contact_referent, pays)
 BENEFICIAIRE(id_beneficiaire, nom, prenom, identifiant_badge, statut, #id_abonnement)
 PERSONNEL(id_personnel, nom, prenom, fonction, est_administrateur, mot_de_passe, email, telephone, date_embauche, specialite, zone_livraison, photo_chemin)
 ```
@@ -135,6 +135,23 @@ toute façon jamais soumis à `supprimer_definitivement()`.
   ne touche pas à la photo : l'archivage reste réversible
   (`restaurer()`), et une restauration qui ferait perdre la photo serait une
   perte de donnée non voulue par la seule réversibilité de l'archivage.
+
+- `CLIENT_ENTREPRISE.pays` est le pays de la société, code **ISO 3166-1
+  alpha-2** (`MG`, `FR`, `US`…), `NOT NULL DEFAULT 'MG'` — ajouté le
+  8 octobre 2026 (ouverture internationale), hors sprint. Les sociétés déjà
+  inscrites étaient toutes malgaches, d'où la valeur par défaut.
+
+  ```sql
+  CHECK (length(pays) = 2 AND pays = upper(pays))
+  ```
+
+  Écrit sans expression régulière pour rester valable sous SQLite (tests) ;
+  le schema d'entrée, lui, exige `^[A-Z]{2}$`. Le code n'est pas confronté à
+  la liste ISO en base : c'est le sélecteur du frontend qui la porte, et un
+  code bien formé mais inexistant ne casse rien.
+
+  `numero_id_fiscal` garde son nom et son unicité : pour une société
+  étrangère il porte son identifiant fiscal national (n° de TVA, EIN…).
 
 ## Catalogue formation
 
@@ -422,7 +439,7 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 ## Transactions
 
 ```
-COMMANDE(id_commande, date_commande, reference_publique, adresse_livraison, nom_invite, contact_invite, type_commande, statut, montant_total, frais_livraison, #id_client, #id_reservation, #id_personnel)
+COMMANDE(id_commande, date_commande, reference_publique, adresse_livraison, nom_invite, contact_invite, type_commande, statut, montant_total, frais_livraison, devise, taux_change, montant_total_devise, #id_client, #id_reservation, #id_personnel)
 LIGNE_COMMANDE(id_ligne, quantite, prix_unitaire_applique, #id_commande, #id_produit)
 DEMANDE_PERSONNALISATION(id_personnalisation, description_demande, ingredients_specifiques, supplement_prix, #id_ligne, #id_produit_base)
 RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_personnes, statut, avec_hebergement, #id_client, #id_session, #id_salle, #id_logement, #id_reservation_hebergement)
@@ -794,10 +811,68 @@ offerte dès 100 000 Ar), modifiables ensuite.
 - Aucun historique : le montant appliqué est figé dans
   `COMMANDE.frais_livraison`.
 
+## Taux de change
+
+```
+TAUX_CHANGE(id_taux, devise, ariary_par_unite, mis_a_jour_le)
+```
+
+Ajoutée le 8 octobre 2026 (ouverture internationale), hors sprint :
+**paiement réel en devise**, décision de l'utilisateur. Le client choisit
+MGA, EUR ou USD ; le catalogue reste tenu en Ariary — un prix n'existe
+qu'une fois — et la conversion se fait à la commande.
+
+- `devise` ∈ {MGA, EUR, USD} (codes ISO 4217). Domaine formel **fermé**, même
+  traitement que `PAIEMENT.fournisseur` : une devise non prévue suppose un
+  taux et un moyen de paiement capable de l'encaisser, elle impose donc une
+  migration, délibérément. `UNIQUE` : une ligne par devise.
+
+- **Pas de ligne pour l'Ariary**, garanti en base :
+
+  ```sql
+  CHECK (devise <> 'MGA')
+  CHECK (ariary_par_unite > 0)
+  ```
+
+  Le taux de l'Ariary vaut 1 par définition ; le stocker permettrait de le
+  rendre faux. Les lignes EUR et USD sont posées par la migration ; aucun
+  endpoint n'en crée ni n'en supprime, l'administrateur ne fait que régler
+  `ariary_par_unite` (Ariary pour **une** unité de devise, quatre décimales).
+
+- `mis_a_jour_le` est montré au client : un taux n'a de sens qu'avec sa date.
+
+- **Le taux est recopié puis figé** dans `COMMANDE.taux_change` à la
+  commande, même règle que `TARIF_LIVRAISON` → `COMMANDE.frais_livraison` :
+  régler un taux ne rétroagit jamais sur une commande passée. Aucun
+  historique n'est donc nécessaire ici.
+
+Côté `COMMANDE` (section Transactions) :
+
+- `devise` — `NOT NULL DEFAULT 'MGA'`, même domaine. **Seul le choix** de la
+  devise vient de la requête.
+- `taux_change` — `NUMERIC(14,4) NOT NULL DEFAULT 1`, lu dans `TAUX_CHANGE`
+  et figé, **jamais** accepté du client (il fixerait ce qu'il paie).
+- `montant_total_devise` — `montant_total` (frais de livraison compris)
+  divisé par le taux, arrondi au centime au demi supérieur, **figé**. C'est
+  ce que le client paie et ce que `PAIEMENT` encaisse. `montant_total` reste
+  la référence comptable en Ariary.
+
+  ```sql
+  CHECK (devise <> 'MGA' OR taux_change = 1)
+  CHECK (taux_change > 0)
+  ```
+
+  Les commandes antérieures sont en Ariary, au taux 1, et la migration a posé
+  `montant_total_devise = montant_total`.
+
+- **Montant minimum hors Ariary : 0,50** dans la devise — en dessous, une
+  carte internationale refuse la transaction (minimum Stripe). Règle de
+  service, refus en 422 : une commande impayable ne doit pas naître.
+
 ## Paiement
 
 ```
-PAIEMENT(id_paiement, montant, methode, fournisseur, statut, reference_externe, date_paiement, #id_commande)
+PAIEMENT(id_paiement, montant, devise, methode, fournisseur, statut, reference_externe, date_paiement, #id_commande)
 ```
 
 Absente du dictionnaire de données d'origine et de tout sprint jusqu'ici : le
@@ -834,7 +909,21 @@ initial, pas la correction d'une omission comme `AVIS` ou `COMMANDE.date_command
   `Reussi`), sans jamais pouvoir déclencher lui-même cette contrainte.
 
 - `PAIEMENT.methode` ∈ {Carte, Mobile_money}. Domaine formel, `CHECK` en
-  base, même traitement que `COMMANDE.type_commande`.
+  base, même traitement que `COMMANDE.type_commande`. `Carte` désigne la
+  **carte bancaire internationale** (Visa, Mastercard, American Express) —
+  libellé précisé côté client le 8 octobre 2026, valeur inchangée.
+
+  **Cohérence méthode / fournisseur** (8 octobre 2026) : `Carte` passe par
+  `Stripe`, `Mobile_money` par `Mvola`, `Orange_money` ou `Airtel_money`.
+  Portée par le schema d'entrée (422) : toute combinaison croisée serait
+  impayable.
+
+- `PAIEMENT.devise` — la devise de `montant`, recopiée de
+  `COMMANDE.devise` ; `montant` vaut `COMMANDE.montant_total_devise`. Un
+  montant sans devise ne dit pas ce qui a été encaissé. **Le mobile money
+  n'est accepté qu'en Ariary** : les portefeuilles malgaches n'opèrent pas
+  en devise. Une commande en EUR ou USD se paie par carte (422 sinon —
+  règle de service, elle croise `PAIEMENT` et `COMMANDE`).
 
 - `PAIEMENT.fournisseur` ∈ {Mvola, Orange_money, Airtel_money, Stripe}.
   Domaine formel et non chaîne libre, même raisonnement que

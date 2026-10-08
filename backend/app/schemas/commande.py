@@ -8,6 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models.commande import StatutCommande, TypeCommande
+from app.models.taux_change import Devise
 from app.schemas.ligne_commande import LigneCommandeCreate, LigneCommandeRead
 
 
@@ -37,6 +38,10 @@ class CommandeCreate(BaseModel):
     #: la base et ne peuvent pas vivre ici.
     id_reservation: int | None = None
     lignes: list[LigneCommandeCreate] = Field(min_length=1)
+    #: Devise dans laquelle le client paiera. **Seul le choix** vient de la
+    #: requête : le taux et le montant converti sont lus et figés par le
+    #: serveur (`TauxChangeService.convertir`), jamais acceptés du client.
+    devise: Devise = Devise.MGA
 
 
 class CommandeInviteCreate(CommandeCreate):
@@ -94,6 +99,11 @@ class CommandeRead(BaseModel):
     montant_total: Decimal
     #: Déjà compris dans `montant_total` ; `0` sans livraison ou si offerte.
     frais_livraison: Decimal = Decimal("0")
+    #: Devise de paiement, taux figé (Ariary par unité) et montant à payer
+    #: dans cette devise. `montant_total` reste la référence en Ariary.
+    devise: Devise = Devise.MGA
+    taux_change: Decimal = Decimal("1")
+    montant_total_devise: Decimal = Decimal("0")
     id_client: int | None = None
     adresse_livraison: str | None = None
     nom_invite: str | None = None

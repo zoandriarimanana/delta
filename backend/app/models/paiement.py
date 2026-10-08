@@ -12,6 +12,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, SoftDeleteMixin
+from app.models.taux_change import Devise, type_devise
 
 if TYPE_CHECKING:
     from app.models.commande import Commande
@@ -20,6 +21,8 @@ if TYPE_CHECKING:
 class MethodePaiement(StrEnum):
     """Domaine de `PAIEMENT.methode` (cf. `docs/mld.md`)."""
 
+    #: Carte bancaire internationale — Visa, Mastercard, American Express,
+    #: via Stripe. Le libellé est affiché côté client ; la valeur ne change pas.
     CARTE = "Carte"
     MOBILE_MONEY = "Mobile_money"
 
@@ -89,6 +92,11 @@ class Paiement(SoftDeleteMixin, Base):
 
     id_paiement: Mapped[int] = mapped_column(primary_key=True)
     montant: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    #: Devise de `montant` — celle de la commande, recopiée. Un montant sans
+    #: devise ne dit pas ce qui a été encaissé.
+    devise: Mapped[Devise] = mapped_column(
+        type_devise("devise_paiement"), nullable=False, server_default="MGA"
+    )
     methode: Mapped[MethodePaiement] = mapped_column(
         SAEnum(
             MethodePaiement,

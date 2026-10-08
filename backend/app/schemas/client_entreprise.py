@@ -12,6 +12,7 @@ class ClientEntrepriseRead(BaseModel):
     numero_id_fiscal: str
     secteur_activite: str | None = None
     nom_contact_referent: str | None = None
+    pays: str = "MG"
 
 
 class ClientEntrepriseCreate(BaseModel):
@@ -26,6 +27,9 @@ class ClientEntrepriseCreate(BaseModel):
     numero_id_fiscal: str = Field(min_length=1, max_length=50)
     secteur_activite: str | None = Field(default=None, max_length=100)
     nom_contact_referent: str | None = Field(default=None, max_length=150)
+    #: Code ISO 3166-1 alpha-2 (`MG`, `FR`, `US`…). `MG` par défaut : les
+    #: clients existants de l'API n'ont pas à l'envoyer.
+    pays: str = Field(default="MG", pattern=r"^[A-Z]{2}$")
 
 
 class ClientEntrepriseAdministration(BaseModel):

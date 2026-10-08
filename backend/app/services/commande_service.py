@@ -34,6 +34,7 @@ from app.schemas.commande import (
 from app.schemas.ligne_commande import LigneCommandeCreate
 from app.services.livraison_service import LivraisonService
 from app.services.tarif_livraison_service import TarifLivraisonService
+from app.services.taux_change_service import TauxChangeService
 
 #: Statuts d'une réservation qui autorisent une commande à s'y rattacher.
 #:
@@ -411,6 +412,9 @@ class CommandeService:
           livraison** si une adresse est donnée — calculés ici par
           `TarifLivraisonService`, puis figés dans `frais_livraison`.
           L'accepter du client reviendrait à le laisser fixer ce qu'il paie.
+        - `taux_change` et `montant_total_devise` sont lus dans `TAUX_CHANGE`
+          pour la devise choisie, puis figés : seul le **choix** de la devise
+          vient du client.
         - `statut` naît toujours `En_attente` : c'est un cycle de vie, pas une
           donnée d'entrée.
 
@@ -461,6 +465,14 @@ class CommandeService:
             )
             montant += commande.frais_livraison
         commande.montant_total = montant
+        # Conversion après les frais : le client paie le total, livraison
+        # comprise. Taux et montant converti sont figés, comme les prix.
+        taux, montant_devise = TauxChangeService(self.db).convertir(
+            montant, donnees.devise
+        )
+        commande.devise = donnees.devise
+        commande.taux_change = taux
+        commande.montant_total_devise = montant_devise
         # Après la boucle : la livraison ne doit exister que si toutes les
         # lignes ont été acceptées et le stock réservé.
         self.livraisons.creer_pour_commande(commande)

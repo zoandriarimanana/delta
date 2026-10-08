@@ -16,6 +16,7 @@ from decimal import Decimal
 from typing import NamedTuple, Protocol
 
 from app.models.paiement import FournisseurPaiement, MethodePaiement, StatutPaiement
+from app.models.taux_change import Devise
 
 
 class ResultatInitiation(NamedTuple):
@@ -45,10 +46,14 @@ class PasserellePaiement(Protocol):
         montant: Decimal,
         methode: MethodePaiement,
         fournisseur: FournisseurPaiement,
+        devise: Devise = Devise.MGA,
     ) -> ResultatInitiation:
         """Initie un paiement auprès du fournisseur, retourne sa référence
         externe. Le statut retourné est toujours `En_attente` : la
-        confirmation arrive plus tard, par webhook."""
+        confirmation arrive plus tard, par webhook.
+
+        `montant` est exprimé dans `devise` — celle de la commande : un vrai
+        fournisseur encaisse dans une devise donnée, jamais un nombre nu."""
         ...
 
     def verifier_signature(self, charge_utile: bytes, signature: str) -> bool:

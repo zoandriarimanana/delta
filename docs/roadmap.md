@@ -1713,6 +1713,42 @@ lignes « à confirmer » surlignées, **annulation confirmée en deux temps**
       encarts Client / Réception et panneau Actions.
 
 
+**Travaux hors sprint : ouverture internationale (demande du 8 octobre
+2026).** Hors roadmap, signalé à l'utilisateur avant de commencer. Objectif :
+permettre la collaboration avec des sociétés étrangères. Décisions de
+l'utilisateur : carte internationale explicite (Visa / Mastercard / American
+Express via Stripe), **paiement réel en devise** (le client choisit MGA, EUR
+ou USD, le montant est figé dans sa devise à la commande), **pays** de la
+société, et **interface client en anglais** dès maintenant. Découpage validé,
+un commit par étape :
+
+- [x] **I.1 — Schéma** : table `TAUX_CHANGE` (taux EUR/USD → MGA, réglés par
+      l'administrateur, comme `TARIF_LIVRAISON`) ; `COMMANDE.devise`,
+      `COMMANDE.taux_change`, `COMMANDE.montant_total_devise` (figés à la
+      commande, jamais acceptés de la requête) ; `PAIEMENT.devise` ;
+      `CLIENT_ENTREPRISE.pays` (ISO 3166-1 alpha-2). Migration + `docs/mld.md`.
+- [x] **I.2 — Services et API** : taux en lecture publique / écriture admin ;
+      conversion et gel à la création de commande ; paiement dans la devise
+      de la commande, mobile money refusé hors MGA (les portefeuilles
+      malgaches opèrent en Ariary) ; pays à l'inscription entreprise.
+      — Livrés ensemble (migration `d5359db993d5`, testée montée / descente
+      / remontée sur base vierge). Deux règles ajoutées en construisant :
+      **cohérence méthode / fournisseur** (carte → Stripe, mobile money →
+      opérateurs malgaches, 422) et **minimum de 0,50** hors Ariary (en
+      dessous, une carte internationale refuse la transaction). La passerelle
+      reçoit désormais la devise : un vrai fournisseur encaisse dans une
+      devise donnée. Backend 1 458/1 458 sur base vierge.
+- [ ] **I.3 — Frontend devise et paiement** : sélecteur de devise dans
+      l'en-tête, prix convertis (indicatifs jusqu'à la validation), total
+      figé affiché dans la devise de la commande, libellé « Carte bancaire
+      internationale », écran admin des taux, champ pays à l'inscription.
+- [ ] **I.4 — Interface client en anglais** : sélecteur FR/EN dans
+      l'en-tête, traduction des écrans publics et client (le back-office
+      reste en français). Les messages d'erreur renvoyés par l'API restent
+      en français — limite assumée, à traiter par un `Accept-Language`
+      côté serveur si le besoin se confirme.
+
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère
@@ -1722,5 +1758,7 @@ ajoutée à un sprint ici — ne jamais laisser une table orpheline.
 - `DOCUMENT_CONNAISSANCE` — ajoutée après coup, couverte par le Sprint 12 (12.9).
 - `TARIF_LIVRAISON` — ajoutée après coup, couverte par les travaux hors
   sprint du 7 octobre 2026 (frais de livraison).
+- `TAUX_CHANGE` — ajoutée après coup, couverte par les travaux hors sprint
+  du 8 octobre 2026 (ouverture internationale, I.1 / I.2).
 - `PHOTO_BIEN` — ajoutée puis **retirée** le 5 octobre 2026 : les photos du
   catalogue sont désormais des fichiers sur disque, sans table.
