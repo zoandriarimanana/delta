@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { textesCourants } from '@/lib/langue';
+
+import { TEXTES_SALLE } from './salle.textes';
 import { recupererSalle, recupererSalles } from './salle.api';
 import type { Salle } from './salle.types';
 
@@ -10,8 +13,6 @@ export interface EtatAsynchrone<T> {
   chargement: boolean;
   erreur: string | null;
 }
-
-const MESSAGE_ERREUR_PAR_DEFAUT = 'Le chargement a échoué. Réessayez dans un instant.';
 
 function useRequete<T>(charger: () => Promise<T>, activee = true): EtatAsynchrone<T> {
   const [etat, setEtat] = useState<EtatAsynchrone<T>>({
@@ -37,7 +38,7 @@ function useRequete<T>(charger: () => Promise<T>, activee = true): EtatAsynchron
           setEtat({
             donnees: null,
             chargement: false,
-            erreur: MESSAGE_ERREUR_PAR_DEFAUT,
+            erreur: textesCourants(TEXTES_SALLE).erreurChargement,
           })
       );
 

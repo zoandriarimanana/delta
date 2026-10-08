@@ -1,7 +1,9 @@
 /** Règles d'affichage des salles — fonctions pures. */
 
 import { formaterMontant } from '@/features/commande/commande.service';
+import { textesCourants } from '@/lib/langue';
 
+import { TEXTES_SALLE } from './salle.textes';
 import type { Salle } from './salle.types';
 
 /**
@@ -16,14 +18,15 @@ export function libelleTarif(
   salle: Salle,
   formater: (montant: string) => string = formaterMontant
 ): string {
+  const t = textesCourants(TEXTES_SALLE);
   const parties: string[] = [];
   if (salle.tarif_horaire !== null) {
-    parties.push(`${formater(salle.tarif_horaire)} / heure`);
+    parties.push(t.parHeure(formater(salle.tarif_horaire)));
   }
   if (salle.tarif_journee !== null) {
-    parties.push(`${formater(salle.tarif_journee)} / journée`);
+    parties.push(t.parJournee(formater(salle.tarif_journee)));
   }
-  return parties.length > 0 ? parties.join(' — ') : 'Tarif non communiqué';
+  return parties.length > 0 ? parties.join(' — ') : t.tarifNonCommunique;
 }
 
 /**
@@ -34,28 +37,26 @@ export function libelleTarif(
  * qu'à la réservation. Ce texte ne prétend donc rien sur une date donnée.
  */
 export function explicationLocation(salle: Salle): string {
-  const modes: string[] = [];
-  if (salle.tarif_horaire !== null) modes.push('à l’heure');
-  if (salle.tarif_journee !== null) modes.push('à la journée');
+  const t = textesCourants(TEXTES_SALLE);
+  const heure = salle.tarif_horaire !== null;
+  const journee = salle.tarif_journee !== null;
   const location =
-    modes.length === 2
-      ? 'Elle se loue à l’heure ou à la journée, selon la durée de votre événement.'
-      : modes.length === 1
-        ? `Elle se loue ${modes[0]}.`
-        : 'Contactez-nous pour connaître ses conditions de location.';
-  return (
-    `Cette salle accueille jusqu’à ${salle.capacite} personne(s). ${location} ` +
-    'Choisissez votre créneau ci-dessous : s’il est libre, votre demande est ' +
-    'enregistrée aussitôt et apparaît dans « Mes réservations ». Un créneau ' +
-    'déjà réservé vous sera signalé avant toute confirmation.'
-  );
+    heure && journee
+      ? t.locationDeux
+      : heure
+        ? t.locationHeure
+        : journee
+          ? t.locationJournee
+          : t.locationAucune;
+  return t.explication(salle.capacite, location);
 }
 
 /** Modes de location, en pastilles : « À l’heure », « À la journée ». */
 export function modesLocation(salle: Salle): string[] {
   const modes: string[] = [];
-  if (salle.tarif_horaire !== null) modes.push('À l’heure');
-  if (salle.tarif_journee !== null) modes.push('À la journée');
+  const t = textesCourants(TEXTES_SALLE);
+  if (salle.tarif_horaire !== null) modes.push(t.aLHeure);
+  if (salle.tarif_journee !== null) modes.push(t.aLaJournee);
   return modes;
 }
 

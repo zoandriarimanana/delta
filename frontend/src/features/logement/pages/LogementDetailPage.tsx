@@ -20,7 +20,9 @@ import GaleriePhotos from '@/features/galerie/components/GaleriePhotos';
 import { useGalerie } from '@/features/galerie/galerie.hooks';
 import FormulaireReservationCreneau from '@/features/reservation/components/FormulaireReservationCreneau';
 import { imagePour } from '@/lib/images';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_LOGEMENT } from '../logement.textes';
 import { useLogement } from '../logement.hooks';
 import {
   estReservable,
@@ -31,6 +33,7 @@ import {
 import type { Logement } from '../logement.types';
 
 export default function LogementDetailPage() {
+  const t = useTextes(TEXTES_LOGEMENT);
   const { idLogement } = useParams();
   const identifiant = Number(idLogement);
   const valide = Number.isInteger(identifiant) && identifiant > 0;
@@ -41,9 +44,9 @@ export default function LogementDetailPage() {
   if (!valide || erreur !== null) {
     return (
       <section>
-        <BoutonRetour vers="/logements">Retour aux hébergements</BoutonRetour>
+        <BoutonRetour vers="/logements">{t.retour}</BoutonRetour>
         <p role="alert" className="mt-6 text-gris-700">
-          Cet hébergement est introuvable.
+          {t.introuvable}
         </p>
       </section>
     );
@@ -52,32 +55,30 @@ export default function LogementDetailPage() {
   if (chargement || donnees === null) {
     return (
       <p role="status" className="text-gris-500">
-        Chargement…
+        {t.chargementCourt}
       </p>
     );
   }
 
   return (
     <section>
-      <BoutonRetour vers="/logements">Retour aux hébergements</BoutonRetour>
+      <BoutonRetour vers="/logements">{t.retour}</BoutonRetour>
 
       <article className="mt-6 grid gap-8 md:grid-cols-2">
         <GaleriePhotos
           bien={{ logement: donnees.id_logement }}
           photos={galerie.photos}
           repli={imagePour('logement', donnees.id_logement, 900)}
-          nomBien={`Chambre ${donnees.type_chambre}`}
+          nomBien={t.chambre(donnees.type_chambre)}
         />
         <Presentation logement={donnees} />
       </article>
 
       <section className="mt-10">
-        <h2 className="text-xl font-semibold text-gris-700">Description</h2>
+        <h2 className="text-xl font-semibold text-gris-700">{t.description}</h2>
         <p className="mt-3 whitespace-pre-line leading-relaxed text-gris-600">
           {donnees.description ??
-            `Chambre ${donnees.type_chambre} pour ${donnees.capacite} ` +
-              'personne(s). Aucune présentation détaillée n’a encore été ' +
-              'rédigée pour ce logement.'}
+            t.descriptionParDefaut(donnees.type_chambre, donnees.capacite)}
         </p>
       </section>
 
@@ -86,7 +87,7 @@ export default function LogementDetailPage() {
         className="mt-10 rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm"
       >
         <h2 id="titre-reserver" className="text-xl font-semibold text-gris-700">
-          Réserver ce logement
+          {t.reserver}
         </h2>
         <FormulaireReservationCreneau
           cible="Logement"
@@ -100,6 +101,7 @@ export default function LogementDetailPage() {
 }
 
 function Presentation({ logement }: { logement: Logement }) {
+  const t = useTextes(TEXTES_LOGEMENT);
   const prix = useFormaterPrix();
   const variante = varianteStatut(logement.statut);
   // Le cadre du statut reprend l'intention de la pastille : vert si l'on peut
@@ -115,10 +117,10 @@ function Presentation({ logement }: { logement: Logement }) {
     <div className="flex flex-col gap-5">
       <div>
         <p className="text-sm font-medium uppercase tracking-wide text-primaire">
-          Hébergement
+          {t.hebergement}
         </p>
         <h1 className="mt-1 text-3xl font-semibold text-gris-700">
-          Chambre {logement.type_chambre}
+          {t.chambre(logement.type_chambre)}
         </h1>
         <div className="mt-2">
           <NoteMoyenne moyenne={logement.note_moyenne} nombre={logement.nombre_avis} />
@@ -126,21 +128,21 @@ function Presentation({ logement }: { logement: Logement }) {
       </div>
 
       <p className="text-2xl font-bold text-primaire">
-        {prix(logement.tarif_nuitee)} / nuit
+        {t.parNuit(prix(logement.tarif_nuitee))}
       </p>
 
-      <ul aria-label="Statuts du logement" className="flex flex-wrap gap-2">
+      <ul aria-label={t.statutsLogement} className="flex flex-wrap gap-2">
         <li>
           <Badge variante={variante}>{libelleStatut(logement.statut)}</Badge>
         </li>
         <li>
-          <Badge>Jusqu’à {logement.capacite} personne(s)</Badge>
+          <Badge>{t.jusqua(logement.capacite)}</Badge>
         </li>
       </ul>
 
       <div className={`rounded-xl border p-4 ${cadre}`}>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-gris-600">
-          Statut : {libelleStatut(logement.statut)}
+          {t.statut(libelleStatut(logement.statut))}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-gris-600">
           {explicationStatut(logement.statut)}
@@ -149,21 +151,21 @@ function Presentation({ logement }: { logement: Logement }) {
 
       <dl className="grid gap-2 rounded-xl border border-gris-200 bg-surface p-4 text-sm">
         <div className="flex justify-between gap-4">
-          <dt className="text-gris-500">Type de chambre</dt>
+          <dt className="text-gris-500">{t.typeChambre}</dt>
           <dd className="text-right font-medium text-gris-700">
             {logement.type_chambre}
           </dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-gris-500">Capacité</dt>
+          <dt className="text-gris-500">{t.capacite}</dt>
           <dd className="text-right font-medium text-gris-700">
-            {logement.capacite} personne(s)
+            {t.personnes(logement.capacite)}
           </dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-gris-500">Tarif</dt>
+          <dt className="text-gris-500">{t.tarif}</dt>
           <dd className="text-right font-medium text-gris-700">
-            {prix(logement.tarif_nuitee)} par nuit
+            {t.tarifParNuit(prix(logement.tarif_nuitee))}
           </dd>
         </div>
       </dl>

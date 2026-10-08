@@ -16,13 +16,16 @@ import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import GaleriePhotos from '@/features/galerie/components/GaleriePhotos';
 import { useGalerie } from '@/features/galerie/galerie.hooks';
 import { imagePour } from '@/lib/images';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_FORMATION } from '../formation.textes';
 import CarteSession from '../components/CarteSession';
 import { useDomaines, useFormation, useSessions } from '../formation.hooks';
 import { formaterDuree, nombreSessionsReservables } from '../formation.service';
 import type { Formation, SessionFormation } from '../formation.types';
 
 export default function FormationDetailPage() {
+  const t = useTextes(TEXTES_FORMATION);
   const { idFormation } = useParams();
   // Un identifiant illisible désactive les requêtes plutôt que d'en émettre une
   // vouée à échouer.
@@ -37,9 +40,9 @@ export default function FormationDetailPage() {
   if (!valide || formation.erreur !== null) {
     return (
       <section>
-        <BoutonRetour vers="/formations">Retour aux formations</BoutonRetour>
+        <BoutonRetour vers="/formations">{t.retour}</BoutonRetour>
         <p role="alert" className="mt-6 text-gris-700">
-          Cette formation est introuvable.
+          {t.introuvable}
         </p>
       </section>
     );
@@ -48,7 +51,7 @@ export default function FormationDetailPage() {
   if (formation.chargement || formation.donnees === null) {
     return (
       <p role="status" className="text-gris-500">
-        Chargement…
+        {t.chargement}
       </p>
     );
   }
@@ -58,7 +61,7 @@ export default function FormationDetailPage() {
 
   return (
     <section>
-      <BoutonRetour vers="/formations">Retour aux formations</BoutonRetour>
+      <BoutonRetour vers="/formations">{t.retour}</BoutonRetour>
 
       <article className="mt-6 grid gap-8 md:grid-cols-2">
         <GaleriePhotos
@@ -75,19 +78,19 @@ export default function FormationDetailPage() {
       </article>
 
       <section className="mt-10">
-        <h2 className="text-xl font-semibold text-gris-700">Description</h2>
+        <h2 className="text-xl font-semibold text-gris-700">{t.description}</h2>
         <p className="mt-3 whitespace-pre-line leading-relaxed text-gris-600">
           {fiche.description ??
-            `Formation de ${formaterDuree(fiche.duree_heures)}` +
-              (fiche.niveau !== null ? `, niveau ${fiche.niveau}` : '') +
-              `, en groupe de ${fiche.capacite_max} participant(s) au plus. ` +
-              'Aucune présentation détaillée n’a encore été rédigée pour ' +
-              'cette formation.'}
+            t.descriptionParDefaut(
+              formaterDuree(fiche.duree_heures),
+              fiche.niveau,
+              fiche.capacite_max
+            )}
         </p>
         {domaine?.description != null && (
           <p className="mt-3 text-sm leading-relaxed text-gris-500">
             <span className="font-medium text-gris-600">
-              À propos du domaine « {domaine.libelle} » :
+              {t.aProposDomaine(domaine.libelle)}
             </span>{' '}
             {domaine.description}
           </p>
@@ -96,12 +99,12 @@ export default function FormationDetailPage() {
 
       <section aria-labelledby="titre-sessions" className="mt-10">
         <h2 id="titre-sessions" className="text-xl font-semibold text-gris-700">
-          Sessions et inscriptions
+          {t.sessionsInscriptions}
         </h2>
 
         {sessions.chargement && (
           <p role="status" className="mt-4 text-gris-500">
-            Chargement…
+            {t.chargement}
           </p>
         )}
 
@@ -113,8 +116,7 @@ export default function FormationDetailPage() {
 
         {sessions.donnees !== null && sessions.donnees.length === 0 && (
           <p className="mt-4 rounded-xl border border-gris-200 bg-surface p-4 text-gris-600">
-            Aucune session n’est programmée pour le moment. Revenez prochainement : les
-            nouvelles dates sont annoncées ici dès leur planification.
+            {t.aucuneSession}
           </p>
         )}
 
@@ -141,6 +143,7 @@ function Presentation({
   domaine: string | undefined;
   sessions: SessionFormation[] | null;
 }) {
+  const t = useTextes(TEXTES_FORMATION);
   const prix = useFormaterPrix();
   const ouvertes = sessions === null ? null : nombreSessionsReservables(sessions);
 
@@ -148,7 +151,7 @@ function Presentation({
     <div className="flex flex-col gap-5">
       <div>
         <p className="text-sm font-medium uppercase tracking-wide text-primaire">
-          {domaine ?? 'Formation'}
+          {domaine ?? t.formation}
         </p>
         <h1 className="mt-1 text-3xl font-semibold text-gris-700">{formation.titre}</h1>
         <div className="mt-2">
@@ -161,24 +164,22 @@ function Presentation({
 
       <p className="text-2xl font-bold text-primaire">
         {prix(formation.prix)}{' '}
-        <span className="text-base font-medium text-gris-500">par personne</span>
+        <span className="text-base font-medium text-gris-500">{t.parPersonne}</span>
       </p>
 
       {/* Le module choisit ses libellés et ses variantes : la pastille ne
           connaît pas la formation. */}
-      <ul aria-label="Statuts de la formation" className="flex flex-wrap gap-2">
+      <ul aria-label={t.statutsFormation} className="flex flex-wrap gap-2">
         {ouvertes !== null && (
           <li>
             <Badge variante={ouvertes > 0 ? 'positif' : 'attente'}>
-              {ouvertes > 0
-                ? `${ouvertes} session(s) ouverte(s)`
-                : 'Aucune inscription ouverte'}
+              {ouvertes > 0 ? t.sessionsOuvertes(ouvertes) : t.aucuneInscription}
             </Badge>
           </li>
         )}
         {formation.niveau !== null && (
           <li>
-            <Badge>Niveau {formation.niveau}</Badge>
+            <Badge>{t.niveau(formation.niveau)}</Badge>
           </li>
         )}
         <li>
@@ -186,7 +187,7 @@ function Presentation({
         </li>
         {formation.propose_hebergement && (
           <li>
-            <Badge variante="attente">Hébergement possible</Badge>
+            <Badge variante="attente">{t.hebergementPossible}</Badge>
           </li>
         )}
       </ul>
@@ -199,31 +200,23 @@ function Presentation({
         }`}
       >
         <h2 className="text-sm font-semibold uppercase tracking-wide text-gris-600">
-          Inscription
+          {t.inscription}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-gris-600">
           {ouvertes !== null && ouvertes > 0
-            ? 'Des places sont disponibles. Choisissez votre session plus bas : ' +
-              'votre place est retenue dès l’envoi de la demande.'
-            : 'Aucune session n’accepte d’inscription pour le moment. Les ' +
-              'prochaines dates apparaîtront plus bas dès leur ouverture.'}{' '}
-          {formation.propose_hebergement
-            ? 'Un hébergement sur place peut être demandé à la réservation : une ' +
-              'chambre libre vous est alors attribuée pour les dates de la session.'
-            : 'Cette formation ne comprend pas d’hébergement.'}
+            ? t.placesDisponibles
+            : t.aucuneSessionOuverte}{' '}
+          {formation.propose_hebergement ? t.avecHebergement : t.sansHebergement}
         </p>
       </div>
 
       <dl className="grid gap-2 rounded-xl border border-gris-200 bg-surface p-4 text-sm">
-        <Ligne terme="Durée" valeur={formaterDuree(formation.duree_heures)} />
-        <Ligne terme="Niveau" valeur={formation.niveau ?? 'Tous niveaux'} />
+        <Ligne terme={t.duree} valeur={formaterDuree(formation.duree_heures)} />
+        <Ligne terme={t.niveauTerme} valeur={formation.niveau ?? t.tousNiveaux} />
+        <Ligne terme={t.groupe} valeur={t.participantsMax(formation.capacite_max)} />
         <Ligne
-          terme="Groupe"
-          valeur={`${formation.capacite_max} participant(s) au plus`}
-        />
-        <Ligne
-          terme="Hébergement"
-          valeur={formation.propose_hebergement ? 'Possible sur demande' : 'Non inclus'}
+          terme={t.hebergementTerme}
+          valeur={formation.propose_hebergement ? t.surDemande : t.nonInclus}
         />
       </dl>
     </div>

@@ -11,7 +11,9 @@ import { CalendarDays, UserRound, Users } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import { formaterDate } from '@/features/commande/commande.service';
 import FormulaireReservation from '@/features/reservation/components/FormulaireReservation';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_FORMATION } from '../formation.textes';
 import {
   estReservable,
   explicationSession,
@@ -27,6 +29,7 @@ interface Proprietes {
 }
 
 export default function CarteSession({ session, proposeHebergement }: Proprietes) {
+  const t = useTextes(TEXTES_FORMATION);
   const reservable = estReservable(session);
 
   return (
@@ -39,11 +42,12 @@ export default function CarteSession({ session, proposeHebergement }: Proprietes
         <p className="flex items-center gap-2 font-semibold text-gris-700">
           <CalendarDays size={18} aria-hidden className="text-primaire" />
           <span>
-            Du{' '}
+            {t.du}{' '}
             <time dateTime={session.date_debut}>
               {formaterDate(session.date_debut)}
             </time>{' '}
-            au <time dateTime={session.date_fin}>{formaterDate(session.date_fin)}</time>
+            {t.au}{' '}
+            <time dateTime={session.date_fin}>{formaterDate(session.date_fin)}</time>
           </span>
         </p>
         <Badge variante={varianteEtatSession(session)}>
@@ -54,12 +58,12 @@ export default function CarteSession({ session, proposeHebergement }: Proprietes
       <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm text-gris-600">
         <p className="flex items-center gap-1.5">
           <Users size={16} aria-hidden />
-          {session.places_restantes} place(s) restante(s)
+          {t.placesRestantes(session.places_restantes)}
         </p>
         {session.formateur !== null && (
           <p className="flex items-center gap-1.5">
             <UserRound size={16} aria-hidden />
-            Animée par {nomFormateur(session.formateur)}
+            {t.animeePar(nomFormateur(session.formateur))}
             {session.formateur.specialite !== null && (
               <> — {session.formateur.specialite}</>
             )}

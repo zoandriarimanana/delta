@@ -16,7 +16,9 @@ import GaleriePhotos from '@/features/galerie/components/GaleriePhotos';
 import { useGalerie } from '@/features/galerie/galerie.hooks';
 import FormulaireReservationCreneau from '@/features/reservation/components/FormulaireReservationCreneau';
 import { imagePour } from '@/lib/images';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_SALLE } from '../salle.textes';
 import { useSalle } from '../salle.hooks';
 import {
   explicationLocation,
@@ -27,6 +29,7 @@ import {
 import type { Salle } from '../salle.types';
 
 export default function SalleDetailPage() {
+  const t = useTextes(TEXTES_SALLE);
   const { idSalle } = useParams();
   // Un identifiant illisible désactive la requête plutôt que d'en émettre une
   // vouée à échouer.
@@ -39,9 +42,9 @@ export default function SalleDetailPage() {
   if (!valide || erreur !== null) {
     return (
       <section>
-        <BoutonRetour vers="/salles">Retour aux salles</BoutonRetour>
+        <BoutonRetour vers="/salles">{t.retour}</BoutonRetour>
         <p role="alert" className="mt-6 text-gris-700">
-          Cette salle est introuvable.
+          {t.introuvable}
         </p>
       </section>
     );
@@ -50,14 +53,14 @@ export default function SalleDetailPage() {
   if (chargement || donnees === null) {
     return (
       <p role="status" className="text-gris-500">
-        Chargement…
+        {t.chargement}
       </p>
     );
   }
 
   return (
     <section>
-      <BoutonRetour vers="/salles">Retour aux salles</BoutonRetour>
+      <BoutonRetour vers="/salles">{t.retour}</BoutonRetour>
 
       <article className="mt-6 grid gap-8 md:grid-cols-2">
         <GaleriePhotos
@@ -70,12 +73,9 @@ export default function SalleDetailPage() {
       </article>
 
       <section className="mt-10">
-        <h2 className="text-xl font-semibold text-gris-700">Description</h2>
+        <h2 className="text-xl font-semibold text-gris-700">{t.description}</h2>
         <p className="mt-3 whitespace-pre-line leading-relaxed text-gris-600">
-          {donnees.description ??
-            `${donnees.nom} peut accueillir jusqu’à ${donnees.capacite} ` +
-              'personne(s). Aucune présentation détaillée n’a encore été ' +
-              'rédigée pour ce lieu.'}
+          {donnees.description ?? t.descriptionParDefaut(donnees.nom, donnees.capacite)}
         </p>
       </section>
 
@@ -84,7 +84,7 @@ export default function SalleDetailPage() {
         className="mt-10 rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm"
       >
         <h2 id="titre-reserver" className="text-xl font-semibold text-gris-700">
-          Réserver cette salle
+          {t.reserver}
         </h2>
         <FormulaireReservationCreneau
           cible="Salle"
@@ -97,6 +97,7 @@ export default function SalleDetailPage() {
 }
 
 function Presentation({ salle }: { salle: Salle }) {
+  const t = useTextes(TEXTES_SALLE);
   const prix = useFormaterPrix();
   const equipements = listeEquipements(salle);
 
@@ -104,7 +105,7 @@ function Presentation({ salle }: { salle: Salle }) {
     <div className="flex flex-col gap-5">
       <div>
         <p className="text-sm font-medium uppercase tracking-wide text-primaire">
-          Salle à louer
+          {t.aLouer}
         </p>
         <h1 className="mt-1 text-3xl font-semibold text-gris-700">{salle.nom}</h1>
         <div className="mt-2">
@@ -117,12 +118,12 @@ function Presentation({ salle }: { salle: Salle }) {
       {/* Le module choisit ses libellés et ses variantes : la pastille ne
           connaît pas la salle. Aucune pastille « libre » : la disponibilité
           d'un créneau ne se lit qu'à la réservation. */}
-      <ul aria-label="Statuts de la salle" className="flex flex-wrap gap-2">
+      <ul aria-label={t.statutsSalle} className="flex flex-wrap gap-2">
         <li>
-          <Badge variante="positif">Réservable</Badge>
+          <Badge variante="positif">{t.reservable}</Badge>
         </li>
         <li>
-          <Badge>Jusqu’à {salle.capacite} personne(s)</Badge>
+          <Badge>{t.jusqua(salle.capacite)}</Badge>
         </li>
         {modesLocation(salle).map((mode) => (
           <li key={mode}>
@@ -133,7 +134,7 @@ function Presentation({ salle }: { salle: Salle }) {
 
       <div className="rounded-xl border border-succes/30 bg-succes/10 p-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-succes">
-          Conditions de location
+          {t.conditions}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-gris-600">
           {explicationLocation(salle)}
@@ -142,7 +143,7 @@ function Presentation({ salle }: { salle: Salle }) {
 
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-gris-500">
-          Équipements
+          {t.equipements}
         </h2>
         {equipements.length > 0 ? (
           <ul className="mt-2 flex flex-wrap gap-2">
@@ -156,9 +157,7 @@ function Presentation({ salle }: { salle: Salle }) {
             ))}
           </ul>
         ) : (
-          <p className="mt-2 text-sm text-gris-500">
-            Aucun équipement particulier n’est renseigné.
-          </p>
+          <p className="mt-2 text-sm text-gris-500">{t.aucunEquipement}</p>
         )}
       </div>
     </div>

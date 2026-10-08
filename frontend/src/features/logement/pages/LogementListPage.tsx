@@ -14,11 +14,14 @@ import Badge from '@/components/ui/Badge';
 import Carte from '@/components/ui/Carte';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import { imagePour } from '@/lib/images';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_LOGEMENT } from '../logement.textes';
 import { libelleStatut, varianteStatut } from '../logement.service';
 import { useLogements } from '../logement.hooks';
 
 export default function LogementListPage() {
+  const t = useTextes(TEXTES_LOGEMENT);
   const prix = useFormaterPrix();
   const [capacite, setCapacite] = useState<number | null>(null);
   const { donnees, chargement, erreur } = useLogements('Disponible', capacite);
@@ -27,9 +30,9 @@ export default function LogementListPage() {
     <section>
       <div className="mb-8">
         <h1 className="text-4xl font-serif font-bold text-primaire mb-2">
-          Nos hébergements
+          {t.nosHebergements}
         </h1>
-        <p className="text-gris-600">Chambres disponibles à la nuitée, sur place</p>
+        <p className="text-gris-600">{t.sousTitre}</p>
       </div>
 
       <div className="mb-8">
@@ -37,7 +40,7 @@ export default function LogementListPage() {
           htmlFor="filtre-capacite"
           className="block mb-2 font-medium text-gris-700"
         >
-          Capacité minimale
+          {t.capaciteMin}
         </label>
         <input
           id="filtre-capacite"
@@ -49,13 +52,13 @@ export default function LogementListPage() {
             setCapacite(Number.isInteger(saisie) && saisie > 0 ? saisie : null);
           }}
           className="w-32 rounded-lg border-2 border-gris-200 px-3 py-2 bg-surface text-gris-700 hover:border-primaire transition-colors"
-          placeholder="Personnes"
+          placeholder={t.personnesPlaceholder}
         />
       </div>
 
       {chargement && (
         <p role="status" className="text-center py-8 text-gris-500">
-          ⏳ Chargement des hébergements…
+          {t.chargement}
         </p>
       )}
 
@@ -70,14 +73,12 @@ export default function LogementListPage() {
 
       {donnees !== null && donnees.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gris-600 mb-4">
-            Aucun hébergement ne correspond à cette capacité.
-          </p>
+          <p className="text-gris-600 mb-4">{t.aucun}</p>
           <button
             onClick={() => setCapacite(null)}
             className="text-primaire hover:text-primaire-fonce font-medium transition-colors underline"
           >
-            Voir tous les hébergements
+            {t.voirTous}
           </button>
         </div>
       )}
@@ -91,12 +92,12 @@ export default function LogementListPage() {
           >
             <Carte
               image={imagePour('logement', logement.id_logement)}
-              titre={`Chambre ${logement.type_chambre}`}
-              description={`${logement.capacite} personne(s)`}
+              titre={t.chambre(logement.type_chambre)}
+              description={t.personnes(logement.capacite)}
               pied={
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-semibold text-primaire">
-                    {prix(logement.tarif_nuitee)} / nuit
+                    {t.parNuit(prix(logement.tarif_nuitee))}
                   </span>
                   {/* Le libellé et la variante viennent du module : la
                       pastille ne sait rien des logements. */}

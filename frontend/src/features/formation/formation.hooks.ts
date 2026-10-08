@@ -8,6 +8,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { textesCourants } from '@/lib/langue';
+
+import { TEXTES_FORMATION } from './formation.textes';
 import {
   recupererDomaines,
   recupererFormation,
@@ -21,8 +24,6 @@ export interface EtatAsynchrone<T> {
   chargement: boolean;
   erreur: string | null;
 }
-
-const MESSAGE_ERREUR_PAR_DEFAUT = 'Le chargement a échoué. Réessayez dans un instant.';
 
 /**
  * Exécute une requête et en suit l'état.
@@ -58,7 +59,7 @@ function useRequete<T>(charger: () => Promise<T>, activee = true): EtatAsynchron
           setEtat({
             donnees: null,
             chargement: false,
-            erreur: MESSAGE_ERREUR_PAR_DEFAUT,
+            erreur: textesCourants(TEXTES_FORMATION).erreurChargement,
           });
         }
       });

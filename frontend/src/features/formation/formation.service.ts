@@ -3,7 +3,9 @@
  */
 
 import type { VarianteBadge } from '@/components/ui/Badge';
+import { textesCourants } from '@/lib/langue';
 
+import { TEXTES_FORMATION } from './formation.textes';
 import type { FormateurPublic, SessionFormation } from './formation.types';
 
 /**
@@ -26,17 +28,12 @@ export function raisonIndisponible(session: SessionFormation): string | null {
   if (estReservable(session)) {
     return null;
   }
+  const t = textesCourants(TEXTES_FORMATION);
   if (session.statut === 'Ouverte') {
-    return 'Session complète.';
+    return t.complete;
   }
-  return LIBELLES_STATUT[session.statut] ?? 'Session indisponible.';
+  return t.raisons[session.statut] ?? t.indisponible;
 }
-
-const LIBELLES_STATUT: Record<string, string> = {
-  Planifiee: 'Inscriptions pas encore ouvertes.',
-  Terminee: 'Session terminée.',
-  Annulee: 'Session annulée.',
-};
 
 /**
  * Met en forme le nom d'un formateur pour l'affichage.
@@ -61,17 +58,12 @@ export function formaterDuree(heures: number): string {
  * l'affichage seulement, que les deux faits se combinent.
  */
 export function libelleEtatSession(session: SessionFormation): string {
+  const t = textesCourants(TEXTES_FORMATION);
   if (session.statut === 'Ouverte') {
-    return session.places_restantes > 0 ? 'Inscriptions ouvertes' : 'Complète';
+    return session.places_restantes > 0 ? t.inscriptionsOuvertes : t.completeCourt;
   }
-  return ETATS[session.statut] ?? 'Indisponible';
+  return t.etats[session.statut] ?? t.indisponibleCourt;
 }
-
-const ETATS: Record<string, string> = {
-  Planifiee: 'Bientôt ouverte',
-  Terminee: 'Terminée',
-  Annulee: 'Annulée',
-};
 
 /** Variante visuelle de l'état, choisie par le module — jamais par `Badge`. */
 export function varianteEtatSession(session: SessionFormation): VarianteBadge {
@@ -86,36 +78,11 @@ export function varianteEtatSession(session: SessionFormation): VarianteBadge {
  * faire, et ce qui l'attend.
  */
 export function explicationSession(session: SessionFormation): string {
-  if (estReservable(session)) {
-    return (
-      'Les inscriptions sont ouvertes. Indiquez le nombre de participants ' +
-      'ci-dessous : votre place est retenue dès l’envoi de la demande, et ' +
-      'apparaît aussitôt dans « Mes réservations ».'
-    );
-  }
-  if (session.statut === 'Ouverte') {
-    return (
-      'Toutes les places de cette session sont prises. Une place peut se ' +
-      'libérer en cas d’annulation : revenez consulter cette page, ou ' +
-      'choisissez une autre session.'
-    );
-  }
-  return (
-    EXPLICATIONS[session.statut] ?? 'Cette session n’est pas disponible pour le moment.'
-  );
+  const t = textesCourants(TEXTES_FORMATION);
+  if (estReservable(session)) return t.explicationOuverte;
+  if (session.statut === 'Ouverte') return t.explicationComplete;
+  return t.explications[session.statut] ?? t.explicationIndisponible;
 }
-
-const EXPLICATIONS: Record<string, string> = {
-  Planifiee:
-    'Cette session est programmée, mais ses inscriptions ne sont pas encore ' +
-    'ouvertes. Revenez prochainement pour réserver votre place.',
-  Terminee:
-    'Cette session a eu lieu. Si vous y avez participé, vous pouvez déposer ' +
-    'un avis depuis « Mes réservations ».',
-  Annulee:
-    'Cette session a été annulée et n’accepte plus d’inscription. Les places ' +
-    'déjà réservées ont été libérées.',
-};
 
 /** Nombre de sessions encore réservables, pour la présentation de la fiche. */
 export function nombreSessionsReservables(sessions: SessionFormation[]): number {
