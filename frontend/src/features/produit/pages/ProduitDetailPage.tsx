@@ -7,6 +7,7 @@ import Badge from '@/components/ui/Badge';
 import BoutonRetour from '@/components/ui/BoutonRetour';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
 import { formaterMontant } from '@/features/commande/commande.service';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import GaleriePhotos from '@/features/galerie/components/GaleriePhotos';
 import { useGalerie } from '@/features/galerie/galerie.hooks';
 import { imageProduit } from '@/lib/images';
@@ -74,6 +75,7 @@ function Fiche({
   produit: Produit;
   categorie: string | undefined;
 }) {
+  const prix = useFormaterPrix();
   const disponible = estDisponible(produit);
   const galerie = useGalerie({ produit: produit.id_produit });
 
@@ -97,7 +99,9 @@ function Fiche({
           </div>
         </div>
 
-        <p className="text-2xl font-bold text-primaire">{formaterPrix(produit)}</p>
+        <p className="text-2xl font-bold text-primaire">
+          {formaterPrix(produit, prix)}
+        </p>
 
         {/* Le module choisit ses libellés et ses variantes : la pastille ne
             connaît ni le stock ni la livraison. */}

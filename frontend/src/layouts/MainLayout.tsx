@@ -26,6 +26,7 @@ import LogoDelta from '@/components/ui/LogoDelta';
 import BulleAssistant from '@/features/assistant/components/BulleAssistant';
 import { useDeconnexion } from '@/features/auth/auth.hooks';
 import { usePanier } from '@/features/commande/commande.hooks';
+import SelecteurDevise from '@/features/devise/components/SelecteurDevise';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
 import BoutonTheme from './BoutonTheme';
@@ -127,6 +128,9 @@ export default function MainLayout() {
           </nav>
 
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* Sur mobile, la devise se choisit dans le menu : la barre est
+                trop étroite pour un sélecteur de plus. */}
+            <SelecteurDevise className="hidden sm:inline-flex" />
             <BoutonTheme />
             <NavLink
               to="/panier"
@@ -186,6 +190,10 @@ export default function MainLayout() {
               </NavLink>
             ))}
             <div className="my-2 border-t border-gris-200" />
+            <div className="flex items-center justify-between px-3 py-2">
+              <span className="text-base font-medium text-gris-700">Devise</span>
+              <SelecteurDevise />
+            </div>
             {connecte ? (
               <button
                 type="button"

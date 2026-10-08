@@ -9,7 +9,10 @@
 import { Link } from 'react-router';
 import { Lock, PackageCheck, Store } from 'lucide-react';
 
-import { formaterMontant, supplementLigne } from '../commande.service';
+import ChoixDevise from '@/features/devise/components/ChoixDevise';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
+
+import { supplementLigne } from '../commande.service';
 import type { LignePanier } from '../commande.types';
 import RecapitulatifMontants from './RecapitulatifMontants';
 import VignetteProduit from './VignetteProduit';
@@ -29,6 +32,7 @@ export default function ResumeCommande({
   idFormulaire,
   envoi,
 }: Proprietes) {
+  const prix = useFormaterPrix();
   return (
     <aside
       aria-labelledby="titre-votre-commande"
@@ -66,7 +70,7 @@ export default function ResumeCommande({
                   : `${ligne.nom} × ${ligne.quantite}`}
               </span>
               <span className="block text-xs text-gris-500">
-                {formaterMontant(ligne.prix_unitaire)} / {ligne.unite_mesure}
+                {prix(ligne.prix_unitaire)} / {ligne.unite_mesure}
               </span>
               {ligne.personnalisation !== undefined && (
                 <span className="mt-0.5 block text-xs font-medium text-attente">
@@ -75,7 +79,7 @@ export default function ResumeCommande({
               )}
             </span>
             <span className="whitespace-nowrap text-sm font-semibold text-gris-700">
-              {formaterMontant(
+              {prix(
                 Number(ligne.prix_unitaire) * ligne.quantite + supplementLigne(ligne)
               )}
             </span>
@@ -85,6 +89,10 @@ export default function ResumeCommande({
 
       <div className="mt-4">
         <RecapitulatifMontants sousTotal={sousTotal} avecLivraison={avecLivraison} />
+      </div>
+
+      <div className="mt-5">
+        <ChoixDevise />
       </div>
 
       <button

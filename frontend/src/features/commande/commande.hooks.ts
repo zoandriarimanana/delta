@@ -4,6 +4,9 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
+import type { Devise } from '@/features/devise/devise.types';
+import type { Produit } from '@/features/produit/produit.types';
+
 import {
   creerCommande,
   creerCommandeInvite,
@@ -35,7 +38,6 @@ import type {
   PersonnalisationPanier,
   TypeCommande,
 } from './commande.types';
-import type { Produit } from '@/features/produit/produit.types';
 
 const MESSAGE_ERREUR_PAR_DEFAUT =
   'La commande n’a pas pu être enregistrée. Réessayez dans un instant.';
@@ -114,7 +116,8 @@ export interface ValidationCommande {
   valider: (
     type: TypeCommande,
     invite?: { nom_invite: string; contact_invite: string },
-    adresseLivraison?: string
+    adresseLivraison?: string,
+    devise?: Devise
   ) => Promise<Commande | null>;
   envoi: boolean;
   erreur: string | null;
@@ -138,7 +141,8 @@ export function useValidationCommande(): ValidationCommande {
     async (
       type: TypeCommande,
       invite?: { nom_invite: string; contact_invite: string },
-      adresseLivraison?: string
+      adresseLivraison?: string,
+      devise?: Devise
     ): Promise<Commande | null> => {
       setEnvoi(true);
       setErreur(null);
@@ -149,15 +153,23 @@ export function useValidationCommande(): ValidationCommande {
         adresseLivraison !== undefined && adresseLivraison.trim() !== ''
           ? { adresse_livraison: adresseLivraison.trim() }
           : {};
+      // L'Ariary est la valeur par défaut du serveur : inutile de l'envoyer.
+      const enDevise = devise !== undefined && devise !== 'MGA' ? { devise } : {};
 
       try {
         const commande =
           invite === undefined
-            ? await creerCommande({ type_commande: type, lignes, ...adresse })
+            ? await creerCommande({
+                type_commande: type,
+                lignes,
+                ...adresse,
+                ...enDevise,
+              })
             : await creerCommandeInvite({
                 type_commande: type,
                 lignes,
                 ...adresse,
+                ...enDevise,
                 ...invite,
               });
         panier.vider();

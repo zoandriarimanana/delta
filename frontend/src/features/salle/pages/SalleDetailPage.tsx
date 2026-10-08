@@ -11,6 +11,7 @@ import { useParams } from 'react-router';
 import Badge from '@/components/ui/Badge';
 import BoutonRetour from '@/components/ui/BoutonRetour';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import GaleriePhotos from '@/features/galerie/components/GaleriePhotos';
 import { useGalerie } from '@/features/galerie/galerie.hooks';
 import FormulaireReservationCreneau from '@/features/reservation/components/FormulaireReservationCreneau';
@@ -96,6 +97,7 @@ export default function SalleDetailPage() {
 }
 
 function Presentation({ salle }: { salle: Salle }) {
+  const prix = useFormaterPrix();
   const equipements = listeEquipements(salle);
 
   return (
@@ -110,7 +112,7 @@ function Presentation({ salle }: { salle: Salle }) {
         </div>
       </div>
 
-      <p className="text-2xl font-bold text-primaire">{libelleTarif(salle)}</p>
+      <p className="text-2xl font-bold text-primaire">{libelleTarif(salle, prix)}</p>
 
       {/* Le module choisit ses libellés et ses variantes : la pastille ne
           connaît pas la salle. Aucune pastille « libre » : la disponibilité

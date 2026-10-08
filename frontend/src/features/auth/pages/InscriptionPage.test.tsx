@@ -111,10 +111,36 @@ describe('entreprise', () => {
       expect(inscrireEntreprise).toHaveBeenCalledWith({
         email: 'jean@example.mg',
         mot_de_passe: 'motdepasse123',
-        identite: { raison_sociale: 'Delta SARL', numero_id_fiscal: 'NIF-42' },
+        identite: {
+          raison_sociale: 'Delta SARL',
+          numero_id_fiscal: 'NIF-42',
+          pays: 'MG',
+        },
       })
     );
     expect(inscrireParticulier).not.toHaveBeenCalled();
+  });
+
+  it('transmet le pays choisi pour une société étrangère', async () => {
+    afficher();
+    await userEvent.click(screen.getByLabelText(/entreprise/i));
+    await remplirCompte();
+    await userEvent.type(screen.getByLabelText(/raison sociale/i), 'Pâtisserie Lyon');
+    await userEvent.type(
+      screen.getByLabelText(/identification fiscale/i),
+      'FR12345678901'
+    );
+    await userEvent.selectOptions(screen.getByLabelText(/^pays$/i), 'FR');
+
+    await soumettre();
+
+    await waitFor(() =>
+      expect(inscrireEntreprise).toHaveBeenCalledWith(
+        expect.objectContaining({
+          identite: expect.objectContaining({ pays: 'FR' }),
+        })
+      )
+    );
   });
 });
 

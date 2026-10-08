@@ -15,7 +15,7 @@
 
 import { PackageCheck, Store, Truck } from 'lucide-react';
 
-import { formaterMontant } from '@/features/commande/commande.service';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import { useTarifLivraison } from '@/features/livraison/livraison.hooks';
 import { fraisLivraison } from '@/features/livraison/livraison.service';
 
@@ -33,6 +33,7 @@ export default function ComparaisonLivraison({
   quantite,
   supplementUnitaire = 0,
 }: Proprietes) {
+  const prix = useFormaterPrix();
   const { tarif } = useTarifLivraison();
   const sousTotal = (Number(produit.prix_unitaire) + supplementUnitaire) * quantite;
   const multiplicateur = produit.vendu_par_personne
@@ -66,9 +67,9 @@ export default function ComparaisonLivraison({
           sousTotal={sousTotal}
           detailQuantite={
             supplementUnitaire > 0
-              ? `${multiplicateur} × (${formaterMontant(produit.prix_unitaire)} + ${formaterMontant(supplementUnitaire)} de personnalisation) + livraison`
+              ? `${multiplicateur} × (${prix(produit.prix_unitaire)} + ${prix(supplementUnitaire)} de personnalisation) + livraison`
               : quantite > 1
-                ? `${multiplicateur} × ${formaterMontant(produit.prix_unitaire)} + livraison`
+                ? `${multiplicateur} × ${prix(produit.prix_unitaire)} + livraison`
                 : null
           }
         />
@@ -86,6 +87,7 @@ function AvecLivraison({
   sousTotal: number;
   detailQuantite: string | null;
 }) {
+  const prix = useFormaterPrix();
   const frais = fraisLivraison(tarif, sousTotal);
   return (
     <>
@@ -97,19 +99,19 @@ function AvecLivraison({
             ? 'Livraison offerte pour cet achat'
             : 'Comptés une seule fois par commande'
         }
-        montant={frais === 0 ? 'Offerte' : formaterMontant(frais)}
+        montant={frais === 0 ? 'Offerte' : prix(frais)}
         miseEnAvant={frais === 0}
       />
       <Ligne
         icone={<PackageCheck size={18} aria-hidden />}
         libelle="Total avec livraison"
         detail={detailQuantite}
-        montant={formaterMontant(sousTotal + frais)}
+        montant={prix(sousTotal + frais)}
       />
       {tarif.seuil_gratuite !== null && frais > 0 && (
         <p className="px-4 py-2 text-xs leading-relaxed text-succes">
-          Livraison offerte dès {formaterMontant(tarif.seuil_gratuite)} d’achat. Le
-          retrait en boutique reste gratuit.
+          Livraison offerte dès {prix(tarif.seuil_gratuite)} d’achat. Le retrait en
+          boutique reste gratuit.
         </p>
       )}
     </>

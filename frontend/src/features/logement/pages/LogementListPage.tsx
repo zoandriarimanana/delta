@@ -10,16 +10,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 
-import Carte from '@/components/ui/Carte';
 import Badge from '@/components/ui/Badge';
+import Carte from '@/components/ui/Carte';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import { imagePour } from '@/lib/images';
 
 import { libelleStatut, varianteStatut } from '../logement.service';
-import { formaterMontant } from '@/features/commande/commande.service';
-
 import { useLogements } from '../logement.hooks';
 
 export default function LogementListPage() {
+  const prix = useFormaterPrix();
   const [capacite, setCapacite] = useState<number | null>(null);
   const { donnees, chargement, erreur } = useLogements('Disponible', capacite);
 
@@ -96,7 +96,7 @@ export default function LogementListPage() {
               pied={
                 <div className="flex items-center justify-between">
                   <span className="text-lg font-semibold text-primaire">
-                    {formaterMontant(logement.tarif_nuitee)} / nuit
+                    {prix(logement.tarif_nuitee)} / nuit
                   </span>
                   {/* Le libellé et la variante viennent du module : la
                       pastille ne sait rien des logements. */}

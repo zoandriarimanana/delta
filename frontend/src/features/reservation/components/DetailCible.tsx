@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { formaterMontant } from '@/features/commande/commande.service';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import {
   recupererFormation,
   recupererSession,
@@ -47,6 +47,7 @@ export default function DetailCible({ reservation }: { reservation: Reservation 
 }
 
 function DetailSalle({ idSalle }: { idSalle: number }) {
+  const prix = useFormaterPrix();
   const [salle, setSalle] = useState<Salle | null>(null);
 
   useEffect(() => {
@@ -73,7 +74,7 @@ function DetailSalle({ idSalle }: { idSalle: number }) {
       </div>
       <div>
         <dt className="text-sm text-gris-500">Tarif</dt>
-        <dd className="text-gris-700">{libelleTarif(salle)}</dd>
+        <dd className="text-gris-700">{libelleTarif(salle, prix)}</dd>
       </div>
       {salle.equipements !== null && (
         <div>
@@ -86,6 +87,7 @@ function DetailSalle({ idSalle }: { idSalle: number }) {
 }
 
 function DetailLogement({ idLogement }: { idLogement: number }) {
+  const prix = useFormaterPrix();
   const [logement, setLogement] = useState<Logement | null>(null);
 
   useEffect(() => {
@@ -112,9 +114,7 @@ function DetailLogement({ idLogement }: { idLogement: number }) {
       </div>
       <div>
         <dt className="text-sm text-gris-500">Tarif</dt>
-        <dd className="text-gris-700">
-          {formaterMontant(logement.tarif_nuitee)} / nuitée
-        </dd>
+        <dd className="text-gris-700">{prix(logement.tarif_nuitee)} / nuitée</dd>
       </div>
       <div>
         <dt className="text-sm text-gris-500">État du bien</dt>
@@ -125,6 +125,7 @@ function DetailLogement({ idLogement }: { idLogement: number }) {
 }
 
 function DetailFormation({ idSession }: { idSession: number }) {
+  const prix = useFormaterPrix();
   const [formation, setFormation] = useState<Formation | null>(null);
 
   useEffect(() => {
@@ -167,7 +168,7 @@ function DetailFormation({ idSession }: { idSession: number }) {
       </div>
       <div>
         <dt className="text-sm text-gris-500">Prix</dt>
-        <dd className="text-gris-700">{formaterMontant(formation.prix)}</dd>
+        <dd className="text-gris-700">{prix(formation.prix)}</dd>
       </div>
     </dl>
   );

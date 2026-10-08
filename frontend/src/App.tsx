@@ -20,25 +20,26 @@ import HistoriqueCommandesPage from '@/features/commande/pages/HistoriqueCommand
 import PanierPage from '@/features/commande/pages/PanierPage';
 import PriseDeCommandePage from '@/features/commande/pages/PriseDeCommandePage';
 import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
+import TauxChangePage from '@/features/devise/pages/TauxChangePage';
 import AdministrationDomainesPage from '@/features/formation/pages/AdministrationDomainesPage';
-import DomaineDetailAdministrationPage from '@/features/formation/pages/DomaineDetailAdministrationPage';
 import AdministrationFormationsPage from '@/features/formation/pages/AdministrationFormationsPage';
-import TarifLivraisonPage from '@/features/livraison/pages/TarifLivraisonPage';
+import DomaineDetailAdministrationPage from '@/features/formation/pages/DomaineDetailAdministrationPage';
 import FormationDetailAdministrationPage from '@/features/formation/pages/FormationDetailAdministrationPage';
 import FormationDetailPage from '@/features/formation/pages/FormationDetailPage';
 import FormationListPage from '@/features/formation/pages/FormationListPage';
+import TarifLivraisonPage from '@/features/livraison/pages/TarifLivraisonPage';
 import AdministrationLogementsPage from '@/features/logement/pages/AdministrationLogementsPage';
 import LogementDetailAdministrationPage from '@/features/logement/pages/LogementDetailAdministrationPage';
 import LogementDetailPage from '@/features/logement/pages/LogementDetailPage';
 import LogementListPage from '@/features/logement/pages/LogementListPage';
-import AdministrationCategoriesPage from '@/features/produit/pages/AdministrationCategoriesPage';
-import CategorieDetailAdministrationPage from '@/features/produit/pages/CategorieDetailAdministrationPage';
-import ProduitDetailAdministrationPage from '@/features/produit/pages/ProduitDetailAdministrationPage';
-import AdministrationProduitsPage from '@/features/produit/pages/AdministrationProduitsPage';
-import ProduitDetailPage from '@/features/produit/pages/ProduitDetailPage';
-import ProduitListPage from '@/features/produit/pages/ProduitListPage';
 import AdministrationPersonnelPage from '@/features/personnel/pages/AdministrationPersonnelPage';
 import PersonnelDetailAdministrationPage from '@/features/personnel/pages/PersonnelDetailAdministrationPage';
+import AdministrationCategoriesPage from '@/features/produit/pages/AdministrationCategoriesPage';
+import AdministrationProduitsPage from '@/features/produit/pages/AdministrationProduitsPage';
+import CategorieDetailAdministrationPage from '@/features/produit/pages/CategorieDetailAdministrationPage';
+import ProduitDetailAdministrationPage from '@/features/produit/pages/ProduitDetailAdministrationPage';
+import ProduitDetailPage from '@/features/produit/pages/ProduitDetailPage';
+import ProduitListPage from '@/features/produit/pages/ProduitListPage';
 import AdministrationReservationsPage from '@/features/reservation/pages/AdministrationReservationsPage';
 import MesReservationsPage from '@/features/reservation/pages/MesReservationsPage';
 import ReservationDetailAdministrationPage from '@/features/reservation/pages/ReservationDetailAdministrationPage';
@@ -174,6 +175,7 @@ export default function App() {
           />
           <Route path="formations" element={<AdministrationFormationsPage />} />
           <Route path="tarif-livraison" element={<TarifLivraisonPage />} />
+          <Route path="taux-change" element={<TauxChangePage />} />
           <Route
             path="formations/:idFormation"
             element={<FormationDetailAdministrationPage />}

@@ -2,10 +2,11 @@
 
 import { Link } from 'react-router';
 
-import { usePanier } from '@/features/commande/commande.hooks';
 import Badge from '@/components/ui/Badge';
 import Bouton from '@/components/ui/Bouton';
 import Carte from '@/components/ui/Carte';
+import { usePanier } from '@/features/commande/commande.hooks';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import { imageProduit } from '@/lib/images';
 
 import { estDisponible, formaterPrix } from '../produit.service';
@@ -16,6 +17,7 @@ interface Proprietes {
 }
 
 export default function ProduitCarte({ produit }: Proprietes) {
+  const prix = useFormaterPrix();
   const disponible = estDisponible(produit);
   const panier = usePanier();
 
@@ -28,7 +30,7 @@ export default function ProduitCarte({ produit }: Proprietes) {
         pied={
           <div className="flex items-center justify-between">
             <span className="text-lg font-semibold text-primaire">
-              {formaterPrix(produit)}
+              {formaterPrix(produit, prix)}
             </span>
             {/* Le module choisit **son** libellé et **sa** variante : la
                 pastille ne connaît ni le stock ni le produit. */}

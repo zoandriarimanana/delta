@@ -29,6 +29,7 @@ const PARTICULIER_VIDE: IdentiteParticulier = { nom: '', prenom: '' };
 const ENTREPRISE_VIDE: IdentiteEntreprise = {
   raison_sociale: '',
   numero_id_fiscal: '',
+  pays: 'MG',
 };
 
 /** Message porté jusqu'à l'écran de connexion par l'état de navigation. */

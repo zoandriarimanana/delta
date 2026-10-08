@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import Badge from '@/components/ui/Badge';
+import { montantAPayer } from '@/features/devise/devise.service';
 
 import {
   formaterMontant,
@@ -162,6 +163,11 @@ export default function LigneCommandeAdministration({
 
       <td className="whitespace-nowrap px-2.5 py-3 text-right font-semibold text-gris-700">
         {formaterMontant(commande.montant_total)}
+        {commande.devise !== undefined && commande.devise !== 'MGA' && (
+          <span className="block text-xs font-medium text-primaire">
+            payée en {montantAPayer(commande)}
+          </span>
+        )}
       </td>
 
       <td className="px-2.5 py-3">

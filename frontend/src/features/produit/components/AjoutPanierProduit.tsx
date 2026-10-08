@@ -13,15 +13,15 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { Check, Minus, Plus, ShoppingCart, Sparkles } from 'lucide-react';
 
-import ChampsPersonnalisation from '@/features/commande/components/ChampsPersonnalisation';
 import { usePanier } from '@/features/commande/commande.hooks';
 import {
   descriptionDemande,
-  formaterMontant,
   PERSONNALISATION_VIDE,
   PERSONNES_MAX,
 } from '@/features/commande/commande.service';
 import type { PersonnalisationPanier } from '@/features/commande/commande.types';
+import ChampsPersonnalisation from '@/features/commande/components/ChampsPersonnalisation';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 
 import { quantiteMinimale } from '../produit.service';
 import type { Produit } from '../produit.types';
@@ -35,6 +35,7 @@ const CLASSES_PAS =
   'flex h-11 w-11 items-center justify-center text-gris-600 transition-colors hover:bg-gris-100 disabled:cursor-not-allowed disabled:opacity-40';
 
 export default function AjoutPanierProduit({ produit }: Proprietes) {
+  const prix = useFormaterPrix();
   const panier = usePanier();
   const minimum = quantiteMinimale(produit);
   const [quantite, setQuantite] = useState(minimum);
@@ -69,7 +70,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
               Personnaliser ce produit
               {produit.supplement_personnalisation !== null && (
                 <span className="font-normal text-gris-500">
-                  (+{formaterMontant(produit.supplement_personnalisation)} /{' '}
+                  (+{prix(produit.supplement_personnalisation)} /{' '}
                   {parPersonne ? 'personne' : 'unité'})
                 </span>
               )}

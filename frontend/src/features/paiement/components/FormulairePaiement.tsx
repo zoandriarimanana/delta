@@ -8,6 +8,13 @@
  * commandes monte ce composant sans rien savoir de son implémentation, même
  * mécanique que `FormulaireAvis`.
  *
+ * **Ouverture internationale** : deux choix, et non plus deux listes
+ * indépendantes qui laissaient composer « Carte » + « MVola ». La carte
+ * bancaire internationale (Visa, Mastercard, American Express) passe par
+ * Stripe ; le mobile money par un opérateur malgache, et **seulement en
+ * Ariary** — le serveur le refuse en 422 pour une commande en devise, le
+ * choix est donc désactivé ici plutôt que découvert après coup.
+ *
  * Le bouton « Simuler la confirmation » est masqué hors
  * `VITE_ENVIRONMENT=developpement` — **confort d'affichage seulement** : un
  * clic hors développement échouerait de toute façon en 404, identique à un
@@ -19,7 +26,9 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { CreditCard, Smartphone } from 'lucide-react';
 
+import type { Devise } from '@/features/devise/devise.types';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
 import { usePaiement } from '../paiement.hooks';
@@ -27,6 +36,10 @@ import type { FournisseurPaiement, MethodePaiement } from '../paiement.types';
 
 interface Proprietes {
   idCommande: number;
+  /** Devise de la commande : hors Ariary, seule la carte est possible. */
+  devise?: Devise;
+  /** Montant à payer, déjà mis en forme dans la devise de la commande. */
+  montant?: string;
   /**
    * Appelé une fois le paiement confirmé `Reussi` — permet à l'historique de
    * recharger ses commandes pour refléter `COMMANDE.statut` (`Confirmee`),
@@ -35,13 +48,8 @@ interface Proprietes {
   onConfirme?: () => void;
 }
 
-const METHODES: MethodePaiement[] = ['Carte', 'Mobile_money'];
-const FOURNISSEURS: FournisseurPaiement[] = [
-  'Mvola',
-  'Orange_money',
-  'Airtel_money',
-  'Stripe',
-];
+/** Opérateurs mobile money — la carte, elle, passe toujours par Stripe. */
+const OPERATEURS: FournisseurPaiement[] = ['Mvola', 'Orange_money', 'Airtel_money'];
 
 /** Nom commercial de chaque fournisseur — la valeur du domaine reste technique. */
 const NOMS_FOURNISSEURS: Record<FournisseurPaiement, string> = {
@@ -63,11 +71,21 @@ function simulationActive(): boolean {
   return import.meta.env.VITE_ENVIRONMENT === 'developpement';
 }
 
-export default function FormulairePaiement({ idCommande, onConfirme }: Proprietes) {
+export default function FormulairePaiement({
+  idCommande,
+  devise = 'MGA',
+  montant,
+  onConfirme,
+}: Proprietes) {
   const connecte = useEstConnecte();
   const { paiement, envoi, erreur, initier, simuler } = usePaiement();
-  const [methode, setMethode] = useState<MethodePaiement>('Mobile_money');
-  const [fournisseur, setFournisseur] = useState<FournisseurPaiement>('Mvola');
+  const enAriary = devise === 'MGA';
+  const [methode, setMethode] = useState<MethodePaiement>(
+    enAriary ? 'Mobile_money' : 'Carte'
+  );
+  const [operateur, setOperateur] = useState<FournisseurPaiement>('Mvola');
+  const fournisseur: FournisseurPaiement = methode === 'Carte' ? 'Stripe' : operateur;
+
   // `onConfirme` déclenche un rechargement chez l'appelant (l'historique) —
   // un effet de bord qui ne doit pas s'exécuter pendant le rendu de ce
   // composant, d'où le `useEffect`. `idDejaNotifie` évite de le rappeler à
@@ -99,45 +117,64 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
   if (paiement === null) {
     return (
       <form
-        className="mt-2 space-y-2 rounded border border-gris-200 bg-surface p-3"
+        className="mt-3 space-y-3 rounded-xl border border-gris-200 bg-surface p-4"
         onSubmit={(evenement) => {
           evenement.preventDefault();
           void initier(idCommande, { methode, fournisseur });
         }}
       >
-        <label className="flex items-center gap-2 text-sm text-gris-700">
-          Méthode
-          <select
-            value={methode}
-            onChange={(evenement) =>
-              setMethode(evenement.target.value as MethodePaiement)
-            }
-            className="rounded border border-gris-300 px-2 py-1"
-          >
-            {METHODES.map((valeur) => (
-              <option key={valeur} value={valeur}>
-                {valeur === 'Carte' ? 'Carte bancaire' : 'Mobile money'}
-              </option>
-            ))}
-          </select>
-        </label>
+        {montant !== undefined && (
+          <p className="text-sm text-gris-600">
+            Montant à payer :{' '}
+            <span className="font-semibold text-gris-700">{montant}</span>
+          </p>
+        )}
 
-        <label className="flex items-center gap-2 text-sm text-gris-700">
-          Fournisseur
-          <select
-            value={fournisseur}
-            onChange={(evenement) =>
-              setFournisseur(evenement.target.value as FournisseurPaiement)
-            }
-            className="rounded border border-gris-300 px-2 py-1"
-          >
-            {FOURNISSEURS.map((valeur) => (
-              <option key={valeur} value={valeur}>
-                {NOMS_FOURNISSEURS[valeur]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <fieldset>
+          <legend className="text-sm font-medium text-gris-700">
+            Moyen de paiement
+          </legend>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <ChoixMethode
+              actif={methode === 'Carte'}
+              surChoix={() => setMethode('Carte')}
+              icone={CreditCard}
+              titre="Carte bancaire internationale"
+              detail="Visa, Mastercard, American Express"
+            />
+            <ChoixMethode
+              actif={methode === 'Mobile_money'}
+              surChoix={() => setMethode('Mobile_money')}
+              icone={Smartphone}
+              titre="Mobile money"
+              detail={
+                enAriary
+                  ? 'MVola, Orange Money, Airtel Money'
+                  : 'Disponible uniquement en Ariary'
+              }
+              desactive={!enAriary}
+            />
+          </div>
+        </fieldset>
+
+        {methode === 'Mobile_money' && (
+          <label className="flex items-center gap-2 text-sm text-gris-700">
+            Opérateur
+            <select
+              value={operateur}
+              onChange={(evenement) =>
+                setOperateur(evenement.target.value as FournisseurPaiement)
+              }
+              className="rounded-lg border border-gris-300 bg-surface px-2 py-1.5"
+            >
+              {OPERATEURS.map((valeur) => (
+                <option key={valeur} value={valeur}>
+                  {NOMS_FOURNISSEURS[valeur]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         {erreur !== null && (
           // Repris tel quel : « cette commande est annulée » ou « cette
@@ -145,7 +182,7 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
           // traitement que `FormulaireAvis`.
           <p
             role="alert"
-            className="rounded border border-danger/30 bg-danger/10 p-2 text-sm text-danger"
+            className="rounded-lg border border-danger/30 bg-danger/10 p-2 text-sm text-danger"
           >
             {erreur}
           </p>
@@ -154,7 +191,7 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
         <button
           type="submit"
           disabled={envoi}
-          className="rounded bg-action px-3 py-1.5 text-sm text-white disabled:opacity-50"
+          className="rounded-full bg-action px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-action-fonce disabled:opacity-50"
         >
           {envoi ? 'Envoi…' : 'Payer cette commande'}
         </button>
@@ -196,5 +233,51 @@ export default function FormulairePaiement({ idCommande, onConfirme }: Propriete
         </p>
       )}
     </div>
+  );
+}
+
+function ChoixMethode({
+  actif,
+  surChoix,
+  icone: Icone,
+  titre,
+  detail,
+  desactive = false,
+}: {
+  actif: boolean;
+  surChoix: () => void;
+  icone: typeof CreditCard;
+  titre: string;
+  detail: string;
+  desactive?: boolean;
+}) {
+  return (
+    <label
+      className={`flex items-start gap-3 rounded-lg border-2 p-3 transition-colors ${
+        desactive
+          ? 'cursor-not-allowed border-gris-200 opacity-60'
+          : actif
+            ? 'cursor-pointer border-primaire bg-primaire/5'
+            : 'cursor-pointer border-gris-200 hover:border-gris-300'
+      }`}
+    >
+      <input
+        type="radio"
+        name="methode-paiement"
+        checked={actif}
+        disabled={desactive}
+        onChange={surChoix}
+        className="sr-only"
+      />
+      <Icone
+        size={20}
+        aria-hidden
+        className={actif ? 'mt-0.5 text-primaire' : 'mt-0.5 text-gris-500'}
+      />
+      <span>
+        <span className="block text-sm font-semibold text-gris-700">{titre}</span>
+        <span className="block text-xs text-gris-500">{detail}</span>
+      </span>
+    </label>
   );
 }

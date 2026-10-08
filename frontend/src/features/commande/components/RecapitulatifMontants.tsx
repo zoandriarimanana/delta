@@ -5,13 +5,12 @@
  * frais à la commande, et c'est son montant qui est enregistré.
  */
 
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import { useTarifLivraison } from '@/features/livraison/livraison.hooks';
 import {
   fraisLivraison,
   resteAvantGratuite,
 } from '@/features/livraison/livraison.service';
-
-import { formaterMontant } from '../commande.service';
 
 interface Proprietes {
   sousTotal: number;
@@ -22,6 +21,7 @@ export default function RecapitulatifMontants({
   sousTotal,
   avecLivraison,
 }: Proprietes) {
+  const prix = useFormaterPrix();
   const { tarif } = useTarifLivraison();
   const frais = avecLivraison && tarif !== null ? fraisLivraison(tarif, sousTotal) : 0;
   const reste =
@@ -31,7 +31,7 @@ export default function RecapitulatifMontants({
     <dl className="space-y-1 rounded-xl border border-gris-200 bg-surface p-4 text-sm">
       <div className="flex justify-between">
         <dt className="text-gris-500">Produits</dt>
-        <dd className="text-gris-700">{formaterMontant(sousTotal)}</dd>
+        <dd className="text-gris-700">{prix(sousTotal)}</dd>
       </div>
       <div className="flex justify-between">
         <dt className="text-gris-500">Livraison</dt>
@@ -42,17 +42,17 @@ export default function RecapitulatifMontants({
               ? 'Calculée à la commande'
               : frais === 0
                 ? 'Offerte'
-                : formaterMontant(frais)}
+                : prix(frais)}
         </dd>
       </div>
       {reste !== null && frais > 0 && (
         <p className="text-xs text-succes">
-          Plus que {formaterMontant(reste)} d’achat pour une livraison offerte.
+          Plus que {prix(reste)} d’achat pour une livraison offerte.
         </p>
       )}
       <div className="flex justify-between border-t border-gris-200 pt-2 text-base font-semibold text-gris-700">
         <dt>Total</dt>
-        <dd>{formaterMontant(sousTotal + frais)}</dd>
+        <dd>{prix(sousTotal + frais)}</dd>
       </div>
     </dl>
   );

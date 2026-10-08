@@ -5,7 +5,9 @@
 import { Link } from 'react-router';
 import { Trash2 } from 'lucide-react';
 
-import { formaterMontant, supplementLigne } from '../commande.service';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
+
+import { supplementLigne } from '../commande.service';
 import type { LignePanier, PersonnalisationPanier } from '../commande.types';
 import ChampQuantite from './ChampQuantite';
 import PersonnalisationPanierBloc from './PersonnalisationPanierBloc';
@@ -24,6 +26,7 @@ export default function LignePanierCarte({
   surRetrait,
   surPersonnalisation,
 }: Proprietes) {
+  const prix = useFormaterPrix();
   const { personnalisation } = ligne;
   // À la personne, le stock compte des gâteaux, pas des personnes.
   const auMaximum =
@@ -48,7 +51,7 @@ export default function LignePanierCarte({
             {ligne.nom}
           </Link>
           <p className="mt-1 text-sm text-gris-500">
-            {formaterMontant(ligne.prix_unitaire)} / {ligne.unite_mesure}
+            {prix(ligne.prix_unitaire)} / {ligne.unite_mesure}
           </p>
           <div className="mt-3 flex items-center gap-4">
             <ChampQuantite ligne={ligne} onChangement={surQuantite} />
@@ -79,9 +82,7 @@ export default function LignePanierCarte({
         </div>
 
         <p className="whitespace-nowrap text-lg font-semibold text-gris-700 sm:text-right">
-          {formaterMontant(
-            Number(ligne.prix_unitaire) * ligne.quantite + supplementLigne(ligne)
-          )}
+          {prix(Number(ligne.prix_unitaire) * ligne.quantite + supplementLigne(ligne))}
         </p>
       </div>
     </li>

@@ -79,6 +79,43 @@ describe('client connecté', () => {
     });
   });
 
+  it('en devise, ne propose que la carte bancaire internationale', async () => {
+    vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
+    render(<FormulairePaiement idCommande={42} devise="EUR" montant="5,00 €" />);
+
+    expect(screen.getByText(/5,00 €/)).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /mobile money/i })).toHaveProperty(
+      'disabled',
+      true
+    );
+    await userEvent.click(
+      screen.getByRole('button', { name: /payer cette commande/i })
+    );
+
+    expect(initierPaiement).toHaveBeenCalledWith(42, {
+      methode: 'Carte',
+      fournisseur: 'Stripe',
+    });
+  });
+
+  it('associe toujours la carte à Stripe, jamais à un opérateur mobile', async () => {
+    vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
+    render(<FormulairePaiement idCommande={42} />);
+
+    await userEvent.click(
+      screen.getByRole('radio', { name: /carte bancaire internationale/i })
+    );
+    expect(screen.queryByLabelText(/opérateur/i)).toBeNull();
+    await userEvent.click(
+      screen.getByRole('button', { name: /payer cette commande/i })
+    );
+
+    expect(initierPaiement).toHaveBeenCalledWith(42, {
+      methode: 'Carte',
+      fournisseur: 'Stripe',
+    });
+  });
+
   it('affiche le statut En_attente après initiation, sans appeler onConfirme', async () => {
     vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
     const onConfirme = vi.fn();

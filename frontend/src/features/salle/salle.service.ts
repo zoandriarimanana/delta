@@ -12,13 +12,16 @@ import type { Salle } from './salle.types';
  * représentable ; s'il se présentait, il viendrait d'une API en désaccord avec
  * son propre schéma, et le libellé neutre vaut mieux qu'une chaîne vide.
  */
-export function libelleTarif(salle: Salle): string {
+export function libelleTarif(
+  salle: Salle,
+  formater: (montant: string) => string = formaterMontant
+): string {
   const parties: string[] = [];
   if (salle.tarif_horaire !== null) {
-    parties.push(`${formaterMontant(salle.tarif_horaire)} / heure`);
+    parties.push(`${formater(salle.tarif_horaire)} / heure`);
   }
   if (salle.tarif_journee !== null) {
-    parties.push(`${formaterMontant(salle.tarif_journee)} / journée`);
+    parties.push(`${formater(salle.tarif_journee)} / journée`);
   }
   return parties.length > 0 ? parties.join(' — ') : 'Tarif non communiqué';
 }

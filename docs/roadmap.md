@@ -1738,10 +1738,17 @@ un commit par étape :
       dessous, une carte internationale refuse la transaction). La passerelle
       reçoit désormais la devise : un vrai fournisseur encaisse dans une
       devise donnée. Backend 1 458/1 458 sur base vierge.
-- [ ] **I.3 — Frontend devise et paiement** : sélecteur de devise dans
+- [x] **I.3 — Frontend devise et paiement** : sélecteur de devise dans
       l'en-tête, prix convertis (indicatifs jusqu'à la validation), total
       figé affiché dans la devise de la commande, libellé « Carte bancaire
       internationale », écran admin des taux, champ pays à l'inscription.
+      — Livré. Le formulaire de paiement ne propose plus deux listes
+      indépendantes (qui permettaient « Carte » + « MVola ») mais deux
+      choix ; le mobile money y est grisé hors Ariary. Pays : codes ISO dans
+      `lib/pays.ts`, noms fournis par `Intl.DisplayNames` (aucune traduction
+      à maintenir). Frontend 796/796 ; parcours vérifié dans un vrai
+      navigateur (fiche en €, tunnel en $, commande figée à 4,44 $ pour
+      20 000 Ar, paiement par carte seule).
 - [ ] **I.4 — Interface client en anglais** : sélecteur FR/EN dans
       l'en-tête, traduction des écrans publics et client (le back-office
       reste en français). Les messages d'erreur renvoyés par l'API restent

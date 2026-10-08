@@ -9,8 +9,9 @@ import { useState } from 'react';
 import { Pencil, Sparkles, X } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 
-import { descriptionDemande, formaterMontant } from '../commande.service';
+import { descriptionDemande } from '../commande.service';
 import type { LignePanier, PersonnalisationPanier } from '../commande.types';
 import ChampsPersonnalisation from './ChampsPersonnalisation';
 
@@ -23,6 +24,7 @@ export default function PersonnalisationPanierBloc({
   ligne,
   surPersonnalisation,
 }: Proprietes) {
+  const prix = useFormaterPrix();
   const [edition, setEdition] = useState(false);
   const [brouillon, setBrouillon] = useState(ligne.personnalisation);
   const supplement = Number(ligne.supplement_personnalisation ?? 0);
@@ -63,7 +65,7 @@ export default function PersonnalisationPanierBloc({
           Personnalisé
           {supplement > 0 && (
             <span className="font-normal text-gris-500">
-              (+{formaterMontant(supplement)} / unité)
+              (+{prix(supplement)} / unité)
             </span>
           )}
         </p>

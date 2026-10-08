@@ -17,13 +17,13 @@ import { useState } from 'react';
 import { ChevronDown, CreditCard, Store, Truck, UtensilsCrossed } from 'lucide-react';
 
 import Badge from '@/components/ui/Badge';
+import { montantAPayer } from '@/features/devise/devise.service';
 import { EncartSuiviCommande } from '@/features/livraison/components/EncartSuivi';
 import FormulairePaiement from '@/features/paiement/components/FormulairePaiement';
 
 import {
   etapeCommande,
   formaterDate,
-  formaterMontant,
   libelleModeReception,
   libelleStatutCommande,
   varianteStatutCommande,
@@ -94,9 +94,7 @@ export default function CarteCommandeClient({
         </div>
 
         <div className="flex flex-row items-center justify-between gap-3 sm:flex-col sm:items-end">
-          <p className="text-2xl font-bold text-primaire">
-            {formaterMontant(commande.montant_total)}
-          </p>
+          <p className="text-2xl font-bold text-primaire">{montantAPayer(commande)}</p>
           <button
             type="button"
             onClick={() => setOuverte((valeur) => !valeur)}
@@ -124,6 +122,8 @@ export default function CarteCommandeClient({
           </p>
           <FormulairePaiement
             idCommande={commande.id_commande}
+            devise={commande.devise}
+            montant={montantAPayer(commande)}
             onConfirme={surPaiementConfirme}
           />
         </div>

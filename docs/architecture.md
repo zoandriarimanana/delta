@@ -526,6 +526,32 @@ l'en-tête public et dans la barre latérale du personnel. Les voiles posés
 sur une photo (`bg-white/85`, dégradés noirs) restent fixes : ils
 dépendent de l'image, pas du thème.
 
+### Devises : afficher en devise, payer au taux figé
+
+Ouverture internationale (8 octobre 2026). Le catalogue est tenu **en
+Ariary**, un prix n'existe qu'une fois. `features/devise/` (module de
+`TAUX_CHANGE`) porte trois choses distinctes :
+
+- **la préférence du visiteur** (`devise.store.ts`, `localStorage`
+  `delta.devise`), choisie dans l'en-tête ou au tunnel — c'est le même
+  magasin, changer l'un change l'autre ;
+- **l'affichage** : `useFormaterPrix()` convertit un montant en Ariary avec
+  les taux publics (`GET /taux-change`, chargés une fois par page), et
+  retombe sur l'Ariary tant qu'ils ne sont pas connus — jamais de prix
+  inventé. Même arrondi que le serveur, pour que l'indication et le montant
+  final coïncident ;
+- **le montant payé**, qui ne vient **jamais** du navigateur : le tunnel
+  n'envoie que la devise choisie, le serveur fixe et fige taux et montant.
+  Une commande passée s'affiche donc dans **sa** devise figée
+  (`montantAPayer`), pas dans la préférence du moment.
+
+Le formulaire de paiement propose deux choix et non deux listes libres :
+carte bancaire internationale (toujours Stripe) ou mobile money (opérateur
+malgache), ce dernier **désactivé hors Ariary** — le serveur le refuse en
+422, l'écran ne le laisse pas découvrir après coup.
+
+L'administration reste en Ariary : elle lit le catalogue tel qu'il est tenu.
+
 ### `src/components/ui/` — l'exception, et son critère
 
 Cette phrase interdisait un `src/components/` fourre-tout, et l'interdiction

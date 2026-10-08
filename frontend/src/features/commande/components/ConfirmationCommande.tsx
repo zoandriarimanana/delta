@@ -8,6 +8,8 @@
 import { Link } from 'react-router';
 import { CheckCircle2, ClipboardList, ShoppingBag } from 'lucide-react';
 
+import { montantAPayer } from '@/features/devise/devise.service';
+
 import { formaterMontant } from '../commande.service';
 import type { Commande } from '../commande.types';
 import EtapesCommande from './EtapesCommande';
@@ -30,7 +32,7 @@ export default function ConfirmationCommande({ commande }: Proprietes) {
         </h1>
         <p className="mt-3 text-gris-600">
           Merci ! Votre commande n° {commande.id_commande} est enregistrée pour un
-          montant de {formaterMontant(commande.montant_total)}
+          montant de {montantAPayer(commande)}
           {frais > 0 && (
             <>, dont {formaterMontant(commande.frais_livraison)} de livraison</>
           )}

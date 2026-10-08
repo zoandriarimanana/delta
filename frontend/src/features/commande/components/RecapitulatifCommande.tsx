@@ -17,10 +17,10 @@ import { Star } from 'lucide-react';
 
 import Badge from '@/components/ui/Badge';
 import FormulaireAvis from '@/features/avis/components/FormulaireAvis';
+import { montantAPayer } from '@/features/devise/devise.service';
 
 import DemandePersonnalisationLue from './DemandePersonnalisationLue';
 import VignetteProduit from './VignetteProduit';
-
 import {
   estTerminee,
   formaterMontant,
@@ -86,6 +86,21 @@ export default function RecapitulatifCommande({
             {formaterMontant(commande.montant_total)}
           </dd>
         </div>
+        {commande.devise !== undefined && commande.devise !== 'MGA' && (
+          // Le client paie dans sa devise, au taux figé à la commande : c'est
+          // ce montant-là qui fait foi pour lui, l'Ariary restant la référence.
+          <div className="flex items-baseline justify-between rounded-lg bg-primaire/5 px-2 py-1.5">
+            <dt className="font-semibold text-gris-700">À payer</dt>
+            <dd className="text-right">
+              <span className="text-lg font-bold text-primaire">
+                {montantAPayer(commande)}
+              </span>
+              <span className="block text-xs text-gris-500">
+                1 {commande.devise} = {formaterMontant(commande.taux_change ?? '1')}
+              </span>
+            </dd>
+          </div>
+        )}
         {afficherStatut && (
           <div className="flex items-center justify-between pt-1">
             <dt className="text-gris-500">Statut</dt>

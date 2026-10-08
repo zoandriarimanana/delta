@@ -6,6 +6,8 @@
  * flottant JSON. Même convention que `produit.types.ts`.
  */
 
+import type { Devise } from '@/features/devise/devise.types';
+
 export type TypeCommande = 'En_ligne' | 'Sur_place' | 'A_emporter';
 
 export type StatutCommande =
@@ -83,6 +85,16 @@ export interface Commande {
    * d'un reversement réel (cf. `docs/mld.md`).
    */
   rembourse_le: string | null;
+  /**
+   * Devise de paiement choisie par le client, taux figé (Ariary par unité)
+   * et montant à payer dans cette devise — tous trois fixés par le serveur à
+   * la commande (ouverture internationale). `montant_total` reste la
+   * référence en Ariary. Facultatifs dans le type : une commande antérieure,
+   * ou une vue qui ne les lit pas, vaut une commande en Ariary.
+   */
+  devise?: Devise;
+  taux_change?: string;
+  montant_total_devise?: string;
 }
 
 /** Ligne envoyée à la création : le serveur fixe le prix, pas le client. */
@@ -100,6 +112,11 @@ export interface CommandeEnvoyee {
    * correspondants. Absente : retrait, aucun frais.
    */
   adresse_livraison?: string;
+  /**
+   * Devise dans laquelle le client paiera. **Seul le choix** est envoyé : le
+   * taux et le montant converti sont fixés par le serveur. Absente : Ariary.
+   */
+  devise?: Devise;
 }
 
 export interface CommandeInviteEnvoyee extends CommandeEnvoyee {

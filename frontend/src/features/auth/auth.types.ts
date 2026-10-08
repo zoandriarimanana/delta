@@ -73,6 +73,8 @@ export interface IdentiteEntreprise {
   numero_id_fiscal: string;
   secteur_activite?: string;
   nom_contact_referent?: string;
+  /** Code ISO 3166-1 alpha-2 (`MG`, `FR`…). `MG` par défaut côté serveur. */
+  pays?: string;
 }
 
 /**

@@ -11,6 +11,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { definirDevise } from '@/features/devise/devise.store';
 import { definirSession, effacerSession } from '@/lib/session.store';
 
 import {
@@ -111,6 +112,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  definirDevise('MGA');
   vi.resetAllMocks();
   localStorage.clear();
   resynchroniserPanier();
@@ -185,6 +187,35 @@ describe('parcours connecté', () => {
 
     expect(await screen.findByText(/commande enregistrée/i)).toBeDefined();
     expect(screen.queryByTestId('reference-publique')).toBeNull();
+  });
+});
+
+describe('devise de paiement', () => {
+  it('n’envoie aucune devise en Ariary, la valeur par défaut du serveur', async () => {
+    definirSession('client');
+    act(remplirLePanier);
+    afficher();
+
+    await userEvent.click(screen.getByRole('button', { name: /valider/i }));
+
+    await screen.findByText(/commande enregistrée/i);
+    expect(vi.mocked(creerCommande).mock.calls[0]?.[0]).not.toHaveProperty('devise');
+  });
+
+  it('envoie la devise choisie, jamais un taux ni un montant converti', async () => {
+    definirSession('client');
+    act(remplirLePanier);
+    afficher();
+
+    await userEvent.click(screen.getByRole('radio', { name: /eur/i }));
+    expect(screen.getByText(/carte bancaire internationale/i)).toBeDefined();
+    await userEvent.click(screen.getByRole('button', { name: /valider/i }));
+
+    await screen.findByText(/commande enregistrée/i);
+    const envoye = vi.mocked(creerCommande).mock.calls[0]?.[0];
+    expect(envoye).toHaveProperty('devise', 'EUR');
+    expect(envoye).not.toHaveProperty('taux_change');
+    expect(envoye).not.toHaveProperty('montant_total_devise');
   });
 });
 

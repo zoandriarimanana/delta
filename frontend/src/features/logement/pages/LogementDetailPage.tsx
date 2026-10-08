@@ -15,7 +15,7 @@ import { useParams } from 'react-router';
 import Badge from '@/components/ui/Badge';
 import BoutonRetour from '@/components/ui/BoutonRetour';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
-import { formaterMontant } from '@/features/commande/commande.service';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import GaleriePhotos from '@/features/galerie/components/GaleriePhotos';
 import { useGalerie } from '@/features/galerie/galerie.hooks';
 import FormulaireReservationCreneau from '@/features/reservation/components/FormulaireReservationCreneau';
@@ -100,6 +100,7 @@ export default function LogementDetailPage() {
 }
 
 function Presentation({ logement }: { logement: Logement }) {
+  const prix = useFormaterPrix();
   const variante = varianteStatut(logement.statut);
   // Le cadre du statut reprend l'intention de la pastille : vert si l'on peut
   // réserver, ambre si le bien revient, rouge s'il est retiré.
@@ -125,7 +126,7 @@ function Presentation({ logement }: { logement: Logement }) {
       </div>
 
       <p className="text-2xl font-bold text-primaire">
-        {formaterMontant(logement.tarif_nuitee)} / nuit
+        {prix(logement.tarif_nuitee)} / nuit
       </p>
 
       <ul aria-label="Statuts du logement" className="flex flex-wrap gap-2">
@@ -162,7 +163,7 @@ function Presentation({ logement }: { logement: Logement }) {
         <div className="flex justify-between gap-4">
           <dt className="text-gris-500">Tarif</dt>
           <dd className="text-right font-medium text-gris-700">
-            {formaterMontant(logement.tarif_nuitee)} par nuit
+            {prix(logement.tarif_nuitee)} par nuit
           </dd>
         </div>
       </dl>

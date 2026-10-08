@@ -12,7 +12,7 @@ import { useParams } from 'react-router';
 import Badge from '@/components/ui/Badge';
 import BoutonRetour from '@/components/ui/BoutonRetour';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
-import { formaterMontant } from '@/features/commande/commande.service';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import GaleriePhotos from '@/features/galerie/components/GaleriePhotos';
 import { useGalerie } from '@/features/galerie/galerie.hooks';
 import { imagePour } from '@/lib/images';
@@ -141,6 +141,7 @@ function Presentation({
   domaine: string | undefined;
   sessions: SessionFormation[] | null;
 }) {
+  const prix = useFormaterPrix();
   const ouvertes = sessions === null ? null : nombreSessionsReservables(sessions);
 
   return (
@@ -159,7 +160,7 @@ function Presentation({
       </div>
 
       <p className="text-2xl font-bold text-primaire">
-        {formaterMontant(formation.prix)}{' '}
+        {prix(formation.prix)}{' '}
         <span className="text-base font-medium text-gris-500">par personne</span>
       </p>
 

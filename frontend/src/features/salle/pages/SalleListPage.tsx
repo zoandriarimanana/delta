@@ -9,11 +9,14 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 
 import Carte from '@/components/ui/Carte';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import { imagePour } from '@/lib/images';
+
 import { useSalles } from '../salle.hooks';
 import { libelleTarif } from '../salle.service';
 
 export default function SalleListPage() {
+  const prix = useFormaterPrix();
   const [capacite, setCapacite] = useState<number | null>(null);
   const { donnees, chargement, erreur } = useSalles(capacite);
 
@@ -89,7 +92,7 @@ export default function SalleListPage() {
               description={`${salle.capacite} personne(s)`}
               pied={
                 <p className="text-lg font-semibold text-primaire">
-                  {libelleTarif(salle)}
+                  {libelleTarif(salle, prix)}
                 </p>
               }
             />

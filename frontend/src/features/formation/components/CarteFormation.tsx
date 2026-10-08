@@ -3,13 +3,14 @@
 import { Link } from 'react-router';
 
 import Carte from '@/components/ui/Carte';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import { imageFormation } from '@/lib/images';
-import { formaterMontant } from '@/features/commande/commande.service';
 
 import { formaterDuree } from '../formation.service';
 import type { Formation } from '../formation.types';
 
 export default function CarteFormation({ formation }: { formation: Formation }) {
+  const prix = useFormaterPrix();
   return (
     <Link to={`/formations/${formation.id_formation}`} className="no-underline">
       <Carte
@@ -19,7 +20,7 @@ export default function CarteFormation({ formation }: { formation: Formation }) 
         pied={
           <div className="flex items-center justify-between">
             <span className="text-lg font-semibold text-primaire">
-              {formaterMontant(formation.prix)}
+              {prix(formation.prix)}
             </span>
             {formation.propose_hebergement && (
               <span className="text-xs bg-succes/15 text-succes px-2 py-1 rounded-full">

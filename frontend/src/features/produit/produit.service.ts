@@ -23,8 +23,16 @@ export type FiltreCategorie = number | typeof TOUTES_CATEGORIES;
  * tel quel plutôt que transformé en `NaN` — mieux vaut afficher une valeur
  * inattendue que masquer une anomalie de données.
  */
-export function formaterPrix(produit: Produit): string {
+export function formaterPrix(
+  produit: Produit,
+  formater?: (montant: string) => string
+): string {
   const unite = uniteDeVente(produit);
+  // Formateur fourni : prix converti dans la devise du visiteur (catalogue
+  // public). Sans lui : Ariary, pour l'administration.
+  if (formater !== undefined) {
+    return `${formater(produit.prix_unitaire)} / ${unite}`;
+  }
   const valeur = Number(produit.prix_unitaire);
   if (Number.isNaN(valeur)) {
     return `${produit.prix_unitaire} ${DEVISE} / ${unite}`;

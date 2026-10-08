@@ -10,10 +10,9 @@
 import { Link } from 'react-router';
 import { ArrowRight, PackageCheck, ShieldCheck, Store } from 'lucide-react';
 
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import { useTarifLivraison } from '@/features/livraison/livraison.hooks';
 import { resteAvantGratuite } from '@/features/livraison/livraison.service';
-
-import { formaterMontant } from '../commande.service';
 
 interface Proprietes {
   nombreArticles: number;
@@ -21,6 +20,7 @@ interface Proprietes {
 }
 
 export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) {
+  const prix = useFormaterPrix();
   const { tarif } = useTarifLivraison();
   const seuil = tarif?.seuil_gratuite == null ? null : Number(tarif.seuil_gratuite);
   const reste = tarif === null ? null : resteAvantGratuite(tarif, sousTotal);
@@ -40,7 +40,7 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
           <dt className="text-gris-500">
             Sous-total ({nombreArticles} article{nombreArticles > 1 ? 's' : ''})
           </dt>
-          <dd className="font-medium text-gris-700">{formaterMontant(sousTotal)}</dd>
+          <dd className="font-medium text-gris-700">{prix(sousTotal)}</dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-gris-500">Livraison</dt>
@@ -49,7 +49,7 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
               ? 'Choisie à l’étape suivante'
               : reste === null && seuil !== null
                 ? 'Offerte'
-                : `${formaterMontant(tarif.forfait)} si livrée`}
+                : `${prix(tarif.forfait)} si livrée`}
           </dd>
         </div>
       </dl>
@@ -59,7 +59,7 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
           <p className="text-xs font-medium text-succes">
             {reste === null
               ? 'Bravo, la livraison vous est offerte !'
-              : `Plus que ${formaterMontant(reste)} pour la livraison offerte`}
+              : `Plus que ${prix(reste)} pour la livraison offerte`}
           </p>
           <div
             role="progressbar"
@@ -79,9 +79,7 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
 
       <div className="mt-5 flex items-baseline justify-between border-t border-gris-200 pt-4">
         <span className="font-semibold text-gris-700">Total estimé</span>
-        <span className="text-2xl font-bold text-primaire">
-          {formaterMontant(sousTotal)}
-        </span>
+        <span className="text-2xl font-bold text-primaire">{prix(sousTotal)}</span>
       </div>
       {/* Indicatif : le serveur recalcule à partir des prix du catalogue. */}
       <p className="mt-1 text-xs text-gris-500">
