@@ -22,7 +22,9 @@ import {
 import { recupererLogements } from '@/features/logement/logement.api';
 import { recupererSalles } from '@/features/salle/salle.api';
 import { imagePour } from '@/lib/images';
+import { textesCourants } from '@/lib/langue';
 
+import { TEXTES_RESERVATION } from './reservation.textes';
 import type { Reservation } from './reservation.types';
 
 export interface CibleResolue {
@@ -75,7 +77,7 @@ export function useCiblesResolues(
       }
       for (const logement of logements) {
         table.set(`Logement:${logement.id_logement}`, {
-          nom: `Chambre ${logement.type_chambre}`,
+          nom: textesCourants(TEXTES_RESERVATION).chambre(logement.type_chambre),
           lien: `/logements/${logement.id_logement}`,
           image: imagePour('logement', logement.id_logement),
         });

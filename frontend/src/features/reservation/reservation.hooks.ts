@@ -17,11 +17,11 @@
 
 import { useCallback, useState } from 'react';
 
+import { textesCourants } from '@/lib/langue';
+
+import { TEXTES_RESERVATION } from './reservation.textes';
 import { creerReservation } from './reservation.api';
 import type { Reservation, ReservationEnvoyee } from './reservation.types';
-
-const MESSAGE_ERREUR_PAR_DEFAUT =
-  'La réservation n’a pas pu être enregistrée. Réessayez dans un instant.';
 
 export interface ValidationReservation {
   reserver: (donnees: ReservationEnvoyee) => Promise<Reservation | null>;
@@ -44,7 +44,7 @@ function messageDErreur(erreur: unknown): string {
     ?.response?.data?.detail;
   return typeof detail === 'string' && detail.length > 0
     ? detail
-    : MESSAGE_ERREUR_PAR_DEFAUT;
+    : textesCourants(TEXTES_RESERVATION).erreurEnregistrement;
 }
 
 /**

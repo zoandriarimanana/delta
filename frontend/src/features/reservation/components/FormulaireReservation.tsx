@@ -10,8 +10,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 
+import { useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import { TEXTES_RESERVATION } from '../reservation.textes';
 import { useValidationReservation } from '../reservation.hooks';
 
 interface Proprietes {
@@ -30,6 +32,7 @@ export default function FormulaireReservation({
   placesRestantes,
   proposeHebergement,
 }: Proprietes) {
+  const t = useTextes(TEXTES_RESERVATION);
   const connecte = useEstConnecte();
   const { reserver, envoi, erreur, reussite } = useValidationReservation();
   const [nombrePersonnes, setNombrePersonnes] = useState(1);
@@ -42,9 +45,9 @@ export default function FormulaireReservation({
     return (
       <p className="mt-3 text-sm text-gris-600">
         <Link to="/connexion" className="text-gris-700 underline">
-          Connectez-vous
+          {t.connectezVous}
         </Link>{' '}
-        pour réserver cette session.
+        {t.pourReserverSession}
       </p>
     );
   }
@@ -52,10 +55,9 @@ export default function FormulaireReservation({
   if (reussite !== null) {
     return (
       <p role="status" className="mt-3 text-sm text-succes">
-        Réservation enregistrée pour {reussite.nombre_personnes} personne(s).
-        Retrouvez-la dans{' '}
+        {t.enregistree(reussite.nombre_personnes)}{' '}
         <Link to="/reservations" className="underline">
-          vos réservations
+          {t.vosReservations}
         </Link>
         .
       </p>
@@ -78,7 +80,7 @@ export default function FormulaireReservation({
       }}
     >
       <label className="flex items-center gap-2 text-sm text-gris-700">
-        Nombre de personnes
+        {t.nombrePersonnes}
         <input
           type="number"
           min={1}
@@ -104,7 +106,7 @@ export default function FormulaireReservation({
             checked={avecHebergement}
             onChange={(evenement) => setAvecHebergement(evenement.target.checked)}
           />
-          Je souhaite être hébergé pendant la formation
+          {t.souhaiteHebergement}
         </label>
       )}
 
@@ -124,7 +126,7 @@ export default function FormulaireReservation({
         disabled={envoi}
         className="rounded bg-action px-4 py-2 text-sm text-white disabled:opacity-50"
       >
-        {envoi ? 'Envoi…' : 'Réserver'}
+        {envoi ? t.envoi : t.reserver}
       </button>
     </form>
   );

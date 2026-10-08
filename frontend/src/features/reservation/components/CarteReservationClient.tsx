@@ -20,7 +20,9 @@ import {
 import Badge from '@/components/ui/Badge';
 import FormulaireAvis from '@/features/avis/components/FormulaireAvis';
 import { formaterDate } from '@/features/commande/commande.service';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_RESERVATION } from '../reservation.textes';
 import type { CibleResolue } from '../reservation.cibles';
 import {
   imageCible,
@@ -45,6 +47,7 @@ export default function CarteReservationClient({
   maintenant,
   surAnnulation,
 }: Proprietes) {
+  const t = useTextes(TEXTES_RESERVATION);
   const [confirmer, setConfirmer] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -98,7 +101,7 @@ export default function CarteReservationClient({
           )}
         </h2>
         <p className="text-xs text-gris-500">
-          Réservation n° {reservation.id_reservation}
+          {t.reservationNumero(reservation.id_reservation)}
         </p>
 
         <ul className="mt-3 space-y-1.5 text-sm text-gris-600">
@@ -109,11 +112,11 @@ export default function CarteReservationClient({
               className="mt-0.5 shrink-0 text-primaire"
             />
             <span>
-              Du{' '}
+              {t.du}{' '}
               <time dateTime={reservation.date_debut}>
                 {formaterDate(reservation.date_debut)}
               </time>{' '}
-              au{' '}
+              {t.au}{' '}
               <time dateTime={reservation.date_fin}>
                 {formaterDate(reservation.date_fin)}
               </time>
@@ -121,7 +124,7 @@ export default function CarteReservationClient({
           </li>
           <li className="flex items-center gap-2">
             <Users size={16} aria-hidden className="shrink-0 text-primaire" />
-            {reservation.nombre_personnes} personne(s)
+            {t.personnes(reservation.nombre_personnes)}
           </li>
           {reservation.avec_hebergement && (
             <li className="flex items-center gap-2">
@@ -129,8 +132,8 @@ export default function CarteReservationClient({
               {/* Le drapeau dit un souhait ; seul le lien prouve qu'une chambre
                   est attribuée (cf. `docs/mld.md`). */}
               {reservation.id_reservation_hebergement !== null
-                ? 'Hébergement attribué pour la durée de la formation'
-                : 'Hébergement demandé — aucune chambre libre pour l’instant'}
+                ? t.hebergementAttribue
+                : t.hebergementDemande}
             </li>
           )}
         </ul>
@@ -149,19 +152,19 @@ export default function CarteReservationClient({
               className="inline-flex items-center gap-1.5 rounded-full border border-gris-300 px-4 py-1.5 text-sm font-medium text-gris-700 transition-colors hover:border-primaire hover:text-primaire"
             >
               <XCircle size={16} aria-hidden />
-              Annuler la réservation
+              {t.annulerReservation}
             </button>
           )}
           {confirmer && (
             <div
               role="group"
-              aria-label="Confirmer l’annulation"
+              aria-label={t.confirmerAnnulation}
               className="flex flex-wrap items-center gap-2 rounded-xl bg-danger/10 px-3 py-2 text-sm"
             >
               <span className="text-gris-700">
                 {reservation.type_reservation === 'Formation'
-                  ? 'Annuler libère votre place, et l’hébergement lié s’il y en a un.'
-                  : 'Annuler libère ce créneau.'}
+                  ? t.liberePlace
+                  : t.libereCreneau}
               </span>
               <button
                 type="button"
@@ -169,7 +172,7 @@ export default function CarteReservationClient({
                 onClick={() => void annuler()}
                 className="rounded-full bg-danger px-3 py-1 font-semibold text-sur-couleur disabled:opacity-60"
               >
-                {envoi ? 'Annulation…' : 'Confirmer l’annulation'}
+                {envoi ? t.annulation : t.confirmerAnnulation}
               </button>
               <button
                 type="button"
@@ -177,7 +180,7 @@ export default function CarteReservationClient({
                 onClick={() => setConfirmer(false)}
                 className="rounded-full px-3 py-1 font-medium text-gris-600 hover:bg-surface"
               >
-                Garder
+                {t.garder}
               </button>
             </div>
           )}
@@ -188,7 +191,7 @@ export default function CarteReservationClient({
               className="inline-flex items-center gap-1.5 text-sm font-medium text-primaire hover:underline"
             >
               <Star size={14} aria-hidden />
-              Déposer un avis
+              {t.deposerAvis}
             </button>
           )}
         </div>

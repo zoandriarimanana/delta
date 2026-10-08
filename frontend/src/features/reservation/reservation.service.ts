@@ -4,22 +4,14 @@
 
 import type { VarianteBadge } from '@/components/ui/Badge';
 import { imagePour } from '@/lib/images';
+import { textesCourants } from '@/lib/langue';
 
+import { TEXTES_RESERVATION } from './reservation.textes';
 import type {
   Reservation,
   StatutReservation,
   TypeReservation,
 } from './reservation.types';
-
-const LIBELLES: Record<StatutReservation, string> = {
-  En_attente: 'En attente de confirmation',
-  Confirmee: 'Confirmée',
-  // Volontairement neutre : depuis le sprint 5, une réservation honorée peut
-  // être une formation suivie comme une salle occupée. « Formation suivie »
-  // aurait menti sur trois types de réservation sur quatre.
-  Honoree: 'Honorée',
-  Annulee: 'Annulée',
-};
 
 /**
  * Traduit un statut en libellé lisible.
@@ -36,9 +28,10 @@ export function libelleStatut(
   statut: StatutReservation,
   type?: TypeReservation
 ): string {
-  const libelle = LIBELLES[statut] ?? 'Statut indisponible';
+  const t = textesCourants(TEXTES_RESERVATION);
+  const libelle = t.statuts[statut] ?? t.statutIndisponible;
   if (statut === 'Annulee' && type === 'Formation') {
-    return `${libelle} — votre place a été libérée`;
+    return t.placeLiberee(libelle);
   }
   return libelle;
 }
@@ -56,15 +49,16 @@ export function libelleStatut(
  * dette N+1 déjà relevée sur l'historique des commandes.
  */
 export function libelleCible(reservation: Reservation): string {
+  const t = textesCourants(TEXTES_RESERVATION);
   switch (reservation.type_reservation) {
     case 'Formation':
       return reservation.id_session === null
-        ? 'Formation'
-        : `Session de formation n° ${reservation.id_session}`;
+        ? t.types.Formation
+        : t.sessionNumero(reservation.id_session);
     case 'Salle':
       return reservation.id_salle === null
-        ? 'Salle'
-        : `Salle n° ${reservation.id_salle}`;
+        ? t.types.Salle
+        : t.salleNumero(reservation.id_salle);
     case 'Logement':
       return reservation.id_logement === null
         ? 'Hébergement'
@@ -170,14 +164,7 @@ export function varianteStatut(statut: StatutReservation): VarianteBadge {
   return VARIANTES[statut] ?? 'neutre';
 }
 
-const TYPES: Record<TypeReservation, string> = {
-  Formation: 'Formation',
-  Salle: 'Salle',
-  Logement: 'Hébergement',
-  Table: 'Table',
-};
-
 /** Libellé court du type, pour une pastille. */
 export function libelleType(type: TypeReservation): string {
-  return TYPES[type] ?? type;
+  return textesCourants(TEXTES_RESERVATION).types[type] ?? type;
 }

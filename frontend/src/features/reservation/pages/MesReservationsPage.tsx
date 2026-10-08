@@ -17,37 +17,28 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { BedDouble, Building2, CalendarDays, GraduationCap } from 'lucide-react';
 
+import { textesCourants, useTextes } from '@/lib/langue';
 import { useChargementSession, useEstConnecte } from '@/lib/useEstConnecte';
 
+import { TEXTES_RESERVATION } from '../reservation.textes';
 import CarteReservationClient from '../components/CarteReservationClient';
 import { annulerReservation, recupererReservations } from '../reservation.api';
 import { cleCible, useCiblesResolues } from '../reservation.cibles';
 import { periodeReservation, type Periode } from '../reservation.service';
 import type { Reservation } from '../reservation.types';
 
-const ONGLETS: { periode: Periode; libelle: string; vide: string }[] = [
-  {
-    periode: 'a_venir',
-    libelle: 'À venir',
-    vide: 'Aucune réservation à venir. Réservez une formation, une salle ou un hébergement.',
-  },
-  {
-    periode: 'passee',
-    libelle: 'Passées',
-    vide: 'Aucune réservation passée pour l’instant.',
-  },
-  { periode: 'annulee', libelle: 'Annulées', vide: 'Aucune réservation annulée.' },
-];
+const PERIODES: Periode[] = ['a_venir', 'passee', 'annulee'];
 
 function messageAnnulation(erreur: unknown): string {
   const detail = (erreur as { response?: { data?: { detail?: unknown } } } | null)
     ?.response?.data?.detail;
   return typeof detail === 'string' && detail.length > 0
     ? detail
-    : 'L’annulation a échoué. Réessayez dans un instant.';
+    : textesCourants(TEXTES_RESERVATION).annulationEchouee;
 }
 
 export default function MesReservationsPage() {
+  const t = useTextes(TEXTES_RESERVATION);
   const chargementSession = useChargementSession();
   const connecte = useEstConnecte();
   const [reservations, setReservations] = useState<Reservation[] | null>(null);
@@ -68,7 +59,7 @@ export default function MesReservationsPage() {
     let actif = true;
     recupererReservations()
       .then((donnees) => actif && setReservations(donnees))
-      .catch(() => actif && setErreur('Vos réservations n’ont pas pu être chargées.'));
+      .catch(() => actif && setErreur(t.nonChargees));
     return () => {
       actif = false;
     };
@@ -113,29 +104,27 @@ export default function MesReservationsPage() {
     return (
       <section className="mx-auto max-w-lg py-12 text-center">
         <CalendarDays size={40} aria-hidden className="mx-auto text-primaire" />
-        <h1 className="mt-4 text-3xl font-semibold text-gris-700">Mes réservations</h1>
-        <p className="mt-2 text-gris-500">
-          Connectez-vous pour retrouver vos réservations.
-        </p>
+        <h1 className="mt-4 text-3xl font-semibold text-gris-700">
+          {t.mesReservations}
+        </h1>
+        <p className="mt-2 text-gris-500">{t.connectezVousReservations}</p>
         <Link
           to="/connexion"
           className="mt-6 inline-block rounded-full bg-action px-6 py-3 font-semibold text-white no-underline hover:bg-action-fonce"
         >
-          Se connecter
+          {t.seConnecter}
         </Link>
       </section>
     );
   }
 
-  const courant = ONGLETS.find((o) => o.periode === onglet)!;
+  const courant = t.onglets[onglet];
   const liste = parPeriode[onglet];
 
   return (
     <section>
-      <h1 className="text-3xl font-semibold text-gris-700">Mes réservations</h1>
-      <p className="mt-1 text-gris-500">
-        Vos formations, salles et hébergements réservés chez Delta.
-      </p>
+      <h1 className="text-3xl font-semibold text-gris-700">{t.mesReservations}</h1>
+      <p className="mt-1 text-gris-500">{t.sousTitre}</p>
 
       {erreur !== null && (
         <p
@@ -148,7 +137,7 @@ export default function MesReservationsPage() {
 
       {reservations === null && erreur === null && (
         <p role="status" className="mt-4 text-gris-500">
-          Chargement…
+          {t.chargement}
         </p>
       )}
 
@@ -156,10 +145,10 @@ export default function MesReservationsPage() {
         <>
           <div
             role="tablist"
-            aria-label="Rubriques de réservations"
+            aria-label={t.rubriques}
             className="mt-6 flex gap-1 overflow-x-auto border-b border-gris-200"
           >
-            {ONGLETS.map(({ periode, libelle }) => {
+            {PERIODES.map((periode) => {
               const actif = periode === onglet;
               return (
                 <button
@@ -174,7 +163,7 @@ export default function MesReservationsPage() {
                       : 'border-transparent text-gris-500 hover:text-gris-700'
                   }`}
                 >
-                  {libelle}
+                  {t.onglets[periode].libelle}
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs ${
                       actif
@@ -195,13 +184,13 @@ export default function MesReservationsPage() {
               {onglet === 'a_venir' && (
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
                   <LienDecouverte vers="/formations" icone={GraduationCap}>
-                    Formations
+                    {t.formations}
                   </LienDecouverte>
                   <LienDecouverte vers="/salles" icone={Building2}>
-                    Salles
+                    {t.salles}
                   </LienDecouverte>
                   <LienDecouverte vers="/logements" icone={BedDouble}>
-                    Hébergements
+                    {t.hebergements}
                   </LienDecouverte>
                 </div>
               )}

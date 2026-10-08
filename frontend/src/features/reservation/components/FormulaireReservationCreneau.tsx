@@ -16,8 +16,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 
+import { useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import { TEXTES_RESERVATION } from '../reservation.textes';
 import { useValidationReservation } from '../reservation.hooks';
 import type { ReservationEnvoyee } from '../reservation.types';
 
@@ -73,6 +75,7 @@ export default function FormulaireReservationCreneau({
   capacite,
   reservable = true,
 }: Proprietes) {
+  const t = useTextes(TEXTES_RESERVATION);
   const connecte = useEstConnecte();
   const { reserver, envoi, erreur, reussite } = useValidationReservation();
   const [debut, setDebut] = useState('');
@@ -80,11 +83,7 @@ export default function FormulaireReservationCreneau({
   const [nombrePersonnes, setNombrePersonnes] = useState(1);
 
   if (!reservable) {
-    return (
-      <p className="mt-3 text-sm text-gris-600">
-        Ce logement n’est pas réservable pour le moment.
-      </p>
-    );
+    return <p className="mt-3 text-sm text-gris-600">{t.nonReservable}</p>;
   }
 
   // Un visiteur non connecté n'émet aucun appel : il recevrait un 401, qui
@@ -94,9 +93,9 @@ export default function FormulaireReservationCreneau({
     return (
       <p className="mt-3 text-sm text-gris-600">
         <Link to="/connexion" className="text-gris-700 underline">
-          Connectez-vous
+          {t.connectezVous}
         </Link>{' '}
-        pour réserver.
+        {t.pourReserver}
       </p>
     );
   }
@@ -104,10 +103,9 @@ export default function FormulaireReservationCreneau({
   if (reussite !== null) {
     return (
       <p role="status" className="mt-3 text-sm text-succes">
-        Réservation enregistrée pour {reussite.nombre_personnes} personne(s).
-        Retrouvez-la dans{' '}
+        {t.enregistree(reussite.nombre_personnes)}{' '}
         <Link to="/reservations" className="underline">
-          vos réservations
+          {t.vosReservations}
         </Link>
         .
       </p>
@@ -123,7 +121,7 @@ export default function FormulaireReservationCreneau({
       }}
     >
       <label className="flex flex-col gap-1 text-sm text-gris-700">
-        Début
+        {t.debut}
         <input
           type="datetime-local"
           required
@@ -134,7 +132,7 @@ export default function FormulaireReservationCreneau({
       </label>
 
       <label className="flex flex-col gap-1 text-sm text-gris-700">
-        Fin
+        {t.fin}
         <input
           type="datetime-local"
           required
@@ -148,7 +146,7 @@ export default function FormulaireReservationCreneau({
       </label>
 
       <label className="flex items-center gap-2 text-sm text-gris-700">
-        Nombre de personnes
+        {t.nombrePersonnes}
         <input
           type="number"
           min={1}
@@ -180,7 +178,7 @@ export default function FormulaireReservationCreneau({
         disabled={envoi}
         className="rounded bg-action px-4 py-2 text-sm text-white disabled:opacity-50"
       >
-        {envoi ? 'Envoi…' : 'Réserver'}
+        {envoi ? t.envoi : t.reserver}
       </button>
     </form>
   );
