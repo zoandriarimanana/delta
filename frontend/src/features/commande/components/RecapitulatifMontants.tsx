@@ -11,6 +11,9 @@ import {
   fraisLivraison,
   resteAvantGratuite,
 } from '@/features/livraison/livraison.service';
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_COMMANDE } from '../commande.textes';
 
 interface Proprietes {
   sousTotal: number;
@@ -21,6 +24,7 @@ export default function RecapitulatifMontants({
   sousTotal,
   avecLivraison,
 }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   const prix = useFormaterPrix();
   const { tarif } = useTarifLivraison();
   const frais = avecLivraison && tarif !== null ? fraisLivraison(tarif, sousTotal) : 0;
@@ -30,28 +34,26 @@ export default function RecapitulatifMontants({
   return (
     <dl className="space-y-1 rounded-xl border border-gris-200 bg-surface p-4 text-sm">
       <div className="flex justify-between">
-        <dt className="text-gris-500">Produits</dt>
+        <dt className="text-gris-500">{t.produits}</dt>
         <dd className="text-gris-700">{prix(sousTotal)}</dd>
       </div>
       <div className="flex justify-between">
-        <dt className="text-gris-500">Livraison</dt>
+        <dt className="text-gris-500">{t.livraison}</dt>
         <dd className="text-gris-700">
           {!avecLivraison
-            ? 'Aucun frais'
+            ? t.aucunFrais
             : tarif === null
-              ? 'Calculée à la commande'
+              ? t.calculeeACommande
               : frais === 0
-                ? 'Offerte'
+                ? t.offerte
                 : prix(frais)}
         </dd>
       </div>
       {reste !== null && frais > 0 && (
-        <p className="text-xs text-succes">
-          Plus que {prix(reste)} d’achat pour une livraison offerte.
-        </p>
+        <p className="text-xs text-succes">{t.plusQueAchat(prix(reste))}</p>
       )}
       <div className="flex justify-between border-t border-gris-200 pt-2 text-base font-semibold text-gris-700">
-        <dt>Total</dt>
+        <dt>{t.total}</dt>
         <dd>{prix(sousTotal + frais)}</dd>
       </div>
     </dl>

@@ -8,6 +8,10 @@
 
 import { Check } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_COMMANDE } from '../commande.textes';
+
 const ETAPES = ['Panier', 'Commande', 'Confirmation'] as const;
 
 export type EtapeCommande = (typeof ETAPES)[number];
@@ -17,10 +21,11 @@ interface Proprietes {
 }
 
 export default function EtapesCommande({ courante }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   const rangCourant = ETAPES.indexOf(courante);
 
   return (
-    <ol aria-label="Étapes de la commande" className="flex items-center gap-2 text-sm">
+    <ol aria-label={t.etapesCommande} className="flex items-center gap-2 text-sm">
       {ETAPES.map((etape, rang) => {
         const faite = rang < rangCourant;
         const active = rang === rangCourant;
@@ -43,7 +48,7 @@ export default function EtapesCommande({ courante }: Proprietes) {
               >
                 {faite ? <Check size={14} aria-hidden /> : rang + 1}
               </span>
-              <span className="hidden sm:inline">{etape}</span>
+              <span className="hidden sm:inline">{t.etapes[etape]}</span>
             </span>
             {rang < ETAPES.length - 1 && (
               <span aria-hidden className="h-px w-6 bg-gris-300 sm:w-10" />

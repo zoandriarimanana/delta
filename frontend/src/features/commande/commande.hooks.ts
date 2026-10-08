@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
 import type { Devise } from '@/features/devise/devise.types';
 import type { Produit } from '@/features/produit/produit.types';
+import { textesCourants } from '@/lib/langue';
 
 import {
   creerCommande,
@@ -30,6 +31,7 @@ import {
   totalPanier,
   versLignesEnvoyees,
 } from './commande.service';
+import { TEXTES_COMMANDE } from './commande.textes';
 import type {
   CibleAcheteur,
   Commande,
@@ -38,9 +40,6 @@ import type {
   PersonnalisationPanier,
   TypeCommande,
 } from './commande.types';
-
-const MESSAGE_ERREUR_PAR_DEFAUT =
-  'La commande n’a pas pu être enregistrée. Réessayez dans un instant.';
 
 export interface Panier {
   lignes: LignePanier[];
@@ -191,7 +190,9 @@ export function useValidationCommande(): ValidationCommande {
 function messageDErreur(erreur: unknown): string {
   const detail = (erreur as { response?: { data?: { detail?: unknown } } } | null)
     ?.response?.data?.detail;
-  return typeof detail === 'string' ? detail : MESSAGE_ERREUR_PAR_DEFAUT;
+  return typeof detail === 'string'
+    ? detail
+    : textesCourants(TEXTES_COMMANDE).erreurEnregistrement;
 }
 
 export interface EtatCommande {
@@ -228,7 +229,7 @@ export function useCommandeInvitee(reference: string | null): EtatCommande {
           setEtat({
             commande: null,
             chargement: false,
-            erreur: 'Cette commande est introuvable.',
+            erreur: textesCourants(TEXTES_COMMANDE).commandeIntrouvable,
           });
         }
       });
@@ -291,7 +292,7 @@ export function useHistorique(actif: boolean): EtatHistorique {
           setEtat({
             commandes: [],
             chargement: false,
-            erreur: 'Vos commandes n’ont pas pu être chargées.',
+            erreur: textesCourants(TEXTES_COMMANDE).commandesNonChargees,
           });
         }
       });

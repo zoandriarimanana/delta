@@ -11,7 +11,9 @@ import { Lock, PackageCheck, Store } from 'lucide-react';
 
 import ChoixDevise from '@/features/devise/components/ChoixDevise';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_COMMANDE } from '../commande.textes';
 import { supplementLigne } from '../commande.service';
 import type { LignePanier } from '../commande.types';
 import RecapitulatifMontants from './RecapitulatifMontants';
@@ -32,6 +34,7 @@ export default function ResumeCommande({
   idFormulaire,
   envoi,
 }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   const prix = useFormaterPrix();
   return (
     <aside
@@ -40,13 +43,13 @@ export default function ResumeCommande({
     >
       <div className="flex items-baseline justify-between">
         <h2 id="titre-votre-commande" className="text-lg font-semibold text-gris-700">
-          Votre commande
+          {t.votreCommande}
         </h2>
         <Link
           to="/panier"
           className="text-sm font-medium text-primaire no-underline hover:underline"
         >
-          Modifier
+          {t.modifier}
         </Link>
       </div>
 
@@ -66,15 +69,16 @@ export default function ResumeCommande({
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-medium text-gris-700">
                 {ligne.vendu_par_personne
-                  ? `${ligne.nom} — ${ligne.quantite} personnes`
+                  ? t.personnesPour(ligne.nom, ligne.quantite)
                   : `${ligne.nom} × ${ligne.quantite}`}
               </span>
               <span className="block text-xs text-gris-500">
-                {prix(ligne.prix_unitaire)} / {ligne.unite_mesure}
+                {prix(ligne.prix_unitaire)} /{' '}
+                {ligne.vendu_par_personne ? t.personne : ligne.unite_mesure}
               </span>
               {ligne.personnalisation !== undefined && (
                 <span className="mt-0.5 block text-xs font-medium text-attente">
-                  Personnalisé
+                  {t.personnalise}
                 </span>
               )}
             </span>
@@ -102,20 +106,18 @@ export default function ResumeCommande({
         className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-action-fonce hover:shadow-lg disabled:translate-y-0 disabled:cursor-wait disabled:opacity-60"
       >
         <Lock size={16} aria-hidden />
-        {envoi ? 'Envoi…' : 'Valider la commande'}
+        {envoi ? t.envoi : t.validerCommande}
       </button>
-      <p className="mt-2 text-center text-xs text-gris-500">
-        Montants confirmés par nos soins à la validation.
-      </p>
+      <p className="mt-2 text-center text-xs text-gris-500">{t.montantsConfirmes}</p>
 
       <ul className="mt-5 space-y-2 border-t border-gris-200 pt-4 text-xs text-gris-500">
         <li className="flex items-center gap-2">
           <PackageCheck size={16} aria-hidden className="text-succes" />
-          Suivi de votre commande en ligne
+          {t.suiviEnLigne}
         </li>
         <li className="flex items-center gap-2">
           <Store size={16} aria-hidden className="text-succes" />
-          Retrait en boutique gratuit
+          {t.retraitGratuit}
         </li>
       </ul>
     </aside>

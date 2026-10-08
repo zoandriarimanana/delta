@@ -11,11 +11,16 @@
 import { useState } from 'react';
 import { Bookmark, Check, Copy } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_COMMANDE } from '../commande.textes';
+
 interface Proprietes {
   reference: string;
 }
 
 export default function ReferencePublique({ reference }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   const lien = `${window.location.origin}/commandes/invite/${reference}`;
   const [copie, setCopie] = useState(false);
 
@@ -33,12 +38,9 @@ export default function ReferencePublique({ reference }: Proprietes) {
     <div className="rounded-2xl border border-attente/50 bg-attente/10 p-5">
       <h2 className="flex items-center gap-2 font-semibold text-gris-700">
         <Bookmark size={18} aria-hidden className="text-attente" />
-        Conservez cette référence
+        {t.conserverReference}
       </h2>
-      <p className="mt-1 text-sm text-gris-600">
-        Vous avez commandé sans compte : c’est le seul moyen de retrouver votre
-        commande. Ajoutez cette page à vos favoris ou copiez son lien.
-      </p>
+      <p className="mt-1 text-sm text-gris-600">{t.referenceExplication}</p>
       <code
         data-testid="reference-publique"
         className="mt-3 block select-all break-all rounded-lg border border-gris-200 bg-surface px-3 py-2 font-mono text-sm text-gris-700"
@@ -52,7 +54,7 @@ export default function ReferencePublique({ reference }: Proprietes) {
           className="inline-flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-sm font-medium text-gris-700 shadow-sm ring-1 ring-gris-300 transition-colors hover:text-primaire hover:ring-primaire"
         >
           {copie ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />}
-          {copie ? 'Lien copié' : 'Copier le lien'}
+          {copie ? t.lienCopie : t.copierLien}
         </button>
         <a href={lien} className="break-all text-xs text-gris-500 underline">
           {lien}

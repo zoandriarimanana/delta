@@ -7,6 +7,9 @@
  * panier gardent eux-mêmes la saisie, ce composant ne fait que l'afficher.
  */
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_COMMANDE } from '../commande.textes';
 import type { PersonnalisationPanier } from '../commande.types';
 
 /** Bornes alignées sur `LONGUEUR_DESCRIPTION` côté serveur (2 000), réparties. */
@@ -22,6 +25,7 @@ const CLASSES_CHAMP =
   'mt-1 block w-full rounded-lg border border-gris-300 bg-surface px-3 py-2 text-sm text-gris-700 focus:border-primaire focus:outline-none focus:ring-2 focus:ring-primaire/20';
 
 export default function ChampsPersonnalisation({ valeurs, surChangement }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   function modifier(champ: keyof PersonnalisationPanier, valeur: string) {
     surChangement({ ...valeurs, [champ]: valeur });
   }
@@ -30,54 +34,54 @@ export default function ChampsPersonnalisation({ valeurs, surChangement }: Propr
     <div className="space-y-3">
       <label className="block">
         <span className="text-sm font-medium text-gris-700">
-          Message à écrire{' '}
-          <span className="font-normal text-gris-500">(facultatif)</span>
+          {t.champMessage}{' '}
+          <span className="font-normal text-gris-500">{t.facultatif}</span>
         </span>
         <input
           maxLength={LONGUEUR_MESSAGE}
           value={valeurs.message}
           onChange={(e) => modifier('message', e.target.value)}
-          placeholder="Ex. : Joyeux anniversaire Lova !"
+          placeholder={t.exempleMessage}
           className={CLASSES_CHAMP}
         />
       </label>
       <label className="block">
         <span className="text-sm font-medium text-gris-700">
-          Thème et couleurs{' '}
-          <span className="font-normal text-gris-500">(facultatif)</span>
+          {t.champTheme}{' '}
+          <span className="font-normal text-gris-500">{t.facultatif}</span>
         </span>
         <input
           maxLength={LONGUEUR_RUBRIQUE}
           value={valeurs.theme}
           onChange={(e) => modifier('theme', e.target.value)}
-          placeholder="Ex. : licornes, rose et blanc"
+          placeholder={t.exempleTheme}
           className={CLASSES_CHAMP}
         />
       </label>
       <label className="block">
         <span className="text-sm font-medium text-gris-700">
-          Autres précisions{' '}
-          <span className="font-normal text-gris-500">(facultatif)</span>
+          {t.champPrecisions}{' '}
+          <span className="font-normal text-gris-500">{t.facultatif}</span>
         </span>
         <textarea
           rows={3}
           maxLength={LONGUEUR_RUBRIQUE}
           value={valeurs.precisions}
           onChange={(e) => modifier('precisions', e.target.value)}
-          placeholder="Taille, forme, nombre de parts, date souhaitée…"
+          placeholder={t.exemplePrecisions}
           className={CLASSES_CHAMP}
         />
       </label>
       <label className="block">
         <span className="text-sm font-medium text-gris-700">
-          Ingrédients à éviter ou allergies{' '}
-          <span className="font-normal text-gris-500">(facultatif)</span>
+          {t.champIngredients}{' '}
+          <span className="font-normal text-gris-500">{t.facultatif}</span>
         </span>
         <input
           maxLength={LONGUEUR_RUBRIQUE}
           value={valeurs.ingredients}
           onChange={(e) => modifier('ingredients', e.target.value)}
-          placeholder="Ex. : sans fruits à coque"
+          placeholder={t.exempleIngredients}
           className={CLASSES_CHAMP}
         />
       </label>

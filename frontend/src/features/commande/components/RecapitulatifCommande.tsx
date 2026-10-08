@@ -18,7 +18,9 @@ import { Star } from 'lucide-react';
 import Badge from '@/components/ui/Badge';
 import FormulaireAvis from '@/features/avis/components/FormulaireAvis';
 import { montantAPayer } from '@/features/devise/devise.service';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_COMMANDE } from '../commande.textes';
 import DemandePersonnalisationLue from './DemandePersonnalisationLue';
 import VignetteProduit from './VignetteProduit';
 import {
@@ -51,6 +53,7 @@ export default function RecapitulatifCommande({
   commande,
   afficherStatut = true,
 }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   const frais = Number(commande.frais_livraison);
   const produits = commande.lignes.reduce((total, l) => total + montantLigne(l), 0);
   const livree = commande.adresse_livraison != null;
@@ -69,19 +72,19 @@ export default function RecapitulatifCommande({
 
       <dl className="mt-4 space-y-1.5 border-t border-gris-200 pt-4 text-sm">
         <div className="flex justify-between">
-          <dt className="text-gris-500">Produits</dt>
+          <dt className="text-gris-500">{t.produits}</dt>
           <dd className="text-gris-700">{formaterMontant(produits)}</dd>
         </div>
         {(frais > 0 || livree) && (
           <div className="flex justify-between">
-            <dt className="text-gris-500">Livraison</dt>
+            <dt className="text-gris-500">{t.livraison}</dt>
             <dd className="text-gris-700">
-              {frais > 0 ? formaterMontant(commande.frais_livraison) : 'Offerte'}
+              {frais > 0 ? formaterMontant(commande.frais_livraison) : t.offerte}
             </dd>
           </div>
         )}
         <div className="flex items-baseline justify-between border-t border-gris-200 pt-2">
-          <dt className="font-semibold text-gris-700">Total</dt>
+          <dt className="font-semibold text-gris-700">{t.total}</dt>
           <dd className="text-xl font-bold text-primaire">
             {formaterMontant(commande.montant_total)}
           </dd>
@@ -90,7 +93,7 @@ export default function RecapitulatifCommande({
           // Le client paie dans sa devise, au taux figé à la commande : c'est
           // ce montant-là qui fait foi pour lui, l'Ariary restant la référence.
           <div className="flex items-baseline justify-between rounded-lg bg-primaire/5 px-2 py-1.5">
-            <dt className="font-semibold text-gris-700">À payer</dt>
+            <dt className="font-semibold text-gris-700">{t.aPayer}</dt>
             <dd className="text-right">
               <span className="text-lg font-bold text-primaire">
                 {montantAPayer(commande)}
@@ -103,7 +106,7 @@ export default function RecapitulatifCommande({
         )}
         {afficherStatut && (
           <div className="flex items-center justify-between pt-1">
-            <dt className="text-gris-500">Statut</dt>
+            <dt className="text-gris-500">{t.statut}</dt>
             <dd>
               <Badge variante={varianteStatutCommande(commande.statut)}>
                 {libelleStatutCommande(commande.statut)}
@@ -123,6 +126,7 @@ function LigneAvecAvis({
   ligne: LigneCommandeLue;
   proposerAvis: boolean;
 }) {
+  const t = useTextes(TEXTES_COMMANDE);
   const [ouvert, setOuvert] = useState(false);
 
   return (
@@ -143,7 +147,7 @@ function LigneAvecAvis({
             </span>
           </div>
           <p className="text-xs text-gris-500">
-            {formaterMontant(ligne.prix_unitaire_applique)} l’unité
+            {t.lUnite(formaterMontant(ligne.prix_unitaire_applique))}
           </p>
           {ligne.personnalisation != null && (
             <DemandePersonnalisationLue
@@ -158,7 +162,7 @@ function LigneAvecAvis({
               className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primaire hover:underline"
             >
               <Star size={14} aria-hidden />
-              Déposer un avis
+              {t.deposerAvis}
             </button>
           )}
           {ouvert && <FormulaireAvis cible="Produit" idCible={ligne.id_ligne} />}

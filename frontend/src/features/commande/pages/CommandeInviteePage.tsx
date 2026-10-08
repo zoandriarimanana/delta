@@ -20,15 +20,18 @@ import {
 } from 'lucide-react';
 
 import { EncartSuiviInvite } from '@/features/livraison/components/EncartSuivi';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_COMMANDE } from '../commande.textes';
 import EtapesCommande from '../components/EtapesCommande';
 import RecapitulatifCommande from '../components/RecapitulatifCommande';
 import ReferencePublique from '../components/ReferencePublique';
 import { useCommandeInvitee } from '../commande.hooks';
-import { formaterDate } from '../commande.service';
+import { formaterDate, libelleModeReception } from '../commande.service';
 import type { Commande } from '../commande.types';
 
 export default function CommandeInviteePage() {
+  const t = useTextes(TEXTES_COMMANDE);
   const { reference } = useParams();
   const { commande, chargement, erreur } = useCommandeInvitee(reference ?? null);
 
@@ -36,13 +39,13 @@ export default function CommandeInviteePage() {
     <section>
       {chargement && (
         <p role="status" className="text-gris-500">
-          Chargement…
+          {t.chargement}
         </p>
       )}
 
       {erreur !== null && (
         <div className="mx-auto max-w-lg py-10 text-center">
-          <h1 className="text-2xl font-semibold text-gris-700">Votre commande</h1>
+          <h1 className="text-2xl font-semibold text-gris-700">{t.votreCommande}</h1>
           <p
             role="alert"
             className="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-4 text-danger"
@@ -68,7 +71,9 @@ export default function CommandeInviteePage() {
                   ne les porte pas non plus. */}
               {reference !== undefined && <EncartSuiviInvite reference={reference} />}
               <div className="rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gris-700">Articles</h2>
+                <h2 className="text-lg font-semibold text-gris-700">
+                  {t.articlesTitre}
+                </h2>
                 <RecapitulatifCommande commande={commande} />
               </div>
             </div>
@@ -82,46 +87,47 @@ export default function CommandeInviteePage() {
 }
 
 function EnTete({ commande }: { commande: Commande }) {
+  const t = useTextes(TEXTES_COMMANDE);
   return (
     <div className="mt-6 flex items-start gap-4">
       <CheckCircle2 size={44} aria-hidden className="shrink-0 text-succes" />
       <div>
-        <h1 className="text-3xl font-semibold text-gris-700">Votre commande</h1>
+        <h1 className="text-3xl font-semibold text-gris-700">{t.votreCommande}</h1>
         <p className="mt-1 text-gris-600">
-          Commande n° {commande.id_commande}
-          {commande.nom_invite !== null && <>, au nom de {commande.nom_invite}</>} —
-          passée le {formaterDate(commande.date_commande)}.
+          {t.numeroCommande(commande.id_commande)}
+          {commande.nom_invite !== null && t.auNomDe(commande.nom_invite)}
+          {t.passeeLe(formaterDate(commande.date_commande))}
         </p>
       </div>
     </div>
   );
 }
 
-const MODES = {
-  En_ligne: { icone: Truck, libelle: 'Livraison à domicile' },
-  A_emporter: { icone: Store, libelle: 'Retrait en boutique' },
-  Sur_place: { icone: UtensilsCrossed, libelle: 'Sur place' },
+const ICONES_MODE = {
+  En_ligne: Truck,
+  A_emporter: Store,
+  Sur_place: UtensilsCrossed,
 } as const;
 
 function Informations({ commande }: { commande: Commande }) {
-  const mode = MODES[commande.type_commande] ?? MODES.A_emporter;
-  const Icone = mode.icone;
+  const t = useTextes(TEXTES_COMMANDE);
+  const Icone = ICONES_MODE[commande.type_commande] ?? Store;
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-6">
       <div className="rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gris-700">Informations</h2>
+        <h2 className="text-lg font-semibold text-gris-700">{t.informations}</h2>
         <dl className="mt-4 space-y-3 text-sm">
           <div>
-            <dt className="text-gris-500">Mode de réception</dt>
+            <dt className="text-gris-500">{t.modeReception}</dt>
             <dd className="mt-0.5 flex items-center gap-2 font-medium text-gris-700">
               <Icone size={16} aria-hidden className="text-primaire" />
-              {mode.libelle}
+              {libelleModeReception(commande.type_commande)}
             </dd>
           </div>
           {commande.contact_invite !== null && (
             <div>
-              <dt className="text-gris-500">Nous vous contacterons au</dt>
+              <dt className="text-gris-500">{t.nousContacterons}</dt>
               <dd className="mt-0.5 font-medium text-gris-700">
                 {commande.contact_invite}
               </dd>
@@ -133,17 +139,14 @@ function Informations({ commande }: { commande: Commande }) {
       <div className="rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm">
         <p className="flex items-center gap-2 font-semibold text-gris-700">
           <UserPlus size={18} aria-hidden className="text-succes" />
-          Commandez plus simplement
+          {t.plusSimplement}
         </p>
-        <p className="mt-1 text-sm text-gris-500">
-          Avec un compte, vos commandes sont regroupées dans « Mes commandes », sans
-          référence à conserver.
-        </p>
+        <p className="mt-1 text-sm text-gris-500">{t.avecCompte}</p>
         <Link
           to="/inscription"
           className="mt-3 inline-block text-sm font-semibold text-primaire no-underline hover:underline"
         >
-          Créer un compte
+          {t.creerCompte}
         </Link>
       </div>
 
@@ -152,7 +155,7 @@ function Informations({ commande }: { commande: Commande }) {
         className="flex w-full items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white no-underline shadow-md transition-all hover:-translate-y-0.5 hover:bg-action-fonce"
       >
         <ShoppingBag size={18} aria-hidden />
-        Continuer mes achats
+        {t.continuerAchats}
       </Link>
     </aside>
   );

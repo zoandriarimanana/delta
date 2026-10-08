@@ -6,7 +6,9 @@ import { Link } from 'react-router';
 import { Trash2 } from 'lucide-react';
 
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_COMMANDE } from '../commande.textes';
 import { supplementLigne } from '../commande.service';
 import type { LignePanier, PersonnalisationPanier } from '../commande.types';
 import ChampQuantite from './ChampQuantite';
@@ -26,6 +28,7 @@ export default function LignePanierCarte({
   surRetrait,
   surPersonnalisation,
 }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   const prix = useFormaterPrix();
   const { personnalisation } = ligne;
   // À la personne, le stock compte des gâteaux, pas des personnes.
@@ -51,28 +54,25 @@ export default function LignePanierCarte({
             {ligne.nom}
           </Link>
           <p className="mt-1 text-sm text-gris-500">
-            {prix(ligne.prix_unitaire)} / {ligne.unite_mesure}
+            {prix(ligne.prix_unitaire)} /{' '}
+            {ligne.vendu_par_personne ? t.personne : ligne.unite_mesure}
           </p>
           <div className="mt-3 flex items-center gap-4">
             <ChampQuantite ligne={ligne} onChangement={surQuantite} />
             {ligne.vendu_par_personne && (
-              <span className="text-sm text-gris-500">personnes</span>
+              <span className="text-sm text-gris-500">{t.personnes}</span>
             )}
             <button
               type="button"
               onClick={surRetrait}
-              aria-label={`Retirer ${ligne.nom}`}
+              aria-label={t.retirerProduit(ligne.nom)}
               className="inline-flex items-center gap-1.5 text-sm text-gris-500 transition-colors hover:text-primaire"
             >
               <Trash2 size={16} aria-hidden />
-              Retirer
+              {t.retirer}
             </button>
           </div>
-          {auMaximum && (
-            <p className="mt-2 text-xs text-attente">
-              Quantité maximale disponible en stock.
-            </p>
-          )}
+          {auMaximum && <p className="mt-2 text-xs text-attente">{t.quantiteMax}</p>}
           {personnalisation !== undefined && (
             <PersonnalisationPanierBloc
               ligne={{ ...ligne, personnalisation }}

@@ -14,20 +14,19 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { ClipboardList, ShoppingBag } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import { TEXTES_COMMANDE } from '../commande.textes';
 import CarteCommandeClient from '../components/CarteCommandeClient';
 import { etapeCommande, type EtapeCommande } from '../commande.service';
 import { useHistorique } from '../commande.hooks';
 import type { Commande } from '../commande.types';
 
-const ONGLETS: { etape: EtapeCommande; libelle: string; vide: string }[] = [
-  { etape: 'en_cours', libelle: 'En cours', vide: 'Aucune commande en cours.' },
-  { etape: 'terminee', libelle: 'Terminées', vide: 'Aucune commande terminée.' },
-  { etape: 'annulee', libelle: 'Annulées', vide: 'Aucune commande annulée.' },
-];
+const ETAPES: EtapeCommande[] = ['en_cours', 'terminee', 'annulee'];
 
 export default function HistoriqueCommandesPage() {
+  const t = useTextes(TEXTES_COMMANDE);
   const connecte = useEstConnecte();
   const { commandes, chargement, erreur, recharger } = useHistorique(connecte);
   const [onglet, setOnglet] = useState<EtapeCommande>('en_cours');
@@ -48,39 +47,32 @@ export default function HistoriqueCommandesPage() {
     return (
       <section className="mx-auto max-w-lg py-12 text-center">
         <ClipboardList size={40} aria-hidden className="mx-auto text-primaire" />
-        <h1 className="mt-4 text-3xl font-semibold text-gris-700">Mes commandes</h1>
-        <p className="mt-2 text-gris-500">
-          Connectez-vous pour retrouver vos commandes.
-        </p>
+        <h1 className="mt-4 text-3xl font-semibold text-gris-700">{t.mesCommandes}</h1>
+        <p className="mt-2 text-gris-500">{t.connectezVous}</p>
         <Link
           to="/connexion"
           className="mt-6 inline-block rounded-full bg-action px-6 py-3 font-semibold text-white no-underline hover:bg-action-fonce"
         >
-          Se connecter
+          {t.seConnecter}
         </Link>
         {/* Une commande passée sans compte ne figure dans aucun historique :
             elle se consulte par sa référence, communiquée à la validation. */}
-        <p className="mt-6 text-sm text-gris-500">
-          Vous avez commandé sans compte ? Utilisez le lien qui vous a été donné au
-          moment de la validation.
-        </p>
+        <p className="mt-6 text-sm text-gris-500">{t.sansCompteLien}</p>
       </section>
     );
   }
 
-  const courant = ONGLETS.find((o) => o.etape === onglet)!;
+  const courant = t.onglets[onglet];
   const liste = parEtape[onglet];
 
   return (
     <section>
-      <h1 className="text-3xl font-semibold text-gris-700">Mes commandes</h1>
-      <p className="mt-1 text-gris-500">
-        Suivez vos commandes, réglez celles en attente et retrouvez vos achats.
-      </p>
+      <h1 className="text-3xl font-semibold text-gris-700">{t.mesCommandes}</h1>
+      <p className="mt-1 text-gris-500">{t.mesCommandesSousTitre}</p>
 
       {chargement && (
         <p role="status" className="mt-4 text-gris-500">
-          Chargement…
+          {t.chargement}
         </p>
       )}
 
@@ -96,14 +88,12 @@ export default function HistoriqueCommandesPage() {
       {!chargement && erreur === null && commandes.length === 0 && (
         <div className="mt-8 rounded-2xl border border-dashed border-gris-300 bg-surface p-10 text-center">
           <ShoppingBag size={36} aria-hidden className="mx-auto text-primaire" />
-          <p className="mt-3 text-gris-500">
-            Vous n’avez pas encore passé de commande.
-          </p>
+          <p className="mt-3 text-gris-500">{t.aucuneCommande}</p>
           <Link
             to="/produits"
             className="mt-6 inline-block rounded-full bg-action px-6 py-3 font-semibold text-white no-underline hover:bg-action-fonce"
           >
-            Parcourir le catalogue
+            {t.parcourirCatalogue}
           </Link>
         </div>
       )}
@@ -112,10 +102,10 @@ export default function HistoriqueCommandesPage() {
         <>
           <div
             role="tablist"
-            aria-label="Rubriques de commandes"
+            aria-label={t.rubriquesCommandes}
             className="mt-6 flex gap-1 overflow-x-auto border-b border-gris-200"
           >
-            {ONGLETS.map(({ etape, libelle }) => {
+            {ETAPES.map((etape) => {
               const actif = etape === onglet;
               return (
                 <button
@@ -130,7 +120,7 @@ export default function HistoriqueCommandesPage() {
                       : 'border-transparent text-gris-500 hover:text-gris-700'
                   }`}
                 >
-                  {libelle}
+                  {t.onglets[etape].libelle}
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs ${
                       actif

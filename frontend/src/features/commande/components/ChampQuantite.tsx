@@ -15,6 +15,9 @@
 import { useEffect, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_COMMANDE } from '../commande.textes';
 import { bornesQuantite } from '../commande.service';
 import type { LignePanier } from '../commande.types';
 
@@ -27,9 +30,9 @@ const CLASSES_PAS =
   'flex h-9 w-9 items-center justify-center text-gris-600 transition-colors hover:bg-gris-100 disabled:cursor-not-allowed disabled:opacity-40';
 
 export default function ChampQuantite({ ligne, onChangement }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   const [saisie, setSaisie] = useState(String(ligne.quantite));
   const { min, max } = bornesQuantite(ligne);
-  const objet = ligne.vendu_par_personne ? 'le nombre de personnes' : 'la quantité';
 
   // Resynchronise si la quantité change ailleurs — bornage au stock, ou
   // modification depuis un autre onglet.
@@ -43,7 +46,7 @@ export default function ChampQuantite({ ligne, onChangement }: Proprietes) {
         type="button"
         onClick={() => onChangement(ligne.quantite - 1)}
         disabled={ligne.quantite <= min}
-        aria-label={`Diminuer ${objet} de ${ligne.nom}`}
+        aria-label={t.diminuer(ligne.vendu_par_personne === true, ligne.nom)}
         className={CLASSES_PAS}
       >
         <Minus size={14} aria-hidden />
@@ -53,11 +56,7 @@ export default function ChampQuantite({ ligne, onChangement }: Proprietes) {
         min={min}
         max={max}
         value={saisie}
-        aria-label={
-          ligne.vendu_par_personne
-            ? `Nombre de personnes pour ${ligne.nom}`
-            : `Quantité pour ${ligne.nom}`
-        }
+        aria-label={t.quantitePour(ligne.vendu_par_personne === true, ligne.nom)}
         onChange={(evenement) => {
           const brut = evenement.target.value;
           setSaisie(brut);
@@ -73,7 +72,7 @@ export default function ChampQuantite({ ligne, onChangement }: Proprietes) {
         type="button"
         onClick={() => onChangement(ligne.quantite + 1)}
         disabled={ligne.quantite >= max}
-        aria-label={`Augmenter ${objet} de ${ligne.nom}`}
+        aria-label={t.augmenter(ligne.vendu_par_personne === true, ligne.nom)}
         className={CLASSES_PAS}
       >
         <Plus size={14} aria-hidden />

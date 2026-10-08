@@ -20,7 +20,9 @@ import Badge from '@/components/ui/Badge';
 import { montantAPayer } from '@/features/devise/devise.service';
 import { EncartSuiviCommande } from '@/features/livraison/components/EncartSuivi';
 import FormulairePaiement from '@/features/paiement/components/FormulairePaiement';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_COMMANDE } from '../commande.textes';
 import {
   etapeCommande,
   formaterDate,
@@ -44,6 +46,7 @@ export default function CarteCommandeClient({
   commande,
   surPaiementConfirme,
 }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   const [ouverte, setOuverte] = useState(etapeCommande(commande) === 'en_cours');
   const IconeMode = ICONES_MODE[commande.type_commande] ?? Store;
   const articles = commande.lignes.reduce((total, ligne) => total + ligne.quantite, 0);
@@ -55,7 +58,7 @@ export default function CarteCommandeClient({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-semibold text-gris-700">
-              Commande n° {commande.id_commande}
+              {t.numeroCommande(commande.id_commande)}
             </h2>
             <Badge variante={varianteStatutCommande(commande.statut)}>
               {libelleStatutCommande(commande.statut)}
@@ -65,17 +68,16 @@ export default function CarteCommandeClient({
               dit pas. `<time>` porte la valeur brute pour les lecteurs
               d'écran et les outils, le texte reste lisible. */}
           <p className="mt-1 text-sm text-gris-500">
-            Passée le{' '}
+            {t.passeeLeCourt}{' '}
             <time dateTime={commande.date_commande}>
               {formaterDate(commande.date_commande)}
             </time>
           </p>
           <p className="mt-2 flex items-center gap-2 text-sm text-gris-600">
             <IconeMode size={16} aria-hidden className="text-primaire" />
-            {libelleModeReception(commande.type_commande)} · {articles} article
-            {articles > 1 ? 's' : ''}
+            {libelleModeReception(commande.type_commande)} · {t.articles(articles)}
           </p>
-          <ul aria-label="Articles" className="mt-3 flex items-center gap-2">
+          <ul aria-label={t.articlesTitre} className="mt-3 flex items-center gap-2">
             {commande.lignes.slice(0, VIGNETTES_MAX).map((ligne) => (
               <li key={ligne.id_ligne}>
                 <VignetteProduit
@@ -101,7 +103,7 @@ export default function CarteCommandeClient({
             aria-expanded={ouverte}
             className="inline-flex items-center gap-1 text-sm font-medium text-gris-600 hover:text-primaire"
           >
-            {ouverte ? 'Masquer le détail' : 'Voir le détail'}
+            {ouverte ? t.masquerDetail : t.voirDetail}
             <ChevronDown
               size={16}
               aria-hidden
@@ -115,11 +117,9 @@ export default function CarteCommandeClient({
         <div className="border-t border-attente/30 bg-attente/10 px-5 py-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-gris-700">
             <CreditCard size={16} aria-hidden className="text-attente" />
-            Paiement en attente
+            {t.paiementEnAttente}
           </p>
-          <p className="mt-1 text-xs text-gris-500">
-            Réglez votre commande en ligne pour qu’elle soit confirmée.
-          </p>
+          <p className="mt-1 text-xs text-gris-500">{t.reglezEnLigne}</p>
           <FormulairePaiement
             idCommande={commande.id_commande}
             devise={commande.devise}

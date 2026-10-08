@@ -7,6 +7,9 @@
  */
 
 import type { VarianteBadge } from '@/components/ui/Badge';
+import type { Produit } from '@/features/produit/produit.types';
+import { localeCourante, textesCourants } from '@/lib/langue';
+
 import type {
   CheminAcheteur,
   CibleAcheteur,
@@ -18,8 +21,7 @@ import type {
   StatutCommande,
   TypeCommande,
 } from './commande.types';
-import type { Produit } from '@/features/produit/produit.types';
-import { localeCourante } from '@/lib/langue';
+import { TEXTES_COMMANDE } from './commande.textes';
 
 export const DEVISE = 'Ar';
 
@@ -135,19 +137,25 @@ export function definirPersonnalisation(
   });
 }
 
-const RUBRIQUES: [keyof PersonnalisationPanier, string][] = [
-  ['message', 'Message à écrire'],
-  ['theme', 'Thème et couleurs'],
-  ['precisions', 'Autres précisions'],
-];
+type Rubriques = Record<'message' | 'theme' | 'precisions', string>;
+
+/** Rubriques **envoyées** : en français, c'est l'équipe Delta qui les lit. */
+const RUBRIQUES_ENVOYEES: Rubriques = TEXTES_COMMANDE.fr.rubriques;
 
 /**
  * Texte envoyé dans `description_demande` : une rubrique par ligne,
  * nommée, pour que l'administrateur lise la demande d'un coup d'œil. Les
  * rubriques vides sont omises ; aucune rubrique renseignée donne `''`.
+ *
+ * `rubriques` ne change que l'**affichage** au client, dans sa langue : la
+ * valeur envoyée garde toujours les rubriques françaises.
  */
-export function descriptionDemande(personnalisation: PersonnalisationPanier): string {
-  return RUBRIQUES.map(([champ, libelle]) => [libelle, personnalisation[champ].trim()])
+export function descriptionDemande(
+  personnalisation: PersonnalisationPanier,
+  rubriques: Rubriques = RUBRIQUES_ENVOYEES
+): string {
+  return (Object.keys(rubriques) as (keyof Rubriques)[])
+    .map((champ) => [rubriques[champ], personnalisation[champ].trim()])
     .filter(([, valeur]) => valeur !== '')
     .map(([libelle, valeur]) => `${libelle} : ${valeur}`)
     .join('\n');
@@ -341,15 +349,6 @@ export const PERSONNALISATION_VIDE: PersonnalisationPanier = {
   ingredients: '',
 };
 
-const LIBELLES_STATUT: Record<StatutCommande, string> = {
-  En_attente: 'En attente de confirmation',
-  Confirmee: 'Confirmée',
-  En_preparation: 'En préparation',
-  Livree: 'Livrée',
-  Servie: 'Servie',
-  Annulee: 'Annulée',
-};
-
 /**
  * Statut d'une commande, lisible par le client.
  *
@@ -358,7 +357,8 @@ const LIBELLES_STATUT: Record<StatutCommande, string> = {
  * API en avance sur le frontend — retombe sur un libellé neutre.
  */
 export function libelleStatutCommande(statut: StatutCommande): string {
-  return LIBELLES_STATUT[statut] ?? 'Statut inconnu';
+  const t = textesCourants(TEXTES_COMMANDE);
+  return t.statuts[statut] ?? t.statutInconnu;
 }
 
 const VARIANTES_STATUT: Record<StatutCommande, VarianteBadge> = {
@@ -376,15 +376,9 @@ export function varianteStatutCommande(statut: StatutCommande): VarianteBadge {
   return VARIANTES_STATUT[statut] ?? 'neutre';
 }
 
-const MODES_RECEPTION: Record<TypeCommande, string> = {
-  En_ligne: 'Livraison à domicile',
-  A_emporter: 'Retrait en boutique',
-  Sur_place: 'Sur place',
-};
-
 /** Mode de réception lisible, déduit du type de commande. */
 export function libelleModeReception(type: TypeCommande): string {
-  return MODES_RECEPTION[type] ?? type;
+  return textesCourants(TEXTES_COMMANDE).modes[type] ?? type;
 }
 
 /** Rubrique de « Mes commandes ». */

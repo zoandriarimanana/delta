@@ -10,7 +10,9 @@ import { Pencil, Sparkles, X } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
+import { useTextes } from '@/lib/langue';
 
+import { TEXTES_COMMANDE } from '../commande.textes';
 import { descriptionDemande } from '../commande.service';
 import type { LignePanier, PersonnalisationPanier } from '../commande.types';
 import ChampsPersonnalisation from './ChampsPersonnalisation';
@@ -24,6 +26,7 @@ export default function PersonnalisationPanierBloc({
   ligne,
   surPersonnalisation,
 }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   const prix = useFormaterPrix();
   const [edition, setEdition] = useState(false);
   const [brouillon, setBrouillon] = useState(ligne.personnalisation);
@@ -41,7 +44,7 @@ export default function PersonnalisationPanierBloc({
             }}
             disabled={descriptionDemande(brouillon) === ''}
           >
-            Enregistrer
+            {t.enregistrer}
           </Bouton>
           <Bouton
             variante="secondaire"
@@ -50,7 +53,7 @@ export default function PersonnalisationPanierBloc({
               setEdition(false);
             }}
           >
-            Annuler
+            {t.annuler}
           </Bouton>
         </div>
       </div>
@@ -62,10 +65,10 @@ export default function PersonnalisationPanierBloc({
       <div className="flex items-start justify-between gap-2">
         <p className="flex items-center gap-1.5 font-semibold text-gris-700">
           <Sparkles size={15} aria-hidden className="text-attente" />
-          Personnalisé
+          {t.personnalise}
           {supplement > 0 && (
             <span className="font-normal text-gris-500">
-              (+{prix(supplement)} / unité)
+              {t.parUnite(prix(supplement))}
             </span>
           )}
         </p>
@@ -73,7 +76,7 @@ export default function PersonnalisationPanierBloc({
           <button
             type="button"
             onClick={() => setEdition(true)}
-            aria-label={`Modifier la personnalisation de ${ligne.nom}`}
+            aria-label={t.modifierPerso(ligne.nom)}
             className="rounded p-1 text-gris-500 hover:bg-surface hover:text-primaire"
           >
             <Pencil size={15} aria-hidden />
@@ -81,7 +84,7 @@ export default function PersonnalisationPanierBloc({
           <button
             type="button"
             onClick={() => surPersonnalisation(null)}
-            aria-label={`Retirer la personnalisation de ${ligne.nom}`}
+            aria-label={t.retirerPerso(ligne.nom)}
             className="rounded p-1 text-gris-500 hover:bg-surface hover:text-primaire"
           >
             <X size={15} aria-hidden />
@@ -89,11 +92,11 @@ export default function PersonnalisationPanierBloc({
         </div>
       </div>
       <p className="mt-1 whitespace-pre-line text-gris-600">
-        {descriptionDemande(ligne.personnalisation)}
+        {descriptionDemande(ligne.personnalisation, t.rubriques)}
       </p>
       {ligne.personnalisation.ingredients.trim() !== '' && (
         <p className="mt-1 text-gris-600">
-          <span className="font-medium">Ingrédients à éviter :</span>{' '}
+          <span className="font-medium">{t.ingredientsAEviter}</span>{' '}
           {ligne.personnalisation.ingredients}
         </p>
       )}

@@ -9,6 +9,9 @@
 
 import { Sparkles } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_COMMANDE } from '../commande.textes';
 import { formaterMontant } from '../commande.service';
 import type { PersonnalisationLue } from '../commande.types';
 
@@ -21,27 +24,31 @@ export default function DemandePersonnalisationLue({
   personnalisation,
   quantite,
 }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   const supplement = Number(personnalisation.supplement_prix);
 
   return (
     <div className="mt-2 rounded-lg border border-attente/40 bg-attente/10 p-3 text-sm">
       <p className="flex items-center gap-1.5 font-semibold text-gris-700">
         <Sparkles size={15} aria-hidden className="text-attente" />
-        Personnalisation demandée
+        {t.personnalisationDemandee}
       </p>
       <p className="mt-1 whitespace-pre-line text-gris-700">
         {personnalisation.description_demande}
       </p>
       {personnalisation.ingredients_specifiques !== null && (
         <p className="mt-1 text-gris-700">
-          <span className="font-medium">Ingrédients à éviter ou allergies :</span>{' '}
+          <span className="font-medium">{t.ingredientsAllergies}</span>{' '}
           {personnalisation.ingredients_specifiques}
         </p>
       )}
       {supplement > 0 && (
         <p className="mt-1 text-xs text-gris-500">
-          Supplément : {formaterMontant(supplement)} × {quantite} ={' '}
-          {formaterMontant(supplement * quantite)}
+          {t.supplementCalcul(
+            formaterMontant(supplement),
+            quantite,
+            formaterMontant(supplement * quantite)
+          )}
         </p>
       )}
     </div>

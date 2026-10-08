@@ -13,6 +13,9 @@ import { ArrowRight, PackageCheck, ShieldCheck, Store } from 'lucide-react';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
 import { useTarifLivraison } from '@/features/livraison/livraison.hooks';
 import { resteAvantGratuite } from '@/features/livraison/livraison.service';
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_COMMANDE } from '../commande.textes';
 
 interface Proprietes {
   nombreArticles: number;
@@ -20,6 +23,7 @@ interface Proprietes {
 }
 
 export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) {
+  const t = useTextes(TEXTES_COMMANDE);
   const prix = useFormaterPrix();
   const { tarif } = useTarifLivraison();
   const seuil = tarif?.seuil_gratuite == null ? null : Number(tarif.seuil_gratuite);
@@ -32,24 +36,22 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
       className="rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm lg:sticky lg:top-6"
     >
       <h2 id="titre-recapitulatif" className="text-lg font-semibold text-gris-700">
-        Récapitulatif
+        {t.recapitulatif}
       </h2>
 
       <dl className="mt-4 space-y-3 text-sm">
         <div className="flex justify-between">
-          <dt className="text-gris-500">
-            Sous-total ({nombreArticles} article{nombreArticles > 1 ? 's' : ''})
-          </dt>
+          <dt className="text-gris-500">{t.sousTotal(nombreArticles)}</dt>
           <dd className="font-medium text-gris-700">{prix(sousTotal)}</dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-gris-500">Livraison</dt>
+          <dt className="text-gris-500">{t.livraison}</dt>
           <dd className="text-right text-gris-700">
             {tarif === null
-              ? 'Choisie à l’étape suivante'
+              ? t.livraisonEtapeSuivante
               : reste === null && seuil !== null
-                ? 'Offerte'
-                : `${prix(tarif.forfait)} si livrée`}
+                ? t.offerte
+                : t.siLivree(prix(tarif.forfait))}
           </dd>
         </div>
       </dl>
@@ -57,13 +59,11 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
       {tarif !== null && seuil !== null && (
         <div className="mt-4 rounded-xl bg-succes/10 p-3">
           <p className="text-xs font-medium text-succes">
-            {reste === null
-              ? 'Bravo, la livraison vous est offerte !'
-              : `Plus que ${prix(reste)} pour la livraison offerte`}
+            {reste === null ? t.livraisonOfferteBravo : t.plusQue(prix(reste))}
           </p>
           <div
             role="progressbar"
-            aria-label="Progression vers la livraison offerte"
+            aria-label={t.progressionLivraison}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progression)}
@@ -78,41 +78,38 @@ export default function ResumePanier({ nombreArticles, sousTotal }: Proprietes) 
       )}
 
       <div className="mt-5 flex items-baseline justify-between border-t border-gris-200 pt-4">
-        <span className="font-semibold text-gris-700">Total estimé</span>
+        <span className="font-semibold text-gris-700">{t.totalEstime}</span>
         <span className="text-2xl font-bold text-primaire">{prix(sousTotal)}</span>
       </div>
       {/* Indicatif : le serveur recalcule à partir des prix du catalogue. */}
-      <p className="mt-1 text-xs text-gris-500">
-        Montant indicatif, confirmé à la validation. Frais de livraison ajoutés à
-        l’étape suivante si vous choisissez d’être livré.
-      </p>
+      <p className="mt-1 text-xs text-gris-500">{t.montantIndicatif}</p>
 
       <Link
         to="/commande"
         className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white no-underline shadow-md transition-all hover:-translate-y-0.5 hover:bg-action-fonce hover:shadow-lg"
       >
-        Valider la commande
+        {t.validerCommande}
         <ArrowRight size={18} aria-hidden />
       </Link>
       <Link
         to="/produits"
         className="mt-3 block text-center text-sm font-medium text-gris-600 no-underline hover:text-primaire"
       >
-        Continuer mes achats
+        {t.continuerAchats}
       </Link>
 
       <ul className="mt-6 space-y-2 border-t border-gris-200 pt-4 text-xs text-gris-500">
         <li className="flex items-center gap-2">
           <ShieldCheck size={16} aria-hidden className="text-succes" />
-          Commande possible avec ou sans compte
+          {t.avecOuSansCompte}
         </li>
         <li className="flex items-center gap-2">
           <PackageCheck size={16} aria-hidden className="text-succes" />
-          Suivi de votre commande en ligne
+          {t.suiviEnLigne}
         </li>
         <li className="flex items-center gap-2">
           <Store size={16} aria-hidden className="text-succes" />
-          Retrait en boutique gratuit
+          {t.retraitGratuit}
         </li>
       </ul>
     </aside>

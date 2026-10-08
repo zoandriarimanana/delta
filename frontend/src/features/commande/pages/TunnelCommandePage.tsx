@@ -16,8 +16,10 @@ import { Link, useNavigate } from 'react-router';
 import { ShoppingBag, UserRound } from 'lucide-react';
 
 import { useDevise } from '@/features/devise/devise.store';
+import { useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import { TEXTES_COMMANDE } from '../commande.textes';
 import ChoixReception from '../components/ChoixReception';
 import ConfirmationCommande from '../components/ConfirmationCommande';
 import EtapesCommande from '../components/EtapesCommande';
@@ -32,6 +34,7 @@ const CLASSES_CHAMP =
   'mt-1 block w-full rounded-lg border border-gris-300 bg-surface px-3 py-2.5 text-gris-700 focus:border-primaire focus:outline-none focus:ring-2 focus:ring-primaire/20';
 
 export default function TunnelCommandePage() {
+  const t = useTextes(TEXTES_COMMANDE);
   const panier = usePanier();
   const connecte = useEstConnecte();
   const devise = useDevise();
@@ -56,15 +59,13 @@ export default function TunnelCommandePage() {
         <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primaire/10 text-primaire">
           <ShoppingBag size={36} aria-hidden />
         </span>
-        <h1 className="mt-6 text-3xl font-semibold text-gris-700">Commande</h1>
-        <p className="mt-3 text-gris-500">
-          Votre panier est vide, il n’y a rien à commander.
-        </p>
+        <h1 className="mt-6 text-3xl font-semibold text-gris-700">{t.commande}</h1>
+        <p className="mt-3 text-gris-500">{t.panierVideCommande}</p>
         <Link
           to="/produits"
           className="mt-8 inline-flex items-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white no-underline shadow-md hover:bg-action-fonce"
         >
-          Parcourir le catalogue
+          {t.parcourirCatalogue}
         </Link>
       </section>
     );
@@ -94,13 +95,11 @@ export default function TunnelCommandePage() {
   return (
     <section>
       <EtapesCommande courante="Commande" />
-      <h1 className="mt-6 text-3xl font-semibold text-gris-700">
-        Finaliser ma commande
-      </h1>
+      <h1 className="mt-6 text-3xl font-semibold text-gris-700">{t.finaliser}</h1>
 
       <div className="mt-6 grid items-start gap-8 lg:grid-cols-[1fr_24rem]">
         <form id={ID_FORMULAIRE} onSubmit={soumettre} className="space-y-6">
-          <Etape numero={1} titre="Mode de réception">
+          <Etape numero={1} titre={t.modeReception}>
             <ChoixReception
               mode={mode}
               adresse={adresse}
@@ -109,25 +108,23 @@ export default function TunnelCommandePage() {
             />
           </Etape>
 
-          <Etape numero={2} titre="Vos coordonnées">
+          <Etape numero={2} titre={t.vosCoordonnees}>
             {connecte ? (
               <p className="flex items-center gap-2 text-sm text-gris-600">
                 <UserRound size={18} aria-hidden className="text-succes" />
-                Vous êtes connecté : la commande sera rattachée à votre compte et
-                visible dans « Mes commandes ».
+                {t.connecteRattachee}
               </p>
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-gris-500">
-                  Vous commandez sans compte. Ces informations nous permettent de vous
-                  recontacter.{' '}
+                  {t.sansCompte}{' '}
                   <Link to="/connexion" className="font-medium text-primaire">
-                    Déjà client ? Se connecter
+                    {t.dejaClient}
                   </Link>
                 </p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
-                    <span className="text-sm font-medium text-gris-700">Nom</span>
+                    <span className="text-sm font-medium text-gris-700">{t.nom}</span>
                     <input
                       required
                       autoComplete="name"
@@ -138,7 +135,7 @@ export default function TunnelCommandePage() {
                   </label>
                   <label className="block">
                     <span className="text-sm font-medium text-gris-700">
-                      Téléphone ou e-mail
+                      {t.telephoneOuEmail}
                     </span>
                     <input
                       required
