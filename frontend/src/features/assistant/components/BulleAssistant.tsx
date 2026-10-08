@@ -13,17 +13,18 @@
 import { useEffect, useState } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_ASSISTANT } from '../assistant.textes';
 import { useConversation, useDisponibiliteAssistant } from '../assistant.hooks';
 import type { ProfilAssistant } from '../assistant.types';
-import FenetreConversation, {
-  ACCUEIL_CLIENT,
-  ACCUEIL_PERSONNEL,
-} from './FenetreConversation';
+import FenetreConversation, { ACCUEIL_PERSONNEL } from './FenetreConversation';
 
 const PRESENTATIONS: Record<ProfilAssistant, { titre: string; sousTitre: string }> = {
+  // Remplacé à l'affichage par la version de la langue courante.
   client: {
-    titre: 'Assistant Delta',
-    sousTitre: 'Réponses à partir de notre catalogue',
+    titre: TEXTES_ASSISTANT.fr.titreClient,
+    sousTitre: TEXTES_ASSISTANT.fr.sousTitreClient,
   },
   personnel: {
     titre: 'Assistant du personnel',
@@ -40,9 +41,13 @@ interface Proprietes {
 }
 
 export default function BulleAssistant({ profil = 'client' }: Proprietes) {
+  const t = useTextes(TEXTES_ASSISTANT);
   const actif = useDisponibiliteAssistant();
   const conversation = useConversation(profil);
-  const presentation = PRESENTATIONS[profil];
+  const presentation =
+    profil === 'client'
+      ? { titre: t.titreClient, sousTitre: t.sousTitreClient }
+      : PRESENTATIONS[profil];
   const [ouverte, setOuverte] = useState(false);
 
   useEffect(() => {
@@ -74,7 +79,7 @@ export default function BulleAssistant({ profil = 'client' }: Proprietes) {
             <button
               type="button"
               onClick={() => setOuverte(false)}
-              aria-label="Fermer l’assistant"
+              aria-label={t.fermer}
               className="rounded p-1 hover:bg-white/10"
             >
               <X size={18} aria-hidden />
@@ -85,7 +90,7 @@ export default function BulleAssistant({ profil = 'client' }: Proprietes) {
           <FenetreConversation
             conversation={conversation}
             surNavigation={() => setOuverte(false)}
-            accueil={profil === 'personnel' ? ACCUEIL_PERSONNEL : ACCUEIL_CLIENT}
+            accueil={profil === 'personnel' ? ACCUEIL_PERSONNEL : t.accueilClient}
             className="flex-1"
           />
         </section>
@@ -94,7 +99,7 @@ export default function BulleAssistant({ profil = 'client' }: Proprietes) {
       <button
         type="button"
         onClick={() => setOuverte((valeur) => !valeur)}
-        aria-label={ouverte ? 'Fermer l’assistant' : 'Ouvrir l’assistant'}
+        aria-label={ouverte ? t.fermer : t.ouvrir}
         aria-expanded={ouverte}
         aria-controls="fenetre-assistant"
         className="flex h-14 w-14 items-center justify-center rounded-full bg-primaire text-sur-couleur shadow-lg transition-transform hover:scale-105"

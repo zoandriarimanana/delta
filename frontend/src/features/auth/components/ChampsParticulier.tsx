@@ -7,6 +7,9 @@
  * séparation des formulaires de réservation évitait déjà.
  */
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_AUTH } from '../auth.textes';
 import type { IdentiteParticulier } from '../auth.types';
 
 interface Proprietes {
@@ -15,10 +18,11 @@ interface Proprietes {
 }
 
 export default function ChampsParticulier({ valeurs, surChangement }: Proprietes) {
+  const t = useTextes(TEXTES_AUTH);
   return (
     <>
       <label className="flex flex-col gap-1 text-sm text-gris-700">
-        Nom
+        {t.nom}
         <input
           type="text"
           required
@@ -31,7 +35,7 @@ export default function ChampsParticulier({ valeurs, surChangement }: Proprietes
       </label>
 
       <label className="flex flex-col gap-1 text-sm text-gris-700">
-        Prénom
+        {t.prenom}
         <input
           type="text"
           required
@@ -44,7 +48,7 @@ export default function ChampsParticulier({ valeurs, surChangement }: Proprietes
       </label>
 
       <label className="flex flex-col gap-1 text-sm text-gris-700">
-        Date de naissance <span className="text-gris-500">(facultative)</span>
+        {t.dateNaissance} <span className="text-gris-500">{t.facultative}</span>
         <input
           type="date"
           value={valeurs.date_naissance ?? ''}

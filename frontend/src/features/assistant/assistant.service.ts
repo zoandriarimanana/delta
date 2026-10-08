@@ -3,12 +3,13 @@
  * appel réseau, testables isolément.
  */
 
+import { textesCourants } from '@/lib/langue';
+
+import { TEXTES_ASSISTANT } from './assistant.textes';
 import type { EvenementFlux, SourceAssistant } from './assistant.types';
 
 /** Miroir de `LONGUEUR_MAX_QUESTION` (backend) : refuser avant d'envoyer. */
 export const LONGUEUR_MAX_QUESTION = 500;
-
-const MESSAGE_GENERIQUE = 'L’assistant n’a pas pu répondre. Réessayez dans un instant.';
 
 /**
  * Sépare d'un tampon les événements SSE complets et ce qui reste à recevoir.
@@ -58,20 +59,9 @@ export function lienSource(source: SourceAssistant): string | null {
   return route === undefined ? null : route(source.id_contenu);
 }
 
-const LIBELLES_PAR_TYPE: Record<string, string> = {
-  produit: 'Produit',
-  categorie_produit: 'Catégorie',
-  formation: 'Formation',
-  domaine_formation: 'Domaine de formation',
-  salle: 'Salle',
-  logement: 'Hébergement',
-  guide: 'Guide de la plateforme',
-  document: 'Document',
-};
-
 /** Libellé lisible d'un type de contenu — l'identifiant brut en dernier recours. */
 export function libelleType(typeContenu: string): string {
-  return LIBELLES_PAR_TYPE[typeContenu] ?? typeContenu;
+  return textesCourants(TEXTES_ASSISTANT).types[typeContenu] ?? typeContenu;
 }
 
 /** Texte du lien d'une source : son titre, ou à défaut son type. */
@@ -99,22 +89,23 @@ export class ErreurAssistant extends Error {
  * pour un visiteur.
  */
 export function messageErreur(statut: number, detail: unknown): string {
+  const t = textesCourants(TEXTES_ASSISTANT);
   if (statut === 401) {
     // Session expirée, ou remplacée par celle d'un autre compte. Le flux passe
     // par `fetch` et non par axios : l'intercepteur qui gère le 401 ailleurs
     // ne voit pas cet appel, le message doit donc dire quoi faire.
-    return 'Votre session n’est plus valide : reconnectez-vous pour continuer.';
+    return t.sessionInvalide;
   }
   if (statut === 429) {
-    return 'Vous avez posé beaucoup de questions d’un coup. Patientez une minute avant de continuer.';
+    return t.tropDeQuestions;
   }
   if (statut === 422) {
-    return `Votre question est vide ou trop longue (${LONGUEUR_MAX_QUESTION} caractères au maximum).`;
+    return t.questionInvalide(LONGUEUR_MAX_QUESTION);
   }
   if (statut === 503 && typeof detail === 'string' && detail.length > 0) {
     return detail;
   }
-  return MESSAGE_GENERIQUE;
+  return t.erreurGenerique;
 }
 
 /** Libellé d'un refus d'administration — même logique que les autres écrans. */

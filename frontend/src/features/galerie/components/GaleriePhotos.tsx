@@ -12,6 +12,9 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Expand, X } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_GALERIE } from '../galerie.textes';
 import { urlPhoto } from '../galerie.api';
 import type { BienPhotographie, PhotoBien } from '../galerie.types';
 
@@ -29,6 +32,7 @@ const CLASSES_FLECHE =
   'absolute top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-gris-700 shadow-md transition hover:bg-surface';
 
 export default function GaleriePhotos({ bien, photos, repli, nomBien }: Proprietes) {
+  const t = useTextes(TEXTES_GALERIE);
   const [index, setIndex] = useState(0);
   const [pleinEcran, setPleinEcran] = useState(false);
   const nombre = photos.length;
@@ -60,7 +64,7 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
     );
   }
 
-  const texteAlternatif = `${nomBien}, photo ${courant + 1} sur ${nombre}`;
+  const texteAlternatif = t.photoSur(nomBien, courant + 1, nombre);
 
   return (
     <div className="self-start space-y-3">
@@ -68,7 +72,7 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
         <button
           type="button"
           onClick={() => setPleinEcran(true)}
-          aria-label="Agrandir la photo"
+          aria-label={t.agrandir}
           className="group block w-full"
         >
           <img
@@ -85,7 +89,7 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
             <button
               type="button"
               onClick={() => aller(-1)}
-              aria-label="Photo précédente"
+              aria-label={t.precedente}
               className={`${CLASSES_FLECHE} left-3`}
             >
               <ChevronLeft size={20} aria-hidden />
@@ -93,7 +97,7 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
             <button
               type="button"
               onClick={() => aller(1)}
-              aria-label="Photo suivante"
+              aria-label={t.suivante}
               className={`${CLASSES_FLECHE} right-3`}
             >
               <ChevronRight size={20} aria-hidden />
@@ -106,13 +110,13 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
       </div>
 
       {nombre > 1 && (
-        <ul aria-label="Miniatures" className="flex gap-2 overflow-x-auto pb-1">
+        <ul aria-label={t.miniatures} className="flex gap-2 overflow-x-auto pb-1">
           {photos.map((miniature, rang) => (
             <li key={miniature.fichier} className="shrink-0">
               <button
                 type="button"
                 onClick={() => setIndex(rang)}
-                aria-label={`Afficher la photo ${rang + 1}`}
+                aria-label={t.afficher(rang + 1)}
                 aria-current={rang === courant}
                 className={`block overflow-hidden rounded-lg border-2 transition ${
                   rang === courant
@@ -135,7 +139,7 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={`Photos de ${nomBien}`}
+          aria-label={t.photosDe(nomBien)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
           onClick={() => setPleinEcran(false)}
         >
@@ -148,7 +152,7 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
           <button
             type="button"
             onClick={() => setPleinEcran(false)}
-            aria-label="Fermer"
+            aria-label={t.fermer}
             className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"
           >
             <X size={22} aria-hidden />
@@ -161,7 +165,7 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
                   evenement.stopPropagation();
                   aller(-1);
                 }}
-                aria-label="Photo précédente"
+                aria-label={t.precedente}
                 className={`${CLASSES_FLECHE} left-4`}
               >
                 <ChevronLeft size={20} aria-hidden />
@@ -172,7 +176,7 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
                   evenement.stopPropagation();
                   aller(1);
                 }}
-                aria-label="Photo suivante"
+                aria-label={t.suivante}
                 className={`${CLASSES_FLECHE} right-4`}
               >
                 <ChevronRight size={20} aria-hidden />

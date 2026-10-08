@@ -1,6 +1,8 @@
 /** Règles d'affichage du module d'authentification — fonctions pures. */
 
-const MESSAGE_PAR_DEFAUT = 'La connexion a échoué. Réessayez dans un instant.';
+import { textesCourants } from '@/lib/langue';
+
+import { TEXTES_AUTH } from './auth.textes';
 
 /**
  * Extrait le message de refus de l'API, ou retombe sur un message générique.
@@ -17,11 +19,10 @@ const MESSAGE_PAR_DEFAUT = 'La connexion a échoué. Réessayez dans un instant.
 export function messageDeRefus(erreur: unknown): string {
   const detail = (erreur as { response?: { data?: { detail?: unknown } } } | null)
     ?.response?.data?.detail;
-  return typeof detail === 'string' && detail.length > 0 ? detail : MESSAGE_PAR_DEFAUT;
+  return typeof detail === 'string' && detail.length > 0
+    ? detail
+    : textesCourants(TEXTES_AUTH).erreurConnexion;
 }
-
-const MESSAGE_INSCRIPTION_PAR_DEFAUT =
-  'L’inscription a échoué. Réessayez dans un instant.';
 
 /**
  * Extrait le message de refus d'une inscription, ou retombe sur un générique.
@@ -45,5 +46,5 @@ export function messageDInscription(erreur: unknown): string {
     ?.response?.data?.detail;
   return typeof detail === 'string' && detail.length > 0
     ? detail
-    : MESSAGE_INSCRIPTION_PAR_DEFAUT;
+    : textesCourants(TEXTES_AUTH).erreurInscription;
 }

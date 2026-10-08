@@ -1749,11 +1749,23 @@ un commit par étape :
       à maintenir). Frontend 796/796 ; parcours vérifié dans un vrai
       navigateur (fiche en €, tunnel en $, commande figée à 4,44 $ pour
       20 000 Ar, paiement par carte seule).
-- [ ] **I.4 — Interface client en anglais** : sélecteur FR/EN dans
+- [x] **I.4 — Interface client en anglais** : sélecteur FR/EN dans
       l'en-tête, traduction des écrans publics et client (le back-office
       reste en français). Les messages d'erreur renvoyés par l'API restent
       en français — limite assumée, à traiter par un `Accept-Language`
       côté serveur si le besoin se confirme.
+      — Livré, sans bibliothèque : un `<module>.textes.ts` par module, la
+      version anglaise vérifiée par le typage (voir `docs/architecture.md`,
+      « Langues »). Couvre l'en-tête, l'accueil, les catalogues (produits,
+      formations, salles, hébergements), le panier et le tunnel, les
+      confirmations, « Mes commandes », « Mes réservations », la connexion
+      et l'inscription, le paiement, les avis, le suivi de livraison, la
+      galerie et la bulle de l'assistant. Dates et nombres suivent la langue
+      (`en-US`). L'assistant IA répond désormais aussi en anglais (consigne
+      élargie, formules de politesse anglaises reconnues). Frontend 802/802 ;
+      vérifié dans un vrai navigateur.
+      — Restent en français, délibérément : les données saisies par
+      l'équipe, les messages d'erreur de l'API, et tout le back-office.
 
 
 ## Traçabilité MLD → sprints (à retenir)

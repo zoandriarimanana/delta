@@ -14,8 +14,10 @@
 
 import { useState } from 'react';
 
+import { useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import { TEXTES_AVIS } from '../avis.textes';
 import { useDepotAvis } from '../avis.hooks';
 import type { AvisEnvoye } from '../avis.types';
 
@@ -48,6 +50,7 @@ function charge(
 }
 
 export default function FormulaireAvis({ cible, idCible }: Proprietes) {
+  const t = useTextes(TEXTES_AVIS);
   const connecte = useEstConnecte();
   const { deposer, envoi, erreur, reussite } = useDepotAvis();
   const [note, setNote] = useState(5);
@@ -65,7 +68,7 @@ export default function FormulaireAvis({ cible, idCible }: Proprietes) {
   if (reussite !== null) {
     return (
       <p role="status" className="mt-2 text-sm text-succes">
-        Merci, votre avis a été enregistré.
+        {t.merci}
       </p>
     );
   }
@@ -79,7 +82,7 @@ export default function FormulaireAvis({ cible, idCible }: Proprietes) {
       }}
     >
       <label className="flex items-center gap-2 text-sm text-gris-700">
-        Note
+        {t.note}
         <select
           value={note}
           onChange={(evenement) => setNote(Number(evenement.target.value))}
@@ -94,7 +97,7 @@ export default function FormulaireAvis({ cible, idCible }: Proprietes) {
       </label>
 
       <label className="flex flex-col gap-1 text-sm text-gris-700">
-        Commentaire (facultatif)
+        {t.commentaire}
         <textarea
           value={commentaire}
           onChange={(evenement) => setCommentaire(evenement.target.value)}
@@ -120,7 +123,7 @@ export default function FormulaireAvis({ cible, idCible }: Proprietes) {
         disabled={envoi}
         className="rounded bg-action px-3 py-1.5 text-sm text-white disabled:opacity-50"
       >
-        {envoi ? 'Envoi…' : 'Déposer mon avis'}
+        {envoi ? t.envoi : t.deposer}
       </button>
     </form>
   );

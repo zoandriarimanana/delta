@@ -27,7 +27,6 @@ export const SYMBOLES_DEVISES: Record<Devise, string> = {
   USD: '$',
 };
 
-
 /**
  * Convertit un montant en Ariary dans `devise`.
  *

@@ -7,6 +7,9 @@
  * ici et non dans le composant.
  */
 
+import { textesCourants } from '@/lib/langue';
+
+import { TEXTES_LIVRAISON } from './livraison.textes';
 import type { StatutLivraison, TarifLivraison } from './livraison.types';
 
 /** Ce qu'un statut dit au client, et ce qu'il lui demande. */
@@ -22,38 +25,17 @@ export interface LibelleStatut {
   priseEnCharge: boolean;
 }
 
-const LIBELLES: Record<StatutLivraison, LibelleStatut> = {
-  En_attente: {
-    titre: 'En préparation',
-    explication:
-      'Votre commande est enregistrée. Elle partira dès qu’un livreur lui sera affecté.',
-    priseEnCharge: true,
-  },
-  En_cours: {
-    titre: 'En cours de livraison',
-    explication: 'Votre commande est en route.',
-    priseEnCharge: true,
-  },
-  Livree: {
-    titre: 'Livrée',
-    explication: 'Votre commande vous a été remise.',
-    priseEnCharge: true,
-  },
-  Echouee: {
-    // Le seul statut qui pourrait inquiéter, et le seul où le client risque de
-    // croire qu'il doit agir. Il ne le doit pas : la suite — nouvelle tentative,
-    // remboursement, annulation — est traitée par l'équipe. Le dire
-    // explicitement évite un appel au support pour rien.
-    titre: 'Livraison non aboutie',
-    explication:
-      'La livraison n’a pas pu être remise. Notre équipe reprend contact avec vous : vous n’avez aucune démarche à faire.',
-    priseEnCharge: true,
-  },
-  Annulee: {
-    titre: 'Livraison annulée',
-    explication: 'Cette livraison n’aura pas lieu.',
-    priseEnCharge: false,
-  },
+/** Seuls `Annulee` et un statut inconnu ne sont pas pris en charge. */
+const PRIS_EN_CHARGE: Record<StatutLivraison, boolean> = {
+  En_attente: true,
+  En_cours: true,
+  Livree: true,
+  // Le seul statut qui pourrait inquiéter, et le seul où le client risque de
+  // croire qu'il doit agir. Il ne le doit pas : la suite — nouvelle tentative,
+  // remboursement, annulation — est traitée par l'équipe, et l'explication le
+  // dit explicitement.
+  Echouee: true,
+  Annulee: false,
 };
 
 /**
@@ -65,13 +47,11 @@ const LIBELLES: Record<StatutLivraison, LibelleStatut> = {
  * la garde couvre le déploiement décalé.
  */
 export function libelleStatut(statut: StatutLivraison): LibelleStatut {
-  return (
-    LIBELLES[statut] ?? {
-      titre: 'Suivi indisponible',
-      explication: 'L’état de cette livraison n’a pas pu être déterminé.',
-      priseEnCharge: false,
-    }
-  );
+  const t = textesCourants(TEXTES_LIVRAISON);
+  const libelle = t.statuts[statut];
+  return libelle === undefined
+    ? { ...t.inconnu, priseEnCharge: false }
+    : { ...libelle, priseEnCharge: PRIS_EN_CHARGE[statut] };
 }
 
 /** Ordre d'avancement, pour situer le statut courant dans le parcours. */

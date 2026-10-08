@@ -14,10 +14,14 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 
-import { useConnexionClient } from '../auth.hooks';
 import ChampMotDePasse from '@/components/ui/ChampMotDePasse';
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_AUTH } from '../auth.textes';
+import { useConnexionClient } from '../auth.hooks';
 
 export default function ConnexionPage() {
+  const t = useTextes(TEXTES_AUTH);
   const naviguer = useNavigate();
   // Message porté par l'état de navigation, et non par un paramètre d'URL :
   // il ne survit pas à un rechargement ni à un lien partagé, ce qui est le
@@ -30,10 +34,8 @@ export default function ConnexionPage() {
 
   return (
     <section className="mx-auto max-w-sm">
-      <h1 className="text-2xl font-semibold text-gris-700">Connexion</h1>
-      <p className="mt-2 text-sm text-gris-600">
-        Retrouvez vos commandes et vos réservations.
-      </p>
+      <h1 className="text-2xl font-semibold text-gris-700">{t.connexion}</h1>
+      <p className="mt-2 text-sm text-gris-600">{t.connexionSousTitre}</p>
 
       {confirmation !== undefined && (
         <p
@@ -56,7 +58,7 @@ export default function ConnexionPage() {
         }}
       >
         <label className="flex flex-col gap-1 text-sm text-gris-700">
-          Adresse e-mail
+          {t.email}
           <input
             type="email"
             required
@@ -68,7 +70,7 @@ export default function ConnexionPage() {
         </label>
 
         <label className="flex flex-col gap-1 text-sm text-gris-700">
-          Mot de passe
+          {t.motDePasse}
           <ChampMotDePasse
             required
             autoComplete="current-password"
@@ -95,21 +97,21 @@ export default function ConnexionPage() {
           disabled={envoi}
           className="w-full rounded bg-action px-4 py-2 text-sm text-white disabled:opacity-50"
         >
-          {envoi ? 'Connexion…' : 'Se connecter'}
+          {envoi ? t.connexionEnCours : t.seConnecter}
         </button>
       </form>
 
       <p className="mt-6 text-sm text-gris-600">
-        Pas encore de compte ?{' '}
+        {t.pasDeCompte}{' '}
         <Link to="/inscription" className="text-gris-700 underline">
-          Créer un compte
+          {t.creerCompte}
         </Link>
       </p>
 
       <p className="mt-2 text-sm text-gris-600">
-        Vous êtes membre de l’équipe Delta ?{' '}
+        {t.membreEquipe}{' '}
         <Link to="/personnel/connexion" className="text-gris-700 underline">
-          Espace personnel
+          {t.espacePersonnel}
         </Link>
       </p>
     </section>

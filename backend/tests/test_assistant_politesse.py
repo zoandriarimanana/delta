@@ -12,20 +12,43 @@ from app.ai_langchain.politesse import REPONSES, reponse_politesse
 
 @pytest.mark.parametrize(
     "message",
-    ["Bonjour", "bonsoir !", "Salut tout le monde", "Hello", "BONJOUR madame"],
+    ["Bonjour", "bonsoir !", "Salut tout le monde", "BONJOUR madame"],
 )
 def test_une_salutation_seule_recoit_la_salutation_francaise(message: str) -> None:
     assert reponse_politesse(message) == REPONSES[("salutation", "fr")]
 
 
-@pytest.mark.parametrize("message", ["Merci", "merci beaucoup !", "Thank you"])
+@pytest.mark.parametrize("message", ["Merci", "merci beaucoup !"])
 def test_un_remerciement_seul_recoit_le_remerciement(message: str) -> None:
     assert reponse_politesse(message) == REPONSES[("remerciement", "fr")]
 
 
-@pytest.mark.parametrize("message", ["Au revoir", "à bientôt", "Bye"])
+@pytest.mark.parametrize("message", ["Au revoir", "à bientôt"])
 def test_un_au_revoir_seul_recoit_l_au_revoir(message: str) -> None:
     assert reponse_politesse(message) == REPONSES[("au_revoir", "fr")]
+
+
+@pytest.mark.parametrize(
+    ("message", "intention"),
+    [
+        ("Hello", "salutation"),
+        ("Hi!", "salutation"),
+        ("Thank you", "remerciement"),
+        ("Thanks", "remerciement"),
+        ("Bye", "au_revoir"),
+        ("Goodbye", "au_revoir"),
+    ],
+)
+def test_l_anglais_seul_recoit_une_reponse_en_anglais(
+    message: str, intention: str
+) -> None:
+    """Interface client en anglais depuis le 8 octobre 2026 : un « Hello »
+    reçoit sa réponse en anglais, plus en français."""
+    assert reponse_politesse(message) == REPONSES[(intention, "en")]
+
+
+def test_un_melange_francais_anglais_reste_en_francais() -> None:
+    assert reponse_politesse("Hello tout le monde") == REPONSES[("salutation", "fr")]
 
 
 @pytest.mark.parametrize(

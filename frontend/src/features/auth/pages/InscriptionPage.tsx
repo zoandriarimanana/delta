@@ -17,11 +17,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
+import ChampMotDePasse from '@/components/ui/ChampMotDePasse';
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_AUTH } from '../auth.textes';
 import ChampsEntreprise from '../components/ChampsEntreprise';
 import ChampsParticulier from '../components/ChampsParticulier';
 import { useInscriptionEntreprise, useInscriptionParticulier } from '../auth.hooks';
 import type { IdentiteEntreprise, IdentiteParticulier } from '../auth.types';
-import ChampMotDePasse from '@/components/ui/ChampMotDePasse';
 
 type TypeCompte = 'particulier' | 'entreprise';
 
@@ -33,9 +36,10 @@ const ENTREPRISE_VIDE: IdentiteEntreprise = {
 };
 
 /** Message porté jusqu'à l'écran de connexion par l'état de navigation. */
-export const MESSAGE_COMPTE_CREE = 'Compte créé, connectez-vous pour continuer.';
+export const MESSAGE_COMPTE_CREE = TEXTES_AUTH.fr.compteCree;
 
 export default function InscriptionPage() {
+  const t = useTextes(TEXTES_AUTH);
   const naviguer = useNavigate();
   const particulier = useInscriptionParticulier();
   const entreprise = useInscriptionEntreprise();
@@ -68,7 +72,7 @@ export default function InscriptionPage() {
       if (reussi) {
         naviguer('/connexion', {
           replace: true,
-          state: { message: MESSAGE_COMPTE_CREE },
+          state: { message: t.compteCree },
         });
       }
     });
@@ -76,10 +80,8 @@ export default function InscriptionPage() {
 
   return (
     <section className="mx-auto max-w-sm">
-      <h1 className="text-2xl font-semibold text-gris-700">Créer un compte</h1>
-      <p className="mt-2 text-sm text-gris-600">
-        Pour suivre vos commandes et vos réservations.
-      </p>
+      <h1 className="text-2xl font-semibold text-gris-700">{t.creerCompte}</h1>
+      <p className="mt-2 text-sm text-gris-600">{t.inscriptionSousTitre}</p>
 
       <form
         className="mt-6 space-y-4"
@@ -89,7 +91,7 @@ export default function InscriptionPage() {
         }}
       >
         <fieldset className="space-y-2">
-          <legend className="text-sm text-gris-700">Type de compte</legend>
+          <legend className="text-sm text-gris-700">{t.typeCompte}</legend>
           {(['particulier', 'entreprise'] as const).map((valeur) => (
             <label
               key={valeur}
@@ -102,13 +104,13 @@ export default function InscriptionPage() {
                 checked={type === valeur}
                 onChange={() => setType(valeur)}
               />
-              {valeur === 'particulier' ? 'Particulier' : 'Entreprise'}
+              {valeur === 'particulier' ? t.particulier : t.entreprise}
             </label>
           ))}
         </fieldset>
 
         <label className="flex flex-col gap-1 text-sm text-gris-700">
-          Adresse e-mail
+          {t.email}
           <input
             type="email"
             required
@@ -120,7 +122,7 @@ export default function InscriptionPage() {
         </label>
 
         <label className="flex flex-col gap-1 text-sm text-gris-700">
-          Mot de passe <span className="text-gris-500">(8 caractères minimum)</span>
+          {t.motDePasse} <span className="text-gris-500">{t.huitCaracteres}</span>
           <ChampMotDePasse
             required
             minLength={8}
@@ -132,7 +134,7 @@ export default function InscriptionPage() {
         </label>
 
         <label className="flex flex-col gap-1 text-sm text-gris-700">
-          Téléphone <span className="text-gris-500">(facultatif)</span>
+          {t.telephone} <span className="text-gris-500">{t.facultatif}</span>
           <input
             type="tel"
             value={telephone}
@@ -170,14 +172,14 @@ export default function InscriptionPage() {
           disabled={courant.envoi}
           className="w-full rounded bg-action px-4 py-2 text-sm text-white disabled:opacity-50"
         >
-          {courant.envoi ? 'Création…' : 'Créer mon compte'}
+          {courant.envoi ? t.creation : t.creerMonCompte}
         </button>
       </form>
 
       <p className="mt-6 text-sm text-gris-600">
-        Vous avez déjà un compte ?{' '}
+        {t.dejaUnCompte}{' '}
         <Link to="/connexion" className="text-gris-700 underline">
-          Se connecter
+          {t.seConnecter}
         </Link>
       </p>
     </section>

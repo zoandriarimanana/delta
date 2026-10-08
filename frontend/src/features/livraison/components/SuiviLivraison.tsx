@@ -8,8 +8,11 @@
  */
 
 import { Truck } from 'lucide-react';
-import { formaterDate } from '@/features/commande/commande.service';
 
+import { formaterDate } from '@/features/commande/commande.service';
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_LIVRAISON } from '../livraison.textes';
 import { estParcoursNominal, libelleStatut } from '../livraison.service';
 import type { SuiviLivraison as Suivi } from '../livraison.types';
 
@@ -18,19 +21,20 @@ interface Proprietes {
 }
 
 export default function SuiviLivraison({ suivi }: Proprietes) {
+  const t = useTextes(TEXTES_LIVRAISON);
   const { titre, explication, priseEnCharge } = libelleStatut(suivi.statut);
   const nominal = estParcoursNominal(suivi.statut);
 
   return (
     <section
-      aria-label="Suivi de livraison"
+      aria-label={t.suivi}
       className={`mt-4 rounded-2xl border p-5 shadow-sm ${
         nominal ? 'border-gris-200 bg-surface' : 'border-attente/40 bg-attente/10'
       }`}
     >
       <h3 className="flex items-center gap-2 font-semibold text-gris-700">
         <Truck size={18} aria-hidden className="text-primaire" />
-        Livraison — {titre}
+        {t.livraison(titre)}
       </h3>
       <p
         className="mt-1 text-sm text-gris-600"
@@ -44,7 +48,7 @@ export default function SuiviLivraison({ suivi }: Proprietes) {
           ligne vide se lit comme une donnée manquante, son absence non. */}
       {suivi.date_heure_prevue !== null && (
         <p className="mt-2 text-sm text-gris-500">
-          Prévue le{' '}
+          {t.prevueLe}{' '}
           <time dateTime={suivi.date_heure_prevue}>
             {formaterDate(suivi.date_heure_prevue)}
           </time>
@@ -53,7 +57,7 @@ export default function SuiviLivraison({ suivi }: Proprietes) {
 
       {suivi.date_heure_reelle !== null && (
         <p className="mt-1 text-sm text-gris-500">
-          Remise le{' '}
+          {t.remiseLe}{' '}
           <time dateTime={suivi.date_heure_reelle}>
             {formaterDate(suivi.date_heure_reelle)}
           </time>
@@ -61,9 +65,7 @@ export default function SuiviLivraison({ suivi }: Proprietes) {
       )}
 
       {!priseEnCharge && (
-        <p className="mt-2 text-sm text-attente">
-          Contactez-nous si vous souhaitez repasser commande.
-        </p>
+        <p className="mt-2 text-sm text-attente">{t.repasserCommande}</p>
       )}
     </section>
   );

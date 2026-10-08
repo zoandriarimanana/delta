@@ -4,6 +4,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { textesCourants } from '@/lib/langue';
+
+import { TEXTES_LIVRAISON } from './livraison.textes';
 import {
   recupererSuivi,
   recupererSuiviInvite,
@@ -74,7 +77,7 @@ function useChargement(
         }
         setEtat({
           ...ETAT_VIDE,
-          erreur: 'Le suivi de livraison n’a pas pu être chargé.',
+          erreur: textesCourants(TEXTES_LIVRAISON).erreurChargement,
         });
       });
 

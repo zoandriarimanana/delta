@@ -9,11 +9,11 @@
 
 import { useCallback, useState } from 'react';
 
+import { textesCourants } from '@/lib/langue';
+
+import { TEXTES_PAIEMENT } from './paiement.textes';
 import { initierPaiement, simulerConfirmation } from './paiement.api';
 import type { Paiement, PaiementEnvoye } from './paiement.types';
-
-const MESSAGE_ERREUR_PAR_DEFAUT =
-  'Le paiement n’a pas pu être traité. Réessayez dans un instant.';
 
 /** Extrait le message métier de l'API, ou retombe sur un message générique. */
 function messageDePaiement(erreur: unknown): string {
@@ -21,7 +21,7 @@ function messageDePaiement(erreur: unknown): string {
     ?.response?.data?.detail;
   return typeof detail === 'string' && detail.length > 0
     ? detail
-    : MESSAGE_ERREUR_PAR_DEFAUT;
+    : textesCourants(TEXTES_PAIEMENT).erreur;
 }
 
 export interface EtatPaiement {

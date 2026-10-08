@@ -10,14 +10,18 @@
 
 import { CreditCard } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_DEVISE } from '../devise.textes';
 import { DEVISES, SYMBOLES_DEVISES } from '../devise.service';
 import { definirDevise, useDevise } from '../devise.store';
 
 export default function ChoixDevise() {
+  const t = useTextes(TEXTES_DEVISE);
   const devise = useDevise();
   return (
     <fieldset>
-      <legend className="text-sm font-medium text-gris-700">Payer en</legend>
+      <legend className="text-sm font-medium text-gris-700">{t.payerEn}</legend>
       <div className="mt-2 grid grid-cols-3 gap-2">
         {DEVISES.map((valeur) => {
           const actif = valeur === devise;
@@ -46,8 +50,7 @@ export default function ChoixDevise() {
       {devise !== 'MGA' && (
         <p className="mt-2 flex items-start gap-1.5 text-xs text-gris-500">
           <CreditCard size={14} aria-hidden className="mt-0.5 shrink-0" />
-          Paiement par carte bancaire internationale (Visa, Mastercard, American
-          Express). Montant indicatif : le taux du jour est figé à la validation.
+          {t.noteDevise}
         </p>
       )}
     </fieldset>

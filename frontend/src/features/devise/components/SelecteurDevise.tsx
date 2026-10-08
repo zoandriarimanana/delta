@@ -5,15 +5,19 @@
  * d'écran sans rien réinventer, et compact sur mobile.
  */
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_DEVISE } from '../devise.textes';
 import { DEVISES, SYMBOLES_DEVISES } from '../devise.service';
 import { definirDevise, useDevise } from '../devise.store';
 import type { Devise } from '../devise.types';
 
 export default function SelecteurDevise({ className = '' }: { className?: string }) {
+  const t = useTextes(TEXTES_DEVISE);
   const devise = useDevise();
   return (
     <label className={`relative inline-flex items-center ${className}`}>
-      <span className="sr-only">Devise</span>
+      <span className="sr-only">{t.devise}</span>
       <select
         value={devise}
         onChange={(e) => definirDevise(e.target.value as Devise)}

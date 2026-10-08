@@ -11,7 +11,9 @@ gâteaux avez-vous ? » — et le message part au RAG comme une vraie question.
 Mieux vaut un appel de trop qu'une question ignorée.
 
 Trois langues, celles des visiteurs attendus : français, malgache, anglais. La
-réponse est donnée en malgache si le message contient un mot malgache.
+réponse est donnée en malgache si le message contient un mot malgache, en
+anglais s'il n'est fait que de mots anglais (interface client en anglais
+depuis le 8 octobre 2026), en français sinon.
 """
 
 import re
@@ -55,6 +57,9 @@ REMERCIEMENTS_MG = {"misaotra", "betsaka", "indrindra", "tompoko"}
 AU_REVOIR_MG = {"veloma", "mandra", "pihaona", "amin", "aminny", "ny", "manaraka"}
 
 VOCABULAIRE_MG = SALUTATIONS_MG | REMERCIEMENTS_MG | AU_REVOIR_MG
+#: Mots propres à l'anglais : un message fait **uniquement** de ceux-ci reçoit
+#: sa réponse en anglais (« hello », « thank you », « bye »).
+VOCABULAIRE_EN = {"hello", "hi", "hey", "thanks", "thank", "you", "bye", "goodbye"}
 VOCABULAIRE = (
     SALUTATIONS_FR_EN
     | REMERCIEMENTS_FR_EN
@@ -78,6 +83,12 @@ REPONSES = {
     ),
     ("remerciement", "mg"): "Tsy misy fisaorana ! Manontania raha mbola misy.",
     ("au_revoir", "mg"): "Veloma tompoko, mandra-pihaona amin'ny manaraka !",
+    ("salutation", "en"): (
+        "Hello! I am Delta's assistant. Ask me anything about our products, "
+        "training, rooms or accommodation."
+    ),
+    ("remerciement", "en"): "You're welcome! Feel free to ask another question.",
+    ("au_revoir", "en"): "Goodbye, and see you soon at Delta!",
 }
 
 
@@ -111,7 +122,12 @@ def reponse_politesse(message: str) -> str | None:
     # ils ne disent rien, mieux vaut laisser le RAG répondre qu'il ne sait pas.
     if not ensemble - LIANTS_FR - {"ny", "amin", "aminny", "manaraka", "tompoko"}:
         return None
-    langue = "mg" if ensemble & VOCABULAIRE_MG else "fr"
+    if ensemble & VOCABULAIRE_MG:
+        langue = "mg"
+    elif ensemble <= VOCABULAIRE_EN:
+        langue = "en"
+    else:
+        langue = "fr"
     if ensemble & (AU_REVOIR_FR_EN | {"veloma", "pihaona"}):
         intention = "au_revoir"
     elif ensemble & (REMERCIEMENTS_FR_EN | {"misaotra"}):

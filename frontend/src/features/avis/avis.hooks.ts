@@ -17,11 +17,11 @@
 
 import { useCallback, useState } from 'react';
 
+import { textesCourants } from '@/lib/langue';
+
+import { TEXTES_AVIS } from './avis.textes';
 import { creerAvis } from './avis.api';
 import type { Avis, AvisEnvoye } from './avis.types';
-
-const MESSAGE_ERREUR_PAR_DEFAUT =
-  'L’avis n’a pas pu être enregistré. Réessayez dans un instant.';
 
 export interface DepotAvis {
   deposer: (donnees: AvisEnvoye) => Promise<Avis | null>;
@@ -43,7 +43,7 @@ function messageDAvis(erreur: unknown): string {
     ?.response?.data?.detail;
   return typeof detail === 'string' && detail.length > 0
     ? detail
-    : MESSAGE_ERREUR_PAR_DEFAUT;
+    : textesCourants(TEXTES_AVIS).erreur;
 }
 
 /**

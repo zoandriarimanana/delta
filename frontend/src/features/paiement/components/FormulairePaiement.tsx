@@ -29,8 +29,10 @@ import { useEffect, useRef, useState } from 'react';
 import { CreditCard, Smartphone } from 'lucide-react';
 
 import type { Devise } from '@/features/devise/devise.types';
+import { useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import { TEXTES_PAIEMENT } from '../paiement.textes';
 import { usePaiement } from '../paiement.hooks';
 import type { FournisseurPaiement, MethodePaiement } from '../paiement.types';
 
@@ -59,12 +61,6 @@ const NOMS_FOURNISSEURS: Record<FournisseurPaiement, string> = {
   Stripe: 'Stripe',
 };
 
-const LIBELLES_STATUT: Record<string, string> = {
-  En_attente: 'En attente de confirmation',
-  Reussi: 'Paiement réussi',
-  Echoue: 'Paiement échoué',
-};
-
 /** Lu à chaque rendu, jamais figé au chargement du module : voir le test qui
  * bascule cette variable d'un rendu à l'autre via `vi.stubEnv`. */
 function simulationActive(): boolean {
@@ -77,6 +73,7 @@ export default function FormulairePaiement({
   montant,
   onConfirme,
 }: Proprietes) {
+  const t = useTextes(TEXTES_PAIEMENT);
   const connecte = useEstConnecte();
   const { paiement, envoi, erreur, initier, simuler } = usePaiement();
   const enAriary = devise === 'MGA';
@@ -125,33 +122,29 @@ export default function FormulairePaiement({
       >
         {montant !== undefined && (
           <p className="text-sm text-gris-600">
-            Montant à payer :{' '}
+            {t.montantAPayer}{' '}
             <span className="font-semibold text-gris-700">{montant}</span>
           </p>
         )}
 
         <fieldset>
           <legend className="text-sm font-medium text-gris-700">
-            Moyen de paiement
+            {t.moyenPaiement}
           </legend>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             <ChoixMethode
               actif={methode === 'Carte'}
               surChoix={() => setMethode('Carte')}
               icone={CreditCard}
-              titre="Carte bancaire internationale"
-              detail="Visa, Mastercard, American Express"
+              titre={t.carte}
+              detail={t.carteDetail}
             />
             <ChoixMethode
               actif={methode === 'Mobile_money'}
               surChoix={() => setMethode('Mobile_money')}
               icone={Smartphone}
-              titre="Mobile money"
-              detail={
-                enAriary
-                  ? 'MVola, Orange Money, Airtel Money'
-                  : 'Disponible uniquement en Ariary'
-              }
+              titre={t.mobileMoney}
+              detail={enAriary ? t.mobileMoneyDetail : t.ariaryUniquement}
               desactive={!enAriary}
             />
           </div>
@@ -159,7 +152,7 @@ export default function FormulairePaiement({
 
         {methode === 'Mobile_money' && (
           <label className="flex items-center gap-2 text-sm text-gris-700">
-            Opérateur
+            {t.operateur}
             <select
               value={operateur}
               onChange={(evenement) =>
@@ -193,7 +186,7 @@ export default function FormulairePaiement({
           disabled={envoi}
           className="rounded-full bg-action px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-action-fonce disabled:opacity-50"
         >
-          {envoi ? 'Envoi…' : 'Payer cette commande'}
+          {envoi ? t.envoi : t.payer}
         </button>
       </form>
     );
@@ -202,7 +195,7 @@ export default function FormulairePaiement({
   return (
     <div className="mt-2 space-y-2 rounded border border-gris-200 bg-surface p-3">
       <p className="text-sm text-gris-700">
-        Statut du paiement : {LIBELLES_STATUT[paiement.statut] ?? paiement.statut}
+        {t.statutPaiement} {t.statuts[paiement.statut] ?? paiement.statut}
       </p>
 
       {erreur !== null && (
@@ -221,15 +214,13 @@ export default function FormulairePaiement({
           disabled={envoi}
           className="rounded border border-gris-300 px-3 py-1.5 text-sm text-gris-700 disabled:opacity-50"
         >
-          {envoi
-            ? 'Envoi…'
-            : 'Simuler la confirmation (en attendant les accès fournisseurs réels)'}
+          {envoi ? t.envoi : t.simuler}
         </button>
       )}
 
       {paiement.statut === 'Reussi' && (
         <p role="status" className="text-sm text-succes">
-          Merci, votre paiement a été confirmé.
+          {t.merci}
         </p>
       )}
     </div>

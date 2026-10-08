@@ -552,6 +552,31 @@ malgache), ce dernier **désactivé hors Ariary** — le serveur le refuse en
 
 L'administration reste en Ariary : elle lit le catalogue tel qu'il est tenu.
 
+### Langues : un fichier de textes par module
+
+Interface **client** en français et en anglais (8 octobre 2026) ; le
+back-office reste en français. Aucune bibliothèque : `lib/langue.ts` porte la
+langue choisie (`localStorage` `delta.langue`, français par défaut, bouton
+FR/EN dans l'en-tête) et la locale des dates et des nombres.
+
+**Chaque module tient ses textes** dans `<module>.textes.ts` — `fr` et `en`,
+la version anglaise typée `Textes<typeof fr>` : une clé oubliée ou une
+fonction de mauvaise signature **ne compile pas**. Un fichier central de
+traductions croiserait toutes les entités, le fourre-tout que la SRP
+interdit. Un composant lit les siens par `useTextes(...)` ; une fonction pure
+de `*.service.ts` (libellé de statut…) par `textesCourants(...)`, non réactif
+— c'est pourquoi `MainLayout` remonte la page (`<Outlet key={langue} />`) au
+changement de langue.
+
+Ce qui **ne se traduit pas**, délibérément :
+
+- les **données** saisies par l'équipe (noms, descriptions, catégories) ;
+- les **rubriques de personnalisation envoyées** : la demande est lue par
+  l'équipe, elle reste en français ; seul son affichage au client est
+  traduit ;
+- les **messages d'erreur de l'API**, repris tels quels : ils restent en
+  français (limite assumée, cf. roadmap).
+
 ### `src/components/ui/` — l'exception, et son critère
 
 Cette phrase interdisait un `src/components/` fourre-tout, et l'interdiction

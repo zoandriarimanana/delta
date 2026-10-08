@@ -9,22 +9,16 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { RotateCcw, Send } from 'lucide-react';
 
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_ASSISTANT } from '../assistant.textes';
 import type { Conversation } from '../assistant.hooks';
 import { LONGUEUR_MAX_QUESTION } from '../assistant.service';
 import MessageAssistant from './MessageAssistant';
 
 /** Accueil et suggestions de départ, selon qui interroge l'assistant. */
-export const ACCUEIL_CLIENT = {
-  message:
-    'Bonjour ! Posez-moi vos questions sur nos produits, nos formations, nos salles ou nos hébergements, ou sur la façon de commander et de réserver.',
-  avertissement:
-    'Réponses générées par une IA à partir de notre catalogue. Stock, disponibilités et places : consultez la fiche concernée.',
-  suggestions: [
-    'Comment commander sans créer de compte ?',
-    'Avez-vous une salle pour une réunion de 30 personnes ?',
-    'Faites-vous des gâteaux personnalisés ?',
-  ],
-};
+/** Accueil client par défaut, en français — la bulle passe celui de la langue. */
+export const ACCUEIL_CLIENT = TEXTES_ASSISTANT.fr.accueilClient;
 
 export const ACCUEIL_PERSONNEL = {
   message:
@@ -51,6 +45,7 @@ export default function FenetreConversation({
   accueil = ACCUEIL_CLIENT,
   className = '',
 }: Proprietes) {
+  const t = useTextes(TEXTES_ASSISTANT);
   const [saisie, setSaisie] = useState('');
   const finDeListe = useRef<HTMLDivElement>(null);
   const { messages, enCours, envoyer, reinitialiser } = conversation;
@@ -112,7 +107,7 @@ export default function FenetreConversation({
 
       <form onSubmit={soumettre} className="border-t border-gris-200 p-3">
         <label htmlFor="question-assistant" className="sr-only">
-          Votre question
+          {t.votreQuestion}
         </label>
         <div className="flex items-end gap-2">
           <textarea
@@ -121,13 +116,13 @@ export default function FenetreConversation({
             value={saisie}
             onChange={(evenement) => setSaisie(evenement.target.value)}
             onKeyDown={surTouche}
-            placeholder="Écrivez votre question…"
+            placeholder={t.ecrivez}
             className="min-h-[2.5rem] flex-1 resize-none rounded-lg border border-gris-300 px-3 py-2 text-sm focus:border-primaire focus:outline-none"
           />
           <button
             type="submit"
             disabled={!envoyable}
-            aria-label="Envoyer la question"
+            aria-label={t.envoyer}
             className="rounded-lg bg-primaire p-2.5 text-sur-couleur transition-opacity disabled:opacity-40"
           >
             <Send size={18} aria-hidden />
@@ -144,7 +139,7 @@ export default function FenetreConversation({
               className="inline-flex items-center gap-1 hover:text-gris-700"
             >
               <RotateCcw size={12} aria-hidden />
-              Nouvelle conversation
+              {t.nouvelle}
             </button>
           )}
         </div>

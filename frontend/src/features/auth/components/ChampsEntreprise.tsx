@@ -12,8 +12,10 @@
 
 import { useMemo } from 'react';
 
+import { useLangue, useTextes } from '@/lib/langue';
 import { listePays } from '@/lib/pays';
 
+import { TEXTES_AUTH } from '../auth.textes';
 import type { IdentiteEntreprise } from '../auth.types';
 
 interface Proprietes {
@@ -22,11 +24,13 @@ interface Proprietes {
 }
 
 export default function ChampsEntreprise({ valeurs, surChangement }: Proprietes) {
-  const pays = useMemo(() => listePays(), []);
+  const t = useTextes(TEXTES_AUTH);
+  const langue = useLangue();
+  const pays = useMemo(() => listePays(langue), [langue]);
   return (
     <>
       <label className="flex flex-col gap-1 text-sm text-gris-700">
-        Pays
+        {t.pays}
         <select
           required
           value={valeurs.pays ?? 'MG'}
@@ -44,7 +48,7 @@ export default function ChampsEntreprise({ valeurs, surChangement }: Proprietes)
       </label>
 
       <label className="flex flex-col gap-1 text-sm text-gris-700">
-        Raison sociale
+        {t.raisonSociale}
         <input
           type="text"
           required
@@ -57,10 +61,8 @@ export default function ChampsEntreprise({ valeurs, surChangement }: Proprietes)
       </label>
 
       <label className="flex flex-col gap-1 text-sm text-gris-700">
-        Numéro d’identification fiscale
-        <span className="text-xs text-gris-500">
-          NIF à Madagascar, n° de TVA ou identifiant fiscal national à l’étranger
-        </span>
+        {t.numeroFiscal}
+        <span className="text-xs text-gris-500">{t.aideFiscal}</span>
         <input
           type="text"
           required
@@ -73,7 +75,7 @@ export default function ChampsEntreprise({ valeurs, surChangement }: Proprietes)
       </label>
 
       <label className="flex flex-col gap-1 text-sm text-gris-700">
-        Secteur d’activité <span className="text-gris-500">(facultatif)</span>
+        {t.secteur} <span className="text-gris-500">{t.facultatif}</span>
         <input
           type="text"
           value={valeurs.secteur_activite ?? ''}
@@ -88,7 +90,7 @@ export default function ChampsEntreprise({ valeurs, surChangement }: Proprietes)
       </label>
 
       <label className="flex flex-col gap-1 text-sm text-gris-700">
-        Contact référent <span className="text-gris-500">(facultatif)</span>
+        {t.contactReferent} <span className="text-gris-500">{t.facultatif}</span>
         <input
           type="text"
           value={valeurs.nom_contact_referent ?? ''}

@@ -26,7 +26,7 @@ const TAUX: TauxChange[] = [
 ];
 
 /** Espaces insécables de `Intl` ramenées à des espaces ordinaires. */
-const net = (texte: string) => texte.replace(/[  ]/g, ' ');
+const net = (texte: string) => texte.replace(/[\u00a0\u202f]/g, ' ');
 
 afterEach(() => definirLangue('fr'));
 
