@@ -274,7 +274,7 @@ def test_etat_assistant_coupe_reste_lisible(
         "actif": False,
         "llm_joignable": False,
         "modele_llm": settings.GROQ_MODEL,
-        "modele_embeddings": settings.LC_EMBEDDING_MODEL,
+        "modele_embeddings": settings.modele_embeddings,
         "fragments_par_type": {},
         "total_fragments": 0,
     }

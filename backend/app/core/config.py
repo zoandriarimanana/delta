@@ -74,7 +74,8 @@ class Settings(BaseSettings):
     # --- Assistant IA générative (Sprint 12) ---
     # Interrupteur général, **automatique par défaut** (décision du 7 octobre
     # 2026 : l'assistant doit rester allumé sans qu'on y pense). Non renseigné,
-    # il s'allume dès que `GROQ_API_KEY` et `HF_API_TOKEN` sont présentes, et
+    # il s'allume dès que `GROQ_API_KEY` et la clé du fournisseur d'embeddings
+    # (`HF_API_TOKEN` ou `GOOGLE_API_KEY`) sont présentes, et
     # reste éteint sinon — un poste sans clés démarre sans erreur. `false`
     # l'éteint explicitement (la CI, qui n'a aucune clé) ; `true` exige les
     # clés au démarrage. Résolu en booléen par le validateur ci-dessous : le
@@ -94,6 +95,16 @@ class Settings(BaseSettings):
     # réindexation complète : les vecteurs de deux modèles ne se comparent pas.
     HF_API_TOKEN: str = ""
     LC_EMBEDDING_MODEL: str = "BAAI/bge-m3"
+    # Fournisseur des embeddings. `google` ajouté le 9 octobre 2026 : le compte
+    # Hugging Face n'avait plus de crédits (402) — décision de l'utilisateur,
+    # un fournisseur à quota gratuit. Gemini (`gemini-embedding-001`, modèle
+    # stable, multilingue), vecteurs réduits à 768 dimensions (valeur
+    # recommandée par Google). Changer de fournisseur impose, comme changer de
+    # modèle, une réindexation complète.
+    EMBEDDINGS_FOURNISSEUR: Literal["huggingface", "google"] = "huggingface"
+    GOOGLE_API_KEY: str = ""
+    GOOGLE_EMBEDDING_MODEL: str = "gemini-embedding-001"
+    GOOGLE_EMBEDDING_DIMENSION: int = 768
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -121,7 +132,7 @@ class Settings(BaseSettings):
         """
         manquantes = [
             nom
-            for nom in ("GROQ_API_KEY", "HF_API_TOKEN")
+            for nom in ("GROQ_API_KEY", self.cle_embeddings)
             if not getattr(self, nom).strip()
         ]
         if self.AI_ENABLED is None:
@@ -132,6 +143,22 @@ class Settings(BaseSettings):
                     "AI_ENABLED=true exige " + ", ".join(manquantes) + " dans .env."
                 )
         return self
+
+    @property
+    def cle_embeddings(self) -> str:
+        """Nom de la clé exigée par le fournisseur d'embeddings choisi."""
+        return (
+            "GOOGLE_API_KEY"
+            if self.EMBEDDINGS_FOURNISSEUR == "google"
+            else "HF_API_TOKEN"
+        )
+
+    @property
+    def modele_embeddings(self) -> str:
+        """Modèle d'embeddings réellement utilisé, quel que soit le fournisseur."""
+        if self.EMBEDDINGS_FOURNISSEUR == "google":
+            return self.GOOGLE_EMBEDDING_MODEL
+        return self.LC_EMBEDDING_MODEL
 
     @property
     def cors_origins(self) -> list[str]:

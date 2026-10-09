@@ -87,7 +87,7 @@ class AssistantService:
             "actif": self.est_actif(),
             "llm_joignable": llm_joignable,
             "modele_llm": settings.GROQ_MODEL,
-            "modele_embeddings": settings.LC_EMBEDDING_MODEL,
+            "modele_embeddings": settings.modele_embeddings,
             "fragments_par_type": fragments,
             "total_fragments": sum(fragments.values()),
         }

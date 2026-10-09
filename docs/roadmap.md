@@ -1775,6 +1775,25 @@ un commit par étape :
       sortir) ; les textes anglais de chaque module restent en place.
 
 
+**Travaux hors sprint : embeddings Google Gemini (9 octobre 2026).** Le compte
+Hugging Face n'avait plus de crédits (402) : la réindexation échouait, et
+l'assistant ne pouvait plus vectoriser ni contenus ni questions. Décision de
+l'utilisateur : un fournisseur à quota gratuit.
+
+- [x] **Garde-fou de réindexation** : le fournisseur est sondé **avant** de
+      vider l'index. Sur le 402, la réindexation avait vidé les produits puis
+      échoué, les faisant disparaître de l'index ; elle s'arrête désormais sans
+      rien modifier, avec un message clair. Test de régression.
+- [x] **Fournisseur configurable** (`EMBEDDINGS_FOURNISSEUR` = `huggingface`
+      ou `google`) : Gemini `gemini-embedding-001`, 768 dimensions, via
+      `langchain-google-genai`. La clé exigée pour l'allumage automatique suit
+      le fournisseur (`HF_API_TOKEN` ou `GOOGLE_API_KEY`).
+- [ ] **Clé Google** à créer et coller par l'utilisateur dans `backend/.env`,
+      puis réindexation complète (`python -m scripts.reindexer_assistant`) :
+      les vecteurs Hugging Face et Gemini ne se comparent pas.
+- [ ] Dette : sur Render, ajouter `GOOGLE_API_KEY` et
+      `EMBEDDINGS_FOURNISSEUR=google` aux variables d'environnement.
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère

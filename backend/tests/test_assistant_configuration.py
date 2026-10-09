@@ -11,6 +11,14 @@ from app.core.exceptions import ServiceIndisponible
 from app.core.logging import get_logger
 
 
+@pytest.fixture(autouse=True)
+def _fournisseur_hugging_face_par_defaut(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Les tests lisent `Settings()`, donc aussi le `.env` du poste : sans ceci,
+    un poste réglé sur `EMBEDDINGS_FOURNISSEUR=google` ferait échouer ceux qui
+    supposent Hugging Face. Les tests Google le surchargent eux-mêmes."""
+    monkeypatch.setenv("EMBEDDINGS_FOURNISSEUR", "huggingface")
+
+
 def _cles(monkeypatch: pytest.MonkeyPatch, groq: str, hf: str) -> None:
     monkeypatch.setenv("GROQ_API_KEY", groq)
     monkeypatch.setenv("HF_API_TOKEN", hf)
@@ -103,3 +111,65 @@ def test_les_loggers_vivent_sous_l_espace_de_noms_delta() -> None:
 
     assert isinstance(journal, logging.Logger)
     assert journal.name == "delta.ai_langchain.indexation"
+
+
+# --- Fournisseur Google (9 octobre 2026) -----------------------------------------
+
+
+def test_avec_google_la_cle_exigee_est_celle_de_google(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Avec Gemini, la clé Hugging Face n'est plus nécessaire : c'est
+    `GOOGLE_API_KEY` qui conditionne l'allumage automatique."""
+    monkeypatch.setenv("EMBEDDINGS_FOURNISSEUR", "google")
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_x")
+    monkeypatch.setenv("HF_API_TOKEN", "")
+    monkeypatch.setenv("GOOGLE_API_KEY", "AIza_x")
+
+    reglages = Settings(AI_ENABLED=None)
+
+    assert reglages.AI_ENABLED is True
+    assert reglages.modele_embeddings == "gemini-embedding-001"
+
+
+def test_google_sans_sa_cle_refuse_de_demarrer_si_force(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("EMBEDDINGS_FOURNISSEUR", "google")
+    monkeypatch.setenv("GROQ_API_KEY", "gsk_x")
+    monkeypatch.setenv("HF_API_TOKEN", "hf_x")
+    monkeypatch.setenv("GOOGLE_API_KEY", "")
+
+    with pytest.raises(ValidationError, match="GOOGLE_API_KEY"):
+        Settings(AI_ENABLED=True)
+
+
+def test_l_embedder_google_est_construit_avec_le_modele_et_la_dimension(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "EMBEDDINGS_FOURNISSEUR", "google")
+    monkeypatch.setattr(settings, "GOOGLE_API_KEY", "AIza_test")
+    embeddings.obtenir_embeddings.cache_clear()
+    try:
+        embedder = embeddings.obtenir_embeddings()
+    finally:
+        embeddings.obtenir_embeddings.cache_clear()
+
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+    assert isinstance(embedder, GoogleGenerativeAIEmbeddings)
+    assert embedder.model.endswith("gemini-embedding-001")
+    assert embedder.output_dimensionality == 768
+
+
+def test_google_sans_cle_leve_service_indisponible(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "EMBEDDINGS_FOURNISSEUR", "google")
+    monkeypatch.setattr(settings, "GOOGLE_API_KEY", "")
+    embeddings.obtenir_embeddings.cache_clear()
+    try:
+        with pytest.raises(ServiceIndisponible, match="GOOGLE_API_KEY"):
+            embeddings.obtenir_embeddings()
+    finally:
+        embeddings.obtenir_embeddings.cache_clear()

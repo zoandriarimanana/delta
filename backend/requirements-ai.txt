@@ -23,6 +23,8 @@ langchain-text-splitters>=1.1,<2
 langchain-groq>=1.1,<2
 # Embeddings via l'API d'inférence Hugging Face (HuggingFaceEndpointEmbeddings).
 langchain-huggingface>=1.2,<2
+# Embeddings Gemini (EMBEDDINGS_FOURNISSEUR=google), ajouté le 9 octobre 2026.
+langchain-google-genai>=4.4,<5
 # Vector store PGVector. Encore en 0.0.x : borne serrée, son schéma de
 # tables (langchain_pg_*) suit la version de la bibliothèque.
 langchain-postgres>=0.0.18,<0.1
