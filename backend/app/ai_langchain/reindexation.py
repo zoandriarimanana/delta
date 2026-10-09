@@ -99,10 +99,38 @@ def _indexer_guides() -> dict[str, int]:
     return {"elements": elements, "fragments": fragments}
 
 
+def _verifier_fournisseur() -> None:
+    """Sonde le service d'embeddings **avant** de vider quoi que ce soit.
+
+    Chaque type de contenu est vidé puis reconstruit : sans cette sonde, un
+    fournisseur indisponible — crédits épuisés, clé invalide, panne — laissait
+    le premier type vidé et jamais reconstruit (constaté le 9 octobre 2026 :
+    tous les produits avaient disparu de l'index sur un 402 de Hugging Face).
+    """
+    try:
+        obtenir_vector_store().embeddings.embed_query("Delta")
+    except Exception as erreur:  # noqa: BLE001 — tout échec du fournisseur
+        detail = str(erreur)
+        if "402" in detail:
+            raison = "le compte du fournisseur d'embeddings n'a plus de crédits (402)"
+        elif "401" in detail or "403" in detail:
+            raison = "la clé du fournisseur d'embeddings est refusée"
+        else:
+            raison = (
+                f"le fournisseur d'embeddings ne répond pas ({type(erreur).__name__})"
+            )
+        raise ServiceIndisponible(
+            f"{raison[0].upper()}{raison[1:]}. L'index actuel n'a pas été modifié."
+        ) from erreur
+
+
 def reindexer_tout(db: Session) -> dict[str, dict[str, int]]:
-    """Reconstruit l'index entier depuis la base. Lève si l'assistant est coupé."""
+    """Reconstruit l'index entier depuis la base. Lève si l'assistant est coupé
+    ou si le fournisseur d'embeddings ne répond pas — dans ce cas, **avant**
+    d'avoir touché à l'index."""
     if not settings.AI_ENABLED:
         raise ServiceIndisponible("L'assistant IA est désactivé (AI_ENABLED=false).")
+    _verifier_fournisseur()
     resultats = {
         module.TYPE_CONTENU: _indexer_type(
             module.TYPE_CONTENU,

@@ -187,3 +187,32 @@ def test_un_document_interne_garde_son_audience_apres_reindexation(
         or d.metadata["type_contenu"] != "document"
         for d in vus_client
     )
+
+
+class _FournisseurEnPanne(DeterministicFakeEmbedding):
+    """Embeddings qui échouent comme Hugging Face à court de crédits."""
+
+    def embed_query(self, text: str) -> list[float]:
+        raise RuntimeError("Client error '402 Payment Required'")
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        raise RuntimeError("Client error '402 Payment Required'")
+
+
+def test_un_fournisseur_en_panne_annule_sans_rien_effacer(
+    session_postgres: Session, store: PGVector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Régression du 9 octobre 2026 : sur un 402, la réindexation vidait les
+    produits puis échouait, et ils disparaissaient de l'index."""
+    _peupler(session_postgres)
+    reindexer_tout(session_postgres)
+    avant = _contenus(store)
+    assert any(t == "produit" for t, _, _ in avant)
+
+    en_panne = creer_vector_store(_FournisseurEnPanne(size=1024), store.collection_name)
+    monkeypatch.setattr(reindexation, "obtenir_vector_store", lambda: en_panne)
+
+    with pytest.raises(ServiceIndisponible, match="crédits.*n'a pas été modifié"):
+        reindexer_tout(session_postgres)
+
+    assert sorted(_contenus(store)) == sorted(avant)
