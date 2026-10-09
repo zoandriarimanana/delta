@@ -2,8 +2,9 @@
  * Devise d'affichage choisie par le visiteur, et sa mémorisation.
  *
  * **Préférence propre à ce navigateur**, rangée en `localStorage` comme le
- * thème : elle ne décide que de l'affichage et de la devise proposée au
- * tunnel. Le montant payé est toujours celui que le serveur fige.
+ * thème. Elle se choisit **au tunnel** (« Payer en ») — pas dans l'en-tête,
+ * retiré à la demande de l'utilisateur (9 octobre 2026) — et décide de la
+ * devise des prix affichés ensuite. Le montant payé est toujours celui que le serveur fige.
  */
 
 import { useSyncExternalStore } from 'react';

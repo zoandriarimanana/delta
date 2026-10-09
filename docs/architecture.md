@@ -533,8 +533,8 @@ Ariary**, un prix n'existe qu'une fois. `features/devise/` (module de
 `TAUX_CHANGE`) porte trois choses distinctes :
 
 - **la préférence du visiteur** (`devise.store.ts`, `localStorage`
-  `delta.devise`), choisie dans l'en-tête ou au tunnel — c'est le même
-  magasin, changer l'un change l'autre ;
+  `delta.devise`), choisie **au tunnel** (« Payer en ») ; l'en-tête n'a
+  plus de sélecteur de devise (retiré le 9 octobre 2026, jugé inutile) ;
 - **l'affichage** : `useFormaterPrix()` convertit un montant en Ariary avec
   les taux publics (`GET /taux-change`, chargés une fois par page), et
   retombe sur l'Ariary tant qu'ils ne sont pas connus — jamais de prix

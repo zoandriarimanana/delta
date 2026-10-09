@@ -1766,6 +1766,9 @@ un commit par étape :
       vérifié dans un vrai navigateur.
       — Restent en français, délibérément : les données saisies par
       l'équipe, les messages d'erreur de l'API, et tout le back-office.
+- [x] **Ajustement (9 octobre 2026)** : sélecteur de devise retiré de
+      l'en-tête, à la demande de l'utilisateur. La devise se choisit
+      uniquement au tunnel (« Payer en »).
 
 
 ## Traçabilité MLD → sprints (à retenir)
