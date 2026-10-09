@@ -226,6 +226,7 @@ def test_le_mobile_money_est_refuse_hors_ariary(
             PaiementCreate(
                 methode=MethodePaiement.MOBILE_MONEY,
                 fournisseur=FournisseurPaiement.MVOLA,
+                numero_mobile_money="0341234567",
             ),
         )
 
@@ -238,7 +239,9 @@ def test_le_mobile_money_reste_possible_en_ariary(
     paiement = PaiementService(db).initier(
         commande,
         PaiementCreate(
-            methode=MethodePaiement.MOBILE_MONEY, fournisseur=FournisseurPaiement.MVOLA
+            methode=MethodePaiement.MOBILE_MONEY,
+            fournisseur=FournisseurPaiement.MVOLA,
+            numero_mobile_money="0341234567",
         ),
     )
 

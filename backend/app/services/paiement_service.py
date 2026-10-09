@@ -95,6 +95,7 @@ class PaiementService:
             donnees.methode,
             donnees.fournisseur,
             commande.devise,
+            donnees.numero_mobile_money,
         )
 
         paiement = Paiement(

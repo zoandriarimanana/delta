@@ -969,6 +969,20 @@ initial, pas la correction d'une omission comme `AVIS` ou `COMMANDE.date_command
   raisonnement que `LIVRAISON.#id_commande`, une propriété structurelle et
   non une identité métier susceptible d'être reprise.
 
+- **Une commande invitée se paie aussi** (9 octobre 2026) :
+  `POST /commandes/invite/{reference}/paiements`, sans authentification — la
+  clé est la référence publique, l'UUID qui permet déjà à l'invité de lire sa
+  commande. Débit limité par IP. Mêmes règles qu'un client connecté.
+
+- **Numéro mobile money : exigé, vérifié, jamais stocké.** Le portefeuille à
+  débiter est transmis à la passerelle (c'est lui qui reçoit la demande de
+  validation de l'opérateur), mais `PAIEMENT` n'a **aucune colonne** pour
+  lui : `reference_externe` suffit à retrouver la transaction chez
+  l'opérateur. Minimisation des données personnelles — un numéro qu'on ne
+  garde pas ne peut pas fuir. Le préfixe doit correspondre à l'opérateur
+  choisi (034/038 MVola, 032/037 Orange Money, 033 Airtel Money ; pas de
+  portabilité des numéros à Madagascar), 422 sinon.
+
 - **Synchronisation `PAIEMENT → COMMANDE`, à sens unique**, même patron que
   `LIVRAISON → COMMANDE` (Sprint 3) : un paiement passant à `Reussi` fait
   progresser `COMMANDE.statut` (`En_attente` → `Confirmee`) dans la même

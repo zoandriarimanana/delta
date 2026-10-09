@@ -61,6 +61,7 @@ class PasserelleSimulee:
         methode: MethodePaiement,
         fournisseur: FournisseurPaiement,
         devise: Devise = Devise.MGA,
+        numero_mobile_money: str | None = None,
     ) -> ResultatInitiation:
         return ResultatInitiation(
             reference_externe=f"SIM-{uuid4().hex}",

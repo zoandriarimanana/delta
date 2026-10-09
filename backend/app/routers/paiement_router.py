@@ -22,6 +22,7 @@ non dans un simple bouton caché côté frontend, qui ne protégerait rien face
 """
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -32,7 +33,9 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import ClientConnecte
 from app.core.exceptions import AuthentificationInvalide, RessourceIntrouvable
+from app.models.paiement import Paiement
 from app.schemas.paiement import PaiementRead, WebhookPaiement
+from app.services.commande_service import CommandeService
 from app.services.paiement_service import PaiementService
 from app.services.passerelle_paiement_simulee import PasserelleSimulee
 
@@ -116,7 +119,40 @@ def simuler_confirmation(
     paiement = service.paiements.get_by_id(id_paiement)
     if paiement is None or paiement.commande.id_client != client.id_client:
         raise RessourceIntrouvable(MESSAGE_PAIEMENT_INTROUVABLE)
+    return _rejouer_confirmation_simulee(service, paiement)
 
+
+@router.post(
+    "/invite/{reference_publique}/{id_paiement}/simuler-confirmation",
+    response_model=PaiementRead,
+    summary="Simule la confirmation d'un paiement invité (dev uniquement)",
+)
+def simuler_confirmation_invite(
+    reference_publique: UUID, id_paiement: int, db: SessionBase
+) -> PaiementRead:
+    """Pendant de `simuler_confirmation` pour une commande **sans compte**.
+
+    L'invité n'a pas de jeton : le paiement doit appartenir à la commande
+    désignée par sa référence publique, sinon **404**, comme hors de
+    `ENVIRONMENT=developpement` — même garde, même message générique.
+    """
+    if settings.ENVIRONMENT != "developpement":
+        raise RessourceIntrouvable(MESSAGE_PAIEMENT_INTROUVABLE)
+
+    commande = CommandeService(db).obtenir_par_reference(reference_publique)
+    service = PaiementService(db)
+    paiement = service.paiements.get_by_id(id_paiement)
+    if paiement is None or paiement.id_commande != commande.id_commande:
+        raise RessourceIntrouvable(MESSAGE_PAIEMENT_INTROUVABLE)
+    return _rejouer_confirmation_simulee(service, paiement)
+
+
+def _rejouer_confirmation_simulee(
+    service: PaiementService, paiement: Paiement
+) -> PaiementRead:
+    """Fabrique la confirmation qu'enverrait l'opérateur et la rejoue par le
+    chemin du webhook (`PaiementService.confirmer`) — rien n'est dupliqué.
+    Seul endroit, avec les deux routes ci-dessus, à nommer `PasserelleSimulee`."""
     charge_utile, _ = PasserelleSimulee().simuler_confirmation(
         paiement.reference_externe
     )

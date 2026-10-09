@@ -1794,6 +1794,24 @@ l'utilisateur : un fournisseur à quota gratuit.
 - [ ] Dette : sur Render, ajouter `GOOGLE_API_KEY` et
       `EMBEDDINGS_FOURNISSEUR=google` aux variables d'environnement.
 
+**Travaux hors sprint : paiement mobile money à la validation, y compris sans
+compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.
+Jusqu'ici, seul un client connecté pouvait payer, et seulement depuis « Mes
+commandes » : un invité ne pouvait pas payer du tout. Décision de
+l'utilisateur : le client paie **dès la validation**, par mobile money
+(MVola/Telma, Orange Money, Airtel Money).
+
+- [x] **P.1 — Backend** : `POST /commandes/invite/{reference}/paiements`
+      (l'UUID de la commande invitée sert de clé, comme pour sa lecture ;
+      débit limité) et la confirmation simulée correspondante (développement
+      seulement). Numéro mobile money exigé pour cette méthode, cohérent avec
+      l'opérateur (034/038 MVola, 032/037 Orange, 033 Airtel), transmis à la
+      passerelle et **jamais stocké**.
+- [ ] **P.2 — Frontend** : étape « Paiement » juste après la validation
+      (invité et connecté) — tuiles d'opérateur, numéro avec détection de
+      l'opérateur, attente « validez sur votre téléphone », confirmation
+      automatique par relecture du statut de la commande.
+
 ## Traçabilité MLD → sprints (à retenir)
 
 Chaque table du MLD doit être couverte par au moins un sprint avant qu'on considère

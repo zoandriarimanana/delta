@@ -17,12 +17,13 @@ capterait `administration` comme un identifiant.
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import ClientConnecte, PersonnelAdministrateur, PersonnelConnecte
 from app.core.exceptions import RessourceIntrouvable
+from app.core.rate_limit import LIMITE_PAIEMENT_INVITE, limiter
 from app.schemas.commande import (
     CommandeAnnulationAdministration,
     CommandeCreate,
@@ -281,6 +282,35 @@ def suivi_livraison(
         raise RessourceIntrouvable("Commande introuvable.")
     livraison = LivraisonService(db).obtenir_par_commande(id_commande)
     return LivraisonPublique.model_validate(livraison)
+
+
+@router.post(
+    "/invite/{reference_publique}/paiements",
+    response_model=PaiementRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Payer une commande invitée",
+)
+@limiter.limit(LIMITE_PAIEMENT_INVITE)
+def initier_paiement_invite(
+    request: Request,
+    reference_publique: UUID,
+    donnees: PaiementCreate,
+    db: SessionBase,
+) -> PaiementRead:
+    """Initie le paiement d'une commande passée **sans compte** (9 octobre 2026).
+
+    Sans authentification, par construction : l'invité n'a ni compte ni
+    jeton. La clé est la référence publique, un UUID non énumérable — la
+    même qui lui permet déjà de consulter sa commande. Débit limité par IP
+    (`LIMITE_PAIEMENT_INVITE`). Mêmes règles que pour un client connecté :
+    **409** si la commande est annulée ou déjà payée, **422** pour un numéro
+    mobile money absent, invalide ou d'un autre opérateur.
+
+    `request` est exigé par `@limiter.limit`.
+    """
+    commande = CommandeService(db).obtenir_par_reference(reference_publique)
+    paiement = PaiementService(db).initier(commande, donnees)
+    return PaiementRead.model_validate(paiement)
 
 
 @router.post(

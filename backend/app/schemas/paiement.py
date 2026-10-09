@@ -1,9 +1,10 @@
 """Schemas Pydantic de l'entité PAIEMENT."""
 
+import re
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from app.models.paiement import FournisseurPaiement, MethodePaiement, StatutPaiement
 from app.models.taux_change import Devise
@@ -22,6 +23,45 @@ FOURNISSEURS_PAR_METHODE: dict[MethodePaiement, frozenset[FournisseurPaiement]] 
 }
 
 
+#: Préfixes des numéros mobiles malgaches, par opérateur de mobile money.
+#: Pas de portabilité des numéros à Madagascar : le préfixe désigne bien
+#: l'opérateur — un numéro Orange ne peut pas payer par MVola.
+PREFIXES_PAR_FOURNISSEUR: dict[FournisseurPaiement, frozenset[str]] = {
+    FournisseurPaiement.MVOLA: frozenset({"034", "038"}),
+    FournisseurPaiement.ORANGE_MONEY: frozenset({"032", "037"}),
+    FournisseurPaiement.AIRTEL_MONEY: frozenset({"033"}),
+}
+
+#: Nom commercial, pour les messages d'erreur.
+NOMS_FOURNISSEURS: dict[FournisseurPaiement, str] = {
+    FournisseurPaiement.MVOLA: "MVola",
+    FournisseurPaiement.ORANGE_MONEY: "Orange Money",
+    FournisseurPaiement.AIRTEL_MONEY: "Airtel Money",
+    FournisseurPaiement.STRIPE: "Stripe",
+}
+
+_NUMERO_LOCAL = re.compile(r"^03[2-9]\d{7}$")
+
+
+def normaliser_numero(brut: str) -> str:
+    """Ramène un numéro malgache à sa forme locale à 10 chiffres (034 12 345 67).
+
+    Accepte les espaces, tirets et points, ainsi que l'indicatif +261 / 00261 /
+    261. Lève `ValueError` si le résultat n'est pas un numéro mobile valide.
+    """
+    chiffres = re.sub(r"[\s.\-()]", "", brut)
+    for indicatif in ("+261", "00261", "261"):
+        if chiffres.startswith(indicatif):
+            chiffres = "0" + chiffres[len(indicatif) :]
+            break
+    if not _NUMERO_LOCAL.match(chiffres):
+        raise ValueError(
+            "Numéro mobile money invalide : attendu un numéro malgache à 10 chiffres "
+            "(ex. 034 12 345 67)."
+        )
+    return chiffres
+
+
 class PaiementCreate(BaseModel):
     """Charge utile d'initiation.
 
@@ -33,6 +73,19 @@ class PaiementCreate(BaseModel):
 
     methode: MethodePaiement
     fournisseur: FournisseurPaiement
+    #: Numéro du portefeuille à débiter, **exigé pour le mobile money** : c'est
+    #: lui qui reçoit la demande de validation (code secret) de l'opérateur.
+    #: Transmis à la passerelle et **jamais stocké** — `PAIEMENT` n'en a pas
+    #: besoin, sa `reference_externe` suffit à le retrouver chez l'opérateur
+    #: (minimisation des données personnelles, cf. `docs/mld.md`).
+    numero_mobile_money: str | None = None
+
+    @field_validator("numero_mobile_money")
+    @classmethod
+    def _numero_normalise(cls, valeur: str | None) -> str | None:
+        if valeur is None or not valeur.strip():
+            return None
+        return normaliser_numero(valeur)
 
     @model_validator(mode="after")
     def _fournisseur_de_la_methode(self) -> "PaiementCreate":
@@ -43,6 +96,19 @@ class PaiementCreate(BaseModel):
                 f"Le fournisseur {self.fournisseur.value} ne traite pas les "
                 f"paiements de type {self.methode.value}."
             )
+        if self.methode == MethodePaiement.MOBILE_MONEY:
+            if self.numero_mobile_money is None:
+                raise ValueError(
+                    "Indiquez le numéro mobile money qui recevra la demande "
+                    "de paiement."
+                )
+            prefixes = PREFIXES_PAR_FOURNISSEUR[self.fournisseur]
+            if self.numero_mobile_money[:3] not in prefixes:
+                nom = NOMS_FOURNISSEURS[self.fournisseur]
+                raise ValueError(
+                    f"Ce numéro n'est pas un numéro {nom} "
+                    f"(préfixes acceptés : {', '.join(sorted(prefixes))})."
+                )
         return self
 
 

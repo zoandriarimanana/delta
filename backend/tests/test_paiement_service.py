@@ -61,7 +61,9 @@ def _commande(
 
 def _donnees() -> PaiementCreate:
     return PaiementCreate(
-        methode=MethodePaiement.MOBILE_MONEY, fournisseur=FournisseurPaiement.MVOLA
+        methode=MethodePaiement.MOBILE_MONEY,
+        fournisseur=FournisseurPaiement.MVOLA,
+        numero_mobile_money="0341234567",
     )
 
 

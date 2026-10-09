@@ -65,6 +65,8 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/commandes/invite/{{reference_publique}}/livraison",
         f"{prefixe}/commandes/{{id_commande}}/livraison",
         f"{prefixe}/commandes/{{id_commande}}/paiements",
+        # Paiement d'une commande invitée, par sa référence (9 octobre 2026).
+        f"{prefixe}/commandes/invite/{{reference_publique}}/paiements",
         f"{prefixe}/domaines-formation",
         f"{prefixe}/domaines-formation/administration",
         f"{prefixe}/domaines-formation/{{id_domaine}}",
@@ -135,6 +137,8 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/avis/{{id_avis}}",
         f"{prefixe}/paiements/webhook",
         f"{prefixe}/paiements/{{id_paiement}}/simuler-confirmation",
+        f"{prefixe}/paiements/invite/{{reference_publique}}/{{id_paiement}}"
+        "/simuler-confirmation",
         f"{prefixe}/assistant/disponibilite",
         f"{prefixe}/assistant/question",
         f"{prefixe}/assistant/question/flux",

@@ -47,13 +47,17 @@ class PasserellePaiement(Protocol):
         methode: MethodePaiement,
         fournisseur: FournisseurPaiement,
         devise: Devise = Devise.MGA,
+        numero_mobile_money: str | None = None,
     ) -> ResultatInitiation:
         """Initie un paiement auprès du fournisseur, retourne sa référence
         externe. Le statut retourné est toujours `En_attente` : la
         confirmation arrive plus tard, par webhook.
 
         `montant` est exprimé dans `devise` — celle de la commande : un vrai
-        fournisseur encaisse dans une devise donnée, jamais un nombre nu."""
+        fournisseur encaisse dans une devise donnée, jamais un nombre nu.
+
+        `numero_mobile_money` : le portefeuille qui reçoit la demande de
+        validation, pour le mobile money. Jamais conservé par la plateforme."""
         ...
 
     def verifier_signature(self, charge_utile: bytes, signature: str) -> bool:

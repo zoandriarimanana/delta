@@ -32,3 +32,9 @@ LIMITE_CONNEXION = "5/minute"
 # conversation enchaîne naturellement plusieurs questions —, mais assez bas
 # pour qu'un script ne vide pas le quota du mois en une après-midi.
 LIMITE_ASSISTANT = "10/minute"
+
+# Paiement d'une commande invitée (9 octobre 2026) : route publique, la seule
+# clé est l'UUID de la commande. Chaque appel crée une ligne `PAIEMENT` et une
+# demande chez l'opérateur — une vraie personne ne réessaie pas dix fois par
+# minute, un script si.
+LIMITE_PAIEMENT_INVITE = "10/minute"

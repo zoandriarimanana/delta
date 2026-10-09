@@ -627,7 +627,12 @@ def _sa_commande(
 
 
 def _corps_paiement(**extra: object) -> dict:
-    return {"methode": "Mobile_money", "fournisseur": "Mvola", **extra}
+    return {
+        "methode": "Mobile_money",
+        "fournisseur": "Mvola",
+        "numero_mobile_money": "034 12 345 67",
+        **extra,
+    }
 
 
 def test_initier_paiement_reussit_pour_sa_propre_commande(
