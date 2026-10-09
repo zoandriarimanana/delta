@@ -29,7 +29,6 @@ import { usePanier } from '@/features/commande/commande.hooks';
 import { useLangue, useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
-import BoutonLangue from './BoutonLangue';
 import BoutonTheme from './BoutonTheme';
 import { TEXTES_LAYOUT } from './layout.textes';
 import MenuCompte from './MenuCompte';
@@ -141,7 +140,6 @@ export default function MainLayout() {
           </nav>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <BoutonLangue />
             <BoutonTheme />
             <NavLink
               to="/panier"

@@ -554,8 +554,10 @@ L'administration reste en Ariary : elle lit le catalogue tel qu'il est tenu.
 
 ### Langues : un fichier de textes par module
 
-Interface **client** en français et en anglais (8 octobre 2026) ; le
-back-office reste en français. Aucune bibliothèque : `lib/langue.ts` porte la
+Interface **client** traduite en anglais (8 octobre 2026), mais **le bouton
+FR/EN a été retiré le 9 octobre 2026** à la demande de l'utilisateur :
+l'interface démarre toujours en français. Les textes anglais restent tenus,
+prêts si le choix revient ; le back-office est en français. Aucune bibliothèque : `lib/langue.ts` porte la
 langue choisie (`localStorage` `delta.langue`, français par défaut, bouton
 FR/EN dans l'en-tête) et la locale des dates et des nombres.
 

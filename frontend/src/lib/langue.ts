@@ -34,16 +34,14 @@ const LOCALES: Record<Langue, string> = { fr: 'fr-FR', en: 'en-US' };
 
 const abonnes = new Set<() => void>();
 
-function langueMemorisee(): Langue {
-  try {
-    const valeur = localStorage.getItem(CLE_LANGUE);
-    return valeur === 'en' ? 'en' : 'fr';
-  } catch {
-    return 'fr';
-  }
-}
-
-let courante: Langue = langueMemorisee();
+/**
+ * **L'interface démarre toujours en français.** Le bouton FR/EN de l'en-tête
+ * a été retiré à la demande de l'utilisateur (9 octobre 2026) : sans lui, un
+ * choix « anglais » mémorisé auparavant serait impossible à quitter, donc on
+ * ne le relit plus. Les textes anglais restent tenus dans chaque module, prêts
+ * si le bouton revient.
+ */
+let courante: Langue = 'fr';
 
 function appliquer(langue: Langue): void {
   document.documentElement.lang = langue;

@@ -1769,6 +1769,10 @@ un commit par étape :
 - [x] **Ajustement (9 octobre 2026)** : sélecteur de devise retiré de
       l'en-tête, à la demande de l'utilisateur. La devise se choisit
       uniquement au tunnel (« Payer en »).
+- [x] **Ajustement (9 octobre 2026)** : bouton FR/EN retiré de l'en-tête, à
+      la demande de l'utilisateur. L'interface démarre toujours en français
+      (un choix « anglais » mémorisé n'est plus relu, faute de moyen d'en
+      sortir) ; les textes anglais de chaque module restent en place.
 
 
 ## Traçabilité MLD → sprints (à retenir)

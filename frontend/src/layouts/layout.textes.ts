@@ -24,7 +24,6 @@ const fr = {
   modeClair: 'Mode clair',
   activerSombre: 'Activer le mode sombre',
   activerClair: 'Activer le mode clair',
-  basculerLangue: 'Switch to English',
 };
 
 export const TEXTES_LAYOUT: Textes<typeof fr> = {
@@ -51,6 +50,5 @@ export const TEXTES_LAYOUT: Textes<typeof fr> = {
     modeClair: 'Light mode',
     activerSombre: 'Switch to dark mode',
     activerClair: 'Switch to light mode',
-    basculerLangue: 'Passer en français',
   },
 };

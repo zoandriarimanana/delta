@@ -15,7 +15,6 @@ import {
   ecrirePanier,
   resynchroniserPanier,
 } from '@/features/commande/commande.panier';
-import { definirLangue } from '@/lib/langue';
 import { definirSession, effacerSession, lireSession } from '@/lib/session.store';
 
 import MainLayout from './MainLayout';
@@ -57,7 +56,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  act(() => definirLangue('fr'));
   localStorage.clear();
   effacerSession();
   resynchroniserPanier();
@@ -238,17 +236,4 @@ it('se déconnecte sans rechargement : la nav se met à jour, le panier survit',
   // Le panier n'a pas été vidé : il vit dans un magasin distinct
   // (`commande.panier.ts`), indépendant de la session.
   expect(screen.getByTestId('compteur-panier').textContent).toBe('2');
-});
-
-it('passe l’en-tête en anglais d’un clic, sans recharger la page', async () => {
-  afficher();
-  expect(screen.getByRole('link', { name: 'Produits' })).toBeTruthy();
-
-  await userEvent.click(screen.getByRole('button', { name: 'Switch to English' }));
-
-  expect(screen.getByRole('link', { name: 'Products' })).toBeTruthy();
-  expect(screen.getByRole('link', { name: 'Accommodation' })).toBeTruthy();
-  expect(screen.getByRole('link', { name: 'Sign in' })).toBeTruthy();
-  // La page est remontée, et toujours affichée.
-  expect(screen.getByText('contenu')).toBeTruthy();
 });
