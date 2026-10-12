@@ -201,6 +201,21 @@ describe('présentation en rubriques', () => {
     expect(screen.queryByText('Paiement en attente')).toBeNull();
   });
 
+  // Le bouton d'envoi du formulaire : « Payer … avec MVola » ou « … par carte ».
+  const PAYER = /^Payer .+ (avec .+|par carte)$/;
+
+  it('ouvre le paiement à la demande, pas d’office', async () => {
+    afficher();
+
+    await screen.findByText('Paiement en attente');
+    expect(screen.queryByRole('button', { name: PAYER })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /Payer maintenant/ }));
+
+    expect(screen.getByRole('button', { name: PAYER })).toBeDefined();
+    await userEvent.click(screen.getByRole('button', { name: 'Fermer le paiement' }));
+    expect(screen.queryByRole('button', { name: PAYER })).toBeNull();
+  });
+
   it('replie le détail d’une commande terminée, dépliable à la demande', async () => {
     afficher();
     await userEvent.click(await screen.findByRole('tab', { name: /Terminées/ }));

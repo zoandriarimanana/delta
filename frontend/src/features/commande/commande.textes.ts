@@ -193,6 +193,13 @@ const fr = {
   voirDetail: 'Voir le détail',
   paiementEnAttente: 'Paiement en attente',
   reglezEnLigne: 'Réglez votre commande en ligne pour qu’elle soit confirmée.',
+  resteAPayer: (montant: string) =>
+    `${montant} à régler pour lancer la préparation de votre commande.`,
+  moyensAcceptes: 'Moyens de paiement acceptés :',
+  carteBancaire: 'Carte bancaire',
+  payerMaintenant: 'Payer maintenant',
+  fermerPaiement: 'Fermer le paiement',
+  reglerCommande: (id: number) => `Régler la commande n° ${id}`,
   // Récapitulatif
   lUnite: (montant: string) => `${montant} l’unité`,
   statut: 'Statut',
@@ -365,6 +372,13 @@ export const TEXTES_COMMANDE: Textes<typeof fr> = {
     voirDetail: 'View details',
     paiementEnAttente: 'Payment pending',
     reglezEnLigne: 'Pay for your order online to have it confirmed.',
+    resteAPayer: (montant: string) =>
+      `${montant} to pay to start preparing your order.`,
+    moyensAcceptes: 'Accepted payment methods:',
+    carteBancaire: 'Bank card',
+    payerMaintenant: 'Pay now',
+    fermerPaiement: 'Close payment',
+    reglerCommande: (id: number) => `Pay order no. ${id}`,
     lUnite: (montant: string) => `${montant} each`,
     statut: 'Status',
     aPayer: 'To pay',

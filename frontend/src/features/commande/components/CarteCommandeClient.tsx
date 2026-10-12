@@ -9,20 +9,18 @@
  *
  * Le paiement n'est proposé que pour une commande **en attente** : une
  * commande confirmée l'est déjà, une annulée ne peut plus l'être (409
- * serveur). Le module `paiement` fournit le formulaire, monté sans rien
- * savoir de son implémentation.
+ * serveur). `PaiementCommandeClient` le présente en bandeau, ouvert à la
+ * demande.
  */
 
 import { useState } from 'react';
-import { ChevronDown, CreditCard, Store, Truck, UtensilsCrossed } from 'lucide-react';
+import { ChevronDown, Store, Truck, UtensilsCrossed } from 'lucide-react';
 
 import Badge from '@/components/ui/Badge';
 import { montantAPayer } from '@/features/devise/devise.service';
 import { EncartSuiviCommande } from '@/features/livraison/components/EncartSuivi';
-import FormulairePaiement from '@/features/paiement/components/FormulairePaiement';
 import { useTextes } from '@/lib/langue';
 
-import { recupererCommande } from '../commande.api';
 import { TEXTES_COMMANDE } from '../commande.textes';
 import {
   etapeCommande,
@@ -32,6 +30,7 @@ import {
   varianteStatutCommande,
 } from '../commande.service';
 import type { Commande } from '../commande.types';
+import PaiementCommandeClient from './PaiementCommandeClient';
 import RecapitulatifCommande from './RecapitulatifCommande';
 import VignetteProduit from './VignetteProduit';
 
@@ -115,22 +114,7 @@ export default function CarteCommandeClient({
       </div>
 
       {commande.statut === 'En_attente' && (
-        <div className="border-t border-attente/30 bg-attente/10 px-5 py-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-gris-700">
-            <CreditCard size={16} aria-hidden className="text-attente" />
-            {t.paiementEnAttente}
-          </p>
-          <p className="mt-1 text-xs text-gris-500">{t.reglezEnLigne}</p>
-          <FormulairePaiement
-            cible={{ type: 'client', idCommande: commande.id_commande }}
-            devise={commande.devise}
-            montant={montantAPayer(commande)}
-            lireStatutCommande={() =>
-              recupererCommande(commande.id_commande).then((c) => c.statut)
-            }
-            onConfirme={surPaiementConfirme}
-          />
-        </div>
+        <PaiementCommandeClient commande={commande} surPaye={surPaiementConfirme} />
       )}
 
       {ouverte && (

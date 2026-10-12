@@ -1835,6 +1835,12 @@ l'utilisateur : le client paie **dès la validation**, par mobile money
       plus) : c'est le webhook qui confirme, l'écran ne fait que le constater.
       « Payer plus tard » reste possible (« Mes commandes », ou le lien de
       suivi pour un invité). Guide client de l'assistant mis à jour.
+      — « Mes commandes » (12 octobre 2026) : le formulaire n'est plus monté
+      d'office dans chaque commande en attente. Un bandeau « Paiement en
+      attente » (montant dû, moyens acceptés, « Payer maintenant ») ouvre à
+      la demande le même parcours qu'après la validation
+      (`PaiementCommandeClient`). Vérifié dans un vrai navigateur, bureau et
+      mobile.
 
 ## Traçabilité MLD → sprints (à retenir)
 
