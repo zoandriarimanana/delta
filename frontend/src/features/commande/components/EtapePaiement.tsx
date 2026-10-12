@@ -12,7 +12,11 @@
 
 import { ShieldCheck } from 'lucide-react';
 
-import { montantAPayer } from '@/features/devise/devise.service';
+import {
+  montantAPayer,
+  montantDeviseEtrangere,
+  montantEnAriary,
+} from '@/features/devise/devise.service';
 import FormulairePaiement from '@/features/paiement/components/FormulairePaiement';
 import type { CiblePaiement } from '@/features/paiement/paiement.types';
 import { useTextes } from '@/lib/langue';
@@ -34,7 +38,11 @@ export default function EtapePaiement({
   surPaye,
 }: Proprietes) {
   const t = useTextes(TEXTES_COMMANDE);
+  // Le formulaire annonce ce que le moyen de paiement débitera (« 4,44 $ »
+  // par carte) ; l'écran, lui, parle en Ariary.
   const montant = montantAPayer(commande);
+  const enAriary = montantEnAriary(commande);
+  const etranger = montantDeviseEtrangere(commande);
 
   return (
     <section
@@ -48,7 +56,14 @@ export default function EtapePaiement({
         <p className="mt-1 text-sm text-gris-600">{t.plusQuUneEtape}</p>
         <p className="mt-3 flex items-baseline justify-between">
           <span className="text-sm font-medium text-gris-600">{t.totalAPayer}</span>
-          <span className="text-2xl font-bold text-primaire">{montant}</span>
+          <span className="text-right">
+            <span className="block text-2xl font-bold text-primaire">{enAriary}</span>
+            {etranger !== null && (
+              <span className="block text-xs text-gris-500">
+                {t.soitParCarte(etranger)}
+              </span>
+            )}
+          </span>
         </p>
       </div>
 

@@ -1766,6 +1766,10 @@ un commit par étape :
       vérifié dans un vrai navigateur.
       — Restent en français, délibérément : les données saisies par
       l'équipe, les messages d'erreur de l'API, et tout le back-office.
+- [x] **Ajustement (12 octobre 2026)** : prix toujours affichés en Ariary
+      côté client, à la demande de l'utilisateur. La devise choisie au tunnel
+      ne décide plus que du paiement (carte), n'est plus mémorisée, et
+      n'apparaît qu'en indication secondaire (« soit 4,44 $ par carte »).
 - [x] **Ajustement (9 octobre 2026)** : sélecteur de devise retiré de
       l'en-tête, à la demande de l'utilisateur. La devise se choisit
       uniquement au tunnel (« Payer en »).

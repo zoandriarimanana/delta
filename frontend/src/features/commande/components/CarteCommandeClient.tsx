@@ -17,7 +17,10 @@ import { useState } from 'react';
 import { ChevronDown, Store, Truck, UtensilsCrossed } from 'lucide-react';
 
 import Badge from '@/components/ui/Badge';
-import { montantAPayer } from '@/features/devise/devise.service';
+import {
+  montantDeviseEtrangere,
+  montantEnAriary,
+} from '@/features/devise/devise.service';
 import { EncartSuiviCommande } from '@/features/livraison/components/EncartSuivi';
 import { useTextes } from '@/lib/langue';
 
@@ -96,7 +99,16 @@ export default function CarteCommandeClient({
         </div>
 
         <div className="flex flex-row items-center justify-between gap-3 sm:flex-col sm:items-end">
-          <p className="text-2xl font-bold text-primaire">{montantAPayer(commande)}</p>
+          <p className="text-right">
+            <span className="block text-2xl font-bold text-primaire">
+              {montantEnAriary(commande)}
+            </span>
+            {montantDeviseEtrangere(commande) !== null && (
+              <span className="block text-xs text-gris-500">
+                {t.soitParCarte(montantDeviseEtrangere(commande) ?? '')}
+              </span>
+            )}
+          </p>
           <button
             type="button"
             onClick={() => setOuverte((valeur) => !valeur)}

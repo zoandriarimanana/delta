@@ -8,9 +8,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { recupererTaux } from './devise.api';
-import { formaterConverti } from './devise.service';
-import { useDevise } from './devise.store';
-import type { TauxChange } from './devise.types';
+import { convertir, formaterDevise } from './devise.service';
+import type { Devise, TauxChange } from './devise.types';
 
 let enCache: TauxChange[] | null = null;
 let enCours: Promise<TauxChange[]> | null = null;
@@ -54,14 +53,28 @@ export function useTaux(): TauxChange[] {
 }
 
 /**
- * Formateur des prix du catalogue dans la devise choisie par le visiteur.
- * Retombe sur l'Ariary tant que le taux n'est pas connu.
+ * Formateur des prix affichés au client : **toujours en Ariary** (demande du
+ * 12 octobre 2026). La devise choisie au tunnel ne décide que du paiement ;
+ * elle ne convertit plus l'affichage — sans quoi, après une commande en
+ * dollars, tout le catalogue restait en dollars.
  */
 export function useFormaterPrix(): (montantAriary: number | string) => string {
-  const devise = useDevise();
-  const taux = useTaux();
   return useCallback(
-    (montantAriary: number | string) => formaterConverti(montantAriary, devise, taux),
-    [devise, taux]
+    (montantAriary: number | string) => formaterDevise(montantAriary, 'MGA'),
+    []
   );
+}
+
+/**
+ * Montant en Ariary converti dans `devise` — l'indication « soit 4,44 $ » du
+ * tunnel. `null` en Ariary, ou tant que le taux n'est pas connu.
+ */
+export function useConversionIndicative(
+  montantAriary: number,
+  devise: Devise
+): string | null {
+  const taux = useTaux();
+  if (devise === 'MGA') return null;
+  const converti = convertir(montantAriary, devise, taux);
+  return converti === null ? null : formaterDevise(converti, devise);
 }

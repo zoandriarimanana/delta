@@ -1,10 +1,11 @@
 /**
- * Devise d'affichage choisie par le visiteur, et sa mémorisation.
+ * Devise de **paiement** choisie au tunnel (« Payer en »).
  *
- * **Préférence propre à ce navigateur**, rangée en `localStorage` comme le
- * thème. Elle se choisit **au tunnel** (« Payer en ») — pas dans l'en-tête,
- * retiré à la demande de l'utilisateur (9 octobre 2026) — et décide de la
- * devise des prix affichés ensuite. Le montant payé est toujours celui que le serveur fige.
+ * Elle ne décide que de la devise dans laquelle la commande est figée et
+ * payée — jamais des prix affichés, toujours en Ariary (12 octobre 2026).
+ * Plus mémorisée d'une visite à l'autre : un client qui a payé une fois en
+ * dollars retrouve l'Ariary, et le mobile money, à sa commande suivante.
+ * L'ancienne clé `localStorage` est effacée au chargement.
  */
 
 import { useSyncExternalStore } from 'react';
@@ -16,29 +17,22 @@ export const CLE_DEVISE = 'delta.devise';
 
 const abonnes = new Set<() => void>();
 
-function deviseMemorisee(): Devise {
-  try {
-    const valeur = localStorage.getItem(CLE_DEVISE);
-    return DEVISES.includes(valeur as Devise) ? (valeur as Devise) : 'MGA';
-  } catch {
-    return 'MGA';
-  }
+try {
+  localStorage.removeItem(CLE_DEVISE);
+} catch {
+  // Stockage indisponible : rien à effacer.
 }
 
-let courante: Devise = deviseMemorisee();
+let courante: Devise = 'MGA';
 
 export function lireDevise(): Devise {
   return courante;
 }
 
-/** Choisit la devise, la mémorise et prévient les composants abonnés. */
+/** Choisit la devise de paiement et prévient les composants abonnés. */
 export function definirDevise(devise: Devise): void {
+  if (!DEVISES.includes(devise)) return;
   courante = devise;
-  try {
-    localStorage.setItem(CLE_DEVISE, devise);
-  } catch {
-    // Stockage indisponible : le choix vaut pour la session en cours.
-  }
   abonnes.forEach((notifier) => notifier());
 }
 

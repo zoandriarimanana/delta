@@ -80,6 +80,24 @@ export function formaterConverti(
     : formaterDevise(converti, devise);
 }
 
+/** Total d'une commande enregistrée, en Ariary — ce que le client lit. */
+export function montantEnAriary(commande: { montant_total: string }): string {
+  return formaterDevise(commande.montant_total, 'MGA');
+}
+
+/**
+ * Montant figé dans la devise étrangère d'une commande (« 4,44 $ »), ou
+ * `null` pour une commande en Ariary. C'est ce que la carte débitera.
+ */
+export function montantDeviseEtrangere(commande: {
+  devise?: Devise;
+  montant_total_devise?: string;
+}): string | null {
+  if (commande.devise === undefined || commande.devise === 'MGA') return null;
+  if (commande.montant_total_devise === undefined) return null;
+  return formaterDevise(commande.montant_total_devise, commande.devise);
+}
+
 /** Montant à payer d'une commande enregistrée, dans **sa** devise figée. */
 export function montantAPayer(commande: {
   devise?: Devise;

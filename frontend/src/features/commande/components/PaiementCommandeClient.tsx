@@ -12,7 +12,11 @@
 import { useState } from 'react';
 import { Clock, CreditCard, Lock, X } from 'lucide-react';
 
-import { montantAPayer } from '@/features/devise/devise.service';
+import {
+  montantAPayer,
+  montantDeviseEtrangere,
+  montantEnAriary,
+} from '@/features/devise/devise.service';
 import FormulairePaiement from '@/features/paiement/components/FormulairePaiement';
 import { OPERATEURS } from '@/features/paiement/paiement.service';
 import { useTextes } from '@/lib/langue';
@@ -29,8 +33,11 @@ interface Proprietes {
 export default function PaiementCommandeClient({ commande, surPaye }: Proprietes) {
   const t = useTextes(TEXTES_COMMANDE);
   const [ouvert, setOuvert] = useState(false);
+  // Le formulaire annonce ce que le moyen de paiement débitera (« 4,44 $ »
+  // par carte) ; l'écran, lui, parle en Ariary.
   const montant = montantAPayer(commande);
-  const enAriary = commande.devise === 'MGA';
+  const enAriary = montantEnAriary(commande);
+  const etranger = montantDeviseEtrangere(commande);
 
   if (!ouvert) {
     return (
@@ -41,10 +48,10 @@ export default function PaiementCommandeClient({ commande, surPaye }: Proprietes
           </span>
           <div>
             <p className="font-semibold text-gris-700">{t.paiementEnAttente}</p>
-            <p className="text-sm text-gris-600">{t.resteAPayer(montant)}</p>
+            <p className="text-sm text-gris-600">{t.resteAPayer(enAriary)}</p>
             <p className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className="sr-only">{t.moyensAcceptes}</span>
-              {enAriary &&
+              {etranger === null &&
                 OPERATEURS.map((o) => (
                   <span
                     key={o.fournisseur}
@@ -82,7 +89,10 @@ export default function PaiementCommandeClient({ commande, surPaye }: Proprietes
         <div className="flex items-start justify-between gap-3 border-b border-gris-200 bg-primaire/5 px-5 py-4">
           <div>
             <p className="text-sm font-medium text-gris-600">{t.totalAPayer}</p>
-            <p className="text-2xl font-bold text-primaire">{montant}</p>
+            <p className="text-2xl font-bold text-primaire">{enAriary}</p>
+            {etranger !== null && (
+              <p className="text-xs text-gris-500">{t.soitParCarte(etranger)}</p>
+            )}
           </div>
           <button
             type="button"

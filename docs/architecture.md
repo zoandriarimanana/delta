@@ -532,14 +532,15 @@ Ouverture internationale (8 octobre 2026). Le catalogue est tenu **en
 Ariary**, un prix n'existe qu'une fois. `features/devise/` (module de
 `TAUX_CHANGE`) porte trois choses distinctes :
 
-- **la préférence du visiteur** (`devise.store.ts`, `localStorage`
-  `delta.devise`), choisie **au tunnel** (« Payer en ») ; l'en-tête n'a
-  plus de sélecteur de devise (retiré le 9 octobre 2026, jugé inutile) ;
-- **l'affichage** : `useFormaterPrix()` convertit un montant en Ariary avec
-  les taux publics (`GET /taux-change`, chargés une fois par page), et
-  retombe sur l'Ariary tant qu'ils ne sont pas connus — jamais de prix
-  inventé. Même arrondi que le serveur, pour que l'indication et le montant
-  final coïncident ;
+- **la devise de paiement** (`devise.store.ts`), choisie **au tunnel**
+  (« Payer en ») et **non mémorisée** : chaque visite repart en Ariary.
+  L'en-tête n'a plus de sélecteur (retiré le 9 octobre 2026) ;
+- **l'affichage**, **toujours en Ariary** (12 octobre 2026) :
+  `useFormaterPrix()` ne convertit plus. Auparavant, un paiement choisi en
+  dollars convertissait ensuite tout le catalogue. Seul le tunnel indique le
+  montant converti (« soit environ 4,44 $ »), avec le même arrondi que le
+  serveur ; une commande en devise affiche son total en Ariary et, en second,
+  « soit 4,44 $ par carte bancaire » ;
 - **le montant payé**, qui ne vient **jamais** du navigateur : le tunnel
   n'envoie que la devise choisie, le serveur fixe et fige taux et montant.
   Une commande passée s'affiche donc dans **sa** devise figée

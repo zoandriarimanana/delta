@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { CheckCircle2, ClipboardList, ShoppingBag } from 'lucide-react';
 
-import { montantAPayer } from '@/features/devise/devise.service';
+import { montantEnAriary } from '@/features/devise/devise.service';
 import { useTextes } from '@/lib/langue';
 
 import { recupererCommande } from '../commande.api';
@@ -58,7 +58,7 @@ export default function ConfirmationCommande({ commande }: Proprietes) {
         </h1>
         <p className="mt-3 text-gris-600">{t.merciPaiement(commande.id_commande)}</p>
         <p className="mt-1 text-sm text-gris-500">
-          {montantAPayer(commande)}
+          {montantEnAriary(commande)}
           {frais > 0 && t.dontLivraison(formaterMontant(commande.frais_livraison))}
         </p>
         <p className="mt-2 text-sm text-gris-500">{t.suivreDepuis}</p>

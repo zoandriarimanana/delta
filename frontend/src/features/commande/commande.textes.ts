@@ -198,6 +198,7 @@ const fr = {
   moyensAcceptes: 'Moyens de paiement acceptés :',
   carteBancaire: 'Carte bancaire',
   payerMaintenant: 'Payer maintenant',
+  soitParCarte: (montant: string) => `soit ${montant} par carte bancaire`,
   fermerPaiement: 'Fermer le paiement',
   reglerCommande: (id: number) => `Régler la commande n° ${id}`,
   // Récapitulatif
@@ -377,6 +378,7 @@ export const TEXTES_COMMANDE: Textes<typeof fr> = {
     moyensAcceptes: 'Accepted payment methods:',
     carteBancaire: 'Bank card',
     payerMaintenant: 'Pay now',
+    soitParCarte: (montant: string) => `i.e. ${montant} by bank card`,
     fermerPaiement: 'Close payment',
     reglerCommande: (id: number) => `Pay order no. ${id}`,
     lUnite: (montant: string) => `${montant} each`,

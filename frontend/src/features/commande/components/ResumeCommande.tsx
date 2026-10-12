@@ -11,6 +11,8 @@ import { Lock, PackageCheck, Store } from 'lucide-react';
 
 import ChoixDevise from '@/features/devise/components/ChoixDevise';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
+import { useTarifLivraison } from '@/features/livraison/livraison.hooks';
+import { fraisLivraison } from '@/features/livraison/livraison.service';
 import { useTextes } from '@/lib/langue';
 
 import { TEXTES_COMMANDE } from '../commande.textes';
@@ -36,6 +38,8 @@ export default function ResumeCommande({
 }: Proprietes) {
   const t = useTextes(TEXTES_COMMANDE);
   const prix = useFormaterPrix();
+  const { tarif } = useTarifLivraison();
+  const frais = avecLivraison && tarif !== null ? fraisLivraison(tarif, sousTotal) : 0;
   return (
     <aside
       aria-labelledby="titre-votre-commande"
@@ -96,7 +100,7 @@ export default function ResumeCommande({
       </div>
 
       <div className="mt-5">
-        <ChoixDevise />
+        <ChoixDevise totalAriary={sousTotal + frais} />
       </div>
 
       <button
