@@ -1825,12 +1825,15 @@ de crédits (402). Décision de l'utilisateur : Jina AI.
       dépendance ajoutée), lots de 64 textes, tâche `retrieval.passage` à
       l'indexation et `retrieval.query` pour une question. Tests sans réseau
       (`httpx.MockTransport`).
-- [ ] **Clé Jina** à coller par l'utilisateur dans `backend/.env`, puis
-      réindexation complète.
-- [ ] **Seuil de pertinence à recalibrer** : `chaine.SEUIL_PERTINENCE`
-      (0,38) a été mesuré sur `bge-m3` ; les scores de Jina n'ont pas la même
-      échelle. À reprendre avec les vraies questions d'essai de 12.3 une fois
-      l'index reconstruit.
+- [x] **Clé Jina** en place, réindexation complète réussie (52 fragments,
+      tous à 1024 dimensions ; les produits perdus avec le 402 sont revenus).
+- [x] **Seuil de pertinence recalibré à 0,17** (`chaine.SEUIL_PERTINENCE`,
+      0,38 avec `bge-m3`) : l'échelle de Jina est bien plus basse. Sur
+      17 vraies questions (français, malgache, anglais), la plus faible à
+      0,177 ; sur 8 hors sujet, la plus forte à 0,169. Les trois questions
+      malgaches passent désormais, ce que `bge-m3` ne faisait pas toujours.
+      Vérifié de bout en bout avec Groq : réponses justes en français et en
+      malgache, refus sans appel au LLM sur « capitale de l'Australie ».
 
 **Travaux hors sprint : paiement mobile money à la validation, y compris sans
 compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.

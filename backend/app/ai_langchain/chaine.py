@@ -29,15 +29,17 @@ journal = get_logger(__name__)
 # Porté de 4 à 6 dans le module d'origine, après évaluation sur des questions
 # réelles : à 4, une information présente dans l'index n'était pas remontée.
 NOMBRE_FRAGMENTS = 6
-# Pertinence minimale (1 - distance cosinus) d'un fragment, calibrée en 12.3
-# sur un catalogue d'essai avec `BAAI/bge-m3` : les bonnes réponses sortaient
-# toutes à 0,408 au moins, les questions hors sujet à 0,370 au plus. Sous ce
-# seuil, aucun fragment n'est retenu : l'assistant répond qu'il ne sait pas,
-# sans appeler le LLM — et les sources ne listent plus des fiches sans
-# rapport. Placé près du bas plutôt qu'au milieu : un appel de trop sur une
-# question farfelue coûte moins qu'une vraie question ignorée. À recalibrer
+# Pertinence minimale (1 - distance cosinus) d'un fragment. Recalibrée le
+# 12 octobre 2026 pour `jina-embeddings-v3`, dont l'échelle est bien plus
+# basse que celle de `BAAI/bge-m3` (seuil d'origine 0,38, calibré en 12.3) :
+# sur 17 vraies questions (français, malgache, anglais), la plus faible sort à
+# 0,177 (« Ahoana no hanaovana kaonty ? ») ; sur 8 hors sujet, la plus forte à
+# 0,169. Sous ce seuil, aucun fragment n'est retenu : l'assistant répond qu'il
+# ne sait pas, sans appeler le LLM. Placé près du bas plutôt qu'au milieu : un
+# appel de trop sur une question farfelue coûte moins qu'une vraie question
+# ignorée — et le prompt interdit de répondre hors du contexte. À recalibrer
 # si le modèle d'embeddings change.
-SEUIL_PERTINENCE = 0.38
+SEUIL_PERTINENCE = 0.17
 
 REGLES_COMMUNES = """Règles, sans exception :
 - Réponds uniquement à partir du contexte fourni. Si l'information n'y est \
