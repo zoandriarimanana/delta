@@ -41,7 +41,12 @@ const fr = {
   commandeIntrouvable: 'Cette commande est introuvable.',
   commandesNonChargees: 'Vos commandes n’ont pas pu être chargées.',
   // Étapes
-  etapes: { Panier: 'Panier', Commande: 'Commande', Confirmation: 'Confirmation' },
+  etapes: {
+    Panier: 'Panier',
+    Commande: 'Commande',
+    Paiement: 'Paiement',
+    Confirmation: 'Confirmation',
+  },
   etapesCommande: 'Étapes de la commande',
   // Panier
   monPanier: 'Mon panier',
@@ -139,6 +144,18 @@ const fr = {
   suivreDepuis:
     'Vous pouvez suivre son avancement à tout moment depuis « Mes commandes ».',
   suivreCommandes: 'Suivre mes commandes',
+  // Étape « Paiement » (9 octobre 2026)
+  commandeNumeroEnregistree: (n: number) => `Commande n° ${n} enregistrée`,
+  plusQuUneEtape:
+    'Plus qu’une étape : réglez votre commande pour qu’elle soit confirmée.',
+  totalAPayer: 'Total à payer',
+  payerPlusTardCompte:
+    'Vous pourrez aussi la régler plus tard depuis « Mes commandes ».',
+  payerPlusTardInvite:
+    'Vous pourrez aussi la régler plus tard depuis cette page — gardez son lien.',
+  commandeConfirmee: 'Commande confirmée',
+  merciPaiement: (n: number) =>
+    `Merci ! Votre paiement est reçu et la commande n° ${n} est confirmée.`,
   // Commande invitée
   chargement: 'Chargement…',
   numeroCommande: (n: number) => `Commande n° ${n}`,
@@ -209,7 +226,12 @@ export const TEXTES_COMMANDE: Textes<typeof fr> = {
     erreurEnregistrement: 'Your order could not be placed. Please try again shortly.',
     commandeIntrouvable: 'This order cannot be found.',
     commandesNonChargees: 'Your orders could not be loaded.',
-    etapes: { Panier: 'Cart', Commande: 'Checkout', Confirmation: 'Confirmation' },
+    etapes: {
+      Panier: 'Cart',
+      Commande: 'Checkout',
+      Paiement: 'Payment',
+      Confirmation: 'Confirmation',
+    },
     etapesCommande: 'Order steps',
     monPanier: 'My cart',
     articles: (n: number) => `${n} item${n > 1 ? 's' : ''}`,
@@ -300,6 +322,14 @@ export const TEXTES_COMMANDE: Textes<typeof fr> = {
     dontLivraison: (montant: string) => `, including ${montant} delivery`,
     suivreDepuis: 'You can follow its progress at any time from “My orders”.',
     suivreCommandes: 'Track my orders',
+    commandeNumeroEnregistree: (n: number) => `Order no. ${n} placed`,
+    plusQuUneEtape: 'One last step: pay for your order to have it confirmed.',
+    totalAPayer: 'Total to pay',
+    payerPlusTardCompte: 'You can also pay later from “My orders”.',
+    payerPlusTardInvite: 'You can also pay later from this page — keep its link.',
+    commandeConfirmee: 'Order confirmed',
+    merciPaiement: (n: number) =>
+      `Thank you! Your payment was received and order no. ${n} is confirmed.`,
     chargement: 'Loading…',
     numeroCommande: (n: number) => `Order no. ${n}`,
     auNomDe: (nom: string) => `, for ${nom}`,

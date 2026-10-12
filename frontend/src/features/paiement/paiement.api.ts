@@ -1,42 +1,41 @@
 /**
  * Appels HTTP du module paiement — et rien d'autre.
  *
- * L'instance axios est celle de `lib/axiosClient`, jamais une nouvelle : c'est
- * elle qui porte l'URL de base et l'injection du jeton.
+ * Deux portes pour la même action : un client connecté paie **sa** commande
+ * (identifiant + cookie de session), un invité paie la sienne par sa
+ * **référence publique** — la même clé qui lui permet de la consulter.
  */
 
 import { axiosClient } from '@/lib/axiosClient';
 
-import type { Paiement, PaiementEnvoye } from './paiement.types';
+import type { CiblePaiement, Paiement, PaiementEnvoye } from './paiement.types';
 
-/**
- * Initie un paiement pour une commande déjà créée — action **séparée** du
- * tunnel de commande (cf. `docs/mld.md`, Sprint 9). **409** si la commande
- * est annulée ou déjà payée ; le message est repris tel quel par l'appelant.
- */
+function cheminInitiation(cible: CiblePaiement): string {
+  return cible.type === 'client'
+    ? `/commandes/${cible.idCommande}/paiements`
+    : `/commandes/invite/${cible.reference}/paiements`;
+}
+
 export async function initierPaiement(
-  idCommande: number,
+  cible: CiblePaiement,
   donnees: PaiementEnvoye
 ): Promise<Paiement> {
-  const reponse = await axiosClient.post<Paiement>(
-    `/commandes/${idCommande}/paiements`,
-    donnees
-  );
+  const reponse = await axiosClient.post<Paiement>(cheminInitiation(cible), donnees);
   return reponse.data;
 }
 
 /**
- * Déclenche, en attendant les accès API réels aux fournisseurs, la
- * confirmation qu'un vrai fournisseur enverrait de lui-même par webhook.
- *
- * **Dev uniquement** : fermé côté serveur en dehors de
- * `ENVIRONMENT=developpement`, avec le même 404 générique qu'un paiement
- * introuvable (cf. `docs/mld.md`) — la protection réelle vit dans le
- * backend, pas ici.
+ * Simule la confirmation que l'opérateur enverrait de lui-même — en
+ * développement seulement (404 sinon, cf. `docs/mld.md`).
  */
-export async function simulerConfirmation(idPaiement: number): Promise<Paiement> {
-  const reponse = await axiosClient.post<Paiement>(
-    `/paiements/${idPaiement}/simuler-confirmation`
-  );
+export async function simulerConfirmation(
+  cible: CiblePaiement,
+  idPaiement: number
+): Promise<Paiement> {
+  const chemin =
+    cible.type === 'client'
+      ? `/paiements/${idPaiement}/simuler-confirmation`
+      : `/paiements/invite/${cible.reference}/${idPaiement}/simuler-confirmation`;
+  const reponse = await axiosClient.post<Paiement>(chemin);
   return reponse.data;
 }

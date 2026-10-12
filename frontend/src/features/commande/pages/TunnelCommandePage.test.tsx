@@ -20,6 +20,8 @@ import {
   recupererCommandeInvitee,
 } from '../commande.api';
 import { recupererPhotos } from '@/features/galerie/galerie.api';
+import { initierPaiement, simulerConfirmation } from '@/features/paiement/paiement.api';
+import type { Paiement } from '@/features/paiement/paiement.types';
 import { recupererTarifLivraison } from '@/features/livraison/livraison.api';
 
 import { ecrirePanier, lirePanier, resynchroniserPanier } from '../commande.panier';
@@ -28,6 +30,7 @@ import CommandeInviteePage from './CommandeInviteePage';
 import TunnelCommandePage from './TunnelCommandePage';
 
 vi.mock('../commande.api');
+vi.mock('@/features/paiement/paiement.api');
 // Seule la lecture du tarif est simulée : la page de commande invitée appelle
 // aussi le suivi de livraison, qui doit garder son comportement réel.
 vi.mock('@/features/galerie/galerie.api', async (original) => ({
@@ -62,6 +65,17 @@ const COMMANDE_INVITEE: Commande = {
     },
   ],
   rembourse_le: null,
+};
+
+const PAIEMENT: Paiement = {
+  id_paiement: 1,
+  montant: '7.00',
+  methode: 'Mobile_money',
+  fournisseur: 'Mvola',
+  statut: 'En_attente',
+  reference_externe: 'SIM-1',
+  date_paiement: '2026-10-12T10:00:00Z',
+  id_commande: 1,
 };
 
 const COMMANDE_CLIENT: Commande = {
@@ -136,6 +150,50 @@ describe('parcours invité', () => {
     expect(screen.getByLabelText(/téléphone ou e-mail/i)).toBeDefined();
   });
 
+  it('un invité paie dès la validation, par mobile money, sur la page de sa commande', async () => {
+    vi.stubEnv('VITE_ENVIRONMENT', 'developpement');
+    vi.mocked(initierPaiement).mockResolvedValue({ ...PAIEMENT, id_commande: 7 });
+    vi.mocked(simulerConfirmation).mockResolvedValue({
+      ...PAIEMENT,
+      id_commande: 7,
+      statut: 'Reussi',
+    });
+    act(remplirLePanier);
+    afficher();
+
+    await userEvent.type(screen.getByLabelText('Nom'), 'Rakoto Jean');
+    await userEvent.type(
+      screen.getByLabelText(/téléphone ou e-mail/i),
+      '+261340000000'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /valider/i }));
+
+    // Étape « Paiement » : le numéro de contact, mobile, est repris d'office.
+    const numero = await screen.findByLabelText(/numéro mobile money/i);
+    expect(numero).toHaveProperty('value', '034 00 000 00');
+    vi.mocked(recupererCommandeInvitee).mockResolvedValue({
+      ...COMMANDE_INVITEE,
+      statut: 'Confirmee',
+    });
+    await userEvent.click(screen.getByRole('button', { name: /avec mvola/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /simuler/i }));
+
+    expect(initierPaiement).toHaveBeenCalledWith(
+      { type: 'invite', reference: REFERENCE },
+      {
+        methode: 'Mobile_money',
+        fournisseur: 'Mvola',
+        numero_mobile_money: '0340000000',
+      }
+    );
+    // Commande relue, confirmée : la page passe à sa vue de confirmation.
+    expect(
+      await screen.findByRole('heading', { name: 'Votre commande' })
+    ).toBeDefined();
+    expect(screen.queryByLabelText(/numéro mobile money/i)).toBeNull();
+    vi.unstubAllEnvs();
+  });
+
   it('affiche la référence publique après validation', async () => {
     // Le critère central reporté de #14 : sans elle, l'invité perd
     // définitivement l'accès à sa commande.
@@ -185,7 +243,7 @@ describe('parcours connecté', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /valider/i }));
 
-    expect(await screen.findByText(/commande enregistrée/i)).toBeDefined();
+    expect(await screen.findByText(/Commande n° \d+ enregistrée/)).toBeDefined();
     expect(screen.queryByTestId('reference-publique')).toBeNull();
   });
 });
@@ -198,7 +256,7 @@ describe('devise de paiement', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /valider/i }));
 
-    await screen.findByText(/commande enregistrée/i);
+    await screen.findByText(/Commande n° \d+ enregistrée/);
     expect(vi.mocked(creerCommande).mock.calls[0]?.[0]).not.toHaveProperty('devise');
   });
 
@@ -211,7 +269,7 @@ describe('devise de paiement', () => {
     expect(screen.getByText(/carte bancaire internationale/i)).toBeDefined();
     await userEvent.click(screen.getByRole('button', { name: /valider/i }));
 
-    await screen.findByText(/commande enregistrée/i);
+    await screen.findByText(/Commande n° \d+ enregistrée/);
     const envoye = vi.mocked(creerCommande).mock.calls[0]?.[0];
     expect(envoye).toHaveProperty('devise', 'EUR');
     expect(envoye).not.toHaveProperty('taux_change');
@@ -280,7 +338,7 @@ describe('mode de réception et frais de livraison', () => {
     });
   });
 
-  it('la confirmation précise les frais de livraison figés', async () => {
+  it('l’étape de paiement annonce le total, frais de livraison compris', async () => {
     vi.mocked(creerCommande).mockResolvedValue({
       ...COMMANDE_CLIENT,
       montant_total: '5007.00',
@@ -294,7 +352,8 @@ describe('mode de réception et frais de livraison', () => {
     await userEvent.type(screen.getByLabelText(/Adresse de livraison/), 'Lot II M 45');
     await userEvent.click(screen.getByRole('button', { name: /valider/i }));
 
-    expect(await screen.findByText(/dont 5\s000,00 Ar de livraison/)).toBeDefined();
+    expect(await screen.findByText(/Total à payer/)).toBeDefined();
+    expect(screen.getAllByText(/5\s007,00 Ar/).length).toBeGreaterThan(0);
   });
 });
 
@@ -315,17 +374,29 @@ describe('présentation du tunnel', () => {
     expect(screen.getByRole('heading', { name: /Vos coordonnées/ })).toBeDefined();
   });
 
-  it('la confirmation propose de suivre ses commandes', async () => {
+  it('après validation, demande le paiement, puis propose de suivre ses commandes', async () => {
+    vi.stubEnv('VITE_ENVIRONMENT', 'developpement');
+    vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT);
+    vi.mocked(simulerConfirmation).mockResolvedValue({ ...PAIEMENT, statut: 'Reussi' });
     definirSession('client');
     act(remplirLePanier);
     afficher();
 
     await userEvent.click(screen.getByRole('button', { name: /valider/i }));
+    // Étape « Paiement » : la commande existe, il reste à la régler.
+    await userEvent.type(
+      await screen.findByLabelText(/numéro mobile money/i),
+      '0341234567'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /avec mvola/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /simuler/i }));
 
     expect(
       (await screen.findByRole('link', { name: /Suivre mes commandes/ })).getAttribute(
         'href'
       )
     ).toBe('/commandes');
+    expect(screen.getByText(/commande confirmée/i)).toBeDefined();
+    vi.unstubAllEnvs();
   });
 });

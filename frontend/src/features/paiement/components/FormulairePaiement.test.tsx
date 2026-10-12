@@ -1,231 +1,309 @@
 /**
- * Tests du formulaire de paiement.
+ * Tests du parcours de paiement : choix, attente de validation, résultat.
  *
- * Trois points portent l'essentiel :
+ * Ce qui porte l'essentiel :
  *
- * - un visiteur non connecté n'affiche rien plutôt que d'émettre un appel qui
- *   reviendrait en 401 (même garde que `FormulaireAvis`) ;
- * - les refus 409 sont repris tels quels — « cette commande est annulée » ou
- *   « cette commande a déjà été payée » disent au client quoi corriger ;
- * - `onConfirme` n'est appelé qu'une fois le paiement passé à `Reussi`, via
- *   `simuler()`, jamais à l'initiation (`En_attente`) ;
- * - le bouton « Simuler la confirmation » est **masqué** hors
- *   `VITE_ENVIRONMENT=developpement` — confort d'affichage, la seule vraie
- *   protection est le 404 backend (cf. `docs/mld.md`).
+ * - le **numéro décide de l'opérateur** (034 → MVola, 032 → Orange Money,
+ *   033 → Airtel Money) : le client ne peut pas envoyer une combinaison que
+ *   le serveur refuserait, et le bouton reste fermé tant que le numéro est
+ *   incomplet ;
+ * - le numéro part **sans espaces**, à 10 chiffres ; jamais aucun montant ;
+ * - un **invité** paie par sa référence, un client connecté par son
+ *   identifiant de commande ;
+ * - après l'envoi, l'écran **attend la validation sur le téléphone** et voit
+ *   arriver la confirmation en relisant le statut de la commande ;
+ * - hors Ariary, seule la carte est proposée ;
+ * - le bouton de simulation est masqué hors développement (confort
+ *   d'affichage, la vraie garantie est le 404 du serveur).
  */
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { definirSession, effacerSession } from '@/lib/session.store';
-
+import { INTERVALLE_RELECTURE_MS } from '../paiement.hooks';
 import { initierPaiement, simulerConfirmation } from '../paiement.api';
-import type { Paiement } from '../paiement.types';
+import type { CiblePaiement, Paiement } from '../paiement.types';
 import FormulairePaiement from './FormulairePaiement';
 
 vi.mock('../paiement.api');
 
-const PAIEMENT_EN_ATTENTE: Paiement = {
+const CLIENT: CiblePaiement = { type: 'client', idCommande: 42 };
+const INVITE: CiblePaiement = { type: 'invite', reference: 'ref-uuid' };
+
+const EN_ATTENTE: Paiement = {
   id_paiement: 1,
-  montant: '5000.00',
+  montant: '20000.00',
   methode: 'Mobile_money',
   fournisseur: 'Mvola',
   statut: 'En_attente',
   reference_externe: 'SIM-abc',
-  date_paiement: '2026-09-07T10:00:00Z',
+  date_paiement: '2026-10-12T10:00:00Z',
   id_commande: 42,
 };
 
-function erreurApi(status: number, detail: string) {
-  return { response: { status, data: { detail } } };
+function afficher(extra: Partial<Parameters<typeof FormulairePaiement>[0]> = {}) {
+  return render(
+    <FormulairePaiement cible={CLIENT} montant="20 000,00 Ar" {...extra} />
+  );
 }
+
+async function saisirNumero(numero: string) {
+  await userEvent.type(screen.getByLabelText(/numéro mobile money/i), numero);
+}
+
+beforeEach(() => {
+  vi.stubEnv('VITE_ENVIRONMENT', 'developpement');
+});
 
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
   vi.unstubAllEnvs();
-  effacerSession();
+  vi.useRealTimers();
 });
 
-describe('visiteur non connecté', () => {
-  it("n'affiche rien et n'émet aucun appel", () => {
-    const { container } = render(<FormulairePaiement idCommande={42} />);
+describe('choix de l’opérateur', () => {
+  it('propose les trois opérateurs, MVola par défaut', () => {
+    afficher();
 
-    expect(container.firstChild).toBeNull();
-    expect(initierPaiement).not.toHaveBeenCalled();
-  });
-});
-
-describe('client connecté', () => {
-  beforeEach(() => {
-    definirSession('client');
-    // Explicite plutôt que de dépendre de frontend/.env : ces tests portent
-    // sur le comportement en développement, indépendamment de l'ambiant.
-    vi.stubEnv('VITE_ENVIRONMENT', 'developpement');
-  });
-
-  it('initie le paiement pour la commande passée en propriété, sans montant', async () => {
-    vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
-    render(<FormulairePaiement idCommande={42} />);
-
-    await userEvent.click(
-      screen.getByRole('button', { name: /payer cette commande/i })
+    expect(screen.getByRole('radio', { name: /mvola/i })).toHaveProperty(
+      'checked',
+      true
     );
-
-    expect(initierPaiement).toHaveBeenCalledWith(42, {
-      methode: 'Mobile_money',
-      fournisseur: 'Mvola',
-    });
+    expect(screen.getByRole('radio', { name: /orange money/i })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /airtel money/i })).toBeTruthy();
   });
 
-  it('en devise, ne propose que la carte bancaire internationale', async () => {
-    vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
-    render(<FormulairePaiement idCommande={42} devise="EUR" montant="5,00 €" />);
+  it('sélectionne l’opérateur d’après le numéro saisi', async () => {
+    afficher();
 
-    expect(screen.getByText(/5,00 €/)).toBeTruthy();
-    expect(screen.getByRole('radio', { name: /mobile money/i })).toHaveProperty(
+    await saisirNumero('0321234567');
+
+    expect(screen.getByRole('radio', { name: /orange money/i })).toHaveProperty(
+      'checked',
+      true
+    );
+    expect(screen.getByText(/numéro orange money détecté/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /avec orange money/i })).toBeTruthy();
+  });
+
+  it('met le numéro en forme et garde le bouton fermé tant qu’il est incomplet', async () => {
+    afficher();
+
+    await saisirNumero('03412');
+
+    expect(screen.getByLabelText(/numéro mobile money/i)).toHaveProperty(
+      'value',
+      '034 12'
+    );
+    expect(screen.getByRole('button', { name: /payer 20 000,00 ar/i })).toHaveProperty(
       'disabled',
       true
     );
-    await userEvent.click(
-      screen.getByRole('button', { name: /payer cette commande/i })
-    );
-
-    expect(initierPaiement).toHaveBeenCalledWith(42, {
-      methode: 'Carte',
-      fournisseur: 'Stripe',
-    });
   });
 
-  it('associe toujours la carte à Stripe, jamais à un opérateur mobile', async () => {
-    vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
-    render(<FormulairePaiement idCommande={42} />);
+  it('signale un numéro qui ne correspond à aucun opérateur', async () => {
+    afficher();
 
-    await userEvent.click(
-      screen.getByRole('radio', { name: /carte bancaire internationale/i })
-    );
-    expect(screen.queryByLabelText(/opérateur/i)).toBeNull();
-    await userEvent.click(
-      screen.getByRole('button', { name: /payer cette commande/i })
-    );
+    await saisirNumero('0391234567');
 
-    expect(initierPaiement).toHaveBeenCalledWith(42, {
-      methode: 'Carte',
-      fournisseur: 'Stripe',
-    });
+    expect(screen.getByText(/aucun opérateur mobile money/i)).toBeTruthy();
   });
 
-  it('affiche le statut En_attente après initiation, sans appeler onConfirme', async () => {
-    vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
-    const onConfirme = vi.fn();
-    render(<FormulairePaiement idCommande={42} onConfirme={onConfirme} />);
+  it('reprend le numéro de contact d’un invité s’il est mobile', () => {
+    afficher({ numeroSuggere: '+261 33 12 345 67' });
 
-    await userEvent.click(
-      screen.getByRole('button', { name: /payer cette commande/i })
+    expect(screen.getByLabelText(/numéro mobile money/i)).toHaveProperty(
+      'value',
+      '033 12 345 67'
     );
-
-    expect(await screen.findByText(/en attente de confirmation/i)).toBeTruthy();
-    expect(onConfirme).not.toHaveBeenCalled();
-  });
-
-  it('reprend le message 409 tel quel — commande annulée', async () => {
-    vi.mocked(initierPaiement).mockRejectedValue(
-      erreurApi(
-        409,
-        "Cette commande est annulée : impossible d'y associer un paiement."
-      )
+    expect(screen.getByRole('radio', { name: /airtel money/i })).toHaveProperty(
+      'checked',
+      true
     );
-    render(<FormulairePaiement idCommande={42} />);
-
-    await userEvent.click(
-      screen.getByRole('button', { name: /payer cette commande/i })
-    );
-
-    expect((await screen.findByRole('alert')).textContent).toContain(
-      'Cette commande est annulée'
-    );
-  });
-
-  it('reprend le message 409 tel quel — commande déjà payée', async () => {
-    vi.mocked(initierPaiement).mockRejectedValue(
-      erreurApi(409, 'Cette commande a déjà été payée.')
-    );
-    render(<FormulairePaiement idCommande={42} />);
-
-    await userEvent.click(
-      screen.getByRole('button', { name: /payer cette commande/i })
-    );
-
-    expect((await screen.findByRole('alert')).textContent).toContain(
-      'Cette commande a déjà été payée.'
-    );
-  });
-
-  it('appelle onConfirme une fois, seulement quand simuler() renvoie Reussi', async () => {
-    vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
-    vi.mocked(simulerConfirmation).mockResolvedValue({
-      ...PAIEMENT_EN_ATTENTE,
-      statut: 'Reussi',
-    });
-    const onConfirme = vi.fn();
-    render(<FormulairePaiement idCommande={42} onConfirme={onConfirme} />);
-
-    await userEvent.click(
-      screen.getByRole('button', { name: /payer cette commande/i })
-    );
-    await userEvent.click(
-      await screen.findByRole('button', { name: /simuler la confirmation/i })
-    );
-
-    expect(await screen.findByRole('status')).toBeTruthy();
-    expect(onConfirme).toHaveBeenCalledTimes(1);
-  });
-
-  it('ne propose plus de simuler une fois le paiement Reussi', async () => {
-    vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
-    vi.mocked(simulerConfirmation).mockResolvedValue({
-      ...PAIEMENT_EN_ATTENTE,
-      statut: 'Reussi',
-    });
-    render(<FormulairePaiement idCommande={42} />);
-
-    await userEvent.click(
-      screen.getByRole('button', { name: /payer cette commande/i })
-    );
-    await userEvent.click(
-      await screen.findByRole('button', { name: /simuler la confirmation/i })
-    );
-
-    await screen.findByRole('status');
-    expect(
-      screen.queryByRole('button', { name: /simuler la confirmation/i })
-    ).toBeNull();
   });
 });
 
-describe('hors developpement (VITE_ENVIRONMENT=production)', () => {
-  beforeEach(() => {
-    definirSession('client');
-    vi.stubEnv('VITE_ENVIRONMENT', 'production');
+describe('envoi', () => {
+  it('envoie l’opérateur et le numéro sans espaces, jamais de montant', async () => {
+    vi.mocked(initierPaiement).mockResolvedValue(EN_ATTENTE);
+    afficher();
+
+    await saisirNumero('034 12 345 67');
+    await userEvent.click(screen.getByRole('button', { name: /avec mvola/i }));
+
+    expect(initierPaiement).toHaveBeenCalledWith(CLIENT, {
+      methode: 'Mobile_money',
+      fournisseur: 'Mvola',
+      numero_mobile_money: '0341234567',
+    });
   });
 
-  it('masque le bouton « Simuler la confirmation » alors que le paiement reste En_attente', async () => {
-    // Un clic sur ce bouton échouerait de toute façon en 404 côté serveur
-    // (Settings.ENVIRONMENT, cf. docs/mld.md) : le masquer évite qu'un client
-    // le voie échouer silencieusement, ce qui donnerait l'impression d'une
-    // fonctionnalité cassée plutôt qu'intentionnellement absente.
-    vi.mocked(initierPaiement).mockResolvedValue(PAIEMENT_EN_ATTENTE);
-    render(<FormulairePaiement idCommande={42} />);
+  it('un invité paie par la référence de sa commande', async () => {
+    vi.mocked(initierPaiement).mockResolvedValue(EN_ATTENTE);
+    render(<FormulairePaiement cible={INVITE} montant="20 000,00 Ar" />);
+
+    await saisirNumero('0341234567');
+    await userEvent.click(screen.getByRole('button', { name: /avec mvola/i }));
+
+    expect(vi.mocked(initierPaiement).mock.calls[0]?.[0]).toEqual(INVITE);
+  });
+
+  it('reprend tel quel le refus du serveur', async () => {
+    vi.mocked(initierPaiement).mockRejectedValue({
+      response: { status: 409, data: { detail: 'Cette commande a déjà été payée.' } },
+    });
+    afficher();
+
+    await saisirNumero('0341234567');
+    await userEvent.click(screen.getByRole('button', { name: /avec mvola/i }));
+
+    expect((await screen.findByRole('alert')).textContent).toContain('déjà été payée');
+  });
+
+  it('rend lisible une erreur de validation du numéro (422)', async () => {
+    vi.mocked(initierPaiement).mockRejectedValue({
+      response: {
+        status: 422,
+        data: { detail: [{ msg: "Value error, Ce numéro n'est pas un numéro MVola" }] },
+      },
+    });
+    afficher();
+
+    await saisirNumero('0341234567');
+    await userEvent.click(screen.getByRole('button', { name: /avec mvola/i }));
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      "Ce numéro n'est pas un numéro MVola"
+    );
+  });
+});
+
+describe('attente de la validation', () => {
+  it('demande de valider sur le téléphone, avec le numéro et l’opérateur', async () => {
+    vi.mocked(initierPaiement).mockResolvedValue(EN_ATTENTE);
+    afficher();
+
+    await saisirNumero('0341234567');
+    await userEvent.click(screen.getByRole('button', { name: /avec mvola/i }));
+
+    expect(
+      await screen.findByText(/validez le paiement sur votre téléphone/i)
+    ).toBeTruthy();
+    expect(screen.getByText(/034 12 345 67 \(MVola\)/)).toBeTruthy();
+    expect(screen.getByText(/en attente de la confirmation de mvola/i)).toBeTruthy();
+  });
+
+  it('voit arriver la confirmation en relisant le statut de la commande', async () => {
+    // Faux minuteurs dès le départ : l'intervalle de relecture est créé à
+    // l'envoi, il doit naître sous leur contrôle.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const utilisateur = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    vi.mocked(initierPaiement).mockResolvedValue(EN_ATTENTE);
+    const lireStatut = vi
+      .fn<() => Promise<string>>()
+      .mockResolvedValueOnce('En_attente')
+      .mockResolvedValue('Confirmee');
+    const onConfirme = vi.fn();
+    afficher({ lireStatutCommande: lireStatut, onConfirme });
+    await utilisateur.type(screen.getByLabelText(/numéro mobile money/i), '0341234567');
+    await utilisateur.click(screen.getByRole('button', { name: /avec mvola/i }));
+    await screen.findByText(/validez le paiement/i);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INTERVALLE_RELECTURE_MS * 2 + 10);
+    });
+
+    expect(await screen.findByText(/paiement reçu/i)).toBeTruthy();
+    expect(lireStatut).toHaveBeenCalledTimes(2);
+    expect(onConfirme).toHaveBeenCalledOnce();
+  });
+
+  it('la simulation (développement) confirme le paiement', async () => {
+    vi.mocked(initierPaiement).mockResolvedValue(EN_ATTENTE);
+    vi.mocked(simulerConfirmation).mockResolvedValue({
+      ...EN_ATTENTE,
+      statut: 'Reussi',
+    });
+    const onConfirme = vi.fn();
+    afficher({ onConfirme });
+    await saisirNumero('0341234567');
+    await userEvent.click(screen.getByRole('button', { name: /avec mvola/i }));
+
+    await userEvent.click(await screen.findByRole('button', { name: /simuler/i }));
+
+    expect(simulerConfirmation).toHaveBeenCalledWith(CLIENT, 1);
+    expect(await screen.findByText(/paiement reçu/i)).toBeTruthy();
+    await waitFor(() => expect(onConfirme).toHaveBeenCalledOnce());
+  });
+
+  it('masque la simulation hors développement', async () => {
+    vi.stubEnv('VITE_ENVIRONMENT', 'production');
+    vi.mocked(initierPaiement).mockResolvedValue(EN_ATTENTE);
+    afficher();
+    await saisirNumero('0341234567');
+    await userEvent.click(screen.getByRole('button', { name: /avec mvola/i }));
+
+    await screen.findByText(/validez le paiement/i);
+    expect(screen.queryByRole('button', { name: /simuler/i })).toBeNull();
+  });
+
+  it('un échec propose de réessayer, et revient au choix', async () => {
+    vi.mocked(initierPaiement).mockResolvedValue(EN_ATTENTE);
+    vi.mocked(simulerConfirmation).mockResolvedValue({
+      ...EN_ATTENTE,
+      statut: 'Echoue',
+    });
+    afficher();
+    await saisirNumero('0341234567');
+    await userEvent.click(screen.getByRole('button', { name: /avec mvola/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /simuler/i }));
+
+    expect(await screen.findByText(/n’a pas abouti/i)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: /réessayer/i }));
+    expect(screen.getByLabelText(/numéro mobile money/i)).toBeTruthy();
+  });
+
+  it('« changer de numéro » revient au choix', async () => {
+    vi.mocked(initierPaiement).mockResolvedValue(EN_ATTENTE);
+    afficher();
+    await saisirNumero('0341234567');
+    await userEvent.click(screen.getByRole('button', { name: /avec mvola/i }));
 
     await userEvent.click(
-      screen.getByRole('button', { name: /payer cette commande/i })
+      await screen.findByRole('button', { name: /changer de numéro/i })
     );
 
-    expect(await screen.findByText(/en attente de confirmation/i)).toBeTruthy();
+    expect(screen.getByLabelText(/numéro mobile money/i)).toBeTruthy();
+  });
+});
+
+describe('carte bancaire', () => {
+  it('reste proposée en Ariary, et passe toujours par Stripe', async () => {
+    vi.mocked(initierPaiement).mockResolvedValue({
+      ...EN_ATTENTE,
+      methode: 'Carte',
+      fournisseur: 'Stripe',
+    });
+    afficher();
+
+    await userEvent.click(screen.getByRole('button', { name: /plutôt par carte/i }));
+    await userEvent.click(screen.getByRole('button', { name: /par carte$/i }));
+
+    expect(initierPaiement).toHaveBeenCalledWith(CLIENT, {
+      methode: 'Carte',
+      fournisseur: 'Stripe',
+    });
+  });
+
+  it('est le seul choix pour une commande en devise', () => {
+    afficher({ devise: 'EUR', montant: '4,00 €' });
+
+    expect(screen.getByText(/ne fonctionne qu’en ariary/i)).toBeTruthy();
+    expect(screen.queryByLabelText(/numéro mobile money/i)).toBeNull();
     expect(
-      screen.queryByRole('button', { name: /simuler la confirmation/i })
+      screen.queryByRole('button', { name: /plutôt par mobile money/i })
     ).toBeNull();
-    expect(simulerConfirmation).not.toHaveBeenCalled();
   });
 });

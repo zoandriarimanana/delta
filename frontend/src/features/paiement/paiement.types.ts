@@ -5,9 +5,8 @@
  * FastAPI sérialise ainsi pour ne pas perdre de précision au passage par le
  * flottant JSON — même convention que `commande.types.ts`.
  *
- * `methode` et `fournisseur` sont deux domaines **indépendants** : aucune
- * contrainte ne lie l'un à l'autre côté serveur (pas de `CHECK`), donc aucune
- * restriction n'est ajoutée ici — ce serait une règle inventée, pas relevée.
+ * `methode` et `fournisseur` sont liés côté serveur (8 octobre 2026) : la
+ * carte passe par Stripe, le mobile money par un opérateur malgache.
  */
 
 export type MethodePaiement = 'Carte' | 'Mobile_money';
@@ -35,4 +34,17 @@ export interface Paiement {
 export interface PaiementEnvoye {
   methode: MethodePaiement;
   fournisseur: FournisseurPaiement;
+  /**
+   * Numéro du portefeuille à débiter, **exigé pour le mobile money** : il
+   * reçoit la demande de validation de l'opérateur. Transmis, jamais stocké
+   * par le serveur.
+   */
+  numero_mobile_money?: string;
 }
+
+/**
+ * Commande à payer : celle d'un client connecté (par son identifiant), ou
+ * celle d'un invité (par sa référence publique, sa seule clé).
+ */
+export type CiblePaiement =
+  { type: 'client'; idCommande: number } | { type: 'invite'; reference: string };

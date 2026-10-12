@@ -1791,6 +1791,21 @@ l'utilisateur : un fournisseur à quota gratuit.
 - [ ] **Clé Google** à créer et coller par l'utilisateur dans `backend/.env`,
       puis réindexation complète (`python -m scripts.reindexer_assistant`) :
       les vecteurs Hugging Face et Gemini ne se comparent pas.
+      — **Bloqué le 12 octobre 2026** : la clé est en place, mais Google
+      répond `403 PERMISSION_DENIED — Your project has been denied access`.
+      C'est le projet Google qui est refusé, pas le code : à régler par
+      l'utilisateur dans Google AI Studio (ou auprès du support Google), ou
+      choisir un autre fournisseur.
+- [x] **Remplacement tout-ou-rien** (12 octobre 2026) : la sonde avait
+      réussi, puis Google avait coupé l'accès **en cours** de réindexation —
+      un fragment Gemini (768 dimensions) s'était retrouvé mêlé à l'index
+      Hugging Face (1024). Désormais, chaque type de contenu (et chaque
+      fragment en synchronisation incrémentale) est **entièrement vectorisé
+      avant** que son ancien contenu soit retiré : une panne à n'importe quel
+      moment laisse l'index tel qu'il était. Test de régression (fournisseur
+      qui accepte la sonde puis refuse) ; fragment parasite retiré à la main.
+      Les produits, perdus par le 402 d'origine, restent absents de l'index
+      jusqu'à la prochaine réindexation réussie.
 - [ ] Dette : sur Render, ajouter `GOOGLE_API_KEY` et
       `EMBEDDINGS_FOURNISSEUR=google` aux variables d'environnement.
 
@@ -1807,10 +1822,19 @@ l'utilisateur : le client paie **dès la validation**, par mobile money
       seulement). Numéro mobile money exigé pour cette méthode, cohérent avec
       l'opérateur (034/038 MVola, 032/037 Orange, 033 Airtel), transmis à la
       passerelle et **jamais stocké**.
-- [ ] **P.2 — Frontend** : étape « Paiement » juste après la validation
+- [x] **P.2 — Frontend** : étape « Paiement » juste après la validation
       (invité et connecté) — tuiles d'opérateur, numéro avec détection de
       l'opérateur, attente « validez sur votre téléphone », confirmation
       automatique par relecture du statut de la commande.
+      — Livré : nouvelle étape « Paiement » dans le fil du tunnel (Panier →
+      Commande → Paiement → Confirmation), montée par la confirmation client
+      **et** par la page publique d'une commande invitée — un seul composant
+      (`EtapePaiement`). Le numéro choisit l'opérateur dès ses trois premiers
+      chiffres ; la carte reste proposée, seule possible hors Ariary. Pendant
+      l'attente, le statut de la commande est relu toutes les 4 s (3 min au
+      plus) : c'est le webhook qui confirme, l'écran ne fait que le constater.
+      « Payer plus tard » reste possible (« Mes commandes », ou le lien de
+      suivi pour un invité). Guide client de l'assistant mis à jour.
 
 ## Traçabilité MLD → sprints (à retenir)
 

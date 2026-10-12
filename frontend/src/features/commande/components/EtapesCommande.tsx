@@ -12,7 +12,7 @@ import { useTextes } from '@/lib/langue';
 
 import { TEXTES_COMMANDE } from '../commande.textes';
 
-const ETAPES = ['Panier', 'Commande', 'Confirmation'] as const;
+const ETAPES = ['Panier', 'Commande', 'Paiement', 'Confirmation'] as const;
 
 export type EtapeCommande = (typeof ETAPES)[number];
 

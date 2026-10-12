@@ -23,7 +23,9 @@ import { EncartSuiviInvite } from '@/features/livraison/components/EncartSuivi';
 import { useTextes } from '@/lib/langue';
 
 import { TEXTES_COMMANDE } from '../commande.textes';
+import EtapePaiement from '../components/EtapePaiement';
 import EtapesCommande from '../components/EtapesCommande';
+import { recupererCommandeInvitee } from '../commande.api';
 import RecapitulatifCommande from '../components/RecapitulatifCommande';
 import ReferencePublique from '../components/ReferencePublique';
 import { useCommandeInvitee } from '../commande.hooks';
@@ -33,7 +35,9 @@ import type { Commande } from '../commande.types';
 export default function CommandeInviteePage() {
   const t = useTextes(TEXTES_COMMANDE);
   const { reference } = useParams();
-  const { commande, chargement, erreur } = useCommandeInvitee(reference ?? null);
+  const { commande, chargement, erreur, recharger } = useCommandeInvitee(
+    reference ?? null
+  );
 
   return (
     <section>
@@ -55,7 +59,36 @@ export default function CommandeInviteePage() {
         </div>
       )}
 
-      {commande !== null && (
+      {commande !== null &&
+        commande.statut === 'En_attente' &&
+        reference !== undefined && (
+          <>
+            <EtapesCommande courante="Paiement" />
+            <div className="mx-auto mt-8 grid max-w-5xl items-start gap-8 lg:grid-cols-[1fr_22rem]">
+              <EtapePaiement
+                commande={commande}
+                cible={{ type: 'invite', reference }}
+                lireStatutCommande={() =>
+                  recupererCommandeInvitee(reference).then((c) => c.statut)
+                }
+                surPaye={recharger}
+              />
+              <div className="space-y-6">
+                {commande.reference_publique !== null && (
+                  <ReferencePublique reference={commande.reference_publique} />
+                )}
+                <div className="rounded-2xl border border-gris-200 bg-surface p-6 shadow-sm">
+                  <h2 className="text-lg font-semibold text-gris-700">
+                    {t.articlesTitre}
+                  </h2>
+                  <RecapitulatifCommande commande={commande} afficherStatut={false} />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+      {commande !== null && commande.statut !== 'En_attente' && (
         <>
           <EtapesCommande courante="Confirmation" />
           <EnTete commande={commande} />

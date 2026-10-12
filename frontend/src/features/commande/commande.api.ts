@@ -37,6 +37,15 @@ export async function creerCommandeInvite(
   return reponse.data;
 }
 
+/**
+ * Relit une commande du client connecté — pour voir arriver la confirmation
+ * d'un paiement. 404 si elle appartient à un autre client.
+ */
+export async function recupererCommande(idCommande: number): Promise<Commande> {
+  const reponse = await axiosClient.get<Commande>(`${CHEMIN}/${idCommande}`);
+  return reponse.data;
+}
+
 /** Relit une commande invitée par sa référence. Endpoint public. */
 export async function recupererCommandeInvitee(reference: string): Promise<Commande> {
   const reponse = await axiosClient.get<Commande>(`${CHEMIN}/invite/${reference}`);

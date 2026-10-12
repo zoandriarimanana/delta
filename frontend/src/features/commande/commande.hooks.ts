@@ -202,7 +202,12 @@ export interface EtatCommande {
 }
 
 /** Lecture publique d'une commande invitée, par sa référence. */
-export function useCommandeInvitee(reference: string | null): EtatCommande {
+export interface EtatCommandeInvitee extends EtatCommande {
+  /** Relit la commande sans réafficher le chargement (après un paiement). */
+  recharger: () => void;
+}
+
+export function useCommandeInvitee(reference: string | null): EtatCommandeInvitee {
   const [etat, setEtat] = useState<EtatCommande>({
     commande: null,
     chargement: reference !== null,
@@ -239,7 +244,16 @@ export function useCommandeInvitee(reference: string | null): EtatCommande {
     };
   }, [reference]);
 
-  return etat;
+  const recharger = useCallback(() => {
+    if (reference === null) return;
+    void recupererCommandeInvitee(reference)
+      .then((commande) => setEtat({ commande, chargement: false, erreur: null }))
+      .catch(() => {
+        // Relecture de confort : la commande déjà affichée reste valable.
+      });
+  }, [reference]);
+
+  return { ...etat, recharger };
 }
 
 export interface EtatHistorique {

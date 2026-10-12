@@ -22,6 +22,7 @@ import { EncartSuiviCommande } from '@/features/livraison/components/EncartSuivi
 import FormulairePaiement from '@/features/paiement/components/FormulairePaiement';
 import { useTextes } from '@/lib/langue';
 
+import { recupererCommande } from '../commande.api';
 import { TEXTES_COMMANDE } from '../commande.textes';
 import {
   etapeCommande,
@@ -121,9 +122,12 @@ export default function CarteCommandeClient({
           </p>
           <p className="mt-1 text-xs text-gris-500">{t.reglezEnLigne}</p>
           <FormulairePaiement
-            idCommande={commande.id_commande}
+            cible={{ type: 'client', idCommande: commande.id_commande }}
             devise={commande.devise}
             montant={montantAPayer(commande)}
+            lireStatutCommande={() =>
+              recupererCommande(commande.id_commande).then((c) => c.statut)
+            }
             onConfirme={surPaiementConfirme}
           />
         </div>
