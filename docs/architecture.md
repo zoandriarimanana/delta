@@ -1211,6 +1211,14 @@ jamais — l'administrateur enregistre son produit même si Hugging Face est hor
 quota ; les questions répondent 503 avec `Retry-After`. Seule la réindexation
 complète, action explicite, signale son échec.
 
+**Vectoriser avant de remplacer.** Une réindexation — complète ou
+incrémentale — calcule **tous** les vecteurs d'un contenu avant d'en retirer
+l'ancienne version. Une sonde préalable ne suffit pas : le 12 octobre 2026,
+Google a accepté la sonde puis refusé l'accès en pleine réindexation, laissant
+un index à moitié vidé et mêlant deux modèles d'embeddings (768 et 1024
+dimensions), qui ne se comparent pas. Calculer d'abord rend chaque
+remplacement tout-ou-rien.
+
 **Frontend.** `features/assistant/`, même structure que les autres modules. La
 bulle (`BulleAssistant`) est montée par `MainLayout` sans qu'il en sache rien,
 et ne s'affiche que si `GET /assistant/disponibilite` répond `actif`. La

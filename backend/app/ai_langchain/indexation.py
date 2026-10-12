@@ -86,25 +86,55 @@ def indexer_texte(
     le nombre de fragments change quand le texte change, et des fragments
     orphelins répondraient encore pour une version périmée de la fiche.
 
-    Les deux étapes ne sont pas dans une même transaction (la suppression
-    passe par le moteur de l'application, l'insertion par le pool de
-    PGVector) : une panne entre les deux laisse l'entité absente de l'index,
-    jamais en double — et la réindexation suivante la rétablit.
+    **Les vecteurs sont calculés avant toute suppression** (9 octobre 2026) :
+    si le fournisseur d'embeddings refuse ou tombe, l'ancien contenu reste en
+    place, intact. Seule l'écriture en base reste en deux temps (suppression
+    par le moteur de l'application, insertion par le pool de PGVector).
     """
     store = store or obtenir_vector_store()
+    fragments = fragments_de(type_contenu, id_contenu, texte, titre, audience)
+    vecteurs = vectoriser(store, fragments)
     supprimer_par_contenu(type_contenu, id_contenu, store.collection_name)
-    # Une liste de textes : des sections découpées chacune pour soi (guides),
-    # pour qu'un fragment ne mêle jamais la fin d'une section au début d'une
-    # autre.
+    ranger(store, fragments, vecteurs)
+    return len(fragments)
+
+
+def fragments_de(
+    type_contenu: str,
+    id_contenu: int,
+    texte: str | Sequence[str],
+    titre: str | None = None,
+    audience: str = AUDIENCE_CLIENT,
+) -> list[Document]:
+    """Fragments d'une entité. Une liste de textes : des sections découpées
+    chacune pour soi (guides), pour qu'un fragment ne mêle jamais la fin d'une
+    section au début d'une autre."""
     parties = [texte] if isinstance(texte, str) else list(texte)
-    fragments = [
+    return [
         fragment
         for partie in parties
         for fragment in decouper(partie, type_contenu, id_contenu, titre, audience)
     ]
+
+
+def vectoriser(store: PGVector, fragments: list[Document]) -> list[list[float]]:
+    """Vecteurs des fragments — le seul appel au fournisseur. Lève s'il échoue,
+    **avant** que quoi que ce soit n'ait été retiré de l'index."""
+    if not fragments:
+        return []
+    return store.embeddings.embed_documents([f.page_content for f in fragments])
+
+
+def ranger(
+    store: PGVector, fragments: list[Document], vecteurs: list[list[float]]
+) -> None:
+    """Écrit des fragments déjà vectorisés, sans rappeler le fournisseur."""
     if fragments:
-        store.add_documents(fragments)
-    return len(fragments)
+        store.add_embeddings(
+            texts=[f.page_content for f in fragments],
+            embeddings=vecteurs,
+            metadatas=[f.metadata for f in fragments],
+        )
 
 
 def indexer_sans_echec(

@@ -91,6 +91,9 @@ def test_activer_avec_les_cles_demarre(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_fournisseurs_sans_cle_levent_service_indisponible(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # `settings` est déjà chargé depuis le `.env` du poste : on fige le
+    # fournisseur, sans quoi une clé Google renseignée ferait mentir le test.
+    monkeypatch.setattr(settings, "EMBEDDINGS_FOURNISSEUR", "huggingface")
     monkeypatch.setattr(settings, "GROQ_API_KEY", "")
     monkeypatch.setattr(settings, "HF_API_TOKEN", "")
     llm.obtenir_llm.cache_clear()

@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.ai_langchain import guides
 from app.ai_langchain.audience import AUDIENCE_CLIENT
-from app.ai_langchain.indexation import indexer_texte
+from app.ai_langchain.indexation import fragments_de, ranger, vectoriser
 from app.ai_langchain.textes import (
     categorie_produit,
     document_connaissance,
@@ -59,69 +59,91 @@ def _indexer_type(
     titre: Callable[[Any], str],
     audience: Callable[[Any], str],
 ) -> dict[str, int]:
-    """Vide un type de contenu, puis réindexe ses entités indexables.
+    """Remplace tout un type de contenu par ses entités indexables.
 
-    Vider d'abord : une entité supprimée depuis la dernière indexation n'a plus
-    de ligne à parcourir, ses fragments ne partiraient jamais autrement.
+    **Tout vectoriser d'abord, ne remplacer qu'ensuite** (9 octobre 2026) :
+    vider puis réindexer entité par entité laissait, sur une panne du
+    fournisseur en cours de route, un type à moitié vide — voire des
+    vecteurs de deux modèles mêlés. Désormais un échec ne touche à rien.
+
+    Vider le type, et non entité par entité : une entité supprimée depuis la
+    dernière indexation n'a plus de ligne à parcourir, ses fragments ne
+    partiraient jamais autrement.
     """
     store = obtenir_vector_store()
-    supprimer_par_contenu(type_contenu, collection=store.collection_name)
-    elements = fragments = 0
+    fragments = []
+    elements = 0
     for entite in entites:
         if est_indexable(entite):
-            fragments += indexer_texte(
+            fragments += fragments_de(
                 type_contenu,
                 getattr(entite, cle),
                 construire_texte(entite),
-                store,
                 titre=titre(entite),
                 audience=audience(entite),
             )
             elements += 1
-    return {"elements": elements, "fragments": fragments}
+    vecteurs = vectoriser(store, fragments)
+    supprimer_par_contenu(type_contenu, collection=store.collection_name)
+    ranger(store, fragments, vecteurs)
+    return {"elements": elements, "fragments": len(fragments)}
 
 
 def _indexer_guides() -> dict[str, int]:
-    """Vide puis réindexe les guides versionnés, section par section."""
+    """Remplace les guides versionnés, section par section — même règle :
+    tout vectoriser avant de retirer quoi que ce soit."""
     store = obtenir_vector_store()
-    supprimer_par_contenu(guides.TYPE_CONTENU, collection=store.collection_name)
-    elements = fragments = 0
+    fragments = []
+    elements = 0
     for guide in guides.guides_presents():
-        fragments += indexer_texte(
+        fragments += fragments_de(
             guides.TYPE_CONTENU,
             guide.identifiant,
             guides.sections(guide.chemin.read_text(encoding="utf-8")),
-            store,
             titre=guide.titre,
             audience=guide.audience,
         )
         elements += 1
-    return {"elements": elements, "fragments": fragments}
+    vecteurs = vectoriser(store, fragments)
+    supprimer_par_contenu(guides.TYPE_CONTENU, collection=store.collection_name)
+    ranger(store, fragments, vecteurs)
+    return {"elements": elements, "fragments": len(fragments)}
 
 
 def _verifier_fournisseur() -> None:
-    """Sonde le service d'embeddings **avant** de vider quoi que ce soit.
+    """Sonde le service d'embeddings avant tout travail.
 
-    Chaque type de contenu est vidé puis reconstruit : sans cette sonde, un
-    fournisseur indisponible — crédits épuisés, clé invalide, panne — laissait
-    le premier type vidé et jamais reconstruit (constaté le 9 octobre 2026 :
-    tous les produits avaient disparu de l'index sur un 402 de Hugging Face).
+    Un fournisseur sans crédits (402 de Hugging Face, 9 octobre 2026) ou qui
+    refuse l'accès (403 de Google, 12 octobre) est ainsi signalé tout de
+    suite, par un message clair. La sonde ne suffit pas à elle seule — un
+    fournisseur peut couper l'accès en cours de route, constaté chez Google :
+    c'est pourquoi chaque type est aussi entièrement vectorisé **avant**
+    d'être remplacé (`_indexer_type`).
     """
     try:
-        obtenir_vector_store().embeddings.embed_query("Delta")
+        # `embed_documents` et non `embed_query` : c'est l'appel que fait
+        # l'indexation, et un fournisseur peut accepter l'un et refuser l'autre.
+        obtenir_vector_store().embeddings.embed_documents(["Delta"])
     except Exception as erreur:  # noqa: BLE001 — tout échec du fournisseur
-        detail = str(erreur)
-        if "402" in detail:
-            raison = "le compte du fournisseur d'embeddings n'a plus de crédits (402)"
-        elif "401" in detail or "403" in detail:
-            raison = "la clé du fournisseur d'embeddings est refusée"
-        else:
-            raison = (
-                f"le fournisseur d'embeddings ne répond pas ({type(erreur).__name__})"
-            )
-        raise ServiceIndisponible(
-            f"{raison[0].upper()}{raison[1:]}. L'index actuel n'a pas été modifié."
-        ) from erreur
+        raise _indisponible(erreur) from erreur
+
+
+def _indisponible(erreur: Exception) -> ServiceIndisponible:
+    """Traduit une panne du fournisseur d'embeddings en message lisible."""
+    detail = str(erreur)
+    if "402" in detail:
+        raison = "le compte du fournisseur d'embeddings n'a plus de crédits (402)"
+    elif "403" in detail or "401" in detail:
+        code = "403" if "403" in detail else "401"
+        raison = (
+            "le fournisseur d'embeddings refuse l'accès "
+            f"(clé ou projet bloqué, {code})"
+        )
+    else:
+        raison = f"le fournisseur d'embeddings ne répond pas ({type(erreur).__name__})"
+    return ServiceIndisponible(
+        f"{raison[0].upper()}{raison[1:]}. L'index actuel n'a pas été modifié."
+    )
 
 
 def reindexer_tout(db: Session) -> dict[str, dict[str, int]]:
@@ -131,6 +153,15 @@ def reindexer_tout(db: Session) -> dict[str, dict[str, int]]:
     if not settings.AI_ENABLED:
         raise ServiceIndisponible("L'assistant IA est désactivé (AI_ENABLED=false).")
     _verifier_fournisseur()
+    try:
+        return _reindexer(db)
+    except ServiceIndisponible:
+        raise
+    except Exception as erreur:  # noqa: BLE001 — panne du fournisseur en cours de route
+        raise _indisponible(erreur) from erreur
+
+
+def _reindexer(db: Session) -> dict[str, dict[str, int]]:
     resultats = {
         module.TYPE_CONTENU: _indexer_type(
             module.TYPE_CONTENU,

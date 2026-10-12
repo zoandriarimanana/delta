@@ -216,3 +216,37 @@ def test_un_fournisseur_en_panne_annule_sans_rien_effacer(
         reindexer_tout(session_postgres)
 
     assert sorted(_contenus(store)) == sorted(avant)
+
+
+class _FournisseurQuiLache(DeterministicFakeEmbedding):
+    """Accepte la sonde, puis refuse tout — comme Google le 12 octobre 2026
+    (« Your project has been denied access », 403, en pleine réindexation)."""
+
+    appels: int = 0
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        self.appels += 1
+        if self.appels > 1:
+            raise RuntimeError("403 PERMISSION_DENIED")
+        return super().embed_documents(texts)
+
+
+def test_une_coupure_en_cours_de_route_ne_vide_ni_ne_melange_rien(
+    session_postgres: Session, store: PGVector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Régression du 12 octobre 2026 : la sonde passait, puis le fournisseur
+    coupait l'accès ; le premier type, déjà vidé, restait à moitié reconstruit
+    — avec des vecteurs d'un autre modèle mêlés à l'ancien index."""
+    _peupler(session_postgres)
+    reindexer_tout(session_postgres)
+    avant = sorted(_contenus(store))
+
+    qui_lache = creer_vector_store(
+        _FournisseurQuiLache(size=1024), store.collection_name
+    )
+    monkeypatch.setattr(reindexation, "obtenir_vector_store", lambda: qui_lache)
+
+    with pytest.raises(ServiceIndisponible, match="403"):
+        reindexer_tout(session_postgres)
+
+    assert sorted(_contenus(store)) == avant
