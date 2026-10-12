@@ -7,6 +7,15 @@ const fr = {
   accroche:
     'Plateforme artisanale pour la pâtisserie, restauration, formation culinaire et hébergement.',
   devise: 'Qualité, tradition et professionnalisme',
+  surtitre: 'Pâtisserie · Boulangerie · Formations · Hébergement',
+  commanderProduits: 'Commander nos produits',
+  voirFormations: 'Découvrir les formations',
+  atouts: [
+    'Fait maison chaque jour',
+    'Paiement MVola, Orange Money, Airtel Money',
+    'Livraison à domicile',
+  ],
+  credit: 'Photo : Unsplash',
   produits: 'Produits',
   produitsDescription: 'Pâtisserie, boulangerie, confiture et spécialités',
   formations: 'Formations',
@@ -35,6 +44,15 @@ export const TEXTES_PAGES: Textes<typeof fr> = {
     accroche:
       'An artisan platform for pastry, catering, culinary training and accommodation.',
     devise: 'Quality, tradition and professionalism',
+    surtitre: 'Pastry · Bakery · Training · Accommodation',
+    commanderProduits: 'Order our products',
+    voirFormations: 'Discover our training',
+    atouts: [
+      'Homemade every day',
+      'Pay with MVola, Orange Money, Airtel Money',
+      'Home delivery',
+    ],
+    credit: 'Photo: Unsplash',
     produits: 'Products',
     produitsDescription: 'Pastries, bread, jams and specialities',
     formations: 'Training',

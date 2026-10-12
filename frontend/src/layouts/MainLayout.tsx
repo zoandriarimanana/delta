@@ -116,7 +116,7 @@ export default function MainLayout() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-fond">
+    <div className="flex min-h-screen flex-col overflow-x-clip bg-fond">
       <header className="sticky top-0 z-20 border-b border-gris-200 bg-surface/95 shadow-sm backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <NavLink to="/" className="shrink-0 transition-opacity hover:opacity-80">
