@@ -75,7 +75,7 @@ class Settings(BaseSettings):
     # Interrupteur général, **automatique par défaut** (décision du 7 octobre
     # 2026 : l'assistant doit rester allumé sans qu'on y pense). Non renseigné,
     # il s'allume dès que `GROQ_API_KEY` et la clé du fournisseur d'embeddings
-    # (`HF_API_TOKEN` ou `GOOGLE_API_KEY`) sont présentes, et
+    # (`HF_API_TOKEN`, `GOOGLE_API_KEY` ou `JINA_API_KEY`) sont présentes, et
     # reste éteint sinon — un poste sans clés démarre sans erreur. `false`
     # l'éteint explicitement (la CI, qui n'a aucune clé) ; `true` exige les
     # clés au démarrage. Résolu en booléen par le validateur ci-dessous : le
@@ -101,10 +101,17 @@ class Settings(BaseSettings):
     # stable, multilingue), vecteurs réduits à 768 dimensions (valeur
     # recommandée par Google). Changer de fournisseur impose, comme changer de
     # modèle, une réindexation complète.
-    EMBEDDINGS_FOURNISSEUR: Literal["huggingface", "google"] = "huggingface"
+    #
+    # `jina` ajouté le 12 octobre 2026 : Google a refusé l'accès au projet
+    # (403). `jina-embeddings-v3`, multilingue, quota gratuit sans carte,
+    # 1024 dimensions.
+    EMBEDDINGS_FOURNISSEUR: Literal["huggingface", "google", "jina"] = "huggingface"
     GOOGLE_API_KEY: str = ""
     GOOGLE_EMBEDDING_MODEL: str = "gemini-embedding-001"
     GOOGLE_EMBEDDING_DIMENSION: int = 768
+    JINA_API_KEY: str = ""
+    JINA_EMBEDDING_MODEL: str = "jina-embeddings-v3"
+    JINA_EMBEDDING_DIMENSION: int = 1024
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -147,17 +154,18 @@ class Settings(BaseSettings):
     @property
     def cle_embeddings(self) -> str:
         """Nom de la clé exigée par le fournisseur d'embeddings choisi."""
-        return (
-            "GOOGLE_API_KEY"
-            if self.EMBEDDINGS_FOURNISSEUR == "google"
-            else "HF_API_TOKEN"
-        )
+        return {
+            "google": "GOOGLE_API_KEY",
+            "jina": "JINA_API_KEY",
+        }.get(self.EMBEDDINGS_FOURNISSEUR, "HF_API_TOKEN")
 
     @property
     def modele_embeddings(self) -> str:
         """Modèle d'embeddings réellement utilisé, quel que soit le fournisseur."""
         if self.EMBEDDINGS_FOURNISSEUR == "google":
             return self.GOOGLE_EMBEDDING_MODEL
+        if self.EMBEDDINGS_FOURNISSEUR == "jina":
+            return self.JINA_EMBEDDING_MODEL
         return self.LC_EMBEDDING_MODEL
 
     @property

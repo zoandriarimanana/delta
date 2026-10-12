@@ -1813,6 +1813,25 @@ l'utilisateur : un fournisseur à quota gratuit.
 - [ ] Dette : sur Render, ajouter `GOOGLE_API_KEY` et
       `EMBEDDINGS_FOURNISSEUR=google` aux variables d'environnement.
 
+**Travaux hors sprint : embeddings Jina AI (12 octobre 2026).** Google
+refuse l'accès au projet de l'utilisateur (403 sur tous les modèles, la clé
+étant pourtant valide : la liste des modèles répond), Hugging Face n'a plus
+de crédits (402). Décision de l'utilisateur : Jina AI.
+
+- [x] **Fournisseur `jina`** (`EMBEDDINGS_FOURNISSEUR=jina`,
+      `JINA_API_KEY`) : `jina-embeddings-v3`, multilingue, 1024 dimensions,
+      quota gratuit sans carte. Client HTTP minimal
+      (`ai_langchain/embeddings_jina.py`, sur `httpx` déjà installé — aucune
+      dépendance ajoutée), lots de 64 textes, tâche `retrieval.passage` à
+      l'indexation et `retrieval.query` pour une question. Tests sans réseau
+      (`httpx.MockTransport`).
+- [ ] **Clé Jina** à coller par l'utilisateur dans `backend/.env`, puis
+      réindexation complète.
+- [ ] **Seuil de pertinence à recalibrer** : `chaine.SEUIL_PERTINENCE`
+      (0,38) a été mesuré sur `bge-m3` ; les scores de Jina n'ont pas la même
+      échelle. À reprendre avec les vraies questions d'essai de 12.3 une fois
+      l'index reconstruit.
+
 **Travaux hors sprint : paiement mobile money à la validation, y compris sans
 compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.
 Jusqu'ici, seul un client connecté pouvait payer, et seulement depuis « Mes

@@ -1,4 +1,4 @@
-"""Embeddings de l'assistant : Hugging Face ou Google Gemini, au choix.
+"""Embeddings de l'assistant : Hugging Face, Google Gemini ou Jina AI, au choix.
 
 Toujours un fournisseur **distant**, jamais un modèle local : la cible de
 déploiement (Render) doit rester légère, sans `torch`. Modèles multilingues,
@@ -6,7 +6,8 @@ le contenu étant en français et parfois en malgache.
 
 Le fournisseur se choisit par `EMBEDDINGS_FOURNISSEUR` (`.env`). Google a été
 ajouté le 9 octobre 2026, quand le compte Hugging Face n'avait plus de
-crédits. Changer de fournisseur impose une réindexation complète : les
+crédits ; Jina le 12 octobre, quand Google a refusé l'accès au projet.
+Changer de fournisseur impose une réindexation complète : les
 vecteurs de deux modèles ne se comparent pas.
 """
 
@@ -27,6 +28,8 @@ def obtenir_embeddings() -> Embeddings:
     """
     if settings.EMBEDDINGS_FOURNISSEUR == "google":
         return _embeddings_google()
+    if settings.EMBEDDINGS_FOURNISSEUR == "jina":
+        return _embeddings_jina()
     if not settings.HF_API_TOKEN:
         raise ServiceIndisponible(
             "L'assistant n'est pas configuré : HF_API_TOKEN est absent."
@@ -56,4 +59,19 @@ def _embeddings_google() -> Embeddings:
         model=settings.GOOGLE_EMBEDDING_MODEL,
         google_api_key=settings.GOOGLE_API_KEY,
         output_dimensionality=settings.GOOGLE_EMBEDDING_DIMENSION,
+    )
+
+
+def _embeddings_jina() -> Embeddings:
+    """Embeddings Jina AI (`jina-embeddings-v3`, quota gratuit sans carte)."""
+    if not settings.JINA_API_KEY:
+        raise ServiceIndisponible(
+            "L'assistant n'est pas configuré : JINA_API_KEY est absente."
+        )
+    from app.ai_langchain.embeddings_jina import JinaEmbeddings
+
+    return JinaEmbeddings(
+        cle=settings.JINA_API_KEY,
+        modele=settings.JINA_EMBEDDING_MODEL,
+        dimension=settings.JINA_EMBEDDING_DIMENSION,
     )
