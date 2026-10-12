@@ -63,7 +63,7 @@ export default function MesReservationsPage() {
     return () => {
       actif = false;
     };
-  }, [chargementSession, connecte]);
+  }, [chargementSession, connecte, t.nonChargees]);
 
   useEffect(charger, [charger]);
 
