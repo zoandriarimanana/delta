@@ -154,7 +154,8 @@ def test_categorie_liste_ses_seuls_produits_actifs_par_ordre_alphabetique() -> N
 
 def test_categorie_vide_ne_porte_pas_de_liste() -> None:
     texte = categorie_produit.construire_texte(_categorie())
-    assert texte == "Catégorie de produits : Pâtisserie"
+    assert texte.startswith("Catégorie de produits : Pâtisserie")
+    assert "Produits de cette catégorie" not in texte
 
 
 # --- FORMATION --------------------------------------------------------------

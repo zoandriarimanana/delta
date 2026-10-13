@@ -20,6 +20,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.retrievers import BaseRetriever
 
 from app.ai_langchain.audience import AUDIENCE_CLIENT
+from app.ai_langchain.langue import (
+    MESSAGES_SANS_RESULTAT,
+    langue_de,
+    message_sans_resultat,
+)
 from app.ai_langchain.politesse import reponse_politesse
 from app.core.exceptions import ServiceIndisponible
 from app.core.logging import get_logger
@@ -54,6 +59,10 @@ reformulés ni traduits : l'utilisateur doit les retrouver à l'écran. Si le \
 contexte ne nomme pas un bouton, décris l'action sans inventer de nom.
 - Réponds dans la langue de la question (français, malgache ou anglais), de \
 façon concise et utile ; pour une démarche, donne les étapes dans l'ordre.
+- Une question en malgache reçoit une réponse **entièrement en malgache**, \
+même si le contexte est en français : traduis les explications, mais garde \
+tels quels les noms de produits, de salles, de formations et les libellés \
+de boutons entre « ».
 - Mise en forme : des phrases et des listes à puces ou numérotées, avec du \
 gras si utile — **jamais de tableau** ni de titre Markdown, que la fenêtre de \
 discussion n'affiche pas."""
@@ -127,9 +136,14 @@ def _prompt(profil: Profil) -> ChatPromptTemplate:
     )
 
 
-MESSAGE_SANS_RESULTAT = (
-    "Je n'ai pas trouvé d'information sur ce sujet. "
-    "N'hésitez pas à contacter Delta directement."
+# Le message français, gardé sous ce nom pour les appelants existants ; la
+# chaîne répond désormais dans la langue de la question (`langue.py`).
+MESSAGE_SANS_RESULTAT = MESSAGES_SANS_RESULTAT["fr"]
+PROMPT_TRADUCTION = (
+    "Traduis en français la question suivante, posée en malgache à "
+    "l'assistant d'une pâtisserie-boulangerie qui propose aussi des "
+    "formations, des salles et des chambres. Réponds uniquement par la "
+    "traduction, sans guillemets ni commentaire.\n\nQuestion : {question}"
 )
 MESSAGE_PANNE = (
     "L'assistant est momentanément indisponible. Merci de réessayer dans "
@@ -219,6 +233,40 @@ def _rechercher(question: str, retriever: BaseRetriever) -> list[Document]:
         raise ServiceIndisponible(MESSAGE_PANNE) from erreur
 
 
+def _traduire_en_francais(question: str, llm: BaseChatModel) -> str | None:
+    """Traduction d'une question malgache, ou `None` si le LLM échoue — la
+    recherche de secours est un bonus, jamais une cause de panne."""
+    try:
+        traduction = llm.invoke(PROMPT_TRADUCTION.format(question=question))
+    except Exception:
+        journal.warning("Traduction d'une question malgache échouée", exc_info=True)
+        return None
+    texte = str(getattr(traduction, "content", traduction)).strip()
+    return texte or None
+
+
+def _trouver(
+    question: str, retriever: BaseRetriever, llm: BaseChatModel | None
+) -> list[Document]:
+    """Recherche, puis recherche de secours pour une question malgache.
+
+    L'index est rédigé en français : une question malgache dont les mots ne
+    s'y retrouvent pas (« Rahoviana no misokatra ianareo ? ») passait sous le
+    seuil de pertinence. Elle est alors traduite en français et cherchée une
+    seconde fois — un appel LLM de plus, mais seulement dans ce cas. La
+    réponse, elle, reste générée à partir de la question d'origine, donc en
+    malgache.
+    """
+    fragments = _rechercher(question, retriever)
+    if fragments or langue_de(question) != "mg":
+        return fragments
+    traduction = _traduire_en_francais(question, llm or _llm_par_defaut())
+    if traduction is None:
+        return []
+    journal.info("Question malgache traduite pour la recherche : %s", traduction)
+    return _rechercher(traduction, retriever)
+
+
 def repondre(
     question: str,
     retriever: BaseRetriever | None = None,
@@ -230,9 +278,9 @@ def repondre(
     if politesse:
         return {"reponse": politesse, "sources": []}
 
-    fragments = _rechercher(question, retriever or _retriever_par_defaut(profil))
+    fragments = _trouver(question, retriever or _retriever_par_defaut(profil), llm)
     if not fragments:
-        return {"reponse": MESSAGE_SANS_RESULTAT, "sources": []}
+        return {"reponse": message_sans_resultat(question), "sources": []}
 
     chaine = _prompt(profil) | (llm or _llm_par_defaut()) | StrOutputParser()
     try:
@@ -267,9 +315,9 @@ def repondre_en_flux(
         yield {"fin": True, "sources": []}
         return
 
-    fragments = _rechercher(question, retriever or _retriever_par_defaut(profil))
+    fragments = _trouver(question, retriever or _retriever_par_defaut(profil), llm)
     if not fragments:
-        yield {"jeton": MESSAGE_SANS_RESULTAT}
+        yield {"jeton": message_sans_resultat(question)}
         yield {"fin": True, "sources": []}
         return
 

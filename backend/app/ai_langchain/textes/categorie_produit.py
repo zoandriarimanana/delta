@@ -17,7 +17,11 @@ TYPE_CONTENU = "categorie_produit"
 
 def construire_texte(categorie: CategorieProduit) -> str:
     noms = sorted(p.nom for p in categorie.produits if p.supprime_le is None)
-    lignes = [f"Catégorie de produits : {categorie.libelle}"]
+    # Terme malgache, même raison que pour PRODUIT.
+    lignes = [
+        f"Catégorie de produits : {categorie.libelle}",
+        "Sokajin'ny vokatra azo vidiana.",
+    ]
     if noms:
         lignes.append("Produits de cette catégorie : " + ", ".join(noms) + ".")
     return "\n".join(lignes)

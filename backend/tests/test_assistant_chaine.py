@@ -260,3 +260,86 @@ def test_le_prompt_interdit_les_tableaux_que_la_bulle_n_affiche_pas() -> None:
     repondre("Produits ?", retriever=FauxRetriever(fragments=FRAGMENTS), llm=llm)
 
     assert "jamais de tableau" in llm.recus[0][0].content
+
+
+# --- Malgache (13 octobre 2026) ----------------------------------------------
+
+
+class RetrieverFrancophone(BaseRetriever):
+    """Ne trouve rien en malgache, trouve en français — comme l'index réel,
+    rédigé en français. Retient les requêtes reçues."""
+
+    requetes: list[str] = []
+
+    def _get_relevant_documents(
+        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+    ) -> list[Document]:
+        self.requetes.append(query)
+        return FRAGMENTS if "horaires" in query.lower() else []
+
+
+def test_rien_trouve_repond_dans_la_langue_de_la_question() -> None:
+    for question, attendu in [
+        ("Vendez-vous des voitures ?", "Je n'ai pas trouvé"),
+        ("Do you sell cars?", "I couldn't find"),
+        ("Mivarotra fiara ve ianareo ?", "Tsy nahitana"),
+    ]:
+        resultat = repondre(
+            question,
+            retriever=FauxRetriever(fragments=[]),
+            # Traduction de secours pour le malgache, puis rien non plus.
+            llm=FakeListChatModel(responses=["Vendez-vous des voitures ?"]),
+        )
+        assert resultat["reponse"].startswith(attendu), question
+
+
+def test_une_question_malgache_introuvable_est_retraduite_puis_recherchee() -> None:
+    """« Rahoviana no misokatra ianareo ? » passait sous le seuil : l'index est
+    en français. La traduction sert à la recherche ; la réponse, générée
+    depuis la question d'origine, reste en malgache."""
+    retriever = RetrieverFrancophone()
+    llm = LlmEspion(
+        responses=["Quels sont vos horaires d'ouverture ?", "Misokatra isan'andro."]
+    )
+    llm.recus = []
+
+    resultat = repondre(
+        "Rahoviana no misokatra ianareo ?", retriever=retriever, llm=llm
+    )
+
+    assert retriever.requetes == [
+        "Rahoviana no misokatra ianareo ?",
+        "Quels sont vos horaires d'ouverture ?",
+    ]
+    assert resultat["reponse"] == "Misokatra isan'andro."
+    assert "Rahoviana no misokatra ianareo ?" in llm.recus[-1][-1].content
+
+
+def test_une_question_francaise_introuvable_n_est_pas_traduite() -> None:
+    retriever = RetrieverFrancophone()
+
+    repondre("Vendez-vous des voitures ?", retriever=retriever, llm=LlmEnPanne())
+
+    assert retriever.requetes == ["Vendez-vous des voitures ?"]
+
+
+def test_une_traduction_en_echec_ne_casse_rien() -> None:
+    resultat = repondre(
+        "Rahoviana no misokatra ianareo ?",
+        retriever=FauxRetriever(fragments=[]),
+        llm=LlmEnPanne(),
+    )
+
+    assert resultat["reponse"].startswith("Tsy nahitana")
+
+
+def test_le_flux_suit_aussi_la_langue() -> None:
+    evenements = list(
+        repondre_en_flux(
+            "Rahoviana no misokatra ianareo ?",
+            retriever=FauxRetriever(fragments=[]),
+            llm=LlmEnPanne(),
+        )
+    )
+
+    assert evenements[0]["jeton"].startswith("Tsy nahitana")

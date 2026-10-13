@@ -107,6 +107,13 @@ def _mots(message: str) -> list[str]:
     return re.findall(r"[a-z]+", sans_apostrophes)
 
 
+def mots_normalises(message: str) -> list[str]:
+    """Mots d'un message sous la forme du vocabulaire — partagé avec la
+    détection de langue (`langue.py`), pour qu'une seule normalisation
+    existe."""
+    return _mots(message)
+
+
 def reponse_politesse(message: str) -> str | None:
     """Réponse toute prête si le message n'est qu'une formule de politesse.
 

@@ -16,7 +16,11 @@ TYPE_CONTENU = "domaine_formation"
 
 def construire_texte(domaine: DomaineFormation) -> str:
     titres = sorted(f.titre for f in domaine.formations if f.supprime_le is None)
-    lignes = [f"Domaine de formation : {domaine.libelle}"]
+    # Terme malgache, même raison que pour FORMATION.
+    lignes = [
+        f"Domaine de formation : {domaine.libelle}",
+        "Sehatra fiofanana.",
+    ]
     if domaine.description:
         lignes.append(domaine.description)
     if titres:

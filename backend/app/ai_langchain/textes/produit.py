@@ -17,6 +17,10 @@ def construire_texte(produit: Produit) -> str:
     lignes = [
         f"Produit : {produit.nom}",
         f"Catégorie : {produit.categorie.libelle}",
+        # Termes malgaches, même raison que pour LOGEMENT : l'index est en
+        # français, une question en malgache (« mofomamy », « mividy ») ne
+        # retrouvait pas les produits (13 octobre 2026).
+        "Vokatra azo vidiana sy kaomandina (mofomamy, mofo, sakafo).",
     ]
     if produit.description:
         lignes.append(f"Description : {produit.description}")

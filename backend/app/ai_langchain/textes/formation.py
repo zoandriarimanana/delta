@@ -49,6 +49,10 @@ def construire_texte(formation: Formation, aujourd_hui: date | None = None) -> s
     lignes = [
         f"Formation : {formation.titre}",
         f"Domaine : {formation.domaine.libelle}",
+        # Termes malgaches : « Misy fiofanana momba ny fanaovana mofomamy
+        # ve ? » ne trouvait aucune formation (13 octobre 2026).
+        "Fiofanana sy fampianarana (fianarana mahandro sakafo na manao "
+        "mofomamy), azo hamandrihana.",
     ]
     if formation.niveau:
         lignes.append(f"Niveau : {formation.niveau}")
