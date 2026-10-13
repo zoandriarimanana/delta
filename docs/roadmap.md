@@ -1914,6 +1914,27 @@ n'étaient posés par personne.
       liste, « En attente de confirmation » devient « À confirmer » (le
       libellé du compteur), le libellé complet débordant de la colonne.
 
+**Travaux hors sprint : liste des commandes triée et suppression (demande du
+13 octobre 2026).** Hors roadmap, demandé par l'utilisateur ; le sens de
+« supprimer » tranché avec lui avant le code.
+
+- [x] **Tri** : `GET /commandes/administration` renvoie les plus récentes
+      d'abord (`CommandeRepository.lister_recentes`, même tri que
+      l'historique client) ; `list()` triait par identifiant croissant.
+- [x] **Supprimer = archiver** : `DELETE /commandes/administration/{id}`
+      (204) pour une commande **terminée ou annulée** seulement (409 sinon),
+      via `CommandeService.supprimer`, qui existait sans être exposé et
+      propage aux lignes et personnalisations. Jamais de suppression réelle :
+      preuve de vente, paiements et livraison conservés.
+      `POST .../{id}/restauration` remet la commande et ses enfants ;
+      `GET /commandes/administration?inclure_archives=true` et la fiche
+      lisent les archives. `CommandeRead.supprime_le` exposé.
+- [x] **Écran** : corbeille au bout de la ligne, confirmation « Supprimer ?
+      Oui / Non » dans la ligne ; case « Afficher les archives », lignes
+      archivées grisées avec « Restaurer » ; compteurs sur les commandes
+      actives seulement ; bandeau et « Restaurer » sur la fiche d'une
+      commande archivée. Guide du personnel complété.
+
 **Travaux hors sprint : paiement mobile money à la validation, y compris sans
 compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.
 Jusqu'ici, seul un client connecté pouvait payer, et seulement depuis « Mes

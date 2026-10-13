@@ -140,10 +140,13 @@ def creer_par_personnel(
     summary="Lister toutes les commandes",
 )
 def lister_administration(
-    admin: PersonnelAdministrateur, db: SessionBase
+    admin: PersonnelAdministrateur,
+    db: SessionBase,
+    inclure_archives: bool = False,
 ) -> list[CommandeRead]:
-    """Tous les clients confondus."""
-    commandes = CommandeService(db).lister()
+    """Tous les clients confondus, les plus récentes d'abord.
+    `inclure_archives` ajoute les commandes archivées, pour les restaurer."""
+    commandes = CommandeService(db).lister(inclure_archives=inclure_archives)
     return [CommandeRead.model_validate(c) for c in commandes]
 
 
@@ -155,8 +158,9 @@ def lister_administration(
 def obtenir_administration(
     id_commande: int, admin: PersonnelAdministrateur, db: SessionBase
 ) -> CommandeRead:
-    """404 si l'identifiant ne désigne personne, ou une ligne archivée."""
-    commande = CommandeService(db).obtenir(id_commande)
+    """404 si l'identifiant ne désigne aucune commande. Une commande archivée
+    reste consultable ici : l'administration la restaure depuis sa fiche."""
+    commande = CommandeService(db).obtenir(id_commande, inclure_supprimes=True)
     return CommandeRead.model_validate(commande)
 
 
@@ -203,6 +207,32 @@ def avancer_administration(
     dont le statut vient de changer.
     """
     commande = CommandeService(db).avancer(id_commande)
+    return CommandeRead.model_validate(commande)
+
+
+@router.delete(
+    "/administration/{id_commande}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Supprimer (archiver) une commande terminée ou annulée",
+)
+def archiver_administration(
+    id_commande: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> None:
+    """Archivage, jamais suppression réelle : la commande quitte la liste
+    mais reste en base, restaurable. **409** si elle est encore en cours."""
+    CommandeService(db).archiver(id_commande)
+
+
+@router.post(
+    "/administration/{id_commande}/restauration",
+    response_model=CommandeRead,
+    summary="Restaurer une commande archivée",
+)
+def restaurer_administration(
+    id_commande: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> CommandeRead:
+    """Idempotent. 404 si l'identifiant ne désigne aucune commande."""
+    commande = CommandeService(db).restaurer(id_commande)
     return CommandeRead.model_validate(commande)
 
 

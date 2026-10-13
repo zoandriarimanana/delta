@@ -1074,3 +1074,107 @@ def test_la_transition_ne_s_applique_que_depuis_le_statut_attendu(
     assert not depot.changer_statut_si(
         commande["id_commande"], StatutCommande.EN_ATTENTE, StatutCommande.CONFIRMEE
     )
+
+
+# --- Tri et archivage depuis l'administration (13 octobre 2026) ---------------
+
+
+def test_administration_liste_les_plus_recentes_d_abord(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    premiere = _sa_commande(client_http, entete, eclair)["id_commande"]
+    seconde = _sa_commande(client_http, entete, eclair)["id_commande"]
+
+    ids = [
+        c["id_commande"]
+        for c in client_http.get(
+            f"{COMMANDES}/administration", headers=_entete_admin(db)
+        ).json()
+    ]
+
+    assert ids.index(seconde) < ids.index(premiere)
+
+
+def _terminer(client_http: TestClient, db: Session, id_commande: int) -> None:
+    for _ in range(3):
+        _avancer(client_http, db, id_commande)
+
+
+def test_une_commande_en_cours_ne_s_archive_pas(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.delete(
+        f"{COMMANDES}/administration/{commande['id_commande']}",
+        headers=_entete_admin(db),
+    )
+
+    assert reponse.status_code == 409
+    assert "encore en cours" in reponse.json()["detail"]
+
+
+def test_une_commande_terminee_s_archive_avec_ses_lignes(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    from app.models.ligne_commande import LigneCommande
+
+    id_commande = _sa_commande(client_http, entete, eclair)["id_commande"]
+    _terminer(client_http, db, id_commande)
+
+    reponse = client_http.delete(
+        f"{COMMANDES}/administration/{id_commande}", headers=_entete_admin(db)
+    )
+
+    assert reponse.status_code == 204
+    liste = client_http.get(
+        f"{COMMANDES}/administration", headers=_entete_admin(db)
+    ).json()
+    assert id_commande not in [c["id_commande"] for c in liste]
+    lignes = db.query(LigneCommande).filter_by(id_commande=id_commande).all()
+    assert lignes and all(ligne.supprime_le is not None for ligne in lignes)
+
+
+def test_une_commande_annulee_s_archive_et_se_restaure(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    id_commande = _sa_commande(client_http, entete, eclair)["id_commande"]
+    entete_admin = _entete_admin(db)
+    client_http.put(
+        f"{COMMANDES}/administration/{id_commande}/statut",
+        json={"statut": "Annulee"},
+        headers=entete_admin,
+    )
+    client_http.delete(
+        f"{COMMANDES}/administration/{id_commande}", headers=entete_admin
+    )
+
+    archives = client_http.get(
+        f"{COMMANDES}/administration?inclure_archives=true", headers=entete_admin
+    ).json()
+    archivee = next(c for c in archives if c["id_commande"] == id_commande)
+    assert archivee["supprime_le"] is not None
+    fiche = client_http.get(
+        f"{COMMANDES}/administration/{id_commande}", headers=entete_admin
+    )
+    assert fiche.status_code == 200
+
+    restauree = client_http.post(
+        f"{COMMANDES}/administration/{id_commande}/restauration", headers=entete_admin
+    )
+
+    assert restauree.status_code == 200
+    assert restauree.json()["supprime_le"] is None
+    assert restauree.json()["lignes"]
+
+
+def test_l_archivage_est_refuse_a_un_salarie_sans_droit(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    id_commande = _sa_commande(client_http, entete, eclair)["id_commande"]
+
+    reponse = client_http.delete(
+        f"{COMMANDES}/administration/{id_commande}", headers=_entete_agent(db)
+    )
+
+    assert reponse.status_code == 403

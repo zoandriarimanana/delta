@@ -516,6 +516,12 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   en attente pour toujours. Une commande **avec livraison** s'arrête à
   `En_preparation` — sa fin reste la livraison marquée livrée, pour qu'il
   n'existe pas deux façons de dire « livrée ».
+
+  **« Supprimer » une commande, c'est l'archiver** (13 octobre 2026) :
+  `supprime_le` posé sur la commande, ses lignes et ses personnalisations,
+  jamais un `DELETE` — une commande est une preuve de vente, référencée par
+  ses paiements et sa livraison, qui restent tels quels. Réservé aux
+  commandes terminées ou annulées (409 sinon), réversible par restauration.
 - `COMMANDE.montant_total` est **figé à la création** : il vaut la somme des
   lignes au moment où la commande est passée, **plus `frais_livraison`**
   depuis le 7 octobre 2026, et n'est jamais recalculé. C'est ce total que

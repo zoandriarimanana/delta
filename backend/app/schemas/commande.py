@@ -115,6 +115,9 @@ class CommandeRead(BaseModel):
     #: remboursement n'a été enregistré. Ne reflète aucun état de `PAIEMENT` —
     #: voir `docs/mld.md`, section Paiement.
     rembourse_le: datetime | None = None
+    #: Archivage (13 octobre 2026) : seule l'administration lit des commandes
+    #: archivées, pour les restaurer. Toujours `None` pour un client.
+    supprime_le: datetime | None = None
 
 
 class CommandeAnnulationAdministration(BaseModel):

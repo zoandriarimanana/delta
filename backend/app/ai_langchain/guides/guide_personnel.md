@@ -36,6 +36,9 @@ Ouvrez « Réservations ». Filtrez par « Type » et par « Statut ». Une fois
 ## Faire avancer une commande
 Ouvrez « Commandes », puis cliquez sur la commande. Dans « Actions », un bouton vert la fait passer à l'étape suivante, et son libellé dit laquelle : « Confirmer la commande » (par exemple quand le client a payé en espèces), puis « Mettre en préparation », puis « Marquer servie » pour une commande sur place ou « Marquer remise au client » pour un retrait. Une commande payée en ligne est confirmée automatiquement. Une commande à livrer s'arrête à la préparation : elle passe « Livrée » quand sa livraison est marquée livrée. Une commande annulée ou terminée n'a plus de bouton.
 
+## Supprimer ou restaurer une commande
+La liste « Commandes » s'ouvre sur les plus récentes. Une commande terminée (livrée ou servie) ou annulée porte une corbeille au bout de sa ligne : cliquez dessus, puis sur « Oui » pour confirmer, ou « Non » pour renoncer. La commande quitte la liste, mais elle n'est pas effacée : ses paiements et sa livraison sont conservés. Une commande encore en cours ne peut pas être supprimée. Pour retrouver une commande supprimée, cochez « Afficher les archives », puis cliquez sur « Restaurer » sur sa ligne.
+
 ## Traiter une commande
 Ouvrez « Commandes ». Filtrez par « Statut », puis cliquez sur « Voir le détail ». Trois actions selon la situation : « Annuler » (impossible sur une commande déjà livrée ou servie), « Relancer la livraison » (proposé quand la livraison a échoué : elle repart en attente, à réaffecter) et « Marquer remboursée » (à utiliser une fois le remboursement fait hors plateforme — espèces, virement — ; cette action ne touche pas aux paiements enregistrés). Les liens « Voir les réservations » et « Voir les abonnements » mènent aux écrans correspondants.
 

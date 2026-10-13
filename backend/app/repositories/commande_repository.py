@@ -39,6 +39,23 @@ class CommandeRepository(BaseRepository[Commande]):
         )
         return self.db.scalars(requete).all()
 
+    def lister_recentes(self, inclure_supprimes: bool = False) -> Sequence[Commande]:
+        """Toutes les commandes actives, **les plus récentes d'abord** — même
+        tri que `lister_par_client`, et pour la même raison : sur
+        `date_commande`, l'identifiant ne départageant que deux commandes du
+        même instant.
+
+        `list()` triait par identifiant croissant : l'écran d'administration
+        ouvrait sur les plus anciennes (demande du 13 octobre 2026).
+        """
+        requete = select(Commande)
+        if not inclure_supprimes:
+            requete = requete.where(Commande.supprime_le.is_(None))
+        requete = requete.order_by(
+            Commande.date_commande.desc(), Commande.id_commande.desc()
+        )
+        return self.db.scalars(requete).all()
+
     def get_by_reference_publique(
         self, reference: UUID, inclure_supprimes: bool = False
     ) -> Commande | None:

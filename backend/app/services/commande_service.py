@@ -75,9 +75,14 @@ class CommandeService:
         self.reservations = ReservationRepository(db)
         self.livraisons = LivraisonService(db)
 
-    def obtenir(self, id_commande: int) -> Commande:
-        """Retourne une commande, ou lève `RessourceIntrouvable` (404)."""
-        commande = self.commandes.get_by_id(id_commande)
+    def obtenir(self, id_commande: int, inclure_supprimes: bool = False) -> Commande:
+        """Retourne une commande, ou lève `RessourceIntrouvable` (404).
+
+        `inclure_supprimes` ne sert qu'à l'administration, qui consulte et
+        restaure les commandes archivées."""
+        commande = self.commandes.get_by_id(
+            id_commande, inclure_supprimes=inclure_supprimes
+        )
         if commande is None:
             raise RessourceIntrouvable("Commande introuvable.")
         return commande
@@ -98,11 +103,11 @@ class CommandeService:
         """Historique d'un client, les plus récentes d'abord."""
         return self.commandes.lister_par_client(client.id_client)
 
-    def lister(self) -> Sequence[Commande]:
+    def lister(self, inclure_archives: bool = False) -> Sequence[Commande]:
         """Toutes les commandes actives, tous clients confondus. Réservé à
         l'administrateur — même patron que `AbonnementService.lister` et
-        `ReservationService.lister`."""
-        return self.commandes.list()
+        `ReservationService.lister`. Les plus récentes d'abord."""
+        return self.commandes.lister_recentes(inclure_supprimes=inclure_archives)
 
     def _verifier_demande_de_livraison(self, donnees: CommandeCreate) -> None:
         """Refuse une demande de livraison incohérente, en 422.
@@ -589,6 +594,51 @@ class CommandeService:
             )
         self.db.commit()
         self.db.refresh(commande)
+        return commande
+
+    def archiver(self, id_commande: int) -> None:
+        """Archive une commande **terminée ou annulée**, décision d'un
+        administrateur (demande du 13 octobre 2026) : elle quitte la liste
+        sans quitter la base.
+
+        Jamais de suppression réelle : une commande est une preuve de vente,
+        référencée par ses paiements et sa livraison. L'archivage reste
+        réversible (`restaurer`). Ses lignes et ses personnalisations suivent
+        (`supprimer`) ; sa livraison et ses paiements, faits distincts, restent
+        tels quels.
+
+        **409** pour une commande encore en cours : l'archiver la ferait
+        disparaître de la liste alors qu'il reste quelque chose à faire.
+        """
+        commande = self.obtenir(id_commande)
+        if not (
+            commande.statut is StatutCommande.ANNULEE
+            or commande.statut is STATUT_TERMINAL[commande.type_commande]
+        ):
+            raise ConflitMetier(
+                "Seule une commande terminée ou annulée peut être supprimée : "
+                "celle-ci est encore en cours."
+            )
+        self.supprimer(id_commande)
+
+    def restaurer(self, id_commande: int) -> Commande:
+        """Remet une commande archivée dans la liste, avec ses lignes et ses
+        personnalisations. Idempotent : restaurer une commande active ne
+        change rien."""
+        commande = self.obtenir(id_commande, inclure_supprimes=True)
+        if commande.supprime_le is None:
+            return commande
+        for ligne in self.lignes.lister_par_commande(
+            id_commande, inclure_supprimes=True
+        ):
+            personnalisation = self.personnalisations.get_by_ligne(
+                ligne.id_ligne, inclure_supprimes=True
+            )
+            if personnalisation is not None:
+                self.personnalisations.restaurer(personnalisation)
+            self.lignes.restaurer(ligne)
+        self.commandes.restaurer(commande)
+        self.db.commit()
         return commande
 
     def rembourser(self, id_commande: int) -> Commande:
