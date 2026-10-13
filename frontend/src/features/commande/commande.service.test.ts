@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  etapeAdministration,
   PERSONNALISATION_VIDE,
   PERSONNES_MAX,
   ajouterAuPanier,
@@ -383,5 +384,44 @@ describe('etapeCommande', () => {
 
   it('nomme le mode de réception', () => {
     expect(libelleModeReception('A_emporter')).toBe('Retrait en boutique');
+  });
+});
+
+describe('etapeAdministration', () => {
+  const base = { type_commande: 'A_emporter' as const, adresse_livraison: null };
+
+  it.each([
+    ['En_attente', 'Confirmer la commande'],
+    ['Confirmee', 'Mettre en préparation'],
+    ['En_preparation', 'Marquer remise au client'],
+  ] as const)('%s → %s', (statut, libelle) => {
+    expect(etapeAdministration({ ...base, statut })).toEqual({
+      type: 'action',
+      libelle,
+    });
+  });
+
+  it('termine une commande sur place par « Marquer servie »', () => {
+    expect(
+      etapeAdministration({
+        statut: 'En_preparation',
+        type_commande: 'Sur_place',
+        adresse_livraison: null,
+      })
+    ).toEqual({ type: 'action', libelle: 'Marquer servie' });
+  });
+
+  it('laisse la fin d’une commande à livrer à sa livraison', () => {
+    expect(
+      etapeAdministration({
+        statut: 'En_preparation',
+        type_commande: 'En_ligne',
+        adresse_livraison: 'Tana',
+      })
+    ).toEqual({ type: 'livraison' });
+  });
+
+  it.each(['Annulee', 'Livree'] as const)('%s : plus rien à faire', (statut) => {
+    expect(etapeAdministration({ ...base, statut })).toBeNull();
   });
 });

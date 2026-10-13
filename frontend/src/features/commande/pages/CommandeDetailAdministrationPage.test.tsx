@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   annulerCommandeAdministration,
+  avancerCommandeAdministration,
   obtenirCommandeAdministration,
   rembourserCommandeAdministration,
 } from '../commande.api';
@@ -216,4 +217,40 @@ it('« Garder la commande » renonce à l’annulation', async () => {
 
   expect(annulerCommandeAdministration).not.toHaveBeenCalled();
   expect(screen.getByRole('button', { name: /^annuler$/i })).toBeTruthy();
+});
+
+describe('faire avancer la commande (13 octobre 2026)', () => {
+  it('confirme une commande en attente, puis recharge la fiche', async () => {
+    vi.mocked(obtenirCommandeAdministration)
+      .mockResolvedValueOnce(COMMANDE)
+      .mockResolvedValue({ ...COMMANDE, statut: 'Confirmee' });
+    vi.mocked(recupererLivraisonsAdministration).mockResolvedValue([]);
+    vi.mocked(avancerCommandeAdministration).mockResolvedValue({
+      ...COMMANDE,
+      statut: 'Confirmee',
+    });
+    afficher();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Confirmer la commande/ })
+    );
+
+    expect(avancerCommandeAdministration).toHaveBeenCalledWith(7);
+    expect(
+      await screen.findByRole('button', { name: /Mettre en préparation/ })
+    ).toBeTruthy();
+  });
+
+  it('n’offre pas de fin à une commande à livrer, renvoyée à sa livraison', async () => {
+    vi.mocked(obtenirCommandeAdministration).mockResolvedValue({
+      ...COMMANDE,
+      statut: 'En_preparation',
+      adresse_livraison: 'Lot II A 12, Tana',
+    });
+    vi.mocked(recupererLivraisonsAdministration).mockResolvedValue([]);
+    afficher();
+
+    expect(await screen.findByText(/quand sa livraison sera marquée/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Marquer remise/ })).toBeNull();
+  });
 });

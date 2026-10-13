@@ -18,6 +18,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import {
   annulerCommandeAdministration,
+  avancerCommandeAdministration,
   obtenirCommandeAdministration,
   recupererCommandesAdministration,
   rembourserCommandeAdministration,
@@ -124,6 +125,7 @@ export function useCommandeDetailAdministration(
 
 export interface ActionsCommandeAdministration {
   annuler: () => Promise<boolean>;
+  avancer: () => Promise<boolean>;
   rembourser: () => Promise<boolean>;
   envoi: boolean;
   erreur: string | null;
@@ -157,6 +159,7 @@ export function useActionsCommandeAdministration(
 
   return {
     annuler: () => executer(annulerCommandeAdministration),
+    avancer: () => executer(avancerCommandeAdministration),
     rembourser: () => executer(rembourserCommandeAdministration),
     envoi,
     erreur,

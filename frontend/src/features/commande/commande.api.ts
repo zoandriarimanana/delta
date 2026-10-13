@@ -128,3 +128,17 @@ export async function rembourserCommandeAdministration(
   );
   return reponse.data;
 }
+
+/**
+ * Fait avancer une commande d'une étape — administration (13 octobre 2026).
+ * Sans corps : le serveur calcule l'étape suivante, la requête ne choisit
+ * jamais le statut.
+ */
+export async function avancerCommandeAdministration(
+  idCommande: number
+): Promise<Commande> {
+  const reponse = await axiosClient.post<Commande>(
+    `${CHEMIN_ADMINISTRATION}/${idCommande}/avancement`
+  );
+  return reponse.data;
+}

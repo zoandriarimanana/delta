@@ -1,8 +1,13 @@
 /**
  * Fiche d'une commande, administration (Sprint 10.6).
  *
- * Trois actions, chacune ses propres conditions d'apparition :
+ * Quatre actions, chacune ses propres conditions d'apparition :
  *
+ * - **Faire avancer** (13 octobre 2026) — un bouton dont le libellé dit
+ *   l'étape : « Confirmer la commande » (payée en espèces, par exemple),
+ *   « Mettre en préparation », puis « Marquer servie » ou « Marquer remise
+ *   au client ». Une commande à livrer s'arrête à la préparation : sa fin
+ *   vient de la livraison (`etapeAdministration`).
  * - **Annuler** — tant que la commande n'est ni déjà `Annulee` ni à son
  *   statut terminal (`Livree`/`Servie`), même garde que le serveur (10.5).
  * - **Relancer la livraison** — seulement si une livraison `Echouee` existe
@@ -23,6 +28,7 @@ import { Link, useParams } from 'react-router';
 import {
   ArrowLeft,
   Banknote,
+  CheckCircle2,
   MapPin,
   RotateCw,
   Store,
@@ -39,6 +45,7 @@ import Bouton from '@/components/ui/Bouton';
 
 import RecapitulatifCommande from '../components/RecapitulatifCommande';
 import {
+  etapeAdministration,
   formaterDate,
   libelleModeReception,
   libelleStatutCommande,
@@ -96,6 +103,7 @@ export default function CommandeDetailAdministrationPage() {
     commande.statut !== 'Annulee' &&
     commande.statut !== 'Livree' &&
     commande.statut !== 'Servie';
+  const etape = etapeAdministration(commande);
 
   const IconeMode = ICONES_MODE[commande.type_commande] ?? Truck;
   const invite = commande.id_client === null;
@@ -218,6 +226,16 @@ export default function CommandeDetailAdministrationPage() {
           </div>
         ) : (
           <div className="mt-3 flex flex-wrap gap-2">
+            {etape?.type === 'action' && (
+              <Bouton
+                variante="valider"
+                icone={CheckCircle2}
+                onClick={() => void actions.avancer()}
+                disabled={actions.envoi}
+              >
+                {etape.libelle}
+              </Bouton>
+            )}
             {livraisonEchouee.livraison !== null && (
               <Bouton
                 variante="primaire"
@@ -252,6 +270,13 @@ export default function CommandeDetailAdministrationPage() {
               </Bouton>
             )}
           </div>
+        )}
+        {etape?.type === 'livraison' && (
+          <p className="mt-3 flex items-start gap-1.5 text-sm text-gris-600">
+            <Truck size={15} aria-hidden className="mt-0.5 shrink-0 text-primaire" />
+            Commande à livrer : elle passera « Livrée » quand sa livraison sera marquée
+            livrée.
+          </p>
         )}
         <p className="mt-3 text-xs text-gris-500">
           « Marquer remboursée » ne fait que noter le remboursement : l’argent se rend

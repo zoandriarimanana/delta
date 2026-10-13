@@ -391,3 +391,35 @@ export function etapeCommande(
   if (commande.statut === 'Annulee') return 'annulee';
   return estTerminee(commande) ? 'terminee' : 'en_cours';
 }
+
+/** Ce que le bouton « faire avancer » de l'administration propose. */
+export type EtapeAdministration =
+  { type: 'action'; libelle: string } | { type: 'livraison' } | null;
+
+/**
+ * Étape suivante d'une commande, telle que l'administration la fait franchir
+ * (`POST /commandes/administration/{id}/avancement`). Reproduit la règle du
+ * serveur pour **afficher** le bon bouton ; c'est le serveur qui décide.
+ *
+ * `livraison` : la commande est à livrer et en préparation — sa fin vient de
+ * la tournée, pas de ce bouton. `null` : annulée ou terminée.
+ */
+export function etapeAdministration(
+  commande: Pick<Commande, 'statut' | 'type_commande' | 'adresse_livraison'>
+): EtapeAdministration {
+  if (commande.statut === 'Annulee' || estTerminee(commande)) return null;
+  if (commande.statut === 'En_attente') {
+    return { type: 'action', libelle: 'Confirmer la commande' };
+  }
+  if (commande.statut === 'Confirmee') {
+    return { type: 'action', libelle: 'Mettre en préparation' };
+  }
+  if (commande.adresse_livraison != null) return { type: 'livraison' };
+  return {
+    type: 'action',
+    libelle:
+      commande.type_commande === 'Sur_place'
+        ? 'Marquer servie'
+        : 'Marquer remise au client',
+  };
+}

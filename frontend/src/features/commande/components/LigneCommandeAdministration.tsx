@@ -173,7 +173,11 @@ export default function LigneCommandeAdministration({
       <td className="px-2.5 py-3">
         <div className="flex flex-col items-start gap-1">
           <Badge variante={varianteStatutCommande(commande.statut)}>
-            {libelleStatutCommande(commande.statut)}
+            {/* « À confirmer », le libellé du compteur de l'écran : le libellé
+                complet débordait de la dernière colonne du tableau. */}
+            {commande.statut === 'En_attente'
+              ? 'À confirmer'
+              : libelleStatutCommande(commande.statut)}
           </Badge>
           {commande.rembourse_le !== null && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-attente">
