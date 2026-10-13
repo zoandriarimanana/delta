@@ -61,13 +61,36 @@ export default function PiedDePage() {
     <footer className="mt-16 bg-[#0a1633] text-white/75">
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
         <div className="space-y-4">
-          <Link
-            to="/"
-            className="inline-flex rounded-xl bg-white px-3 py-2 no-underline"
-            aria-label={t.retourAccueil}
-          >
-            <LogoDelta className="h-8" />
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/"
+              className="inline-flex rounded-xl bg-white px-3 py-2 no-underline"
+              aria-label={t.retourAccueil}
+            >
+              <LogoDelta className="h-8" />
+            </Link>
+            {URL_FACEBOOK ? (
+              <a
+                href={URL_FACEBOOK}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t.facebook}
+                title={t.facebook}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2] text-white transition hover:brightness-110"
+              >
+                <IconeFacebook />
+              </a>
+            ) : (
+              <span
+                role="img"
+                aria-label={t.facebook}
+                title={t.facebook}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2] text-white"
+              >
+                <IconeFacebook />
+              </span>
+            )}
+          </div>
           <p className="max-w-xs text-sm leading-relaxed">{t.presentation}</p>
           <div className="flex items-start gap-2 text-sm">
             <Clock size={16} aria-hidden className="mt-0.5 shrink-0 text-[#ffb37a]" />
@@ -111,27 +134,6 @@ export default function PiedDePage() {
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
           <p>{t.droits(new Date().getFullYear())}</p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            {URL_FACEBOOK ? (
-              <a
-                href={URL_FACEBOOK}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={t.facebook}
-                title={t.facebook}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1877F2] text-white transition hover:brightness-110"
-              >
-                <IconeFacebook />
-              </a>
-            ) : (
-              <span
-                role="img"
-                aria-label={t.facebook}
-                title={t.facebook}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1877F2] text-white"
-              >
-                <IconeFacebook />
-              </span>
-            )}
             {/* Discret, en bas de page : l'équipe le connaît, un client n'a
                 pas à le chercher. La connexion reste protégée côté serveur. */}
             <Link
