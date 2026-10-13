@@ -23,9 +23,10 @@ import { useEstConnecte } from '@/lib/useEstConnecte';
 
 import { TEXTES_LAYOUT } from './layout.textes';
 
-/** Page Facebook de Delta, réglée dans `frontend/.env` : sans adresse
- * connue, l'icône n'est pas affichée plutôt que de pointer vers une page
- * inventée. */
+/** Page Facebook de Delta, réglée dans `frontend/.env`. Sans adresse
+ * connue, l'icône reste affichée **sans lien** (choix de l'utilisateur, 13
+ * octobre 2026) plutôt que de pointer vers une page inventée ; elle devient
+ * cliquable dès que l'adresse est renseignée. */
 const URL_FACEBOOK = (import.meta.env.VITE_FACEBOOK_URL ?? '').trim();
 const URL_DIGITHEQUE = 'https://digitheque.net';
 
@@ -110,17 +111,26 @@ export default function PiedDePage() {
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
           <p>{t.droits(new Date().getFullYear())}</p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            {URL_FACEBOOK && (
+            {URL_FACEBOOK ? (
               <a
                 href={URL_FACEBOOK}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={t.facebook}
                 title={t.facebook}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-[#1877F2]"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1877F2] text-white transition hover:brightness-110"
               >
                 <IconeFacebook />
               </a>
+            ) : (
+              <span
+                role="img"
+                aria-label={t.facebook}
+                title={t.facebook}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1877F2] text-white"
+              >
+                <IconeFacebook />
+              </span>
             )}
             {/* Discret, en bas de page : l'équipe le connaît, un client n'a
                 pas à le chercher. La connexion reste protégée côté serveur. */}
@@ -175,8 +185,8 @@ function Colonne({ titre, liens }: { titre: string; liens: Lien[] }) {
  * marque. */
 function IconeFacebook() {
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden fill="currentColor">
-      <path d="M13.5 21v-7.5h2.5l.4-3h-2.9V8.6c0-.9.3-1.5 1.5-1.5H16.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.8 1.4-3.8 3.9v2.3H8v3h2.5V21h3Z" />
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden fill="currentColor">
+      <path d="M9.2 21.5h4v-8h3.6l.4-4h-4V7.5a1 1 0 0 1 1-1h3v-4h-3a5 5 0 0 0-5 5v2H7.2l-.4 4h2.4v8Z" />
     </svg>
   );
 }

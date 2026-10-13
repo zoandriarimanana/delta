@@ -1875,8 +1875,9 @@ ne figurent nulle part dans le projet, à fournir par l'utilisateur. Pas de
 lien « Espace personnel », retiré de ce layout comme lien mort.
 — Barre du bas complétée à la demande de l'utilisateur : lien discret
 « Administration » avec un cadenas (vers la connexion du personnel — la
-protection reste côté serveur), icône **Facebook** affichée seulement si
-`VITE_FACEBOOK_URL` est renseignée (adresse de la page à fournir), et
+protection reste côté serveur), icône **Facebook** toujours affichée, en bleu
+Facebook — **sans lien** tant que `VITE_FACEBOOK_URL` est vide (choix de
+l'utilisateur), cliquable dès que l'adresse de la page est renseignée, et
 « Développé par Digitheque », souligné, vers https://digitheque.net.
 — Corrigé au passage : `oublierTaux()` laissait une réponse partie avant
 l'oubli réécrire des taux périmés en arrivant après, jusqu'à effacer la

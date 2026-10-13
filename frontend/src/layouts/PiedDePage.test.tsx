@@ -65,8 +65,9 @@ it('crédite Digitheque, dans un nouvel onglet', () => {
   expect(lien.getAttribute('rel')).toContain('noopener');
 });
 
-it('n’affiche pas Facebook tant que l’adresse de la page n’est pas réglée', () => {
+it('affiche Facebook sans lien tant que l’adresse de la page n’est pas réglée', () => {
   afficher();
 
+  expect(screen.getByRole('img', { name: 'Delta sur Facebook' })).toBeDefined();
   expect(screen.queryByRole('link', { name: 'Delta sur Facebook' })).toBeNull();
 });
