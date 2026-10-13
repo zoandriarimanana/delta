@@ -27,8 +27,10 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
   ArrowLeft,
+  Archive,
   Banknote,
   CheckCircle2,
+  RotateCcw,
   MapPin,
   RotateCw,
   Store,
@@ -139,6 +141,24 @@ export default function CommandeDetailAdministrationPage() {
       >
         Passée le {formaterDate(commande.date_commande)}
       </time>
+
+      {commande.supprime_le != null && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gris-300 bg-gris-100 p-4">
+          <p className="flex items-center gap-2 text-sm text-gris-700">
+            <Archive size={16} aria-hidden />
+            Commande supprimée de la liste (archivée). Elle reste conservée avec ses
+            paiements et sa livraison.
+          </p>
+          <Bouton
+            variante="valider"
+            icone={RotateCcw}
+            onClick={() => void actions.restaurer()}
+            disabled={actions.envoi}
+          >
+            Restaurer
+          </Bouton>
+        </div>
+      )}
 
       {actions.erreur !== null && (
         <p

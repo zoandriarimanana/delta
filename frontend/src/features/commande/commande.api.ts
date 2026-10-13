@@ -87,12 +87,16 @@ export async function creerCommandePersonnel(
  * RESERVATION en 10.2 (cf. `reservation.api.ts`). Le filtre par statut de
  * `AdministrationCommandesPage` s'applique donc côté client.
  */
-export async function recupererCommandesAdministration(): Promise<Commande[]> {
-  const reponse = await axiosClient.get<Commande[]>(CHEMIN_ADMINISTRATION);
+export async function recupererCommandesAdministration(
+  inclureArchives = false
+): Promise<Commande[]> {
+  const reponse = await axiosClient.get<Commande[]>(CHEMIN_ADMINISTRATION, {
+    params: inclureArchives ? { inclure_archives: true } : undefined,
+  });
   return reponse.data;
 }
 
-/** Fiche d'une commande, administration. 404 si inconnue ou archivée. */
+/** Fiche d'une commande, administration — archivée comprise. 404 si inconnue. */
 export async function obtenirCommandeAdministration(
   idCommande: number
 ): Promise<Commande> {
@@ -139,6 +143,26 @@ export async function avancerCommandeAdministration(
 ): Promise<Commande> {
   const reponse = await axiosClient.post<Commande>(
     `${CHEMIN_ADMINISTRATION}/${idCommande}/avancement`
+  );
+  return reponse.data;
+}
+
+/**
+ * Supprime une commande terminée ou annulée — un **archivage**, jamais une
+ * suppression réelle : elle reste en base, restaurable (13 octobre 2026).
+ */
+export async function archiverCommandeAdministration(
+  idCommande: number
+): Promise<void> {
+  await axiosClient.delete(`${CHEMIN_ADMINISTRATION}/${idCommande}`);
+}
+
+/** Remet une commande archivée dans la liste. */
+export async function restaurerCommandeAdministration(
+  idCommande: number
+): Promise<Commande> {
+  const reponse = await axiosClient.post<Commande>(
+    `${CHEMIN_ADMINISTRATION}/${idCommande}/restauration`
   );
   return reponse.data;
 }

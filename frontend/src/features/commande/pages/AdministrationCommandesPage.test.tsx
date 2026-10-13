@@ -12,7 +12,11 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { recupererCommandesAdministration } from '../commande.api';
+import {
+  archiverCommandeAdministration,
+  recupererCommandesAdministration,
+  restaurerCommandeAdministration,
+} from '../commande.api';
 import type { Commande } from '../commande.types';
 import AdministrationCommandesPage from './AdministrationCommandesPage';
 
@@ -142,5 +146,52 @@ describe('lecture enrichie', () => {
 
     expect(within(tableau).getByText('Commande n° 1')).toBeTruthy();
     expect(within(tableau).queryByText('Commande n° 2')).toBeNull();
+  });
+});
+
+describe('supprimer une commande (13 octobre 2026)', () => {
+  it('ne propose la corbeille que sur une commande terminée ou annulée', async () => {
+    vi.mocked(recupererCommandesAdministration).mockResolvedValue([
+      EN_ATTENTE,
+      ANNULEE,
+    ]);
+    afficher();
+
+    expect(
+      await screen.findByRole('button', { name: 'Supprimer la commande n° 2' })
+    ).toBeDefined();
+    expect(
+      screen.queryByRole('button', { name: 'Supprimer la commande n° 1' })
+    ).toBeNull();
+  });
+
+  it('demande confirmation, archive, puis recharge la liste', async () => {
+    vi.mocked(recupererCommandesAdministration).mockResolvedValue([ANNULEE]);
+    vi.mocked(archiverCommandeAdministration).mockResolvedValue();
+    afficher();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Supprimer la commande n° 2' })
+    );
+    expect(archiverCommandeAdministration).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Oui' }));
+
+    expect(archiverCommandeAdministration).toHaveBeenCalledWith(2);
+    expect(recupererCommandesAdministration).toHaveBeenCalledTimes(2);
+  });
+
+  it('affiche les archives à la demande, restaurables', async () => {
+    const archivee = { ...ANNULEE, supprime_le: '2026-10-13T10:00:00Z' };
+    vi.mocked(recupererCommandesAdministration).mockImplementation(async (avec) =>
+      avec ? [archivee] : []
+    );
+    vi.mocked(restaurerCommandeAdministration).mockResolvedValue(ANNULEE);
+    afficher();
+
+    await userEvent.click(await screen.findByLabelText('Afficher les archives'));
+    await userEvent.click(await screen.findByRole('button', { name: /Restaurer/ }));
+
+    expect(recupererCommandesAdministration).toHaveBeenCalledWith(true);
+    expect(restaurerCommandeAdministration).toHaveBeenCalledWith(2);
   });
 });

@@ -32,7 +32,10 @@ import { Link } from 'react-router';
 
 import LigneCommandeAdministration from '../components/LigneCommandeAdministration';
 import { estTerminee, libelleStatutCommande } from '../commande.service';
-import { useCommandesAdministration } from '../commande.administration';
+import {
+  useArchivageCommandes,
+  useCommandesAdministration,
+} from '../commande.administration';
 import type { Commande, StatutCommande } from '../commande.types';
 
 const STATUTS: StatutCommande[] = [
@@ -85,7 +88,15 @@ const CLASSES_CHAMP =
   'rounded-lg border border-gris-300 bg-surface px-3 py-2 text-sm text-gris-700 focus:border-primaire focus:outline-none focus:ring-2 focus:ring-primaire/20';
 
 export default function AdministrationCommandesPage() {
-  const donnees = useCommandesAdministration();
+  const [archives, setArchives] = useState(false);
+  const donnees = useCommandesAdministration(archives);
+  const archivage = useArchivageCommandes(donnees.recharger);
+  // Les compteurs ne comptent que les commandes actives : une archive n'a
+  // plus rien à confirmer ni à traiter.
+  const actives = useMemo(
+    () => donnees.commandes.filter((c) => c.supprime_le == null),
+    [donnees.commandes]
+  );
   const [filtreStatut, setFiltreStatut] = useState<StatutCommande | ''>('');
   const [groupe, setGroupe] = useState<Groupe>('');
   const [recherche, setRecherche] = useState('');
@@ -93,10 +104,10 @@ export default function AdministrationCommandesPage() {
   const compte = useMemo(() => {
     const total = {} as Record<Groupe, number>;
     for (const { groupe: g } of COMPTEURS) {
-      total[g] = donnees.commandes.filter((c) => dansGroupe(c, g)).length;
+      total[g] = actives.filter((c) => dansGroupe(c, g)).length;
     }
     return total;
-  }, [donnees.commandes]);
+  }, [actives]);
 
   const commandesFiltrees = useMemo(() => {
     const terme = recherche.trim().toLowerCase();
@@ -129,8 +140,9 @@ export default function AdministrationCommandesPage() {
               Administration des commandes
             </h1>
             <p className="mt-0.5 text-sm text-gris-500">
-              Toutes les commandes, clients inscrits et invités. Ouvrez une commande
-              pour l’annuler, relancer sa livraison ou la marquer remboursée.
+              Toutes les commandes, des plus récentes aux plus anciennes. Ouvrez une
+              commande pour la faire avancer, l’annuler ou la marquer remboursée ; la
+              corbeille retire de la liste une commande terminée ou annulée.
             </p>
           </div>
         </div>
@@ -212,6 +224,25 @@ export default function AdministrationCommandesPage() {
         </label>
       </div>
 
+      <label className="mt-3 inline-flex items-center gap-2 text-sm text-gris-600">
+        <input
+          type="checkbox"
+          checked={archives}
+          onChange={(e) => setArchives(e.target.checked)}
+          className="h-4 w-4 rounded border-gris-300"
+        />
+        Afficher les archives
+      </label>
+
+      {archivage.erreur !== null && (
+        <p
+          role="alert"
+          className="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
+        >
+          {archivage.erreur}
+        </p>
+      )}
+
       {donnees.erreur !== null && (
         <p
           role="alert"
@@ -244,6 +275,9 @@ export default function AdministrationCommandesPage() {
                 <th className="px-2.5 py-3">Réception</th>
                 <th className="px-2.5 py-3 text-right">Montant</th>
                 <th className="px-2.5 py-3">Statut</th>
+                <th className="px-2.5 py-3 pr-4">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gris-200">
@@ -251,6 +285,9 @@ export default function AdministrationCommandesPage() {
                 <LigneCommandeAdministration
                   key={commande.id_commande}
                   commande={commande}
+                  surArchiver={(id) => void archivage.archiver(id)}
+                  surRestaurer={(id) => void archivage.restaurer(id)}
+                  envoi={archivage.envoi}
                 />
               ))}
             </tbody>

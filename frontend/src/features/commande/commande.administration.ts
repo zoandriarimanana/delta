@@ -18,10 +18,12 @@ import { useCallback, useEffect, useState } from 'react';
 
 import {
   annulerCommandeAdministration,
+  archiverCommandeAdministration,
   avancerCommandeAdministration,
   obtenirCommandeAdministration,
   recupererCommandesAdministration,
   rembourserCommandeAdministration,
+  restaurerCommandeAdministration,
 } from './commande.api';
 import type { Commande } from './commande.types';
 import {
@@ -61,7 +63,9 @@ export interface CommandesAdministration {
 }
 
 /** Toutes les commandes, tous clients confondus. */
-export function useCommandesAdministration(): CommandesAdministration {
+export function useCommandesAdministration(
+  inclureArchives = false
+): CommandesAdministration {
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -74,7 +78,7 @@ export function useCommandesAdministration(): CommandesAdministration {
     setChargement(true);
     setErreur(null);
 
-    recupererCommandesAdministration()
+    recupererCommandesAdministration(inclureArchives)
       .then((donnees) => actif && setCommandes(donnees))
       .catch((erreurAppel) => actif && setErreur(messageDAdministration(erreurAppel)))
       .finally(() => actif && setChargement(false));
@@ -82,7 +86,7 @@ export function useCommandesAdministration(): CommandesAdministration {
     return () => {
       actif = false;
     };
-  }, [jeton]);
+  }, [jeton, inclureArchives]);
 
   return { commandes, chargement, erreur, recharger };
 }
@@ -126,6 +130,7 @@ export function useCommandeDetailAdministration(
 export interface ActionsCommandeAdministration {
   annuler: () => Promise<boolean>;
   avancer: () => Promise<boolean>;
+  restaurer: () => Promise<boolean>;
   rembourser: () => Promise<boolean>;
   envoi: boolean;
   erreur: string | null;
@@ -160,6 +165,7 @@ export function useActionsCommandeAdministration(
   return {
     annuler: () => executer(annulerCommandeAdministration),
     avancer: () => executer(avancerCommandeAdministration),
+    restaurer: () => executer(restaurerCommandeAdministration),
     rembourser: () => executer(rembourserCommandeAdministration),
     envoi,
     erreur,
@@ -242,4 +248,47 @@ export function useActionRelanceLivraison(
   );
 
   return { relancer, envoi, erreur };
+}
+
+export interface ArchivageCommandes {
+  archiver: (idCommande: number) => Promise<boolean>;
+  restaurer: (idCommande: number) => Promise<boolean>;
+  envoi: boolean;
+  erreur: string | null;
+}
+
+/**
+ * Supprimer (archiver) ou restaurer une commande depuis la liste
+ * d'administration, puis recharger la liste (13 octobre 2026). Le serveur
+ * refuse en 409 une commande encore en cours : le message est repris tel
+ * quel.
+ */
+export function useArchivageCommandes(recharger: () => void): ArchivageCommandes {
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const executer = useCallback(
+    async (action: (id: number) => Promise<unknown>, id: number) => {
+      setEnvoi(true);
+      setErreur(null);
+      try {
+        await action(id);
+        recharger();
+        return true;
+      } catch (erreurAppel) {
+        setErreur(messageDAdministration(erreurAppel));
+        return false;
+      } finally {
+        setEnvoi(false);
+      }
+    },
+    [recharger]
+  );
+
+  return {
+    archiver: (id) => executer(archiverCommandeAdministration, id),
+    restaurer: (id) => executer(restaurerCommandeAdministration, id),
+    envoi,
+    erreur,
+  };
 }

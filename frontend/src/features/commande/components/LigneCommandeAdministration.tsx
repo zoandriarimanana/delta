@@ -12,10 +12,14 @@
  * conditions et vivent sur la fiche (cf. `AdministrationCommandesPage`).
  */
 
+import { useState } from 'react';
 import { Link } from 'react-router';
 import {
+  Archive,
   Banknote,
   ChevronRight,
+  RotateCcw,
+  Trash2,
   Store,
   Truck,
   UserRound,
@@ -27,6 +31,7 @@ import Badge from '@/components/ui/Badge';
 import { montantAPayer } from '@/features/devise/devise.service';
 
 import {
+  estTerminee,
   formaterMontant,
   libelleModeReception,
   libelleStatutCommande,
@@ -60,11 +65,26 @@ const FORMAT_COURT = new Intl.DateTimeFormat('fr-FR', {
 /** Vignettes montrées au plus ; le reste est résumé par « +n ». */
 const VIGNETTES_MAX = 2;
 
+interface Proprietes {
+  commande: Commande;
+  /** Supprimer = archiver (jamais d'effacement réel), puis restaurer. */
+  surArchiver: (idCommande: number) => void;
+  surRestaurer: (idCommande: number) => void;
+  envoi: boolean;
+}
+
 export default function LigneCommandeAdministration({
   commande,
-}: {
-  commande: Commande;
-}) {
+  surArchiver,
+  surRestaurer,
+  envoi,
+}: Proprietes) {
+  const [confirmation, setConfirmation] = useState(false);
+  const archivee = commande.supprime_le != null;
+  // Une commande en cours a encore quelque chose à faire : la supprimer de
+  // la liste la ferait oublier. Le serveur le refuse aussi (409).
+  const supprimable =
+    !archivee && (commande.statut === 'Annulee' || estTerminee(commande));
   const IconeMode = ICONES_MODE[commande.type_commande] ?? Truck;
   const aTraiter = commande.statut === 'En_attente';
   const articles = commande.lignes.reduce((total, l) => total + l.quantite, 0);
@@ -76,7 +96,7 @@ export default function LigneCommandeAdministration({
     <tr
       className={`align-middle transition-colors hover:bg-gris-100/60 ${
         aTraiter ? 'bg-attente/5' : ''
-      }`}
+      } ${archivee ? 'opacity-60' : ''}`}
     >
       <td
         className={`border-l-4 px-3 py-3 ${
@@ -186,6 +206,65 @@ export default function LigneCommandeAdministration({
             </span>
           )}
         </div>
+      </td>
+
+      {/* `relative` : la confirmation s'affiche en bulle par-dessus la fin de
+          la ligne, sans élargir la colonne — elle était coupée par le cadre
+          défilant du tableau. */}
+      <td className="relative whitespace-nowrap px-2.5 py-3 pr-4 text-right">
+        {archivee ? (
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-gris-500">
+              <Archive size={13} aria-hidden />
+              Archivée
+            </span>
+            <button
+              type="button"
+              onClick={() => surRestaurer(commande.id_commande)}
+              disabled={envoi}
+              className="inline-flex items-center gap-1 rounded-lg border border-succes/40 px-2 py-1 text-xs font-semibold text-succes hover:bg-succes/10 disabled:opacity-50"
+            >
+              <RotateCcw size={13} aria-hidden />
+              Restaurer
+            </button>
+          </span>
+        ) : confirmation ? (
+          <span
+            role="group"
+            aria-label={`Confirmer la suppression de la commande n° ${commande.id_commande}`}
+            className="absolute right-2 top-1/2 z-10 inline-flex -translate-y-1/2 items-center gap-1.5 rounded-xl border border-danger/30 bg-surface px-3 py-2 shadow-lg"
+          >
+            <span className="text-xs font-medium text-danger">Supprimer ?</span>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmation(false);
+                surArchiver(commande.id_commande);
+              }}
+              disabled={envoi}
+              className="rounded-lg bg-danger px-2 py-1 text-xs font-semibold text-sur-couleur hover:opacity-90 disabled:opacity-50"
+            >
+              Oui
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmation(false)}
+              className="rounded-lg border border-gris-300 px-2 py-1 text-xs font-semibold text-gris-600 hover:bg-gris-100"
+            >
+              Non
+            </button>
+          </span>
+        ) : supprimable ? (
+          <button
+            type="button"
+            onClick={() => setConfirmation(true)}
+            aria-label={`Supprimer la commande n° ${commande.id_commande}`}
+            title="Supprimer (archiver) cette commande"
+            className="rounded-lg p-1.5 text-gris-400 transition hover:bg-danger/10 hover:text-danger"
+          >
+            <Trash2 size={17} aria-hidden />
+          </button>
+        ) : null}
       </td>
     </tr>
   );
