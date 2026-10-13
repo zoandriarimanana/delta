@@ -111,6 +111,8 @@ export function useReservationDetailAdministration(
 }
 
 export interface ActionsReservationAdministration {
+  /** En attente → Confirmée (13 octobre 2026). */
+  confirmer: (idReservation: number) => Promise<boolean>;
   marquerHonoree: (idReservation: number) => Promise<boolean>;
   annuler: (idReservation: number) => Promise<boolean>;
   /** Réservation dont l'action la plus récente est en cours, pour ne
@@ -134,7 +136,10 @@ export function useActionsReservationAdministration(
   const [erreur, setErreur] = useState<string | null>(null);
 
   const changer = useCallback(
-    async (idReservation: number, statut: 'Honoree' | 'Annulee'): Promise<boolean> => {
+    async (
+      idReservation: number,
+      statut: 'Confirmee' | 'Honoree' | 'Annulee'
+    ): Promise<boolean> => {
       setIdEnCours(idReservation);
       setErreur(null);
       try {
@@ -152,6 +157,7 @@ export function useActionsReservationAdministration(
   );
 
   return {
+    confirmer: (id) => changer(id, 'Confirmee'),
     marquerHonoree: (id) => changer(id, 'Honoree'),
     annuler: (id) => changer(id, 'Annulee'),
     idEnCours,

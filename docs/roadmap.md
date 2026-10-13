@@ -1925,6 +1925,12 @@ n'étaient posés par personne.
       (`ReservationRepository.lister_recentes`) : `RESERVATION` n'ayant pas
       de date de création, l'identifiant, tiré d'une séquence dans l'ordre
       des réservations, en tient lieu.
+- [x] **Confirmer une réservation** (même jour) : l'écran
+      d'administration ne proposait que « Marquer honorée » et « Annuler »,
+      alors que la route `PUT /reservations/administration/{id}/statut`
+      accepte déjà `Confirmee`. Bouton « Confirmer » sur une réservation en
+      attente, dans la liste et sur la fiche (`peutConfirmer`). Aucun
+      changement d'API. Guide du personnel complété.
 - [x] **Supprimer = archiver** : `DELETE /commandes/administration/{id}`
       (204) pour une commande **terminée ou annulée** seulement (409 sinon),
       via `CommandeService.supprimer`, qui existait sans être exposé et

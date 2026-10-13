@@ -114,6 +114,15 @@ export function imageCible(reservation: Reservation): string | null {
  * `PersonnelService.obtenir_avec_fonction` côté serveur : deux implémentations
  * ne divergeraient qu'au jour où l'une serait corrigée sans l'autre.
  */
+/**
+ * Une réservation en attente se confirme (13 octobre 2026) : jusque-là,
+ * l'écran ne proposait que « Marquer honorée » et « Annuler », et une
+ * réservation restait « en attente de confirmation » sans moyen de l'accepter.
+ */
+export function peutConfirmer(reservation: Reservation): boolean {
+  return reservation.statut === 'En_attente';
+}
+
 export function peutMarquerHonoree(reservation: Reservation): boolean {
   return reservation.statut !== 'Honoree' && reservation.statut !== 'Annulee';
 }

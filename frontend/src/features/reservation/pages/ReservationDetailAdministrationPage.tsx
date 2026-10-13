@@ -16,7 +16,7 @@
  */
 
 import { Link, useParams } from 'react-router';
-import { Check, X } from 'lucide-react';
+import { Check, CheckCircle2, X } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
 import { formaterDate } from '@/features/commande/commande.service';
@@ -31,6 +31,7 @@ import {
   libelleCible,
   libelleStatut,
   peutAnnuler,
+  peutConfirmer,
   peutMarquerHonoree,
 } from '../reservation.service';
 
@@ -144,6 +145,16 @@ export default function ReservationDetailAdministrationPage() {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        {peutConfirmer(reservation) && (
+          <Bouton
+            variante="primaire"
+            icone={CheckCircle2}
+            onClick={() => void actions.confirmer(reservation.id_reservation)}
+            disabled={actions.idEnCours === reservation.id_reservation}
+          >
+            Confirmer la réservation
+          </Bouton>
+        )}
         {peutMarquerHonoree(reservation) && (
           <Bouton
             variante="valider"

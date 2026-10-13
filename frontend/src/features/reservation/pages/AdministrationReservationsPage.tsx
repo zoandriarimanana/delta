@@ -105,8 +105,9 @@ export default function AdministrationReservationsPage() {
             Administration des réservations
           </h1>
           <p className="mt-0.5 text-sm text-gris-500">
-            Formations, salles, hébergements et tables. Confirmez la venue d’un client
-            avec « Marquer honorée », ou annulez une réservation.
+            Formations, salles, hébergements et tables, les plus récentes d’abord.
+            Confirmez une réservation en attente, marquez-la honorée une fois la
+            prestation réalisée, ou annulez-la.
           </p>
         </div>
       </div>
@@ -230,6 +231,7 @@ export default function AdministrationReservationsPage() {
                   reservation={reservation}
                   cible={cibles.get(cleCible(reservation))}
                   enCours={actions.idEnCours === reservation.id_reservation}
+                  confirmer={() => void actions.confirmer(reservation.id_reservation)}
                   marquerHonoree={() =>
                     void actions.marquerHonoree(reservation.id_reservation)
                   }

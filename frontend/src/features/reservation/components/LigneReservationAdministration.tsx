@@ -17,6 +17,7 @@ import {
   BedDouble,
   Building2,
   Check,
+  CheckCircle2,
   ChevronRight,
   GraduationCap,
   UserRound,
@@ -35,6 +36,7 @@ import {
   libelleStatut,
   libelleType,
   peutAnnuler,
+  peutConfirmer,
   peutMarquerHonoree,
   varianteStatut,
 } from '../reservation.service';
@@ -64,6 +66,7 @@ interface Proprietes {
   reservation: Reservation;
   cible: CibleResolue | undefined;
   enCours: boolean;
+  confirmer: () => void;
   marquerHonoree: () => void;
   annuler: () => void;
 }
@@ -72,6 +75,7 @@ export default function LigneReservationAdministration({
   reservation,
   cible,
   enCours,
+  confirmer,
   marquerHonoree,
   annuler,
 }: Proprietes) {
@@ -169,6 +173,17 @@ export default function LigneReservationAdministration({
             </>
           ) : (
             <>
+              {peutConfirmer(reservation) && (
+                <Bouton
+                  variante="primaire"
+                  icone={CheckCircle2}
+                  onClick={confirmer}
+                  disabled={enCours}
+                  className="whitespace-nowrap px-3 py-1.5"
+                >
+                  Confirmer
+                </Bouton>
+              )}
               {peutMarquerHonoree(reservation) && (
                 <Bouton
                   variante="valider"

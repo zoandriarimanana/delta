@@ -242,3 +242,37 @@ it('compte les réservations par statut et filtre au clic', async () => {
   expect(corpsDuTableau().getAllByText('Table').length).toBeGreaterThan(0);
   expect(corpsDuTableau().queryByText('Salle')).toBeNull();
 });
+
+describe('confirmer une réservation (13 octobre 2026)', () => {
+  it('ne propose « Confirmer » que sur une réservation en attente', async () => {
+    vi.mocked(recupererReservationsAdministration).mockResolvedValue([
+      EN_ATTENTE,
+      HONOREE,
+      ANNULEE,
+    ]);
+    afficher();
+
+    await screen.findByRole('table');
+    expect(screen.getAllByRole('button', { name: /^confirmer$/i })).toHaveLength(1);
+  });
+
+  it('confirme via l’API puis recharge la liste', async () => {
+    vi.mocked(recupererReservationsAdministration)
+      .mockResolvedValueOnce([EN_ATTENTE])
+      .mockResolvedValueOnce([{ ...EN_ATTENTE, statut: 'Confirmee' }]);
+    vi.mocked(changerStatutAdministration).mockResolvedValue({
+      ...EN_ATTENTE,
+      statut: 'Confirmee',
+    });
+    afficher();
+
+    await userEvent.click(await screen.findByRole('button', { name: /^confirmer$/i }));
+
+    await waitFor(() =>
+      expect(changerStatutAdministration).toHaveBeenCalledWith(1, 'Confirmee')
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /^confirmer$/i })).toBeNull()
+    );
+  });
+});

@@ -59,7 +59,7 @@ export async function recupererReservationAdministration(
  */
 export async function changerStatutAdministration(
   idReservation: number,
-  statut: 'Honoree' | 'Annulee'
+  statut: 'Confirmee' | 'Honoree' | 'Annulee'
 ): Promise<Reservation> {
   const reponse = await axiosClient.put<Reservation>(
     `${CHEMIN_ADMINISTRATION}/${idReservation}/statut`,
