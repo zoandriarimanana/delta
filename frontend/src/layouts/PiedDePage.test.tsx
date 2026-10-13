@@ -47,3 +47,26 @@ it('propose commandes et réservations à un client connecté', () => {
   expect(within(espace).getByRole('link', { name: 'Mes commandes' })).toBeDefined();
   expect(within(espace).queryByRole('link', { name: 'Connexion' })).toBeNull();
 });
+
+it('mène à l’espace d’administration par un lien discret', () => {
+  afficher();
+
+  expect(
+    screen.getByRole('link', { name: 'Administration' }).getAttribute('href')
+  ).toBe('/personnel/connexion');
+});
+
+it('crédite Digitheque, dans un nouvel onglet', () => {
+  afficher();
+  const lien = screen.getByRole('link', { name: 'Digitheque' });
+
+  expect(lien.getAttribute('href')).toBe('https://digitheque.net');
+  expect(lien.getAttribute('target')).toBe('_blank');
+  expect(lien.getAttribute('rel')).toContain('noopener');
+});
+
+it('n’affiche pas Facebook tant que l’adresse de la page n’est pas réglée', () => {
+  afficher();
+
+  expect(screen.queryByRole('link', { name: 'Delta sur Facebook' })).toBeNull();
+});

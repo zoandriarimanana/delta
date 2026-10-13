@@ -1873,6 +1873,14 @@ document « Horaires d'ouverture »), liens du site, espace client selon la
 session, moyens de paiement acceptés. **Aucune adresse ni téléphone** : ils
 ne figurent nulle part dans le projet, à fournir par l'utilisateur. Pas de
 lien « Espace personnel », retiré de ce layout comme lien mort.
+— Barre du bas complétée à la demande de l'utilisateur : lien discret
+« Administration » avec un cadenas (vers la connexion du personnel — la
+protection reste côté serveur), icône **Facebook** affichée seulement si
+`VITE_FACEBOOK_URL` est renseignée (adresse de la page à fournir), et
+« Développé par Digitheque », souligné, vers https://digitheque.net.
+— Corrigé au passage : `oublierTaux()` laissait une réponse partie avant
+l'oubli réécrire des taux périmés en arrivant après, jusqu'à effacer la
+saisie d'un administrateur (test `TauxChangePage` intermittent).
 
 **Travaux hors sprint : paiement mobile money à la validation, y compris sans
 compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.

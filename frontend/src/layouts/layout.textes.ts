@@ -25,6 +25,9 @@ const fr = {
   activerSombre: 'Activer le mode sombre',
   activerClair: 'Activer le mode clair',
   // Pied de page
+  administration: 'Administration',
+  facebook: 'Delta sur Facebook',
+  developpePar: 'Développé par',
   retourAccueil: 'Delta, retour à l’accueil',
   presentation:
     'Pâtisserie, boulangerie, formations culinaires, salles et hébergement à Madagascar.',
@@ -65,6 +68,9 @@ export const TEXTES_LAYOUT: Textes<typeof fr> = {
     activerSombre: 'Switch to dark mode',
     activerClair: 'Switch to light mode',
     retourAccueil: 'Delta, back to home',
+    administration: 'Administration',
+    facebook: 'Delta on Facebook',
+    developpePar: 'Developed by',
     presentation:
       'Pastry, bakery, culinary training, meeting rooms and accommodation in Madagascar.',
     horaires: 'Opening hours',

@@ -13,7 +13,7 @@
  * pas du thème, et le texte clair s'y lit dans les deux modes.
  */
 
-import { Clock, CreditCard, Truck } from 'lucide-react';
+import { Clock, CreditCard, LockKeyhole, Truck } from 'lucide-react';
 import { Link } from 'react-router';
 
 import LogoDelta from '@/components/ui/LogoDelta';
@@ -22,6 +22,12 @@ import { useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
 import { TEXTES_LAYOUT } from './layout.textes';
+
+/** Page Facebook de Delta, réglée dans `frontend/.env` : sans adresse
+ * connue, l'icône n'est pas affichée plutôt que de pointer vers une page
+ * inventée. */
+const URL_FACEBOOK = (import.meta.env.VITE_FACEBOOK_URL ?? '').trim();
+const URL_DIGITHEQUE = 'https://digitheque.net';
 
 interface Lien {
   vers: string;
@@ -101,9 +107,43 @@ export default function PiedDePage() {
       </div>
 
       <div className="border-t border-white/10">
-        <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-white/50">
-          {t.droits(new Date().getFullYear())}
-        </p>
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
+          <p>{t.droits(new Date().getFullYear())}</p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            {URL_FACEBOOK && (
+              <a
+                href={URL_FACEBOOK}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t.facebook}
+                title={t.facebook}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-[#1877F2]"
+              >
+                <IconeFacebook />
+              </a>
+            )}
+            {/* Discret, en bas de page : l'équipe le connaît, un client n'a
+                pas à le chercher. La connexion reste protégée côté serveur. */}
+            <Link
+              to="/personnel/connexion"
+              className="inline-flex items-center gap-1.5 text-white/60 no-underline transition hover:text-white"
+            >
+              <LockKeyhole size={13} aria-hidden />
+              {t.administration}
+            </Link>
+            <p>
+              {t.developpePar}{' '}
+              <a
+                href={URL_DIGITHEQUE}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-white/80 underline underline-offset-2 hover:text-white"
+              >
+                Digitheque
+              </a>
+            </p>
+          </div>
+        </div>
       </div>
     </footer>
   );
@@ -128,5 +168,15 @@ function Colonne({ titre, liens }: { titre: string; liens: Lien[] }) {
         ))}
       </ul>
     </nav>
+  );
+}
+
+/** Logo « f » de Facebook — absent de lucide, qui ne porte plus de logos de
+ * marque. */
+function IconeFacebook() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden fill="currentColor">
+      <path d="M13.5 21v-7.5h2.5l.4-3h-2.9V8.6c0-.9.3-1.5 1.5-1.5H16.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.8 1.4-3.8 3.9v2.3H8v3h2.5V21h3Z" />
+    </svg>
   );
 }
