@@ -1843,6 +1843,37 @@ fixe pour la lisibilité dans les deux thèmes, deux boutons d'action, cartes
 des modules remontées sur la photo. Vérifié dans un vrai navigateur (clair,
 sombre, mobile), sans défilement horizontal.
 
+**Travaux hors sprint : assistant en malgache (13 octobre 2026).** Constat
+de l'utilisateur : l'assistant « ne sait pas le malgache ». Mesuré sur 9
+questions réelles : la compréhension était là, mais trois défauts réels —
+le message « rien trouvé » sortait en français, une question sur les
+formations en pâtisserie (« mofomamy ») ne trouvait aucune formation, et
+une réponse partait en français.
+
+- [x] **Langue de la question** (`ai_langchain/langue.py`) : détection par
+      mots-outils, message « rien trouvé » en français, malgache ou anglais.
+- [x] **Recherche de secours** : une question malgache sous le seuil est
+      traduite en français par le LLM, puis recherchée de nouveau ; la
+      réponse reste générée depuis la question d'origine. Un appel de plus,
+      seulement dans ce cas ; un échec de traduction ne casse rien.
+      Couvre aussi les documents téléversés, dont le texte n'est pas le
+      nôtre (« Rahoviana no misokatra ianareo ? » trouve désormais les
+      horaires).
+- [x] **Termes malgaches** dans les textes indexés des produits,
+      catégories, formations et domaines, comme pour salles et logements ;
+      consigne du prompt : réponse **entièrement** en malgache.
+      — Vérifié avec les vraies clés : 9 questions malgaches sur 9 répondues
+      en malgache, dont les trois en défaut. Limite : la qualité du malgache
+      rédigé dépend du modèle Groq (tournures parfois approximatives).
+
+**Travaux hors sprint : pied de page public (13 octobre 2026).** Le site
+n'avait qu'une ligne « Delta » en bas de page. `layouts/PiedDePage.tsx`,
+monté par `MainLayout` : présentation, **horaires réels** (repris du
+document « Horaires d'ouverture »), liens du site, espace client selon la
+session, moyens de paiement acceptés. **Aucune adresse ni téléphone** : ils
+ne figurent nulle part dans le projet, à fournir par l'utilisateur. Pas de
+lien « Espace personnel », retiré de ce layout comme lien mort.
+
 **Travaux hors sprint : paiement mobile money à la validation, y compris sans
 compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.
 Jusqu'ici, seul un client connecté pouvait payer, et seulement depuis « Mes

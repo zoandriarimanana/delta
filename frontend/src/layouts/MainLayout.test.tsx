@@ -19,6 +19,9 @@ import { definirSession, effacerSession, lireSession } from '@/lib/session.store
 
 import MainLayout from './MainLayout';
 
+/** L'en-tête seul : le pied de page répète une partie des liens. */
+const entete = () => within(screen.getByRole('banner'));
+
 const { deconnecter } = vi.hoisted(() => ({ deconnecter: vi.fn() }));
 vi.mock('@/features/auth/auth.api', () => ({ deconnecter }));
 
@@ -89,14 +92,14 @@ it('porte la navigation transverse', () => {
   afficher();
 
   for (const libelle of ['Accueil', 'Produits', 'Panier', 'Connexion']) {
-    expect(screen.getByRole('link', { name: new RegExp(libelle) })).toBeDefined();
+    expect(entete().getByRole('link', { name: new RegExp(libelle) })).toBeDefined();
   }
 });
 
 it('offre « Connexion » au visiteur, jamais « Déconnexion »', () => {
   afficher();
 
-  expect(screen.getByRole('link', { name: /connexion/i })).toBeDefined();
+  expect(entete().getByRole('link', { name: /connexion/i })).toBeDefined();
   expect(screen.queryByRole('button', { name: /déconnexion/i })).toBeNull();
 });
 
@@ -115,7 +118,7 @@ it('offre la déconnexion au client connecté, dans « Mon compte »', async () 
   expect(
     within(menu).getByRole('menuitem', { name: /mes réservations/i })
   ).toBeDefined();
-  expect(screen.queryByRole('link', { name: /^connexion$/i })).toBeNull();
+  expect(entete().queryByRole('link', { name: /^connexion$/i })).toBeNull();
 });
 
 it('le menu « Mon compte » se referme sur Échap', async () => {
@@ -132,7 +135,7 @@ it('le panier est une icône dont le nom annonce le nombre d’articles', () => 
   act(() => remplir(3));
   afficher();
 
-  expect(screen.getByRole('link', { name: 'Panier, 3 article(s)' })).toBeDefined();
+  expect(entete().getByRole('link', { name: 'Panier, 3 article(s)' })).toBeDefined();
 });
 
 it('ne propose les pages client qu’au client', () => {
@@ -142,8 +145,8 @@ it('ne propose les pages client qu’au client', () => {
 
   afficher();
 
-  expect(screen.queryByRole('link', { name: /mes commandes/i })).toBeNull();
-  expect(screen.queryByRole('link', { name: /mes réservations/i })).toBeNull();
+  expect(entete().queryByRole('link', { name: /mes commandes/i })).toBeNull();
+  expect(entete().queryByRole('link', { name: /mes réservations/i })).toBeNull();
 });
 
 const LIBELLES_PERSONNEL_OBSOLETES = [
@@ -163,7 +166,7 @@ it('ne propose aucun lien personnel/* à un visiteur', () => {
   afficher();
 
   for (const libelle of LIBELLES_PERSONNEL_OBSOLETES) {
-    expect(screen.queryByRole('link', { name: libelle })).toBeNull();
+    expect(entete().queryByRole('link', { name: libelle })).toBeNull();
   }
 });
 
@@ -173,7 +176,7 @@ it('ne propose aucun lien personnel/* à un client connecté', () => {
   afficher();
 
   for (const libelle of LIBELLES_PERSONNEL_OBSOLETES) {
-    expect(screen.queryByRole('link', { name: libelle })).toBeNull();
+    expect(entete().queryByRole('link', { name: libelle })).toBeNull();
   }
 });
 
@@ -183,7 +186,7 @@ it('n’affiche plus la navigation personnel/* complète à un salarié', () => 
   afficher();
 
   for (const libelle of LIBELLES_PERSONNEL_OBSOLETES) {
-    expect(screen.queryByRole('link', { name: libelle })).toBeNull();
+    expect(entete().queryByRole('link', { name: libelle })).toBeNull();
   }
 });
 
@@ -195,12 +198,12 @@ it('n’affiche aucun lien « Espace personnel » (retiré, devenu mort)', () =>
   // `App.tsx`) — ce test vérifie seulement que le lien a bien disparu du
   // code, pour les populations qui atteignent réellement ce layout.
   afficher();
-  expect(screen.queryByRole('link', { name: 'Espace personnel' })).toBeNull();
+  expect(entete().queryByRole('link', { name: 'Espace personnel' })).toBeNull();
 
   definirSession('client');
   cleanup();
   afficher();
-  expect(screen.queryByRole('link', { name: 'Espace personnel' })).toBeNull();
+  expect(entete().queryByRole('link', { name: 'Espace personnel' })).toBeNull();
 });
 
 it('garde le lien public « Salles » distinct de la route admin', () => {
@@ -209,7 +212,7 @@ it('garde le lien public « Salles » distinct de la route admin', () => {
   // (administration), retiré par ce correctif.
   afficher();
 
-  const lien = screen.getByRole('link', { name: 'Salles' });
+  const lien = entete().getByRole('link', { name: 'Salles' });
   expect(lien).toHaveProperty('href', expect.stringContaining('/salles'));
   expect(lien).not.toHaveProperty('href', expect.stringContaining('/personnel/salles'));
 });
@@ -230,7 +233,7 @@ it('se déconnecte sans rechargement : la nav se met à jour, le panier survit',
 
   await waitFor(() => expect(deconnecter).toHaveBeenCalledOnce());
   await waitFor(() => expect(lireSession().type).toBeNull());
-  expect(screen.getByRole('link', { name: /connexion/i })).toBeDefined();
+  expect(entete().getByRole('link', { name: /connexion/i })).toBeDefined();
   expect(screen.queryByRole('button', { name: /mon compte/i })).toBeNull();
   expect(screen.queryByRole('menuitem', { name: /déconnexion/i })).toBeNull();
   // Le panier n'a pas été vidé : il vit dans un magasin distinct

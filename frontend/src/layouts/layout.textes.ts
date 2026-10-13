@@ -24,6 +24,20 @@ const fr = {
   modeClair: 'Mode clair',
   activerSombre: 'Activer le mode sombre',
   activerClair: 'Activer le mode clair',
+  // Pied de page
+  retourAccueil: 'Delta, retour à l’accueil',
+  presentation:
+    'Pâtisserie, boulangerie, formations culinaires, salles et hébergement à Madagascar.',
+  horaires: 'Horaires d’ouverture',
+  horairesSemaine: 'Du lundi au samedi, de 7 h à 19 h',
+  horairesFermeture: 'Fermé le dimanche et les jours fériés',
+  decouvrir: 'Découvrir',
+  votreEspace: 'Votre espace',
+  creerCompte: 'Créer un compte',
+  paiementAccepte: 'Paiement accepté',
+  carteBancaire: 'Carte bancaire',
+  livraisonDomicile: 'Livraison à domicile',
+  droits: (annee: number) => `© ${annee} Delta · Madagascar. Tous droits réservés.`,
 };
 
 export const TEXTES_LAYOUT: Textes<typeof fr> = {
@@ -50,5 +64,18 @@ export const TEXTES_LAYOUT: Textes<typeof fr> = {
     modeClair: 'Light mode',
     activerSombre: 'Switch to dark mode',
     activerClair: 'Switch to light mode',
+    retourAccueil: 'Delta, back to home',
+    presentation:
+      'Pastry, bakery, culinary training, meeting rooms and accommodation in Madagascar.',
+    horaires: 'Opening hours',
+    horairesSemaine: 'Monday to Saturday, 7 am to 7 pm',
+    horairesFermeture: 'Closed on Sundays and public holidays',
+    decouvrir: 'Discover',
+    votreEspace: 'Your space',
+    creerCompte: 'Create an account',
+    paiementAccepte: 'Accepted payment',
+    carteBancaire: 'Bank card',
+    livraisonDomicile: 'Home delivery',
+    droits: (annee: number) => `© ${annee} Delta · Madagascar. All rights reserved.`,
   },
 };

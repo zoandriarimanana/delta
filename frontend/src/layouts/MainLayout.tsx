@@ -32,6 +32,7 @@ import { useEstConnecte } from '@/lib/useEstConnecte';
 import BoutonTheme from './BoutonTheme';
 import { TEXTES_LAYOUT } from './layout.textes';
 import MenuCompte from './MenuCompte';
+import PiedDePage from './PiedDePage';
 
 type CleLien =
   | 'accueil'
@@ -236,12 +237,7 @@ export default function MainLayout() {
           fonctionnement — elle ne s'affiche que si l'assistant est activé. */}
       <BulleAssistant />
 
-      <footer className="border-t border-gris-200 bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-4 text-sm text-gris-500">
-          <LogoDelta forme="symbole" className="h-6" />
-          <span>Delta</span>
-        </div>
-      </footer>
+      <PiedDePage />
     </div>
   );
 }

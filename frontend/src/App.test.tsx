@@ -56,7 +56,9 @@ describe('routage', () => {
     // depuis une URL erronée, l'utilisateur n'est pas coincé.
     afficherA('/cette-route-nexiste-pas');
 
-    expect(screen.getByRole('navigation')).toBeDefined();
+    expect(
+      screen.getByRole('navigation', { name: 'Navigation principale' })
+    ).toBeDefined();
     expect(screen.getByRole('link', { name: 'Accueil' })).toBeDefined();
     expect(screen.getByRole('contentinfo')).toBeDefined();
   });
