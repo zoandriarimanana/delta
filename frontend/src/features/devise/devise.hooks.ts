@@ -13,19 +13,26 @@ import type { Devise, TauxChange } from './devise.types';
 
 let enCache: TauxChange[] | null = null;
 let enCours: Promise<TauxChange[]> | null = null;
+// Incrémentée par `oublierTaux()` : une réponse partie avant l'oubli arrive
+// parfois après, et réécrivait alors des taux périmés — jusqu'à remettre à
+// zéro le champ qu'un administrateur venait de saisir (test intermittent du
+// 13 octobre 2026).
+let generation = 0;
 const abonnes = new Set<(taux: TauxChange[]) => void>();
 
 function charger(): Promise<TauxChange[]> {
   if (enCours === null) {
+    const lancement = generation;
     enCours = recupererTaux()
       .then((taux) => {
+        if (lancement !== generation) return taux;
         enCache = taux;
         abonnes.forEach((notifier) => notifier(taux));
         return taux;
       })
       .catch(() => {
         // Sans taux, les prix restent en Ariary ; on réessaiera plus tard.
-        enCours = null;
+        if (lancement === generation) enCours = null;
         return [];
       });
   }
@@ -34,6 +41,7 @@ function charger(): Promise<TauxChange[]> {
 
 /** Oublie les taux en cache — après un réglage administrateur, et en test. */
 export function oublierTaux(): void {
+  generation += 1;
   enCache = null;
   enCours = null;
 }
