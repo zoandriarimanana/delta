@@ -198,6 +198,8 @@ const fr = {
   moyensAcceptes: 'Moyens de paiement acceptés :',
   carteBancaire: 'Carte bancaire',
   payerMaintenant: 'Payer maintenant',
+  payerAvant: (heure: string) =>
+    `À payer avant ${heure} — au-delà, la commande est annulée.`,
   soitParCarte: (montant: string) => `soit ${montant} par carte bancaire`,
   fermerPaiement: 'Fermer le paiement',
   reglerCommande: (id: number) => `Régler la commande n° ${id}`,
@@ -378,6 +380,8 @@ export const TEXTES_COMMANDE: Textes<typeof fr> = {
     moyensAcceptes: 'Accepted payment methods:',
     carteBancaire: 'Bank card',
     payerMaintenant: 'Pay now',
+    payerAvant: (heure: string) =>
+      `Pay before ${heure} — after that, the order is cancelled.`,
     soitParCarte: (montant: string) => `i.e. ${montant} by bank card`,
     fermerPaiement: 'Close payment',
     reglerCommande: (id: number) => `Pay order no. ${id}`,

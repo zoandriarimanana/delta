@@ -22,6 +22,7 @@ import { OPERATEURS } from '@/features/paiement/paiement.service';
 import { useTextes } from '@/lib/langue';
 
 import { recupererCommande } from '../commande.api';
+import EcheancePaiement from './EcheancePaiement';
 import { TEXTES_COMMANDE } from '../commande.textes';
 import type { Commande } from '../commande.types';
 
@@ -49,6 +50,7 @@ export default function PaiementCommandeClient({ commande, surPaye }: Proprietes
           <div>
             <p className="font-semibold text-gris-700">{t.paiementEnAttente}</p>
             <p className="text-sm text-gris-600">{t.resteAPayer(enAriary)}</p>
+            <EcheancePaiement paiementAvant={commande.paiement_avant} />
             <p className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className="sr-only">{t.moyensAcceptes}</span>
               {etranger === null &&

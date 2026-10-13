@@ -19,8 +19,9 @@ import { Link, useParams } from 'react-router';
 import { Check, CheckCircle2, X } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
-import { formaterDate } from '@/features/commande/commande.service';
+import { formaterDate, formaterMontant } from '@/features/commande/commande.service';
 
+import EtatAcompte from '../components/EtatAcompte';
 import DetailCible from '../components/DetailCible';
 import {
   useActionsReservationAdministration,
@@ -124,6 +125,23 @@ export default function ReservationDetailAdministrationPage() {
               <dt className="text-sm text-gris-500">Personnes</dt>
               <dd className="text-gris-700">{reservation.nombre_personnes}</dd>
             </div>
+            {reservation.montant_total != null && (
+              <div>
+                <dt className="text-sm text-gris-500">Prix</dt>
+                <dd className="text-gris-700">
+                  {formaterMontant(reservation.montant_total)}
+                </dd>
+              </div>
+            )}
+            {reservation.montant_acompte != null && (
+              <div>
+                <dt className="text-sm text-gris-500">Acompte (30 %)</dt>
+                <dd className="text-gris-700">
+                  {formaterMontant(reservation.montant_acompte)} —{' '}
+                  <EtatAcompte reservation={reservation} />
+                </dd>
+              </div>
+            )}
             {reservation.avec_hebergement && (
               <div>
                 <dt className="text-sm text-gris-500">Hébergement</dt>

@@ -22,6 +22,7 @@ import FormulaireAvis from '@/features/avis/components/FormulaireAvis';
 import { formaterDate } from '@/features/commande/commande.service';
 import { useTextes } from '@/lib/langue';
 
+import PaiementAcompte from './PaiementAcompte';
 import { TEXTES_RESERVATION } from '../reservation.textes';
 import type { CibleResolue } from '../reservation.cibles';
 import {
@@ -39,6 +40,8 @@ interface Proprietes {
   cible: CibleResolue | undefined;
   maintenant: Date;
   surAnnulation: (idReservation: number) => Promise<string | null>;
+  /** Après un acompte payé : la liste se recharge pour montrer la confirmation. */
+  surAcomptePaye?: () => void;
 }
 
 export default function CarteReservationClient({
@@ -46,6 +49,7 @@ export default function CarteReservationClient({
   cible,
   maintenant,
   surAnnulation,
+  surAcomptePaye,
 }: Proprietes) {
   const t = useTextes(TEXTES_RESERVATION);
   const [confirmer, setConfirmer] = useState(false);
@@ -137,6 +141,10 @@ export default function CarteReservationClient({
             </li>
           )}
         </ul>
+
+        {/* Rien si aucun acompte n'est attendu : déjà payé, réservation de
+            table, ou antérieure à la règle (13 octobre 2026). */}
+        <PaiementAcompte reservation={reservation} surPaye={surAcomptePaye} />
 
         {erreur !== null && (
           <p role="alert" className="mt-3 text-sm text-danger">

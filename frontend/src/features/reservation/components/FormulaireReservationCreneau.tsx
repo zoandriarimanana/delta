@@ -19,6 +19,7 @@ import { Link } from 'react-router';
 import { useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import PaiementAcompte from './PaiementAcompte';
 import { TEXTES_RESERVATION } from '../reservation.textes';
 import { useValidationReservation } from '../reservation.hooks';
 import type { ReservationEnvoyee } from '../reservation.types';
@@ -102,13 +103,18 @@ export default function FormulaireReservationCreneau({
 
   if (reussite !== null) {
     return (
-      <p role="status" className="mt-3 text-sm text-succes">
-        {t.enregistree(reussite.nombre_personnes)}{' '}
-        <Link to="/reservations" className="underline">
-          {t.vosReservations}
-        </Link>
-        .
-      </p>
+      <>
+        <p role="status" className="mt-3 text-sm text-succes">
+          {t.enregistree(reussite.nombre_personnes)}{' '}
+          <Link to="/reservations" className="underline">
+            {t.vosReservations}
+          </Link>
+          .
+        </p>
+        {/* Salle, chambre ou formation : l'acompte se paie tout de suite
+          (13 octobre 2026). Rien pour une réservation qui n'en demande pas. */}
+        <PaiementAcompte reservation={reussite} ouvertParDefaut />
+      </>
     );
   }
 

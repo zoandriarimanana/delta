@@ -204,6 +204,7 @@ export default function MesReservationsPage() {
                   cible={cibles.get(cleCible(reservation))}
                   maintenant={maintenant}
                   surAnnulation={annuler}
+                  surAcomptePaye={() => void charger()}
                 />
               ))}
             </ul>

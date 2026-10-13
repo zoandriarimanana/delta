@@ -23,7 +23,9 @@ export interface Paiement {
   statut: StatutPaiement;
   reference_externe: string;
   date_paiement: string;
-  id_commande: number;
+  /** `null` pour l'acompte d'une réservation (13 octobre 2026). */
+  id_commande: number | null;
+  id_reservation?: number | null;
 }
 
 /**
@@ -43,8 +45,11 @@ export interface PaiementEnvoye {
 }
 
 /**
- * Commande à payer : celle d'un client connecté (par son identifiant), ou
- * celle d'un invité (par sa référence publique, sa seule clé).
+ * Ce qui est payé : la commande d'un client connecté (par son identifiant),
+ * celle d'un invité (par sa référence publique, sa seule clé), ou l'acompte
+ * d'une réservation (13 octobre 2026).
  */
 export type CiblePaiement =
-  { type: 'client'; idCommande: number } | { type: 'invite'; reference: string };
+  | { type: 'client'; idCommande: number }
+  | { type: 'invite'; reference: string }
+  | { type: 'reservation'; idReservation: number };

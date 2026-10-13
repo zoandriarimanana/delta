@@ -11,9 +11,14 @@ import { axiosClient } from '@/lib/axiosClient';
 import type { CiblePaiement, Paiement, PaiementEnvoye } from './paiement.types';
 
 function cheminInitiation(cible: CiblePaiement): string {
-  return cible.type === 'client'
-    ? `/commandes/${cible.idCommande}/paiements`
-    : `/commandes/invite/${cible.reference}/paiements`;
+  switch (cible.type) {
+    case 'client':
+      return `/commandes/${cible.idCommande}/paiements`;
+    case 'invite':
+      return `/commandes/invite/${cible.reference}/paiements`;
+    case 'reservation':
+      return `/reservations/${cible.idReservation}/paiements`;
+  }
 }
 
 export async function initierPaiement(
@@ -32,10 +37,12 @@ export async function simulerConfirmation(
   cible: CiblePaiement,
   idPaiement: number
 ): Promise<Paiement> {
+  // Un client connecté — commande ou acompte — passe par la même route ; un
+  // invité, sans jeton, par celle qui vérifie sa référence publique.
   const chemin =
-    cible.type === 'client'
-      ? `/paiements/${idPaiement}/simuler-confirmation`
-      : `/paiements/invite/${cible.reference}/${idPaiement}/simuler-confirmation`;
+    cible.type === 'invite'
+      ? `/paiements/invite/${cible.reference}/${idPaiement}/simuler-confirmation`
+      : `/paiements/${idPaiement}/simuler-confirmation`;
   const reponse = await axiosClient.post<Paiement>(chemin);
   return reponse.data;
 }

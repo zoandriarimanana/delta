@@ -43,6 +43,8 @@ const fr = {
   // Fin
   reussi: 'Paiement reçu — votre commande est confirmée.',
   merci: 'Merci ! Nous préparons votre commande.',
+  reussiAcompte: 'Acompte reçu — votre réservation est confirmée.',
+  merciAcompte: 'Merci ! Le solde se règle sur place.',
   echoue: 'Le paiement n’a pas abouti.',
   echoueDetail:
     'Aucun montant n’a été débité. Vérifiez le solde de votre compte, puis réessayez.',
@@ -89,6 +91,8 @@ export const TEXTES_PAIEMENT: Textes<typeof fr> = {
     simuler: 'Simulate the operator confirmation (development)',
     reussi: 'Payment received — your order is confirmed.',
     merci: 'Thank you! We are preparing your order.',
+    reussiAcompte: 'Deposit received — your booking is confirmed.',
+    merciAcompte: 'Thank you! The balance is paid on site.',
     echoue: 'The payment did not go through.',
     echoueDetail: 'No amount was debited. Check your balance, then try again.',
     reessayer: 'Try again',

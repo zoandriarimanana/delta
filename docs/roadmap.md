@@ -1982,12 +1982,25 @@ non payée annulée après **2 h**, réservation sans acompte annulée après
       par `scripts/expirer_impayes.py`. Délais réglables dans `Settings`.
       Les échéances sont exposées par l'API (`paiement_avant`,
       `acompte_avant`) : l'écran les affiche sans recalculer la règle.
-- [ ] **E.6 — Écrans** : étape de paiement de l'acompte juste après une
+- [x] **E.6 — Écrans** : étape de paiement de l'acompte juste après une
       réservation, bandeau « Acompte à payer avant … » dans « Mes
       réservations », échéance de paiement affichée pour une commande,
       montants et acompte dans l'administration des réservations.
-- [ ] **E.7 — Docs et guides** : `docs/mld.md`, `docs/architecture.md`,
+- [x] **E.7 — Docs et guides** : `docs/mld.md`, `docs/architecture.md`,
       guides client et personnel de l'assistant.
+      — Livré. Backend 1 548 tests et frontend 849 verts ; migration
+      `3a59b76aebef` rejouée montée / descente / montée sur base vierge.
+      Écrans : `PaiementAcompte` (module réservation, monté par les deux
+      formulaires et par « Mes réservations »), `EtatAcompte` dans
+      l'administration, `EcheancePaiement` sur l'étape de paiement et dans
+      « Mes commandes ». Le formulaire de paiement accepte une cible
+      « réservation ».
+      — **Incident de mise en place** : le script d'expiration, lancé pour
+      essai sur la base de développement, y a annulé 11 commandes de
+      démonstration en attente depuis plus de 2 h (comportement voulu,
+      exécution non voulue). Remises en l'état aussitôt, stock compris.
+      Leçon : ne jamais lancer une passe d'expiration sur la base de
+      développement sans accord — elle agit pour de vrai.
 
 **Travaux hors sprint : paiement mobile money à la validation, y compris sans
 compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.

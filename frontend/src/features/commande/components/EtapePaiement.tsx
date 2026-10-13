@@ -21,6 +21,7 @@ import FormulairePaiement from '@/features/paiement/components/FormulairePaiemen
 import type { CiblePaiement } from '@/features/paiement/paiement.types';
 import { useTextes } from '@/lib/langue';
 
+import EcheancePaiement from './EcheancePaiement';
 import { TEXTES_COMMANDE } from '../commande.textes';
 import type { Commande } from '../commande.types';
 
@@ -54,6 +55,7 @@ export default function EtapePaiement({
           {t.commandeNumeroEnregistree(commande.id_commande)}
         </h2>
         <p className="mt-1 text-sm text-gris-600">{t.plusQuUneEtape}</p>
+        <EcheancePaiement paiementAvant={commande.paiement_avant} />
         <p className="mt-3 flex items-baseline justify-between">
           <span className="text-sm font-medium text-gris-600">{t.totalAPayer}</span>
           <span className="text-right">

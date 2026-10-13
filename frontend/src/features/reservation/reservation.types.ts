@@ -28,6 +28,16 @@ export interface Reservation {
    * En sortie seulement : jamais soumis à la création.
    */
   id_reservation_hebergement: number | null;
+  /**
+   * Prix figé et acompte (13 octobre 2026), calculés par le serveur. `null`
+   * pour une table, et pour les réservations antérieures.
+   */
+  date_reservation?: string | null;
+  montant_total?: string | null;
+  montant_acompte?: string | null;
+  acompte_paye?: boolean;
+  /** Échéance de l'acompte ; `null` si aucun acompte n'est attendu. */
+  acompte_avant?: string | null;
 }
 
 /**

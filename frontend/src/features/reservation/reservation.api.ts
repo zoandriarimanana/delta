@@ -83,3 +83,10 @@ export async function annulerReservation(idReservation: number): Promise<Reserva
   );
   return reponse.data;
 }
+
+/** Une réservation du client connecté (`GET /reservations/{id}`) — sert à
+ * voir arriver la confirmation d'un acompte. */
+export async function obtenirReservation(idReservation: number): Promise<Reservation> {
+  const reponse = await axiosClient.get<Reservation>(`/reservations/${idReservation}`);
+  return reponse.data;
+}

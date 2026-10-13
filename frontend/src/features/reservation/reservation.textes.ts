@@ -32,6 +32,13 @@ const fr = {
   enregistree: (n: number) =>
     `Réservation enregistrée pour ${n} personne(s). Retrouvez-la dans`,
   vosReservations: 'vos réservations',
+  // Acompte (13 octobre 2026)
+  acompteAPayer: (montant: string) => `Acompte à payer : ${montant}`,
+  acompteDetail: (total: string) =>
+    `30 % du prix total (${total}) pour retenir votre réservation ; le solde se règle sur place.`,
+  acompteAvant: (date: string) =>
+    `À payer avant le ${date} — sans acompte, la réservation est annulée.`,
+  payerAcompte: 'Payer l’acompte',
   nombrePersonnes: 'Nombre de personnes',
   souhaiteHebergement: 'Je souhaite être hébergé pendant la formation',
   envoi: 'Envoi…',
@@ -102,6 +109,12 @@ export const TEXTES_RESERVATION: Textes<typeof fr> = {
     pourReserverSession: 'to book this session.',
     pourReserver: 'to book.',
     enregistree: (n: number) => `Booking recorded for ${n} people. Find it in`,
+    acompteAPayer: (montant: string) => `Deposit to pay: ${montant}`,
+    acompteDetail: (total: string) =>
+      `30% of the total price (${total}) to hold your booking; the balance is paid on site.`,
+    acompteAvant: (date: string) =>
+      `Pay before ${date} — without a deposit, the booking is cancelled.`,
+    payerAcompte: 'Pay the deposit',
     vosReservations: 'your bookings',
     nombrePersonnes: 'Number of people',
     souhaiteHebergement: 'I would like accommodation during the training',

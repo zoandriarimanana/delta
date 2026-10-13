@@ -88,6 +88,9 @@ export interface Commande {
   /** Archivage (13 octobre 2026) : seule l'administration lit des
    * commandes archivées. */
   supprime_le?: string | null;
+  /** Échéance du paiement (13 octobre 2026) : au-delà, la commande est
+   * annulée et son stock rendu. `null` si elle n'est pas concernée. */
+  paiement_avant?: string | null;
   /**
    * Devise de paiement choisie par le client, taux figé (Ariary par unité)
    * et montant à payer dans cette devise — tous trois fixés par le serveur à

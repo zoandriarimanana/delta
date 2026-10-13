@@ -29,6 +29,7 @@ import {
 import Badge from '@/components/ui/Badge';
 import Bouton from '@/components/ui/Bouton';
 
+import EtatAcompte from './EtatAcompte';
 import type { CibleResolue } from '../reservation.cibles';
 import {
   imageCible,
@@ -139,9 +140,12 @@ export default function LigneReservationAdministration({
       </td>
 
       <td className="px-3 py-3">
-        <Badge variante={varianteStatut(reservation.statut)}>
-          {libelleStatut(reservation.statut)}
-        </Badge>
+        <div className="flex flex-col items-start gap-1">
+          <Badge variante={varianteStatut(reservation.statut)}>
+            {libelleStatut(reservation.statut)}
+          </Badge>
+          <EtatAcompte reservation={reservation} />
+        </div>
       </td>
 
       <td className="px-3 py-3">

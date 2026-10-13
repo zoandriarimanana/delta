@@ -83,8 +83,12 @@ export default function FormulairePaiement({
     return (
       <div role="status" className="space-y-2 py-4 text-center">
         <CheckCircle2 size={48} aria-hidden className="mx-auto text-succes" />
-        <p className="text-lg font-semibold text-gris-700">{t.reussi}</p>
-        <p className="text-sm text-gris-500">{t.merci}</p>
+        <p className="text-lg font-semibold text-gris-700">
+          {cible.type === 'reservation' ? t.reussiAcompte : t.reussi}
+        </p>
+        <p className="text-sm text-gris-500">
+          {cible.type === 'reservation' ? t.merciAcompte : t.merci}
+        </p>
       </div>
     );
   }

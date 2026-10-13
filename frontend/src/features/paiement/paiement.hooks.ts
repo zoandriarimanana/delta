@@ -68,7 +68,7 @@ export function usePaiement(cible: CiblePaiement): EtatPaiement {
     // `cible` est un objet recréé à chaque rendu par l'appelant : on dépend de
     // ce qui l'identifie, pas de son identité.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [cible.type, cible.type === 'client' ? cible.idCommande : cible.reference]
+    [cleCible(cible)]
   );
 
   const simuler = useCallback(async (): Promise<void> => {
@@ -139,4 +139,16 @@ export function useAttenteConfirmation(
   }, [actif]);
 
   return { confirmee, expire };
+}
+
+/** Ce qui identifie une cible de paiement, pour les dépendances d'un hook. */
+function cleCible(cible: CiblePaiement): string {
+  switch (cible.type) {
+    case 'client':
+      return `client:${cible.idCommande}`;
+    case 'invite':
+      return `invite:${cible.reference}`;
+    case 'reservation':
+      return `reservation:${cible.idReservation}`;
+  }
 }
