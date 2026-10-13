@@ -7,7 +7,16 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, func, text
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Numeric,
+    String,
+    func,
+    text,
+)
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,6 +25,7 @@ from app.models.taux_change import Devise, type_devise
 
 if TYPE_CHECKING:
     from app.models.commande import Commande
+    from app.models.reservation import Reservation
 
 
 class MethodePaiement(StrEnum):
@@ -88,6 +98,19 @@ class Paiement(SoftDeleteMixin, Base):
             postgresql_where=text("statut = 'Reussi' AND supprime_le IS NULL"),
             sqlite_where=text("statut = 'Reussi' AND supprime_le IS NULL"),
         ),
+        # Même garantie pour l'acompte d'une réservation (13 octobre 2026).
+        Index(
+            "uq_paiement_reservation_reussi",
+            "id_reservation",
+            unique=True,
+            postgresql_where=text("statut = 'Reussi' AND supprime_le IS NULL"),
+            sqlite_where=text("statut = 'Reussi' AND supprime_le IS NULL"),
+        ),
+        # Un paiement règle une commande **ou** l'acompte d'une réservation.
+        CheckConstraint(
+            "(id_commande IS NOT NULL) <> (id_reservation IS NOT NULL)",
+            name="cible_paiement_unique",
+        ),
     )
 
     id_paiement: Mapped[int] = mapped_column(primary_key=True)
@@ -138,8 +161,16 @@ class Paiement(SoftDeleteMixin, Base):
     date_paiement: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    id_commande: Mapped[int] = mapped_column(
-        ForeignKey("commande.id_commande", ondelete="RESTRICT"), nullable=False
+    #: Commande réglée — ou `NULL` pour l'acompte d'une réservation
+    #: (13 octobre 2026). Exactement l'une des deux cibles est renseignée.
+    id_commande: Mapped[int | None] = mapped_column(
+        ForeignKey("commande.id_commande", ondelete="RESTRICT")
+    )
+    #: Réservation dont c'est l'acompte. `ON DELETE RESTRICT` : un paiement
+    #: est une preuve, on ne l'efface pas avec la réservation.
+    id_reservation: Mapped[int | None] = mapped_column(
+        ForeignKey("reservation.id_reservation", ondelete="RESTRICT")
     )
 
-    commande: Mapped[Commande] = relationship(back_populates="paiements")
+    commande: Mapped[Commande | None] = relationship(back_populates="paiements")
+    reservation: Mapped[Reservation | None] = relationship(back_populates="paiements")

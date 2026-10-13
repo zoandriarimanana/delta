@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import ConflitMetier, ReferenceInvalide
 from app.models.commande import Commande, StatutCommande
 from app.models.paiement import MethodePaiement, Paiement, StatutPaiement
+from app.models.reservation import Reservation, StatutReservation
 from app.models.taux_change import Devise
 from app.repositories.paiement_repository import PaiementRepository
 from app.schemas.paiement import PaiementCreate
@@ -26,7 +27,11 @@ MESSAGE_COMMANDE_ANNULEE = (
 MESSAGE_DEJA_PAYEE = "Cette commande a déjà été payée."
 MESSAGE_REFERENCE_INCONNUE = "Aucun paiement ne porte la référence {reference}."
 
-_CONTRAINTE_UNICITE_REUSSI = "uq_paiement_commande_reussi"
+_CONTRAINTES_UNICITE_REUSSI = {
+    "uq_paiement_commande_reussi",
+    "uq_paiement_reservation_reussi",
+}
+MESSAGE_ACOMPTE_DEJA_PAYE = "L'acompte de cette réservation a déjà été payé."
 
 
 def _viole_double_paiement(erreur: IntegrityError) -> bool:
@@ -38,7 +43,7 @@ def _viole_double_paiement(erreur: IntegrityError) -> bool:
     « déjà payée », y compris une clé étrangère cassée.
     """
     nom = getattr(getattr(erreur.orig, "diag", None), "constraint_name", None)
-    return nom == _CONTRAINTE_UNICITE_REUSSI
+    return nom in _CONTRAINTES_UNICITE_REUSSI
 
 
 class PaiementService:
@@ -111,6 +116,48 @@ class PaiementService:
         self.db.commit()
         return paiement
 
+    def initier_acompte(
+        self, reservation: Reservation, donnees: PaiementCreate
+    ) -> Paiement:
+        """Initie le paiement de l'**acompte** d'une réservation (13 octobre
+        2026), déjà vérifiée comme appartenant à l'appelant par le routeur.
+
+        Mêmes règles que `initier`, adaptées : **409** si la réservation
+        n'est plus en attente (annulée, ou déjà confirmée — par un acompte ou
+        par l'administration) ou si l'acompte est déjà payé ; **422** si elle
+        ne demande pas d'acompte (table, prix nul). Toujours en Ariary : les
+        tarifs le sont, et le mobile money n'opère qu'en Ariary.
+        """
+        if reservation.statut is not StatutReservation.EN_ATTENTE:
+            raise ConflitMetier(
+                f"Cette réservation est « {reservation.statut.value} » : "
+                "elle n'attend plus d'acompte."
+            )
+        if reservation.montant_acompte is None:
+            raise ReferenceInvalide("Cette réservation ne demande pas d'acompte.")
+        if self.paiements.existe_reussi_pour_reservation(reservation.id_reservation):
+            raise ConflitMetier(MESSAGE_ACOMPTE_DEJA_PAYE)
+
+        resultat = self.passerelle.initier(
+            reservation.montant_acompte,
+            donnees.methode,
+            donnees.fournisseur,
+            Devise.MGA,
+            donnees.numero_mobile_money,
+        )
+        paiement = Paiement(
+            montant=reservation.montant_acompte,
+            devise=Devise.MGA,
+            methode=donnees.methode,
+            fournisseur=donnees.fournisseur,
+            statut=resultat.statut,
+            reference_externe=resultat.reference_externe,
+            id_reservation=reservation.id_reservation,
+        )
+        self.db.add(paiement)
+        self.db.commit()
+        return paiement
+
     def confirmer(self, reference_externe: str, statut: StatutPaiement) -> Paiement:
         """Applique la confirmation reçue par webhook — la **signature** est
         vérifiée par l'appelant (le routeur) avant tout appel à cette
@@ -150,7 +197,10 @@ class PaiementService:
                 # c'est-à-dire écrire la ligne — et donc faire fuir cette
                 # même `IntegrityError` hors du filet si l'accès a lieu
                 # avant qu'il ne soit posé.
-                self._propager_sur_la_commande(paiement)
+                if paiement.id_reservation is not None:
+                    self._propager_sur_la_reservation(paiement)
+                else:
+                    self._propager_sur_la_commande(paiement)
             self.db.commit()
         except IntegrityError as erreur:
             self.db.rollback()
@@ -170,3 +220,23 @@ class PaiementService:
         commande = paiement.commande
         if commande.statut == StatutCommande.EN_ATTENTE:
             commande.statut = StatutCommande.CONFIRMEE
+
+    def _propager_sur_la_reservation(self, paiement: Paiement) -> None:
+        """Un acompte réussi confirme la réservation, **et sa chambre liée**
+        pour une formation — la chambre n'a pas d'acompte propre, elle suit
+        sa formation (13 octobre 2026). Même sens unique que pour une
+        commande : seul `En_attente` avance, rien n'est ramené en arrière.
+        """
+        reservation = paiement.reservation
+        if (
+            reservation is None
+            or reservation.statut is not StatutReservation.EN_ATTENTE
+        ):
+            return
+        reservation.statut = StatutReservation.CONFIRMEE
+        hebergement = reservation.hebergement
+        if (
+            hebergement is not None
+            and hebergement.statut is StatutReservation.EN_ATTENTE
+        ):
+            hebergement.statut = StatutReservation.CONFIRMEE

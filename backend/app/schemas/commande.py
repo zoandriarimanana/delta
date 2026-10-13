@@ -118,6 +118,9 @@ class CommandeRead(BaseModel):
     #: Archivage (13 octobre 2026) : seule l'administration lit des commandes
     #: archivées, pour les restaurer. Toujours `None` pour un client.
     supprime_le: datetime | None = None
+    #: Échéance du paiement (13 octobre 2026) : la commande est annulée
+    #: au-delà. `None` si elle n'est pas concernée.
+    paiement_avant: datetime | None = None
 
 
 class CommandeAnnulationAdministration(BaseModel):

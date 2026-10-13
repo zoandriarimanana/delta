@@ -8,11 +8,15 @@ Cette traduction est **globale** et non répétée dans chaque router : le mappi
 service lève `ConflitMetier` sans jamais savoir que cela vaudra un 409.
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
+from app.core import expiration_periodique
 from app.core.config import settings
 from app.core.csrf import middleware_csrf
 from app.core.exceptions import (
@@ -53,7 +57,17 @@ from app.routers import (
     taux_change_router,
 )
 
-app = FastAPI(title=settings.PROJECT_NAME)
+
+@asynccontextmanager
+async def _cycle_de_vie(_: FastAPI) -> AsyncIterator[None]:
+    """Démarre l'expiration périodique des impayés, l'arrête à l'extinction
+    (13 octobre 2026, cf. `app/core/expiration_periodique.py`)."""
+    tache = expiration_periodique.demarrer()
+    yield
+    await expiration_periodique.arreter(tache)
+
+
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=_cycle_de_vie)
 
 # Requis par `slowapi` : c'est ici qu'il va chercher le limiteur pour
 # appliquer les décorateurs `@limiter.limit(...)` posés sur les routers.

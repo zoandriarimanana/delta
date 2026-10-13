@@ -1,6 +1,7 @@
 """Schemas Pydantic de l'entité RESERVATION."""
 
 from datetime import datetime
+from decimal import Decimal
 from typing import ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -129,6 +130,13 @@ class ReservationRead(BaseModel):
     #: n'a pas été honoré — aucune chambre n'était libre. En **sortie
     #: seulement** : le lien est posé par le serveur, jamais soumis.
     id_reservation_hebergement: int | None = None
+    #: Acompte et prix (13 octobre 2026), calculés et figés par le serveur.
+    date_reservation: datetime | None = None
+    montant_total: Decimal | None = None
+    montant_acompte: Decimal | None = None
+    acompte_paye: bool = False
+    #: Échéance de l'acompte, `None` si la réservation n'est pas concernée.
+    acompte_avant: datetime | None = None
 
 
 class ReservationChangementStatut(BaseModel):

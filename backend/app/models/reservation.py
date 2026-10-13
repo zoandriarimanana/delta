@@ -2,15 +2,25 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
+from decimal import Decimal
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, literal_column, text
+from sqlalchemy import (
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Numeric,
+    func,
+    literal_column,
+    text,
+)
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.config import settings
 from app.core.database import Base, SoftDeleteMixin
 
 if TYPE_CHECKING:
@@ -18,6 +28,7 @@ if TYPE_CHECKING:
     from app.models.client import Client
     from app.models.commande import Commande
     from app.models.logement import Logement
+    from app.models.paiement import Paiement
     from app.models.salle import Salle
     from app.models.session_formation import SessionFormation
 
@@ -121,6 +132,12 @@ class Reservation(SoftDeleteMixin, Base):
             " OR id_reservation_hebergement <> id_reservation",
             name="hebergement_distinct_de_la_formation",
         ),
+        # Un acompte suppose un prix, et ne le dépasse pas (13 octobre 2026).
+        CheckConstraint(
+            "montant_acompte IS NULL OR (montant_total IS NOT NULL"
+            " AND montant_acompte >= 0 AND montant_acompte <= montant_total)",
+            name="acompte_coherent",
+        ),
     )
 
     id_reservation: Mapped[int] = mapped_column(primary_key=True)
@@ -149,6 +166,22 @@ class Reservation(SoftDeleteMixin, Base):
         ),
         nullable=False,
     )
+    #: Moment où la réservation a été faite — c'est lui qui fait courir le
+    #: délai de l'acompte, et qui trie l'administration. Posé par la base.
+    #: Ajouté le 13 octobre 2026 : `date_debut` dit quand a lieu la
+    #: prestation, rien ne disait quand elle avait été réservée.
+    date_reservation: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    #: Prix de la prestation, calculé par le serveur et **figé** à la
+    #: création, comme `COMMANDE.montant_total`. `NULL` pour une table, qui
+    #: n'a pas de prix, et pour les réservations antérieures.
+    montant_total: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    #: Acompte exigé pour retenir la réservation (30 % du prix). `NULL` :
+    #: aucun acompte n'est demandé — table, prix nul, chambre réservée avec
+    #: une formation (couverte par l'acompte de celle-ci), ou réservation
+    #: antérieure à la règle.
+    montant_acompte: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     avec_hebergement: Mapped[bool] = mapped_column(
         nullable=False, server_default="false"
     )
@@ -200,3 +233,30 @@ class Reservation(SoftDeleteMixin, Base):
     )
     commandes: Mapped[list[Commande]] = relationship(back_populates="reservation")
     avis: Mapped[list[Avis]] = relationship(back_populates="reservation")
+    paiements: Mapped[list[Paiement]] = relationship(back_populates="reservation")
+
+    @property
+    def acompte_paye(self) -> bool:
+        """Un paiement d'acompte a réussi (13 octobre 2026)."""
+        return any(
+            paiement.statut == "Reussi" and paiement.supprime_le is None
+            for paiement in self.paiements
+        )
+
+    @property
+    def acompte_avant(self) -> datetime | None:
+        """Moment où la réservation sera annulée faute d'acompte, ou `None`
+        si elle n'est pas concernée : déjà confirmée, sans acompte demandé,
+        ou acompte payé. Règle appliquée par `ExpirationService`, exposée ici
+        pour que l'écran affiche l'échéance sans la recalculer.
+        """
+        if (
+            self.statut is not StatutReservation.EN_ATTENTE
+            or self.montant_acompte is None
+            or self.acompte_paye
+            or self.date_reservation is None  # pas encore relue après insertion
+        ):
+            return None
+        return self.date_reservation + timedelta(
+            hours=settings.RESERVATION_DELAI_ACOMPTE_HEURES
+        )

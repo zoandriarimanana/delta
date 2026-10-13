@@ -22,12 +22,14 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import ClientConnecte, PersonnelAdministrateur
+from app.schemas.paiement import PaiementCreate, PaiementRead
 from app.schemas.reservation import (
     ReservationAnnulation,
     ReservationChangementStatut,
     ReservationCreate,
     ReservationRead,
 )
+from app.services.paiement_service import PaiementService
 from app.services.reservation_service import ReservationService
 
 router = APIRouter(prefix="/reservations", tags=["reservation"])
@@ -135,6 +137,31 @@ def obtenir(
     return ReservationRead.model_validate(
         ReservationService(db).obtenir_du_client(id_reservation, client)
     )
+
+
+@router.post(
+    "/{id_reservation}/paiements",
+    response_model=PaiementRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Payer l'acompte d'une de ses réservations",
+)
+def payer_acompte(
+    id_reservation: int,
+    donnees: PaiementCreate,
+    client: ClientConnecte,
+    db: SessionBase,
+) -> PaiementRead:
+    """Initie le paiement de l'acompte (13 octobre 2026) — mêmes moyens et
+    même simulation que le paiement d'une commande. Un acompte réussi
+    confirme la réservation.
+
+    **404** sur la réservation d'un autre client ; **409** si elle n'attend
+    plus d'acompte ou s'il est déjà payé ; **422** si elle n'en demande pas,
+    ou pour un numéro mobile money invalide.
+    """
+    reservation = ReservationService(db).obtenir_du_client(id_reservation, client)
+    paiement = PaiementService(db).initier_acompte(reservation, donnees)
+    return PaiementRead.model_validate(paiement)
 
 
 @router.put(

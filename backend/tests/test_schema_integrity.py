@@ -75,6 +75,10 @@ CHECKS_ATTENDUS = [
     ("produit", "ck_produit_vendu_par_personne_a_un_minimum"),
     ("commande", "ck_commande_type_commande"),
     ("commande", "ck_commande_statut_commande"),
+    # Un paiement règle une commande **ou** l'acompte d'une réservation, et un
+    # acompte ne dépasse jamais le prix (13 octobre 2026).
+    ("paiement", "ck_paiement_cible_paiement_unique"),
+    ("reservation", "ck_reservation_acompte_coherent"),
 ]
 
 # Cardinalités (1,1) du schéma conceptuel : elles restent des contraintes
@@ -121,7 +125,6 @@ FK_RESTRICT_ATTENDUES = [
     ("formation", "id_domaine"),
     ("ligne_commande", "id_produit"),
     ("livraison", "id_commande"),
-    ("paiement", "id_commande"),
     ("produit", "id_categorie"),
     ("reservation", "id_client"),
     ("session_formation", "id_formation"),
@@ -282,3 +285,15 @@ def test_aucune_fk_not_null_sans_ondelete() -> None:
         f"{sans_politique} — choisir RESTRICT ou CASCADE et l'ajouter aux "
         "listes de ce fichier."
     )
+
+
+@pytest.mark.parametrize("colonne", ["id_commande", "id_reservation"])
+def test_les_deux_cibles_d_un_paiement_sont_protegees_en_restrict(
+    colonne: str,
+) -> None:
+    """13 octobre 2026 : `PAIEMENT.id_commande` devient nullable — un acompte
+    de réservation n'a pas de commande. Les deux cibles restent en RESTRICT :
+    un paiement est une preuve, il ne disparaît pas avec ce qu'il règle. Le
+    `CHECK` `cible_paiement_unique` impose qu'exactement l'une soit posée."""
+    assert Base.metadata.tables["paiement"].columns[colonne].nullable
+    assert _ondelete("paiement", colonne) == "RESTRICT"

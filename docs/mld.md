@@ -442,7 +442,7 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 COMMANDE(id_commande, date_commande, reference_publique, adresse_livraison, nom_invite, contact_invite, type_commande, statut, montant_total, frais_livraison, devise, taux_change, montant_total_devise, #id_client, #id_reservation, #id_personnel)
 LIGNE_COMMANDE(id_ligne, quantite, prix_unitaire_applique, #id_commande, #id_produit)
 DEMANDE_PERSONNALISATION(id_personnalisation, description_demande, ingredients_specifiques, supplement_prix, #id_ligne, #id_produit_base)
-RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_personnes, statut, avec_hebergement, #id_client, #id_session, #id_salle, #id_logement, #id_reservation_hebergement)
+RESERVATION(id_reservation, type_reservation, date_debut, date_fin, date_reservation, nombre_personnes, statut, avec_hebergement, montant_total, montant_acompte, #id_client, #id_session, #id_salle, #id_logement, #id_reservation_hebergement)
 ```
 
 - `COMMANDE.date_commande` est un `TIMESTAMPTZ NOT NULL DEFAULT now()`, posé par
@@ -583,6 +583,43 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   Une commande **invitée** ne peut pas en porter : `RESERVATION.#id_client` est
   NOT NULL, réserver exige un compte, et un invité n'a pas de propriétaire à
   comparer.
+- **Impayés : expiration et acompte** (13 octobre 2026, décisions de
+  l'utilisateur pour limiter les abus — faux comptes qui bloquent stock et
+  créneaux —, préférées à des frais d'inscription) :
+
+  - une commande `En_attente` passée par un client est **annulée après
+    2 h** sans paiement (`COMMANDE_DELAI_PAIEMENT_MINUTES`) ; une commande
+    saisie par le personnel (`#id_personnel`) n'expire jamais, elle se règle
+    au comptoir ;
+  - **une commande annulée rend son stock**, par l'expiration comme par
+    l'administration — symétrique du décrément, comme les places d'une
+    session. Jusqu'ici, annuler laissait le stock bloqué ;
+  - `RESERVATION.montant_total` est le prix de la prestation, **calculé par
+    le serveur et figé** à la création : salle au moins cher entre heures
+    entamées × tarif horaire et jours entamés × tarif journalier, chambre
+    aux nuits entamées × tarif (une au moins), formation au prix × personnes.
+    `NULL` pour une table et pour les réservations antérieures ;
+  - `RESERVATION.montant_acompte` vaut **30 %** du prix
+    (`ACOMPTE_POURCENTAGE`), arrondi au centime. `NULL` : aucun acompte —
+    table, prix nul, chambre réservée avec une formation (elle suit sa
+    formation), réservation antérieure.
+    `CHECK (montant_acompte IS NULL OR (montant_total IS NOT NULL AND
+    montant_acompte >= 0 AND montant_acompte <= montant_total))` ;
+  - un acompte payé (`PAIEMENT` sur `#id_reservation`, statut `Reussi`)
+    **confirme** la réservation et sa chambre liée ; sans acompte, la
+    réservation est **annulée après 24 h**
+    (`RESERVATION_DELAI_ACOMPTE_HEURES`), places rendues et chambre liée
+    annulée ;
+  - `RESERVATION.date_reservation` (`DEFAULT now()`, posé par la base) fait
+    courir ce délai : `date_debut` dit quand a lieu la prestation, rien ne
+    disait quand elle avait été réservée ;
+  - un paiement initié depuis moins de 30 min épargne l'expiration : le
+    client est peut-être en train de valider sur son téléphone.
+
+  L'API expose les échéances (`COMMANDE.paiement_avant`,
+  `RESERVATION.acompte_avant`, calculées, non stockées) pour que l'écran
+  les affiche sans recalculer la règle.
+
 - `RESERVATION.type_reservation` ∈ {Formation, Salle, Logement, Table}.
 
 - `RESERVATION.statut` ∈ {En_attente, Confirmee, Honoree, Annulee}. Domaine
@@ -887,12 +924,24 @@ Côté `COMMANDE` (section Transactions) :
 ## Paiement
 
 ```
-PAIEMENT(id_paiement, montant, devise, methode, fournisseur, statut, reference_externe, date_paiement, #id_commande)
+PAIEMENT(id_paiement, montant, devise, methode, fournisseur, statut, reference_externe, date_paiement, #id_commande, #id_reservation)
 ```
 
 Absente du dictionnaire de données d'origine et de tout sprint jusqu'ici : le
 Sprint 9 introduit la première entité entièrement nouvelle depuis le schéma
 initial, pas la correction d'une omission comme `AVIS` ou `COMMANDE.date_commande`.
+
+- **Un paiement règle une commande ou l'acompte d'une réservation**
+  (13 octobre 2026) : `#id_commande` est devenu nullable, `#id_reservation`
+  s'y ajoute, tous deux en `ON DELETE RESTRICT`.
+
+  ```sql
+  CHECK ((id_commande IS NOT NULL) <> (id_reservation IS NOT NULL))
+  ```
+
+  Un index unique partiel `uq_paiement_reservation_reussi`, pendant de
+  `uq_paiement_commande_reussi`, interdit deux acomptes réussis pour une même
+  réservation. L'acompte est toujours en Ariary, comme les tarifs.
 
 - **Plusieurs paiements sont possibles pour une même commande** :
   `#id_commande` n'est **pas** une clé étrangère unique. Décision actée en

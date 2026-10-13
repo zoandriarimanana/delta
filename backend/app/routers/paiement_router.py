@@ -117,7 +117,9 @@ def simuler_confirmation(
 
     service = PaiementService(db)
     paiement = service.paiements.get_by_id(id_paiement)
-    if paiement is None or paiement.commande.id_client != client.id_client:
+    # La cible est une commande, ou une réservation pour un acompte.
+    cible = None if paiement is None else (paiement.commande or paiement.reservation)
+    if cible is None or cible.id_client != client.id_client:
         raise RessourceIntrouvable(MESSAGE_PAIEMENT_INTROUVABLE)
     return _rejouer_confirmation_simulee(service, paiement)
 

@@ -739,6 +739,34 @@ uniforme de la connexion. Il n'y a ici rien à protéger : dire qu'une adresse e
 déjà prise est la raison même du refus. Et le 409 sur `numero_id_fiscal` est
 distinct de celui sur l'e-mail — les deux ne se corrigent pas de la même façon.
 
+### Impayés : expiration et acompte
+
+Une commande non payée retient du stock, une réservation retient un créneau
+ou des places : un faux client pouvait tout bloquer sans jamais payer
+(13 octobre 2026, décisions de l'utilisateur détaillées dans `docs/mld.md`).
+
+**`ExpirationService` décide, chaque entité annule à sa façon.** Le
+service ne fait que trouver les commandes et réservations qui ont dépassé
+leur délai ; l'annulation passe par `CommandeService.annuler` (qui rend le
+stock) et `ReservationService.changer_statut` (qui rend les places et
+annule la chambre liée). Il orchestre deux entités, d'où un fichier à part.
+
+**Une tâche du serveur l'applique toutes les 5 minutes**
+(`core/expiration_periodique.py`, démarrée par le cycle de vie de
+`main.py`), dans un fil à part pour ne pas bloquer les requêtes, et sans
+jamais lever. `scripts/expirer_impayes.py` fait la même passe à la demande.
+Les tests coupent la tâche (`EXPIRATION_AUTOMATIQUE`) et appellent le
+service directement. Plusieurs instances du serveur feraient chacune leur
+passe : sans danger — l'annulation refuse ce qui l'est déjà —, seulement
+redondant.
+
+**Le prix d'une réservation est calculé côté serveur**
+(`services/prix_reservation.py`, fonctions pures) et figé à la création,
+comme le total d'une commande : jamais accepté de la requête. L'acompte se
+paie par le même parcours que le paiement d'une commande
+(`POST /reservations/{id}/paiements`), et sa confirmation suit le même sens
+unique que `PAIEMENT → COMMANDE`.
+
 ### La livraison naît avec la commande
 
 `LIVRAISON` est créée dans la transaction de `POST /commandes`, comme les lignes

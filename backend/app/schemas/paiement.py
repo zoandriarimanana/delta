@@ -139,4 +139,6 @@ class PaiementRead(BaseModel):
     statut: StatutPaiement
     reference_externe: str
     date_paiement: datetime
-    id_commande: int
+    #: Commande réglée, ou `None` pour l'acompte d'une réservation.
+    id_commande: int | None = None
+    id_reservation: int | None = None

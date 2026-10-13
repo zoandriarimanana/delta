@@ -1945,6 +1945,50 @@ n'étaient posés par personne.
       actives seulement ; bandeau et « Restaurer » sur la fiche d'une
       commande archivée. Guide du personnel complété.
 
+**Travaux hors sprint : expiration des impayés et acompte des réservations
+(demande du 13 octobre 2026).** Hors roadmap, proposé à l'utilisateur pour
+limiter les abus (faux comptes qui bloquent stock et créneaux), qui l'a
+préféré à des frais d'inscription. Décisions de l'utilisateur : commande
+non payée annulée après **2 h**, réservation sans acompte annulée après
+**24 h**, acompte de **30 %** pour les **salles, chambres et formations**
+(les tables restent sans acompte). Plan écrit avant le code :
+
+- [x] **E.1 — Stock rendu à l'annulation** : une commande annulée (par
+      l'administration ou par expiration) rend le stock qu'elle retenait —
+      le symétrique du décrément, comme les places d'une session. Jusqu'ici,
+      annuler laissait le stock bloqué.
+- [x] **E.2 — Schéma** : `RESERVATION.date_reservation` (horodatage de
+      création, `DEFAULT now()`), `RESERVATION.montant_total` et
+      `RESERVATION.montant_acompte` (figés à la création, jamais acceptés de
+      la requête) ; `PAIEMENT.#id_reservation`, `PAIEMENT.#id_commande`
+      devenu nullable, `CHECK` : exactement l'un des deux ; index unique
+      partiel « un seul paiement réussi par réservation ». Migration +
+      `docs/mld.md`.
+- [x] **E.3 — Prix d'une réservation**, calculé par le serveur : salle au
+      moins cher entre heures × tarif horaire et jours × tarif journalier ;
+      chambre au nombre de nuits × tarif ; formation au prix × personnes,
+      plus la chambre attribuée s'il y en a une. Acompte = 30 % (arrondi au
+      centime) ; pas d'acompte pour une table ni pour un prix nul.
+- [x] **E.4 — Payer l'acompte** : `POST /reservations/{id}/paiements`
+      (client propriétaire, Ariary, mobile money ou carte) ; un acompte
+      réussi confirme la réservation (et sa chambre liée), même patron que
+      `PAIEMENT → COMMANDE`.
+- [x] **E.5 — Expiration automatique** : `ExpirationService` (orchestration
+      commande + réservation) annule les commandes `En_attente` de plus de
+      2 h sans paiement réussi — sauf celles saisies par le personnel — et
+      les réservations `En_attente` à acompte de plus de 24 h. Épargne un
+      paiement initié depuis moins de 30 min (le client est en train de
+      payer). Exécutée toutes les 5 minutes par une tâche du serveur, et
+      par `scripts/expirer_impayes.py`. Délais réglables dans `Settings`.
+      Les échéances sont exposées par l'API (`paiement_avant`,
+      `acompte_avant`) : l'écran les affiche sans recalculer la règle.
+- [ ] **E.6 — Écrans** : étape de paiement de l'acompte juste après une
+      réservation, bandeau « Acompte à payer avant … » dans « Mes
+      réservations », échéance de paiement affichée pour une commande,
+      montants et acompte dans l'administration des réservations.
+- [ ] **E.7 — Docs et guides** : `docs/mld.md`, `docs/architecture.md`,
+      guides client et personnel de l'assistant.
+
 **Travaux hors sprint : paiement mobile money à la validation, y compris sans
 compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.
 Jusqu'ici, seul un client connecté pouvait payer, et seulement depuis « Mes

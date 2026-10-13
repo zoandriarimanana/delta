@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
 from typing import TYPE_CHECKING
@@ -21,6 +21,7 @@ from sqlalchemy import (
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.config import settings
 from app.core.database import Base, SoftDeleteMixin
 from app.models.taux_change import Devise, type_devise
 
@@ -226,3 +227,21 @@ class Commande(SoftDeleteMixin, Base):
         back_populates="commande", passive_deletes=True
     )
     paiements: Mapped[list[Paiement]] = relationship(back_populates="commande")
+
+    @property
+    def paiement_avant(self) -> datetime | None:
+        """Moment où la commande sera annulée faute de paiement, ou `None`
+        si elle n'est pas concernée (13 octobre 2026, cf. `docs/mld.md`).
+
+        Seule une commande `En_attente` passée par un client expire ; une
+        commande saisie par le personnel (`#id_personnel`) se règle au
+        comptoir et n'expire jamais. Règle appliquée par `ExpirationService`,
+        exposée ici pour que l'écran affiche l'échéance sans la recalculer.
+        """
+        if self.statut is not StatutCommande.EN_ATTENTE or self.id_personnel:
+            return None
+        if self.date_commande is None:  # pas encore relue après insertion
+            return None
+        return self.date_commande + timedelta(
+            minutes=settings.COMMANDE_DELAI_PAIEMENT_MINUTES
+        )

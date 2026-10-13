@@ -1178,3 +1178,23 @@ def test_l_archivage_est_refuse_a_un_salarie_sans_droit(
     )
 
     assert reponse.status_code == 403
+
+
+def test_annuler_une_commande_rend_son_stock(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    """13 octobre 2026 : annuler laissait le stock bloqué pour toujours."""
+    db.refresh(eclair)
+    avant = eclair.stock_disponible
+    commande = _sa_commande(client_http, entete, eclair)
+    db.refresh(eclair)
+    assert eclair.stock_disponible == avant - 2
+
+    client_http.put(
+        f"{COMMANDES}/administration/{commande['id_commande']}/statut",
+        json={"statut": "Annulee"},
+        headers=_entete_admin(db),
+    )
+
+    db.refresh(eclair)
+    assert eclair.stock_disponible == avant

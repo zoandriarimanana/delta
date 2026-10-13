@@ -542,8 +542,27 @@ class CommandeService:
             )
 
         commande.statut = StatutCommande.ANNULEE
+        self._restituer_stock(commande)
         self.db.commit()
         return commande
+
+    def _restituer_stock(self, commande: Commande) -> None:
+        """Rend au stock ce que la commande retenait, **sans commiter** — la
+        transaction appartient à l'annulation qui l'appelle.
+
+        Symétrique de `_reserver_le_stock` (13 octobre 2026) : annuler
+        laissait jusqu'ici le stock bloqué pour toujours. Même règle de
+        comptage qu'à la commande : un produit vendu à la personne retient un
+        produit entier, quelle que soit la quantité (le nombre de personnes).
+        L'appelant garantit qu'une commande n'est annulée qu'une fois : la
+        restitution n'a lieu qu'au passage vers `Annulee`.
+        """
+        for ligne in self.lignes.lister_par_commande(commande.id_commande):
+            produit = self.produits.get_by_id(ligne.id_produit, inclure_supprimes=True)
+            if produit is None:
+                continue
+            quantite = 1 if produit.vendu_par_personne else ligne.quantite
+            self.produits.incrementer_stock(produit.id_produit, quantite)
 
     def avancer(self, id_commande: int) -> Commande:
         """Fait passer une commande à l'étape suivante, décision d'un

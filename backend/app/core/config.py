@@ -63,6 +63,21 @@ class Settings(BaseSettings):
     # « Photos du catalogue sur disque » dans `docs/roadmap.md`.
     UPLOAD_DIR: str = "static/upload"
 
+    # --- Impayés et acomptes (13 octobre 2026, cf. docs/mld.md) ---
+    # Une commande non payée est annulée, son stock rendu, après ce délai.
+    COMMANDE_DELAI_PAIEMENT_MINUTES: int = 120
+    # Une réservation dont l'acompte n'est pas payé est annulée après ce délai.
+    RESERVATION_DELAI_ACOMPTE_HEURES: int = 24
+    # Part du prix exigée pour retenir une salle, une chambre ou une formation.
+    ACOMPTE_POURCENTAGE: int = 30
+    # Un paiement initié depuis moins longtemps protège de l'expiration : le
+    # client est peut-être en train de valider sur son téléphone.
+    EXPIRATION_GRACE_PAIEMENT_MINUTES: int = 30
+    # Tâche périodique du serveur qui applique l'expiration. Les tests la
+    # coupent ; `scripts/expirer_impayes.py` l'applique à la demande.
+    EXPIRATION_AUTOMATIQUE: bool = True
+    EXPIRATION_INTERVALLE_SECONDES: int = 300
+
     # --- Environnement d'exécution ---
     # Défaut fermé (`production`) : un déploiement qui omet cette variable
     # reste protégé plutôt que de se retrouver exposé par omission. Seul

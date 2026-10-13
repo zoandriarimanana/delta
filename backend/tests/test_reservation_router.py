@@ -696,3 +696,132 @@ def test_administration_liste_les_plus_recentes_d_abord(
 
     assert ordre == sorted(ordre, reverse=True)
     assert ordre.index(ids[1]) < ordre.index(ids[0])
+
+
+# --- Prix figé et acompte (13 octobre 2026) ------------------------------
+
+PAIEMENTS = f"{settings.API_V1_PREFIX}/paiements"
+MVOLA = {
+    "methode": "Mobile_money",
+    "fournisseur": "Mvola",
+    "numero_mobile_money": "034 12 345 67",
+}
+
+
+def _reserver(client_http: TestClient, entete: dict[str, str], corps: dict) -> dict:
+    reponse = client_http.post(RESERVATIONS, json=corps, headers=entete)
+    assert reponse.status_code == 201, reponse.text
+    return reponse.json()
+
+
+def test_une_formation_porte_son_prix_et_son_acompte(
+    client_http: TestClient, db: Session, session_ouverte: SessionFormation
+) -> None:
+    """850 000 Ar par personne, 2 personnes : 1 700 000 Ar, acompte 30 %."""
+    entete = _entete(_compte(db, "prix"))
+
+    reservation = _reserver(client_http, entete, _corps(session_ouverte.id_session, 2))
+
+    assert Decimal(reservation["montant_total"]) == Decimal("1700000.00")
+    assert Decimal(reservation["montant_acompte"]) == Decimal("510000.00")
+    assert reservation["acompte_paye"] is False
+    assert reservation["acompte_avant"] is not None
+
+
+def test_le_prix_ne_vient_jamais_de_la_requete(
+    client_http: TestClient, db: Session, session_ouverte: SessionFormation
+) -> None:
+    entete = _entete(_compte(db, "triche"))
+
+    reponse = client_http.post(
+        RESERVATIONS,
+        json=_corps(session_ouverte.id_session, montant_total="1", montant_acompte="0"),
+        headers=entete,
+    )
+
+    assert reponse.status_code in (201, 422)
+    if reponse.status_code == 201:
+        assert Decimal(reponse.json()["montant_total"]) == Decimal("850000.00")
+
+
+def test_une_table_ne_demande_ni_prix_ni_acompte(
+    client_http: TestClient, db: Session
+) -> None:
+    reservation = _reserver(client_http, _entete(_compte(db, "table")), _corps_table())
+
+    assert reservation["montant_total"] is None
+    assert reservation["montant_acompte"] is None
+    assert reservation["acompte_avant"] is None
+
+
+def test_payer_l_acompte_confirme_la_reservation(
+    client_http: TestClient,
+    db: Session,
+    session_ouverte: SessionFormation,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "ENVIRONMENT", "developpement")
+    entete = _entete(_compte(db, "acompte"))
+    reservation = _reserver(client_http, entete, _corps(session_ouverte.id_session))
+
+    paiement = client_http.post(
+        f"{RESERVATIONS}/{reservation['id_reservation']}/paiements",
+        json=MVOLA,
+        headers=entete,
+    )
+    assert paiement.status_code == 201
+    assert paiement.json()["id_reservation"] == reservation["id_reservation"]
+    assert paiement.json()["id_commande"] is None
+    assert Decimal(paiement.json()["montant"]) == Decimal("255000.00")
+
+    confirmation = client_http.post(
+        f"{PAIEMENTS}/{paiement.json()['id_paiement']}/simuler-confirmation",
+        headers=entete,
+    )
+    assert confirmation.json()["statut"] == "Reussi"
+
+    lue = client_http.get(
+        f"{RESERVATIONS}/{reservation['id_reservation']}", headers=entete
+    ).json()
+    assert lue["statut"] == "Confirmee"
+    assert lue["acompte_paye"] is True
+    assert lue["acompte_avant"] is None
+
+    # Plus rien à payer.
+    second = client_http.post(
+        f"{RESERVATIONS}/{reservation['id_reservation']}/paiements",
+        json=MVOLA,
+        headers=entete,
+    )
+    assert second.status_code == 409
+
+
+def test_une_table_n_a_pas_d_acompte_a_payer(
+    client_http: TestClient, db: Session
+) -> None:
+    entete = _entete(_compte(db, "tablepaie"))
+    reservation = _reserver(client_http, entete, _corps_table())
+
+    reponse = client_http.post(
+        f"{RESERVATIONS}/{reservation['id_reservation']}/paiements",
+        json=MVOLA,
+        headers=entete,
+    )
+
+    assert reponse.status_code == 422
+
+
+def test_l_acompte_d_un_autre_client_repond_404(
+    client_http: TestClient, db: Session, session_ouverte: SessionFormation
+) -> None:
+    reservation = _reserver(
+        client_http, _entete(_compte(db, "proprio")), _corps(session_ouverte.id_session)
+    )
+
+    reponse = client_http.post(
+        f"{RESERVATIONS}/{reservation['id_reservation']}/paiements",
+        json=MVOLA,
+        headers=_entete(_compte(db, "intrus")),
+    )
+
+    assert reponse.status_code == 404

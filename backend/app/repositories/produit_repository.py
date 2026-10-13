@@ -71,3 +71,19 @@ class ProduitRepository(BaseRepository[Produit]):
             .execution_options(synchronize_session=False)
         )
         return resultat.rowcount == 1
+
+    def incrementer_stock(self, id_produit: int, quantite: int) -> None:
+        """Rend `quantite` au stock — le symétrique de `decrementer_stock`,
+        pour une commande annulée (13 octobre 2026).
+
+        `UPDATE` relatif (`stock + n`) et non une lecture suivie d'une
+        écriture : deux restitutions simultanées s'ajoutent sans s'écraser.
+        Un produit archivé entre-temps reçoit aussi son stock : il le
+        retrouvera s'il est restauré.
+        """
+        self.db.execute(
+            update(Produit)
+            .where(Produit.id_produit == id_produit)
+            .values(stock_disponible=Produit.stock_disponible + quantite)
+            .execution_options(synchronize_session=False)
+        )

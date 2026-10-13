@@ -7,11 +7,13 @@ rejouée ne rend rien de plus.
 """
 
 from collections.abc import Sequence
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.exceptions import (
     ConflitMetier,
     ReferenceInvalide,
@@ -30,6 +32,12 @@ from app.repositories.reservation_repository import ReservationRepository
 from app.repositories.salle_repository import SalleRepository
 from app.repositories.session_formation_repository import SessionFormationRepository
 from app.schemas.reservation import ReservationCreate
+from app.services.prix_reservation import (
+    acompte,
+    prix_formation,
+    prix_logement,
+    prix_salle,
+)
 
 #: Noms des contraintes d'exclusion posées sur `RESERVATION` (migration
 #: acadf9ddce27). PostgreSQL les remonte dans `diag.constraint_name`, comme pour
@@ -176,7 +184,11 @@ class ReservationService:
                 f"session, {donnees.nombre_personnes} demandée(s)."
             )
 
-        reservation = self._nouvelle_ligne(donnees, client)
+        reservation = self._nouvelle_ligne(
+            donnees,
+            client,
+            prix_formation(session.formation, donnees.nombre_personnes),
+        )
         self._attacher_hebergement(reservation, client)
         self.db.commit()
         # Le décrément est fait en SQL : l'objet en session porte un compteur
@@ -184,14 +196,22 @@ class ReservationService:
         self.db.refresh(session)
         return reservation
 
-    def _creer_ligne(self, donnees: ReservationCreate, client: Client) -> Reservation:
+    def _creer_ligne(
+        self,
+        donnees: ReservationCreate,
+        client: Client,
+        montant_total: Decimal | None = None,
+    ) -> Reservation:
         """Écrit la ligne et commite. Chemin des types sans hébergement."""
-        reservation = self._nouvelle_ligne(donnees, client)
+        reservation = self._nouvelle_ligne(donnees, client, montant_total)
         self.db.commit()
         return reservation
 
     def _nouvelle_ligne(
-        self, donnees: ReservationCreate, client: Client
+        self,
+        donnees: ReservationCreate,
+        client: Client,
+        montant_total: Decimal | None = None,
     ) -> Reservation:
         """Écrit la ligne **sans commiter**. Commun aux quatre types.
 
@@ -199,7 +219,9 @@ class ReservationService:
         de formation et son hébergement se valident ensemble ou pas du tout.
 
         `statut` et `id_client` ne viennent jamais de la requête : le premier est
-        un cycle de vie, le second est déduit du jeton.
+        un cycle de vie, le second est déduit du jeton. Le **prix** et
+        l'**acompte** non plus (13 octobre 2026) : le serveur les calcule et
+        les fige — `None` pour une table, qui n'a pas de prix.
         """
         return self.reservations.create(
             {
@@ -213,6 +235,12 @@ class ReservationService:
                 "id_salle": donnees.id_salle,
                 "id_logement": donnees.id_logement,
                 "avec_hebergement": donnees.avec_hebergement,
+                "montant_total": montant_total,
+                "montant_acompte": (
+                    None
+                    if montant_total is None
+                    else acompte(montant_total, settings.ACOMPTE_POURCENTAGE)
+                ),
             }
         )
 
@@ -270,6 +298,12 @@ class ReservationService:
                         "id_client": client.id_client,
                         "id_logement": logement.id_logement,
                         "avec_hebergement": False,
+                        # Son prix est connu, mais pas d'acompte propre :
+                        # la chambre suit sa formation, dont l'acompte la
+                        # confirme ou dont l'expiration l'annule.
+                        "montant_total": prix_logement(
+                            logement, formation.date_debut, formation.date_fin
+                        ),
                     }
                 )
                 formation.id_reservation_hebergement = hebergement.id_reservation
@@ -318,8 +352,13 @@ class ReservationService:
         if self._chevauche(colonne, identifiant, donnees):
             raise ConflitMetier(f"Cette {genre} est déjà réservée sur ce créneau.")
 
+        prix = (
+            prix_salle(bien, donnees.date_debut, donnees.date_fin)
+            if genre == "salle"
+            else prix_logement(bien, donnees.date_debut, donnees.date_fin)
+        )
         try:
-            return self._creer_ligne(donnees, client)
+            return self._creer_ligne(donnees, client, prix)
         except IntegrityError as erreur:
             self.db.rollback()
             if _viole_exclusion(erreur):

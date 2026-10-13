@@ -104,6 +104,15 @@ def creer_engine_sqlite(*tables: object) -> Engine:
 
 
 @pytest.fixture(autouse=True)
+def _expiration_periodique_coupee(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Aucune tâche d'expiration en arrière-plan pendant les tests : chaque
+    `TestClient` démarre le cycle de vie de l'application, et une passe
+    asynchrone annulerait des données de test au hasard. Les tests de
+    l'expiration appellent `ExpirationService` directement."""
+    monkeypatch.setattr(settings, "EXPIRATION_AUTOMATIQUE", False)
+
+
+@pytest.fixture(autouse=True)
 def _assistant_eteint_par_defaut(monkeypatch: pytest.MonkeyPatch) -> None:
     """Éteint l'assistant dans chaque test, quel que soit le `.env` local.
 
