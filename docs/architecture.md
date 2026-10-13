@@ -1176,11 +1176,19 @@ relèvent d'une décision de conception.
 
 ## Assistant IA générative (Sprint 12)
 
-RAG LangChain : le catalogue public est découpé, vectorisé (Hugging Face,
-`BAAI/bge-m3`) et rangé dans PostgreSQL (pgvector) ; une question remonte les
+RAG LangChain : le catalogue public est découpé, vectorisé et rangé dans
+PostgreSQL (pgvector) ; une question remonte les
 fragments les plus proches, que le LLM (Groq) reformule. Détail des décisions
 dans `docs/roadmap.md`, Sprint 12 ; tables vectorielles hors MLD dans
 `docs/mld.md`.
+
+**Fournisseur d'embeddings au choix** (`EMBEDDINGS_FOURNISSEUR`) :
+`huggingface` (`BAAI/bge-m3`, d'origine), `google` (Gemini) ou `jina`
+(`jina-embeddings-v3`, en service depuis le 12 octobre 2026 — Hugging Face
+sans crédits, projet Google refusé). Tous sont des API distantes, jamais un
+modèle local. Changer de fournisseur impose une réindexation complète, et un
+recalibrage de `chaine.SEUIL_PERTINENCE` : chaque modèle a sa propre échelle
+de scores (0,38 avec `bge-m3`, 0,17 avec Jina).
 
 **Backend.** `app/ai_langchain/` porte le mécanisme — un module transverse,
 comme `core/`, et non une entité : il n'a ni table du MLD ni repository.
@@ -1193,7 +1201,7 @@ sans `requirements-ai.txt`.
 
 **Allumé par défaut dès qu'il peut l'être** (décision du 7 octobre 2026).
 `AI_ENABLED` absent ou vide vaut « automatique » : l'assistant s'allume si
-`GROQ_API_KEY` et `HF_API_TOKEN` sont présentes, et reste éteint sans erreur
+`GROQ_API_KEY` et la clé du fournisseur d'embeddings sont présentes, et reste éteint sans erreur
 sinon. `false` l'éteint explicitement — c'est ce que fait la CI ; `true`
 exige les deux clés au démarrage. Sur Render, renseigner les deux clés
 suffit. Les tests l'éteignent par une fixture `autouse` (`conftest.py`),
@@ -1208,8 +1216,8 @@ vente. Le prompt système n'est pas une protection : ce qui n'est pas indexé ne
 peut pas ressortir.
 
 **Une panne de l'assistant ne casse rien d'autre.** La synchronisation ne lève
-jamais — l'administrateur enregistre son produit même si Hugging Face est hors
-quota ; les questions répondent 503 avec `Retry-After`. Seule la réindexation
+jamais — l'administrateur enregistre son produit même si le fournisseur
+d'embeddings est hors quota ; les questions répondent 503 avec `Retry-After`. Seule la réindexation
 complète, action explicite, signale son échec.
 
 **Vectoriser avant de remplacer.** Une réindexation — complète ou

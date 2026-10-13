@@ -1835,6 +1835,14 @@ de crédits (402). Décision de l'utilisateur : Jina AI.
       Vérifié de bout en bout avec Groq : réponses justes en français et en
       malgache, refus sans appel au LLM sur « capitale de l'Australie ».
 
+**Travaux hors sprint : bandeau photo de l'accueil (demande du 12 octobre
+2026).** Photo de boutique (Unsplash, licence libre) en fond pleine largeur
+de la page d'accueil : original dans `delta_figure/accueil-fond.jpg`,
+version allégée servie par le site (`frontend/src/assets/`). Voile sombre
+fixe pour la lisibilité dans les deux thèmes, deux boutons d'action, cartes
+des modules remontées sur la photo. Vérifié dans un vrai navigateur (clair,
+sombre, mobile), sans défilement horizontal.
+
 **Travaux hors sprint : paiement mobile money à la validation, y compris sans
 compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.
 Jusqu'ici, seul un client connecté pouvait payer, et seulement depuis « Mes
