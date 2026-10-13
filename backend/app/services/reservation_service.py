@@ -96,8 +96,9 @@ class ReservationService:
 
     def lister(self) -> Sequence[Reservation]:
         """Toutes les réservations actives, les 4 types confondus. Réservé à
-        l'administrateur — même patron que `AbonnementService.lister`."""
-        return self.reservations.list()
+        l'administrateur — même patron que `AbonnementService.lister`. Les
+        plus récentes d'abord."""
+        return self.reservations.lister_recentes()
 
     # --- Création -------------------------------------------------------------
 

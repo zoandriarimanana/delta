@@ -675,3 +675,24 @@ def test_client_annuler_sans_statut_utilise_le_defaut(
 
     assert reponse.status_code == 200
     assert reponse.json()["statut"] == "Annulee"
+
+
+def test_administration_liste_les_plus_recentes_d_abord(
+    client_http: TestClient, db: Session
+) -> None:
+    """Demande du 13 octobre 2026 : la dernière réservation faite en haut."""
+    compte = _compte(db, "recentes")
+    ids = [
+        client_http.post(
+            RESERVATIONS, json=_corps_table(), headers=_entete(compte)
+        ).json()["id_reservation"]
+        for _ in range(2)
+    ]
+
+    liste = client_http.get(
+        f"{RESERVATIONS}/administration", headers=_entete_admin(db)
+    ).json()
+    ordre = [r["id_reservation"] for r in liste]
+
+    assert ordre == sorted(ordre, reverse=True)
+    assert ordre.index(ids[1]) < ordre.index(ids[0])

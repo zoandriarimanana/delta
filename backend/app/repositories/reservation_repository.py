@@ -13,6 +13,22 @@ class ReservationRepository(BaseRepository[Reservation]):
 
     modele = Reservation
 
+    def lister_recentes(self) -> Sequence[Reservation]:
+        """Toutes les réservations actives, **les plus récentes d'abord**
+        (demande du 13 octobre 2026).
+
+        `RESERVATION` ne porte pas de date de création : l'identifiant, tiré
+        d'une séquence dans l'ordre où les réservations sont faites, en tient
+        lieu. `list()` triait par identifiant croissant, et l'écran
+        d'administration ouvrait sur les plus anciennes.
+        """
+        requete = (
+            select(Reservation)
+            .where(Reservation.supprime_le.is_(None))
+            .order_by(Reservation.id_reservation.desc())
+        )
+        return self.db.scalars(requete).all()
+
     def lister_par_client(
         self, id_client: int, inclure_supprimes: bool = False
     ) -> Sequence[Reservation]:

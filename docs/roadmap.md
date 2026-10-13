@@ -1921,6 +1921,10 @@ n'étaient posés par personne.
 - [x] **Tri** : `GET /commandes/administration` renvoie les plus récentes
       d'abord (`CommandeRepository.lister_recentes`, même tri que
       l'historique client) ; `list()` triait par identifiant croissant.
+      Même tri pour `GET /reservations/administration`
+      (`ReservationRepository.lister_recentes`) : `RESERVATION` n'ayant pas
+      de date de création, l'identifiant, tiré d'une séquence dans l'ordre
+      des réservations, en tient lieu.
 - [x] **Supprimer = archiver** : `DELETE /commandes/administration/{id}`
       (204) pour une commande **terminée ou annulée** seulement (409 sinon),
       via `CommandeService.supprimer`, qui existait sans être exposé et
