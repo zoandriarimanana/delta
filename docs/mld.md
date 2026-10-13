@@ -507,6 +507,15 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, nombre_perso
   Règle de service, **non exprimable en `CHECK`** puisqu'elle croise deux
   colonnes : une commande `Sur_place` se termine sur `Servie`, les deux autres
   types sur `Livree`.
+
+  **L'administration fait avancer une commande d'une étape à la fois**
+  (13 octobre 2026) : `En_attente → Confirmee → En_preparation →` terminal,
+  calculé par le serveur et jamais choisi par la requête. Jusque-là, seul un
+  paiement en ligne confirmait une commande et seule une livraison la
+  terminait : une commande payée en espèces ou retirée en boutique restait
+  en attente pour toujours. Une commande **avec livraison** s'arrête à
+  `En_preparation` — sa fin reste la livraison marquée livrée, pour qu'il
+  n'existe pas deux façons de dire « livrée ».
 - `COMMANDE.montant_total` est **figé à la création** : il vaut la somme des
   lignes au moment où la commande est passée, **plus `frais_livraison`**
   depuis le 7 octobre 2026, et n'est jamais recalculé. C'est ce total que

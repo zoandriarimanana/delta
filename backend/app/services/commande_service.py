@@ -14,7 +14,13 @@ from app.core.exceptions import (
     RessourceIntrouvable,
 )
 from app.models.client import Client
-from app.models.commande import STATUT_TERMINAL, Commande, StatutCommande, TypeCommande
+from app.models.commande import (
+    ETAPE_SUIVANTE,
+    STATUT_TERMINAL,
+    Commande,
+    StatutCommande,
+    TypeCommande,
+)
 from app.models.ligne_commande import LigneCommande
 from app.models.personnel import Personnel
 from app.models.produit import Produit
@@ -532,6 +538,57 @@ class CommandeService:
 
         commande.statut = StatutCommande.ANNULEE
         self.db.commit()
+        return commande
+
+    def avancer(self, id_commande: int) -> Commande:
+        """Fait passer une commande à l'étape suivante, décision d'un
+        administrateur (demande du 13 octobre 2026).
+
+        Le serveur **calcule** l'étape suivante, la requête ne la choisit
+        jamais : `En_attente → Confirmee → En_preparation →
+        STATUT_TERMINAL[type]`. C'est ce qui permet de confirmer une commande
+        payée en espèces, puis de la terminer quand elle est servie ou
+        remise au client — jusqu'ici, seul un paiement en ligne la confirmait
+        et seule une livraison la terminait.
+
+        **Une commande avec livraison s'arrête à `En_preparation`** : sa fin
+        reste la tournée marquée livrée (synchronisation `LIVRAISON →
+        COMMANDE`), pour qu'il n'existe pas deux façons de dire « livrée ».
+
+        **409** sur une commande annulée, déjà terminée, ou à livrer en
+        préparation — et si une autre action a changé son statut entre la
+        lecture et l'écriture.
+        """
+        commande = self.obtenir(id_commande)
+        actuel = commande.statut
+        terminal = STATUT_TERMINAL[commande.type_commande]
+
+        if actuel is StatutCommande.ANNULEE:
+            raise ConflitMetier(
+                "Cette commande est annulée : elle ne peut plus avancer."
+            )
+        if actuel is terminal:
+            raise ConflitMetier(
+                f"Cette commande est déjà « {terminal.value} » : elle est terminée."
+            )
+
+        suivant = ETAPE_SUIVANTE.get(actuel)
+        if suivant is None:
+            livraison = commande.livraison
+            if livraison is not None and livraison.supprime_le is None:
+                raise ConflitMetier(
+                    "Cette commande est à livrer : elle passera « Livree » quand "
+                    "sa livraison sera marquée livrée."
+                )
+            suivant = terminal
+
+        if not self.commandes.changer_statut_si(id_commande, actuel, suivant):
+            self.db.rollback()
+            raise ConflitMetier(
+                "Le statut de cette commande vient de changer. Rechargez la fiche."
+            )
+        self.db.commit()
+        self.db.refresh(commande)
         return commande
 
     def rembourser(self, id_commande: int) -> Commande:

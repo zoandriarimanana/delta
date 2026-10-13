@@ -1883,6 +1883,37 @@ l'utilisateur), cliquable dès que l'adresse de la page est renseignée, et
 l'oubli réécrire des taux périmés en arrivant après, jusqu'à effacer la
 saisie d'un administrateur (test `TauxChangePage` intermittent).
 
+**Travaux hors sprint : faire avancer une commande depuis l'administration
+(demande du 13 octobre 2026).** Hors roadmap, signalé à l'utilisateur et
+validé avant le code. Constat : seul un paiement en ligne réussi confirme une
+commande, et seule une livraison marquée livrée la termine. Une commande
+payée en espèces, prise sur place ou retirée en boutique restait donc
+« En attente de confirmation » pour toujours, et `En_preparation` / `Servie`
+n'étaient posés par personne.
+
+- [x] **Backend** : `POST /commandes/administration/{id}/avancement`,
+      réservé `PersonnelAdministrateur`, **sans corps** — le serveur calcule
+      l'étape suivante, la requête ne choisit jamais le statut :
+      `En_attente → Confirmee → En_preparation → STATUT_TERMINAL[type]`
+      (`Servie` sur place, `Livree` au retrait). Une commande **avec
+      livraison** s'arrête à `En_preparation` : sa fin reste la livraison
+      marquée livrée, pour qu'il n'existe pas deux façons de dire « livrée ».
+      409 sur une commande annulée, terminée, ou à livrer en préparation.
+      Transition par `UPDATE` conditionnel sur le statut attendu : deux
+      administrateurs qui cliquent ensemble ne sautent pas deux étapes.
+- [x] **Frontend** : un bouton sur la fiche d'administration d'une commande,
+      dont le libellé dit l'étape (« Confirmer la commande », « Mettre en
+      préparation », « Marquer servie » / « Marquer remise au client »).
+- [x] **Docs** : `docs/mld.md` (statut de `COMMANDE`),
+      `docs/architecture.md` (quatrième chemin d'écriture du statut), guide
+      du personnel de l'assistant.
+      — Livré. `ETAPE_SUIVANTE` vit dans le modèle, à côté de
+      `STATUT_TERMINAL` ; transition par `CommandeRepository.changer_statut_si`.
+      Fiche : bouton vert dont le libellé dit l'étape, et pour une commande à
+      livrer en préparation, une phrase qui renvoie à la livraison. Dans la
+      liste, « En attente de confirmation » devient « À confirmer » (le
+      libellé du compteur), le libellé complet débordant de la colonne.
+
 **Travaux hors sprint : paiement mobile money à la validation, y compris sans
 compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.
 Jusqu'ici, seul un client connecté pouvait payer, et seulement depuis « Mes

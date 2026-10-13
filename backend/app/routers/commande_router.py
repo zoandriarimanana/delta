@@ -187,6 +187,26 @@ def annuler_administration(
 
 
 @router.post(
+    "/administration/{id_commande}/avancement",
+    response_model=CommandeRead,
+    summary="Faire avancer une commande d'une étape (administration)",
+)
+def avancer_administration(
+    id_commande: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> CommandeRead:
+    """Étape suivante calculée par le serveur, **sans corps** : la requête ne
+    choisit jamais le statut. `En_attente → Confirmee → En_preparation →`
+    `Servie` (sur place) ou `Livree` (retrait). Une commande à livrer se
+    termine par sa livraison, jamais par cette route.
+
+    **409** sur une commande annulée, terminée, à livrer en préparation, ou
+    dont le statut vient de changer.
+    """
+    commande = CommandeService(db).avancer(id_commande)
+    return CommandeRead.model_validate(commande)
+
+
+@router.post(
     "/administration/{id_commande}/remboursement",
     response_model=CommandeRead,
     summary="Marquer une commande remboursée (administration)",

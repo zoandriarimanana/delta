@@ -956,3 +956,121 @@ def test_administration_remboursement_refuse_a_un_salarie_sans_droit(
     )
 
     assert reponse.status_code == 403
+
+
+# --- Faire avancer une commande (13 octobre 2026) ------------------------------
+
+
+def _avancer(client_http: TestClient, db: Session, id_commande: int) -> object:
+    return client_http.post(
+        f"{COMMANDES}/administration/{id_commande}/avancement",
+        headers=_entete_admin(db),
+    )
+
+
+def test_administration_fait_avancer_une_commande_jusqu_a_sa_fin(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    """Payée en espèces : confirmée, préparée, puis remise au client."""
+    commande = _sa_commande(client_http, entete, eclair)
+    statuts = [
+        _avancer(client_http, db, commande["id_commande"]).json()["statut"]
+        for _ in range(3)
+    ]
+
+    assert statuts == ["Confirmee", "En_preparation", "Livree"]
+    fin = _avancer(client_http, db, commande["id_commande"])
+    assert fin.status_code == 409
+    assert "terminée" in fin.json()["detail"]
+
+
+def test_une_commande_sur_place_se_termine_servie(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = client_http.post(
+        COMMANDES,
+        json={**_corps(eclair.id_produit), "type_commande": "Sur_place"},
+        headers=entete,
+    ).json()
+
+    for _ in range(2):
+        _avancer(client_http, db, commande["id_commande"])
+
+    assert _avancer(client_http, db, commande["id_commande"]).json()["statut"] == (
+        "Servie"
+    )
+
+
+def test_une_commande_a_livrer_se_termine_par_sa_livraison(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    """Pas deux façons de dire « livrée » : la fin reste la tournée."""
+    creation = client_http.post(
+        COMMANDES,
+        json={**_corps(eclair.id_produit), "adresse_livraison": "Lot II A 12, Tana"},
+        headers=entete,
+    )
+    assert creation.status_code == 201
+    id_commande = creation.json()["id_commande"]
+
+    for _ in range(2):
+        _avancer(client_http, db, id_commande)
+    refus = _avancer(client_http, db, id_commande)
+
+    assert refus.status_code == 409
+    assert "livraison" in refus.json()["detail"]
+    lecture = client_http.get(
+        f"{COMMANDES}/administration/{id_commande}", headers=_entete_admin(db)
+    )
+    assert lecture.json()["statut"] == "En_preparation"
+
+
+def test_une_commande_annulee_ne_peut_plus_avancer(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+    client_http.put(
+        f"{COMMANDES}/administration/{commande['id_commande']}/statut",
+        json={"statut": "Annulee"},
+        headers=_entete_admin(db),
+    )
+
+    assert _avancer(client_http, db, commande["id_commande"]).status_code == 409
+
+
+def test_avancer_est_refuse_a_un_salarie_sans_droit(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    commande = _sa_commande(client_http, entete, eclair)
+
+    reponse = client_http.post(
+        f"{COMMANDES}/administration/{commande['id_commande']}/avancement",
+        headers=_entete_agent(db),
+    )
+
+    assert reponse.status_code == 403
+
+
+def test_avancer_une_commande_inconnue_repond_404(
+    client_http: TestClient, db: Session
+) -> None:
+    assert _avancer(client_http, db, 999999).status_code == 404
+
+
+def test_la_transition_ne_s_applique_que_depuis_le_statut_attendu(
+    client_http: TestClient, db: Session, entete: dict[str, str], eclair: Produit
+) -> None:
+    """Deux administrateurs qui cliquent ensemble : le second trouve un statut
+    déjà changé, et ne fait pas sauter une seconde étape."""
+    from app.models.commande import StatutCommande
+    from app.repositories.commande_repository import CommandeRepository
+
+    commande = _sa_commande(client_http, entete, eclair)
+    depot = CommandeRepository(db)
+
+    assert depot.changer_statut_si(
+        commande["id_commande"], StatutCommande.EN_ATTENTE, StatutCommande.CONFIRMEE
+    )
+    assert not depot.changer_statut_si(
+        commande["id_commande"], StatutCommande.EN_ATTENTE, StatutCommande.CONFIRMEE
+    )

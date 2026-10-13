@@ -3,14 +3,15 @@
 from collections.abc import Sequence
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
-from app.models.commande import Commande
+from app.models.commande import Commande, StatutCommande
 from app.repositories.base_repository import BaseRepository
 
 
 class CommandeRepository(BaseRepository[Commande]):
-    """CRUD générique, plus la recherche par client."""
+    """CRUD générique, plus la recherche par client et la transition de
+    statut conditionnelle."""
 
     modele = Commande
 
@@ -51,3 +52,29 @@ class CommandeRepository(BaseRepository[Commande]):
         if not inclure_supprimes:
             requete = requete.where(Commande.supprime_le.is_(None))
         return self.db.scalars(requete).one_or_none()
+
+    def changer_statut_si(
+        self,
+        id_commande: int,
+        attendu: StatutCommande,
+        nouveau: StatutCommande,
+    ) -> bool:
+        """Passe la commande à `nouveau` **seulement** si elle est encore à
+        `attendu`. `False` si aucune ligne n'a été touchée.
+
+        Un `UPDATE` conditionnel, même patron que le décrément de
+        `places_restantes` : deux administrateurs qui font avancer la même
+        commande au même instant ne lui font pas sauter deux étapes — le
+        second trouve un statut qui a déjà changé.
+        """
+        resultat = self.db.execute(
+            update(Commande)
+            .where(
+                Commande.id_commande == id_commande,
+                Commande.statut == attendu,
+                Commande.supprime_le.is_(None),
+            )
+            .values(statut=nouveau)
+            .execution_options(synchronize_session=False)
+        )
+        return resultat.rowcount == 1

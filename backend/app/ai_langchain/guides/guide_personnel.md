@@ -33,6 +33,9 @@ Ouvrez « Personnel ». Le tableau se filtre avec « Filtrer par fonction ». Po
 ## Suivre et traiter les réservations
 Ouvrez « Réservations ». Filtrez par « Type » et par « Statut ». Une fois la prestation réalisée — formation suivie, salle ou chambre occupée —, cliquez sur « Marquer honorée » : c'est ce qui permet ensuite au client de déposer un avis. « Annuler » annule la réservation et rend ses places. « Voir le détail » ouvre la fiche, où les mêmes actions sont proposées ; elle indique aussi si un hébergement a été demandé et attribué.
 
+## Faire avancer une commande
+Ouvrez « Commandes », puis cliquez sur la commande. Dans « Actions », un bouton vert la fait passer à l'étape suivante, et son libellé dit laquelle : « Confirmer la commande » (par exemple quand le client a payé en espèces), puis « Mettre en préparation », puis « Marquer servie » pour une commande sur place ou « Marquer remise au client » pour un retrait. Une commande payée en ligne est confirmée automatiquement. Une commande à livrer s'arrête à la préparation : elle passe « Livrée » quand sa livraison est marquée livrée. Une commande annulée ou terminée n'a plus de bouton.
+
 ## Traiter une commande
 Ouvrez « Commandes ». Filtrez par « Statut », puis cliquez sur « Voir le détail ». Trois actions selon la situation : « Annuler » (impossible sur une commande déjà livrée ou servie), « Relancer la livraison » (proposé quand la livraison a échoué : elle repart en attente, à réaffecter) et « Marquer remboursée » (à utiliser une fois le remboursement fait hors plateforme — espèces, virement — ; cette action ne touche pas aux paiements enregistrés). Les liens « Voir les réservations » et « Voir les abonnements » mènent aux écrans correspondants.
 

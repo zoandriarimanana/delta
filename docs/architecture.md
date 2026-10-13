@@ -829,6 +829,15 @@ domaine — la garantie structurelle se déplace du « aucune requête ne peut
 l'écrire » au « une seule requête, un seul administrateur, une seule
 valeur possible » ; elle ne disparaît pas, elle se resserre.
 
+Un **quatrième** chemin s'y ajoute le 13 octobre 2026 : `POST
+/commandes/administration/{id}/avancement`, réservé
+`PersonnelAdministrateur`, **sans corps**. Le serveur calcule l'étape
+suivante (`ETAPE_SUIVANTE`, puis `STATUT_TERMINAL`) : la requête ne choisit
+toujours aucun statut. Il ne termine jamais une commande à livrer — cette
+fin reste celle de la synchronisation ci-dessus —, et la transition passe
+par un `UPDATE` conditionnel sur le statut attendu, pour que deux
+administrateurs simultanés ne fassent pas sauter deux étapes.
+
 Le statut d'arrivée est lu dans `STATUT_TERMINAL`, la table posée avec le domaine
 de `COMMANDE` : `Servie` sur place, `Livree` pour les deux autres types. La
 branche `Sur_place` est **inatteignable** par ce chemin — une commande sur place

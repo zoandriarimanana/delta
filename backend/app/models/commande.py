@@ -61,6 +61,14 @@ STATUT_TERMINAL: dict[TypeCommande, StatutCommande] = {
     TypeCommande.A_EMPORTER: StatutCommande.LIVREE,
 }
 
+#: Étapes que l'administration fait franchir une à une
+#: (`CommandeService.avancer`). Après `En_preparation`, l'étape dépend du type
+#: de commande et de la présence d'une livraison : elle n'est donc pas ici.
+ETAPE_SUIVANTE: dict[StatutCommande, StatutCommande] = {
+    StatutCommande.EN_ATTENTE: StatutCommande.CONFIRMEE,
+    StatutCommande.CONFIRMEE: StatutCommande.EN_PREPARATION,
+}
+
 
 class Commande(SoftDeleteMixin, Base):
     """Commande de produits, passée avec ou sans compte client.
