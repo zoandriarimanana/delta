@@ -1296,7 +1296,7 @@ chaque redéploiement. Format lu dans les octets, jamais dans le nom.
 | `produit` | CATEGORIE_PRODUIT, PRODUIT |
 | `commande` | COMMANDE, LIGNE_COMMANDE, DEMANDE_PERSONNALISATION |
 | `livraison` | LIVRAISON, TARIF_LIVRAISON |
-| `formation` | DOMAINE_FORMATION, FORMATION, SESSION_FORMATION |
+| `formation` | DOMAINE_FORMATION, FORMATION, SESSION_FORMATION, DEMANDE_FORMATION |
 | `salle` | SALLE |
 | `logement` | LOGEMENT |
 | `reservation` | RESERVATION |

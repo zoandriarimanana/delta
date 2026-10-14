@@ -22,6 +22,7 @@ import PriseDeCommandePage from '@/features/commande/pages/PriseDeCommandePage';
 import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
 import TauxChangePage from '@/features/devise/pages/TauxChangePage';
 import AdministrationDomainesPage from '@/features/formation/pages/AdministrationDomainesPage';
+import AdministrationDemandesFormationPage from '@/features/formation/pages/AdministrationDemandesFormationPage';
 import AdministrationFormationsPage from '@/features/formation/pages/AdministrationFormationsPage';
 import DomaineDetailAdministrationPage from '@/features/formation/pages/DomaineDetailAdministrationPage';
 import FormationDetailAdministrationPage from '@/features/formation/pages/FormationDetailAdministrationPage';
@@ -174,6 +175,10 @@ export default function App() {
             element={<DomaineDetailAdministrationPage />}
           />
           <Route path="formations" element={<AdministrationFormationsPage />} />
+          <Route
+            path="demandes-formation"
+            element={<AdministrationDemandesFormationPage />}
+          />
           <Route path="tarif-livraison" element={<TarifLivraisonPage />} />
           <Route path="taux-change" element={<TauxChangePage />} />
           <Route

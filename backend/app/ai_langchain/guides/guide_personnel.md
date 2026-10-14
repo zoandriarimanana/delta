@@ -27,6 +27,9 @@ Ouvrez « Logements », puis « Nouveau logement ». Remplissez « Type de chamb
 ## Gérer les domaines de formation
 Ouvrez « Domaines ». Pour en créer un, saisissez son « Libellé » et, si vous le souhaitez, une « Description » (facultative), puis cliquez sur « Ajouter ». « Modifier » puis « Enregistrer » change un domaine ; « Archiver » est refusé tant que le domaine contient des formations actives ; « Afficher les archives » puis « Restaurer » le remet. La gestion des formations et de leurs sessions n'est pas encore décrite dans ce guide.
 
+## Suivre les demandes de formation sur mesure
+Ouvrez « Demandes de formation » : ce sont les formations demandées par des visiteurs et absentes du catalogue, les plus récentes en haut. Chaque demande indique le sujet, le nombre de participants, le niveau, le lieu, la période, le message, et qui rappeler. Les onglets filtrent par avancement : « Nouvelle », « En discussion », « Planifiée », « Refusée ». Rappelez le demandeur, puis choisissez l'« Avancement », écrivez une « Note interne » si besoin et cliquez sur « Enregistrer le suivi ». Une formation acceptée se crée ensuite dans « Formations ». « Archiver » retire une demande de la liste.
+
 ## Gérer le personnel
 Ouvrez « Personnel ». Le tableau se filtre avec « Filtrer par fonction ». Pour ajouter quelqu'un, cliquez sur « Nouveau membre » et remplissez « Nom », « Prénom », « Fonction », « E-mail professionnel », « Téléphone », « Date d'embauche », et selon le poste « Spécialité » ou « Zone de livraison » ; une « Photo de profil » (facultatif, JPEG ou PNG, 2 Mio maximum) peut être jointe. Cliquez sur « Créer ». Sur « Voir la fiche » d'un membre : « Modifier », « Archiver » (réversible, « Restaurer »), « Anonymiser » (efface définitivement ses données personnelles), « Télécharger le badge » et « Retirer la photo ». Les droits d'administrateur et les comptes de connexion ne se donnent pas depuis cet écran : adressez-vous au responsable technique.
 

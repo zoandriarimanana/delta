@@ -220,3 +220,22 @@ def get_sujet_optionnel(
         return None
 
     return None
+
+
+def get_client_optionnel(
+    sujet: Annotated[
+        tuple[TypeSujet, Client | Personnel] | None, Depends(get_sujet_optionnel)
+    ],
+) -> Client | None:
+    """Le client de la session s'il y en a un, sinon `None` — jamais
+    d'exception. Pour un formulaire public qui rattache le demandeur à son
+    compte quand il est connecté (demande de formation, 14 octobre 2026).
+    Un salarié connecté n'est pas un client : `None`."""
+    if sujet is None or sujet[0] is not TypeSujet.CLIENT:
+        return None
+    client = sujet[1]
+    return client if isinstance(client, Client) else None
+
+
+#: Client connecté, ou `None` pour un visiteur : `client: ClientOptionnel`.
+ClientOptionnel = Annotated[Client | None, Depends(get_client_optionnel)]

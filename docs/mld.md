@@ -187,6 +187,35 @@ SESSION_FORMATION(id_session, date_debut, date_fin, places_restantes, statut, #i
   catalogue. Modifier la capacité d'une formation ne rétroagit pas sur les
   sessions déjà ouvertes.
 
+## Formation sur commande
+
+```
+DEMANDE_FORMATION(id_demande, sujet, nombre_participants, niveau, periode_souhaitee, lieu, message, nom_contact, contact, statut, note_interne, date_demande, #id_client)
+```
+
+Ajoutée le 14 octobre 2026, retour du client après la présentation : un
+visiteur demande une formation **qui n'est pas au catalogue** (« Vous ne
+trouvez pas votre formation ? »). Entité nouvelle, pas la correction d'une
+omission.
+
+- **Envoyée avec ou sans compte.** `#id_client` est **déduit de la
+  session**, jamais du corps — même règle que `COMMANDE.#id_client` ;
+  `NULL` pour un visiteur. `nom_contact` et `contact` sont exigés même pour
+  un client connecté : il peut vouloir être rappelé ailleurs.
+  `ON DELETE RESTRICT`, comme toute trace d'un client.
+- `statut` ∈ {Nouvelle, En_discussion, Planifiee, Refusee}, domaine formel,
+  `CHECK` en base. Une demande naît `Nouvelle` ; seule l'administration le
+  fait évoluer, dans les deux sens — rien n'est engagé tant qu'aucune
+  session n'est créée au catalogue. `Planifiee` dit que la formation a été
+  montée, par les écrans existants du catalogue.
+- `lieu` ∈ {Chez_delta, En_entreprise, Indifferent}, domaine formel.
+- `note_interne` appartient à l'administration et n'est jamais renvoyée au
+  demandeur : l'envoi ne lui rend qu'un accusé (`id_demande`,
+  `date_demande`).
+- `CHECK (nombre_participants >= 1)`.
+- **Lecture réservée à l'administration** : la demande porte le nom et le
+  contact d'une personne. L'envoi est public, débit limité par IP.
+
 ## Catalogue produits / espace
 
 ```

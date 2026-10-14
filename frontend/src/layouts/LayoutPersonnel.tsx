@@ -56,6 +56,7 @@ const LIENS_GESTION: Lien[] = [
   { vers: '/personnel/logements', libelle: 'Logements' },
   { vers: '/personnel/domaines-formation', libelle: 'Domaines' },
   { vers: '/personnel/formations', libelle: 'Formations' },
+  { vers: '/personnel/demandes-formation', libelle: 'Demandes de formation' },
   { vers: '/personnel/assistant', libelle: 'Assistant IA' },
 ];
 

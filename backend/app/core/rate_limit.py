@@ -38,3 +38,7 @@ LIMITE_ASSISTANT = "10/minute"
 # demande chez l'opérateur — une vraie personne ne réessaie pas dix fois par
 # minute, un script si.
 LIMITE_PAIEMENT_INVITE = "10/minute"
+
+#: Demande de formation sur commande (14 octobre 2026) : formulaire public,
+#: donc cible de spam — quelques envois par minute suffisent à un humain.
+LIMITE_DEMANDE_FORMATION = "5/minute"

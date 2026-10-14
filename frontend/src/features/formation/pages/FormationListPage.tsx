@@ -11,6 +11,7 @@ import { useTextes } from '@/lib/langue';
 
 import { TEXTES_FORMATION } from '../formation.textes';
 import CarteFormation from '../components/CarteFormation';
+import DemandeFormationSurMesure from '../components/DemandeFormationSurMesure';
 import { useDomaines, useFormations } from '../formation.hooks';
 
 export default function FormationListPage() {
@@ -85,6 +86,10 @@ export default function FormationListPage() {
           </div>
         ))}
       </div>
+
+      {/* Formation sur commande (14 octobre 2026) : ce qui n'est pas au
+          catalogue peut être demandé. */}
+      <DemandeFormationSurMesure />
     </section>
   );
 }

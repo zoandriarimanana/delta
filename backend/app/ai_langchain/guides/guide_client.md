@@ -42,6 +42,9 @@ Une salle, une chambre ou une formation se retient par un acompte de 30 % du pri
 ## Réserver une formation
 Ouvrez « Formations » : le catalogue se filtre par domaine. Sur la fiche d'une formation, la section « Sessions » liste les sessions programmées, chacune avec ses dates, ses places restantes et son propre formulaire. Il faut être connecté. Dans la session choisie, indiquez le « Nombre de personnes » ; si la formation propose un hébergement, vous pouvez cocher « Je souhaite être hébergé pendant la formation ». Cliquez sur « Réserver ». Avec l'hébergement, une chambre vous est attribuée pour les dates de la session si l'une est libre ; sinon, votre demande est notée et Delta vous recontacte. Une session complète reste visible mais ne peut plus être réservée.
 
+## Demander une formation qui n'est pas au catalogue
+Si la formation que vous cherchez n'est pas dans « Formations », Delta peut l'organiser sur mesure, chez Delta ou dans votre entreprise. En bas de la page « Formations », dans l'encadré « Vous ne trouvez pas votre formation ? », cliquez sur « Demander une formation sur mesure ». Indiquez la « Formation souhaitée », le « Nombre de participants », le « Lieu » et, si vous le souhaitez, le niveau, la période et vos précisions, puis « Votre nom » et votre « Téléphone ou e-mail ». Cliquez sur « Envoyer ma demande » : le responsable des formations vous recontacte. Pas besoin de compte. Le numéro du responsable est aussi affiché dans l'encadré pour ceux qui préfèrent appeler.
+
 ## Louer une salle
 Ouvrez « Salles », puis la fiche de la salle. Il faut être connecté. Renseignez le « Début » et la « Fin » du créneau souhaité et le « Nombre de personnes », puis cliquez sur « Réserver ». Le nombre de personnes ne peut pas dépasser la capacité de la salle, et un créneau déjà réservé par quelqu'un d'autre est refusé : choisissez-en un autre.
 

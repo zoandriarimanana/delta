@@ -2002,6 +2002,47 @@ non payée annulée après **2 h**, réservation sans acompte annulée après
       Leçon : ne jamais lancer une passe d'expiration sur la base de
       développement sans accord — elle agit pour de vrai.
 
+**Travaux hors sprint : retours du client après la présentation (14 octobre
+2026).** Hors roadmap, signalés à l'utilisateur et validés avant le code.
+Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
+(décision de l'utilisateur) :
+
+- [x] **R.1 — Formation sur commande.** Nouvelle entité
+      `DEMANDE_FORMATION` : sujet souhaité, nombre de participants, niveau,
+      période, lieu (chez Delta ou en entreprise), nom et contact du
+      demandeur, message ; client connecté rattaché s'il y en a un, sans
+      compte sinon. Statut `Nouvelle → En_discussion → Planifiee | Refusee`
+      et note interne, posés par l'administration seule. Encadré « Vous ne
+      trouvez pas votre formation ? » sur le catalogue des formations, avec
+      le numéro du responsable (réglage `VITE_TELEPHONE_FORMATION`, masqué
+      tant qu'il est vide) ; écran « Demandes de formation » dans
+      l'administration. Envoi public, débit limité par IP.
+      — Livré. Migration `8303122daf72` (table seule, rejouée montée /
+      descente / montée sur base vierge). Dépendance `ClientOptionnel`
+      (`core/deps.py`) pour rattacher un client connecté sans refuser un
+      visiteur. L'envoi ne rend qu'un accusé (numéro et date), jamais la
+      saisie. Frontend : `DemandeFormationSurMesure` sous le catalogue,
+      écran « Demandes de formation » (onglets par avancement, suivi et
+      note, archivage). Guides client et personnel complétés. Backend
+      1 559, frontend 853 ; écrans vérifiés dans un vrai navigateur sur une
+      copie du site branchée sur la base de test.
+- [ ] **R.2 — Réservation des salles par calendrier.** Créneaux occupés
+      d'une salle exposés publiquement, **sans aucune donnée du client** ;
+      calendrier mensuel sur la fiche (jours occupés grisés, choix du jour
+      puis des heures, prix et acompte affichés) ; calendrier de toutes les
+      salles dans l'administration.
+- [ ] **R.3 — Cantine : QR code et priorité au paiement en ligne.** Une
+      commande « sur place » payée en ligne reçoit **un QR code par
+      commande** (le payeur, pour tout son groupe), qui ne porte qu'une
+      référence non devinable. Écran « Accueil cantine » du personnel :
+      scan, contrôle (payé, nombre de couverts, nom), arrivée enregistrée,
+      QR déjà utilisé refusé. File de service : payés en ligne d'abord, par
+      ordre d'arrivée, puis ceux qui paieront après le repas.
+- [ ] **R.4 — Repas d'un événement en salle, sur devis.** À la réservation
+      d'une salle, une demande de repas (convives, formule, précisions) ;
+      l'administration fixe le prix (devis), le client l'accepte et paie un
+      acompte.
+
 **Travaux hors sprint : paiement mobile money à la validation, y compris sans
 compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.
 Jusqu'ici, seul un client connecté pouvait payer, et seulement depuis « Mes
@@ -2046,5 +2087,7 @@ ajoutée à un sprint ici — ne jamais laisser une table orpheline.
   sprint du 7 octobre 2026 (frais de livraison).
 - `TAUX_CHANGE` — ajoutée après coup, couverte par les travaux hors sprint
   du 8 octobre 2026 (ouverture internationale, I.1 / I.2).
+- `DEMANDE_FORMATION` — ajoutée après coup, couverte par les retours du
+  client du 14 octobre 2026 (R.1, formation sur commande).
 - `PHOTO_BIEN` — ajoutée puis **retirée** le 5 octobre 2026 : les photos du
   catalogue sont désormais des fichiers sur disque, sans table.
