@@ -7,6 +7,7 @@ from typing import NamedTuple
 
 from sqlalchemy import case, func, select
 
+from app.models.categorie_produit import CategorieProduit
 from app.models.commande import Commande, StatutCommande
 from app.models.demande_personnalisation import DemandePersonnalisation
 from app.models.ligne_commande import LigneCommande
@@ -19,6 +20,7 @@ class VenteProduit(NamedTuple):
 
     id_produit: int
     nom: str
+    categorie: str
     unites_vendues: int
     chiffre_affaires: Decimal
     nombre_commandes: int
@@ -69,22 +71,27 @@ class LigneCommandeRepository(BaseRepository[LigneCommande]):
             select(
                 Produit.id_produit,
                 Produit.nom,
+                CategorieProduit.libelle,
                 func.sum(unites),
                 func.sum(montant),
                 func.count(func.distinct(LigneCommande.id_commande)),
             )
             .join(Commande, Commande.id_commande == LigneCommande.id_commande)
             .join(Produit, Produit.id_produit == LigneCommande.id_produit)
+            .join(
+                CategorieProduit,
+                CategorieProduit.id_categorie == Produit.id_categorie,
+            )
             .outerjoin(
                 DemandePersonnalisation,
                 DemandePersonnalisation.id_ligne == LigneCommande.id_ligne,
             )
             .where(Commande.statut.in_(list(statuts)))
-            .group_by(Produit.id_produit, Produit.nom)
+            .group_by(Produit.id_produit, Produit.nom, CategorieProduit.libelle)
         )
         if depuis is not None:
             requete = requete.where(Commande.date_commande >= depuis)
         return [
-            VenteProduit(int(i), nom, int(u or 0), Decimal(m or 0), int(n))
-            for i, nom, u, m, n in self.db.execute(requete).all()
+            VenteProduit(int(i), nom, cat, int(u or 0), Decimal(m or 0), int(n))
+            for i, nom, cat, u, m, n in self.db.execute(requete).all()
         ]

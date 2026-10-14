@@ -21,10 +21,20 @@ const DONNEES: TableauDeBord = {
   nombre_commandes: 5,
   panier_moyen: '25000.00',
   commandes_a_confirmer: 2,
+  pas: 'jour',
+  evolution: [
+    { debut: '2026-10-13', nombre_commandes: 2, chiffre_affaires: '60000.00' },
+    { debut: '2026-10-14', nombre_commandes: 3, chiffre_affaires: '65000.00' },
+  ],
+  categories: [
+    { categorie: 'Gâteaux', unites_vendues: 2, chiffre_affaires: '60000.00' },
+    { categorie: 'Pâtisserie', unites_vendues: 12, chiffre_affaires: '42000.00' },
+  ],
   produits: [
     {
       id_produit: 1,
       nom: 'Éclair',
+      categorie: 'Pâtisserie',
       unites_vendues: 12,
       chiffre_affaires: '42000.00',
       nombre_commandes: 4,
@@ -32,6 +42,7 @@ const DONNEES: TableauDeBord = {
     {
       id_produit: 2,
       nom: 'Gâteau',
+      categorie: 'Gâteaux',
       unites_vendues: 2,
       chiffre_affaires: '60000.00',
       nombre_commandes: 2,
@@ -67,7 +78,7 @@ it('affiche les chiffres clés de la période', async () => {
 
 it('classe par quantité, puis par chiffre d’affaires à la demande', async () => {
   afficher();
-  const liste = await screen.findByRole('list');
+  const liste = await screen.findByRole('list', { name: 'Produits les plus vendus' });
   const noms = () =>
     within(liste)
       .getAllByRole('link')
@@ -80,9 +91,22 @@ it('classe par quantité, puis par chiffre d’affaires à la demande', async ()
 
 it('recharge pour une autre période', async () => {
   afficher();
-  await screen.findByRole('list');
+  await screen.findByRole('list', { name: 'Produits les plus vendus' });
 
   await userEvent.click(screen.getByRole('button', { name: '7 jours' }));
 
   expect(recupererTableauDeBord).toHaveBeenLastCalledWith('7j');
+});
+
+it('dessine la courbe et la répartition par catégorie', async () => {
+  afficher();
+
+  expect(
+    await screen.findByRole('img', { name: 'Évolution du chiffre d’affaires' })
+  ).toBeDefined();
+  expect(
+    screen.getByRole('img', { name: /répartition du chiffre d’affaires/i })
+  ).toBeDefined();
+  // 60 000 sur 102 000 : 59 %.
+  expect(screen.getByText(/59 %/)).toBeDefined();
 });

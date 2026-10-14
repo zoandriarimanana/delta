@@ -6,6 +6,7 @@ import type { VenteProduit } from './tableauDeBord.types';
 const vente = (id: number, unites: number, chiffre: string): VenteProduit => ({
   id_produit: id,
   nom: `Produit ${id}`,
+  categorie: 'Pâtisserie',
   unites_vendues: unites,
   chiffre_affaires: chiffre,
   nombre_commandes: 1,

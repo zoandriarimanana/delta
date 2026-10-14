@@ -3,6 +3,7 @@
 Lecture seule, calculée à la demande : aucune entité du MLD derrière.
 """
 
+from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 
@@ -23,9 +24,26 @@ class VenteProduitRead(BaseModel):
 
     id_produit: int
     nom: str
+    categorie: str
     unites_vendues: int
     chiffre_affaires: Decimal
     nombre_commandes: int
+
+
+class PointVentes(BaseModel):
+    """Un point de la courbe : un jour, ou un mois (son premier jour)."""
+
+    debut: date
+    nombre_commandes: int
+    chiffre_affaires: Decimal
+
+
+class VentesCategorie(BaseModel):
+    """Part d'une catégorie dans les ventes de la période."""
+
+    categorie: str
+    unites_vendues: int
+    chiffre_affaires: Decimal
 
 
 class TableauDeBordRead(BaseModel):
@@ -40,3 +58,9 @@ class TableauDeBordRead(BaseModel):
     commandes_a_confirmer: int
     #: Tous les produits vendus sur la période, par quantité décroissante.
     produits: list[VenteProduitRead]
+    #: `jour` sur 7 et 30 jours, `mois` au-delà.
+    pas: str
+    #: Chiffre d'affaires par jour ou par mois, périodes sans vente à zéro.
+    evolution: list[PointVentes]
+    #: Ventes par catégorie, chiffre d'affaires décroissant.
+    categories: list[VentesCategorie]

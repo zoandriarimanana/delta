@@ -2107,6 +2107,11 @@ Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
       — Livré. Aucune migration. Les totaux se testent par différence (la
       base de test porte d'autres commandes). Vérifié dans un vrai
       navigateur sur la base de test.
+      — **Graphiques** (demande suivante, même jour) : courbe du chiffre
+      d'affaires sur la période (par jour sur 7 et 30 jours, par mois au-delà,
+      jours et mois sans vente à zéro, à l'heure de Madagascar), barres des
+      produits les plus vendus, anneau de répartition par catégorie. Dessinés
+      en SVG dans le module, sans bibliothèque ajoutée.
 - [ ] **R.2 — Réservation des salles par calendrier.** Créneaux occupés
       d'une salle exposés publiquement, **sans aucune donnée du client** ;
       calendrier mensuel sur la fiche (jours occupés grisés, choix du jour

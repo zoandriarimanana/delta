@@ -184,3 +184,45 @@ def test_route_reservee_a_l_administration(
     assert {"chiffre_affaires", "panier_moyen", "produits"} <= ok.json().keys()
     assert refuse.status_code == 403
     assert anonyme.status_code == 401
+
+
+def test_la_courbe_couvre_chaque_jour_de_la_periode(
+    client_http: TestClient, db: Session
+) -> None:
+    produit = _produit(db, "Madeleine", "2000.00")
+    _vendre(client_http, db, produit, 2, il_y_a=timedelta(days=3))
+
+    tableau = TableauDeBordService(db).calculer(Periode.SEPT_JOURS)
+
+    assert tableau.pas == "jour"
+    # Sept jours passés et aujourd'hui, sans trou : un jour sans vente vaut 0.
+    assert len(tableau.evolution) == 8
+    jours = [p.debut for p in tableau.evolution]
+    assert jours == sorted(jours)
+    assert sum(p.chiffre_affaires for p in tableau.evolution) == (
+        tableau.chiffre_affaires
+    )
+
+
+def test_par_mois_au_dela_de_trente_jours(client_http: TestClient, db: Session) -> None:
+    tableau = TableauDeBordService(db).calculer(Periode.DOUZE_MOIS)
+
+    assert tableau.pas == "mois"
+    assert all(p.debut.day == 1 for p in tableau.evolution)
+    assert len(tableau.evolution) in (12, 13)
+
+
+def test_repartit_les_ventes_par_categorie(
+    client_http: TestClient, db: Session
+) -> None:
+    produit = _produit(db, "Chausson", "1200.00")
+    _vendre(client_http, db, produit, 5)
+
+    categories = {
+        c.categorie: c
+        for c in TableauDeBordService(db).calculer(Periode.TOUT).categories
+    }
+
+    categorie = produit.categorie.libelle
+    assert categories[categorie].unites_vendues == 5
+    assert categories[categorie].chiffre_affaires == Decimal("6000.00")

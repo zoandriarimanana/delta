@@ -6,10 +6,26 @@ export type Periode = '7j' | '30j' | '12m' | 'tout';
 export interface VenteProduit {
   id_produit: number;
   nom: string;
+  categorie: string;
   unites_vendues: number;
   /** Décimal sérialisé en chaîne par l'API. */
   chiffre_affaires: string;
   nombre_commandes: number;
+}
+
+/** Miroir de `PointVentes` : un jour, ou un mois (son premier jour). */
+export interface PointVentes {
+  /** Date ISO `AAAA-MM-JJ`. */
+  debut: string;
+  nombre_commandes: number;
+  chiffre_affaires: string;
+}
+
+/** Miroir de `VentesCategorie`. */
+export interface VentesCategorie {
+  categorie: string;
+  unites_vendues: number;
+  chiffre_affaires: string;
 }
 
 /** Miroir de `TableauDeBordRead`. */
@@ -22,4 +38,8 @@ export interface TableauDeBord {
   commandes_a_confirmer: number;
   /** Produits vendus sur la période, par quantité décroissante. */
   produits: VenteProduit[];
+  pas: 'jour' | 'mois';
+  /** Périodes sans vente à zéro. */
+  evolution: PointVentes[];
+  categories: VentesCategorie[];
 }

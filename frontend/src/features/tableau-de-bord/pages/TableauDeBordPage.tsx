@@ -10,6 +10,7 @@
  */
 
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
   BarChart3,
@@ -21,12 +22,14 @@ import {
 } from 'lucide-react';
 
 import { formaterMontant } from '@/features/commande/commande.service';
-import { urlPhotoPartie } from '@/features/galerie/galerie.api';
 import { useCouvertures } from '@/features/galerie/galerie.hooks';
-import { imageProduit } from '@/lib/images';
+
+import GraphiqueCategories from '../components/GraphiqueCategories';
+import GraphiqueEvolution from '../components/GraphiqueEvolution';
+import GraphiqueProduits from '../components/GraphiqueProduits';
 
 import { useTableauDeBord } from '../tableauDeBord.hooks';
-import { classer, part, type Classement } from '../tableauDeBord.service';
+import { classer, type Classement } from '../tableauDeBord.service';
 import type { Periode } from '../tableauDeBord.types';
 
 const PERIODES: { valeur: Periode; libelle: string }[] = [
@@ -46,7 +49,6 @@ export default function TableauDeBordPage() {
   const couvertures = useCouvertures('produits');
 
   const tops = donnees === null ? [] : classer(donnees.produits, classement);
-  const premier = tops[0];
 
   return (
     <section className="mx-auto max-w-6xl">
@@ -129,92 +131,48 @@ export default function TableauDeBordPage() {
             </Link>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-gris-200 bg-surface p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-gris-700">
-                Produits les plus vendus
-              </h2>
-              <div
-                role="group"
-                aria-label="Classer par"
-                className="flex gap-1 rounded-xl bg-gris-100 p-1"
-              >
-                <button
-                  type="button"
-                  aria-pressed={classement === 'quantite'}
-                  onClick={() => setClassement('quantite')}
-                  className={`${CLASSES_BASCULE} text-gris-600`}
-                >
-                  Quantité
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={classement === 'chiffre'}
-                  onClick={() => setClassement('chiffre')}
-                  className={`${CLASSES_BASCULE} text-gris-600`}
-                >
-                  Chiffre d’affaires
-                </button>
-              </div>
-            </div>
+          <Panneau titre="Évolution du chiffre d’affaires" className="mt-6">
+            <GraphiqueEvolution points={donnees.evolution} pas={donnees.pas} />
+          </Panneau>
 
-            {tops.length === 0 ? (
-              <p className="mt-6 rounded-xl border border-dashed border-gris-300 p-8 text-center text-gris-500">
-                Aucune vente sur cette période.
-              </p>
-            ) : (
-              <ol className="mt-4 space-y-3">
-                {tops.map((produit, rang) => {
-                  const fichier = couvertures[String(produit.id_produit)];
-                  const image =
-                    fichier === undefined
-                      ? imageProduit(produit.id_produit, produit.nom)
-                      : urlPhotoPartie('produits', fichier);
-                  const largeur = part(produit, premier, classement);
-                  return (
-                    <li key={produit.id_produit} className="flex items-center gap-3">
-                      <span className="w-6 shrink-0 text-right text-sm font-bold text-gris-500">
-                        {rang + 1}
-                      </span>
-                      <img
-                        src={image}
-                        alt=""
-                        className="h-11 w-11 shrink-0 rounded-lg object-cover"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                          <Link
-                            to={`/personnel/catalogue/${produit.id_produit}`}
-                            className="truncate font-medium text-gris-700 no-underline hover:text-primaire"
-                          >
-                            {produit.nom}
-                          </Link>
-                          <span className="text-sm text-gris-600">
-                            <strong className="text-gris-700">
-                              {produit.unites_vendues}
-                            </strong>{' '}
-                            vendu(s) ·{' '}
-                            <strong className="text-gris-700">
-                              {formaterMontant(produit.chiffre_affaires)}
-                            </strong>{' '}
-                            · {produit.nombre_commandes} commande(s)
-                          </span>
-                        </div>
-                        <div
-                          className="mt-1.5 h-2 overflow-hidden rounded-full bg-gris-100"
-                          aria-hidden
-                        >
-                          <div
-                            className="h-full rounded-full bg-primaire"
-                            style={{ width: `${largeur}%` }}
-                          />
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
+          <div className="mt-6 grid gap-6 lg:grid-cols-3">
+            <Panneau
+              titre="Produits les plus vendus"
+              className="lg:col-span-2"
+              actions={
+                <div
+                  role="group"
+                  aria-label="Classer par"
+                  className="flex gap-1 rounded-xl bg-gris-100 p-1"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={classement === 'quantite'}
+                    onClick={() => setClassement('quantite')}
+                    className={`${CLASSES_BASCULE} text-gris-600`}
+                  >
+                    Quantité
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={classement === 'chiffre'}
+                    onClick={() => setClassement('chiffre')}
+                    className={`${CLASSES_BASCULE} text-gris-600`}
+                  >
+                    Chiffre d’affaires
+                  </button>
+                </div>
+              }
+            >
+              <GraphiqueProduits
+                produits={tops}
+                classement={classement}
+                couvertures={couvertures}
+              />
+            </Panneau>
+            <Panneau titre="Ventes par catégorie">
+              <GraphiqueCategories categories={donnees.categories} />
+            </Panneau>
           </div>
         </>
       )}
@@ -249,5 +207,30 @@ function Indicateur({
       </div>
       <p className="mt-2 text-2xl font-bold text-gris-700">{valeur}</p>
     </div>
+  );
+}
+
+function Panneau({
+  titre,
+  actions,
+  className = '',
+  children,
+}: {
+  titre: string;
+  actions?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      aria-label={titre}
+      className={`rounded-2xl border border-gris-200 bg-surface p-5 shadow-sm ${className}`}
+    >
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-gris-700">{titre}</h2>
+        {actions}
+      </div>
+      {children}
+    </section>
   );
 }

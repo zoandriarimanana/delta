@@ -1,7 +1,7 @@
 """Repository de l'entité COMMANDE."""
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -123,3 +123,31 @@ class CommandeRepository(BaseRepository[Commande]):
             )
             or 0
         )
+
+    def serie(
+        self,
+        statuts: Sequence[StatutCommande],
+        depuis: datetime | None,
+        unite: str,
+        fuseau: str,
+    ) -> list[tuple[date, int, Decimal]]:
+        """Nombre de commandes et chiffre d'affaires par `unite` (`day` ou
+        `month`), datés dans le `fuseau` donné — un jour de Madagascar, pas un
+        jour UTC. Seules les périodes qui ont des ventes sont renvoyées."""
+        debut = func.date_trunc(unite, func.timezone(fuseau, Commande.date_commande))
+        requete = (
+            select(
+                debut,
+                func.count(Commande.id_commande),
+                func.sum(Commande.montant_total),
+            )
+            .where(Commande.statut.in_(list(statuts)))
+            .group_by(debut)
+            .order_by(debut)
+        )
+        if depuis is not None:
+            requete = requete.where(Commande.date_commande >= depuis)
+        return [
+            (instant.date(), int(n), Decimal(m or 0))
+            for instant, n, m in self.db.execute(requete).all()
+        ]
