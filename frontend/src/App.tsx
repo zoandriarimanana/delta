@@ -22,6 +22,7 @@ import PriseDeCommandePage from '@/features/commande/pages/PriseDeCommandePage';
 import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
 import AdministrationDomainesPage from '@/features/formation/pages/AdministrationDomainesPage';
 import AdministrationDemandesFormationPage from '@/features/formation/pages/AdministrationDemandesFormationPage';
+import TableauDeBordPage from '@/features/tableau-de-bord/pages/TableauDeBordPage';
 import AdministrationFormationsPage from '@/features/formation/pages/AdministrationFormationsPage';
 import DomaineDetailAdministrationPage from '@/features/formation/pages/DomaineDetailAdministrationPage';
 import FormationDetailAdministrationPage from '@/features/formation/pages/FormationDetailAdministrationPage';
@@ -184,6 +185,7 @@ export default function App() {
             element={<FormationDetailAdministrationPage />}
           />
           <Route path="assistant" element={<AdministrationAssistantPage />} />
+          <Route path="tableau-de-bord" element={<TableauDeBordPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

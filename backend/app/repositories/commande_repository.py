@@ -1,9 +1,11 @@
 """Repository de l'entité COMMANDE."""
 
 from collections.abc import Sequence
+from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 
 from app.models.commande import Commande, StatutCommande
 from app.repositories.base_repository import BaseRepository
@@ -95,3 +97,29 @@ class CommandeRepository(BaseRepository[Commande]):
             .execution_options(synchronize_session=False)
         )
         return resultat.rowcount == 1
+
+    def totaux(
+        self, statuts: Sequence[StatutCommande], depuis: datetime | None
+    ) -> tuple[int, Decimal]:
+        """Nombre de commandes aux `statuts` donnés et somme de leur
+        `montant_total` (frais de livraison compris), depuis `depuis` — tout
+        l'historique si `None`. Les commandes archivées comptent : ce sont
+        des ventes terminées."""
+        requete = select(
+            func.count(Commande.id_commande), func.sum(Commande.montant_total)
+        ).where(Commande.statut.in_(list(statuts)))
+        if depuis is not None:
+            requete = requete.where(Commande.date_commande >= depuis)
+        nombre, somme = self.db.execute(requete).one()
+        return int(nombre), Decimal(somme or 0)
+
+    def compter_actives(self, statut: StatutCommande) -> int:
+        """Commandes **actives** (non archivées) à un statut donné."""
+        return int(
+            self.db.scalar(
+                select(func.count(Commande.id_commande)).where(
+                    Commande.statut == statut, Commande.supprime_le.is_(None)
+                )
+            )
+            or 0
+        )

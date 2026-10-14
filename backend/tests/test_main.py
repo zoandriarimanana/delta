@@ -57,6 +57,7 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/photos/{{partie}}/couvertures",
         f"{prefixe}/commandes",
         f"{prefixe}/demandes-formation",
+        f"{prefixe}/tableau-de-bord",
         f"{prefixe}/demandes-formation/administration",
         f"{prefixe}/demandes-formation/administration/{{id_demande}}",
         f"{prefixe}/commandes/administration",

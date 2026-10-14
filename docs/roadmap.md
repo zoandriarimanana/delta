@@ -2082,6 +2082,31 @@ Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
       Interface seulement : `TAUX_CHANGE` et les colonnes de devise restent
       en base, inactifs, pour les commandes déjà passées en devise (voir
       `docs/architecture.md`, « Devises »). Aucune migration.
+- [x] **Tableau de bord de l'administration** (demande du 14 octobre 2026,
+      hors plan R, signalé et cadré avant le code). Décisions de
+      l'utilisateur : classement des produits **par quantité et par chiffre
+      d'affaires** (bascule entre les deux), **choix de la période**
+      (7 jours, 30 jours par défaut, 12 mois, tout), et **chiffres clés** en
+      tête — chiffre d'affaires, nombre de commandes, panier moyen,
+      commandes à confirmer.
+      — Ce qui compte comme une vente : une commande **engagée** —
+      confirmée, en préparation, livrée ou servie, archivée comprise (une
+      archive est une vente terminée). Ni une commande en attente (elle
+      peut expirer), ni une annulée.
+      — Unités vendues : la quantité de la ligne, sauf pour un produit
+      vendu à la personne, où une ligne est **un** produit (même règle que
+      le stock). Chiffre d'affaires d'un produit : prix figé × quantité,
+      plus le supplément de personnalisation figé.
+      — Backend : `GET /tableau-de-bord?periode=…`, réservé
+      `PersonnelAdministrateur`, calculé à la demande (aucune table, même
+      principe que `calculer_solde`). Service d'orchestration à part
+      (`TableauDeBordService`), il croise `COMMANDE`, `LIGNE_COMMANDE`,
+      `DEMANDE_PERSONNALISATION` et `PRODUIT`.
+      — Frontend : module `features/tableau-de-bord/`, premier lien de
+      l'espace personnel.
+      — Livré. Aucune migration. Les totaux se testent par différence (la
+      base de test porte d'autres commandes). Vérifié dans un vrai
+      navigateur sur la base de test.
 - [ ] **R.2 — Réservation des salles par calendrier.** Créneaux occupés
       d'une salle exposés publiquement, **sans aucune donnée du client** ;
       calendrier mensuel sur la fiche (jours occupés grisés, choix du jour

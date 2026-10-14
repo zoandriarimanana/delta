@@ -44,6 +44,7 @@ const LIENS_GENERAL: Lien[] = [
 ];
 
 const LIENS_GESTION: Lien[] = [
+  { vers: '/personnel/tableau-de-bord', libelle: 'Tableau de bord' },
   { vers: '/personnel/administration', libelle: 'Personnel' },
   { vers: '/personnel/reservations', libelle: 'Réservations' },
   { vers: '/personnel/commandes/administration', libelle: 'Commandes' },

@@ -54,6 +54,7 @@ from app.routers import (
     salle_router,
     session_formation_router,
     session_router,
+    tableau_de_bord_router,
     tarif_livraison_router,
     taux_change_router,
 )
@@ -224,3 +225,4 @@ app.include_router(paiement_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(assistant_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(document_connaissance_router.router, prefix=settings.API_V1_PREFIX)
 app.include_router(demande_formation_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(tableau_de_bord_router.router, prefix=settings.API_V1_PREFIX)

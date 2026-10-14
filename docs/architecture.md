@@ -1312,6 +1312,7 @@ chaque redéploiement. Format lu dans les octets, jamais dans le nom.
 | `avis` | AVIS |
 | `paiement` | PAIEMENT |
 | `assistant` | DOCUMENT_CONNAISSANCE (et l'index vectoriel, hors MLD) |
+| `tableau-de-bord` | aucune — lecture agrégée de COMMANDE, LIGNE_COMMANDE, DEMANDE_PERSONNALISATION, PRODUIT |
 | `galerie` | aucune — fichiers sur disque (`static/upload/`), salles, logements, formations, produits |
 
 Voir `docs/mld.md` pour le détail des colonnes de chaque table.
