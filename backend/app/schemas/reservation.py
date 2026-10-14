@@ -137,6 +137,8 @@ class ReservationRead(BaseModel):
     acompte_paye: bool = False
     #: Échéance de l'acompte, `None` si la réservation n'est pas concernée.
     acompte_avant: datetime | None = None
+    # Archivée par l'administration (14 octobre 2026) : `None` si active.
+    supprime_le: datetime | None = None
 
 
 class ReservationChangementStatut(BaseModel):

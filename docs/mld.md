@@ -661,6 +661,14 @@ RESERVATION(id_reservation, type_reservation, date_debut, date_fin, date_reserva
   `RESERVATION.acompte_avant`, calculées, non stockées) pour que l'écran
   les affiche sans recalculer la règle.
 
+- **« Supprimer » une réservation, c'est l'archiver** (14 octobre 2026),
+  même règle que `COMMANDE` : `supprime_le` posé sur la réservation et son
+  hébergement lié, jamais un `DELETE`. Réservé aux réservations **honorées
+  ou annulées** (409 sinon), sans rendre de place — une honorée a consommé
+  la sienne, une annulée l'a déjà rendue. Réversible par restauration, sauf
+  si le créneau a été repris entre-temps (contrainte d'exclusion, 409) ou si
+  la réservation était encore en cours quand son client l'a archivée.
+
 - `RESERVATION.type_reservation` ∈ {Formation, Salle, Logement, Table}.
 
 - `RESERVATION.statut` ∈ {En_attente, Confirmee, Honoree, Annulee}. Domaine

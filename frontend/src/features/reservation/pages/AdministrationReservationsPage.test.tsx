@@ -13,8 +13,10 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  archiverReservationAdministration,
   changerStatutAdministration,
   recupererReservationsAdministration,
+  restaurerReservationAdministration,
 } from '../reservation.api';
 import type { Reservation } from '../reservation.types';
 import AdministrationReservationsPage from './AdministrationReservationsPage';
@@ -274,5 +276,65 @@ describe('confirmer une réservation (13 octobre 2026)', () => {
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: /^confirmer$/i })).toBeNull()
     );
+  });
+});
+
+describe('supprimer une réservation terminée (14 octobre 2026)', () => {
+  it('ne propose la corbeille que pour une réservation honorée ou annulée', async () => {
+    vi.mocked(recupererReservationsAdministration).mockResolvedValue([
+      EN_ATTENTE,
+      HONOREE,
+      ANNULEE,
+    ]);
+    afficher();
+    await screen.findByRole('table');
+
+    expect(
+      screen.queryByRole('button', { name: /supprimer la réservation n° 1/i })
+    ).toBeNull();
+    expect(
+      screen.getByRole('button', { name: /supprimer la réservation n° 2/i })
+    ).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: /supprimer la réservation n° 3/i })
+    ).toBeDefined();
+  });
+
+  it('archive après confirmation, puis recharge la liste', async () => {
+    vi.mocked(recupererReservationsAdministration).mockResolvedValue([HONOREE]);
+    vi.mocked(archiverReservationAdministration).mockResolvedValue(undefined);
+    afficher();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /supprimer la réservation n° 2/i })
+    );
+    expect(archiverReservationAdministration).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Oui' }));
+
+    await waitFor(() =>
+      expect(archiverReservationAdministration).toHaveBeenCalledWith(2)
+    );
+    await waitFor(() =>
+      expect(recupererReservationsAdministration).toHaveBeenCalledTimes(2)
+    );
+  });
+
+  it('montre les archives à la demande et les restaure', async () => {
+    const archivee = { ...ANNULEE, supprime_le: '2026-10-14T08:00:00Z' };
+    vi.mocked(recupererReservationsAdministration).mockImplementation(
+      async (inclureArchives) => (inclureArchives ? [archivee] : [])
+    );
+    vi.mocked(restaurerReservationAdministration).mockResolvedValue(ANNULEE);
+    afficher();
+
+    await userEvent.click(await screen.findByLabelText(/afficher les archives/i));
+    await userEvent.click(await screen.findByRole('button', { name: /restaurer/i }));
+
+    expect(recupererReservationsAdministration).toHaveBeenLastCalledWith(true);
+    await waitFor(() =>
+      expect(restaurerReservationAdministration).toHaveBeenCalledWith(3)
+    );
+    // Une archive ne propose plus aucune action de statut.
+    expect(screen.queryByRole('button', { name: /^annuler$/i })).toBeNull();
   });
 });

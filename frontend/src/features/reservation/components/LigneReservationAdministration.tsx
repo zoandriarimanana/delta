@@ -14,12 +14,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router';
 import {
+  Archive,
   BedDouble,
   Building2,
   Check,
   CheckCircle2,
   ChevronRight,
   GraduationCap,
+  RotateCcw,
+  Trash2,
   UserRound,
   Users,
   UtensilsCrossed,
@@ -35,10 +38,12 @@ import {
   imageCible,
   libelleCible,
   libelleStatut,
+  estArchivee,
   libelleType,
   peutAnnuler,
   peutConfirmer,
   peutMarquerHonoree,
+  peutSupprimer,
   varianteStatut,
 } from '../reservation.service';
 import type { Reservation, TypeReservation } from '../reservation.types';
@@ -70,6 +75,10 @@ interface Proprietes {
   confirmer: () => void;
   marquerHonoree: () => void;
   annuler: () => void;
+  /** Supprimer = archiver (jamais d'effacement réel), puis restaurer. */
+  surArchiver: () => void;
+  surRestaurer: () => void;
+  envoiArchivage: boolean;
 }
 
 export default function LigneReservationAdministration({
@@ -79,8 +88,13 @@ export default function LigneReservationAdministration({
   confirmer,
   marquerHonoree,
   annuler,
+  surArchiver,
+  surRestaurer,
+  envoiArchivage,
 }: Proprietes) {
   const [confirmation, setConfirmation] = useState(false);
+  const [suppression, setSuppression] = useState(false);
+  const archivee = estArchivee(reservation);
   const image = cible?.image ?? imageCible(reservation);
   const nom = cible?.nom ?? libelleCible(reservation);
   const IconeType = ICONES_TYPE[reservation.type_reservation] ?? Building2;
@@ -90,7 +104,7 @@ export default function LigneReservationAdministration({
     <tr
       className={`align-middle transition-colors hover:bg-gris-100/60 ${
         aTraiter ? 'bg-attente/5' : ''
-      }`}
+      } ${archivee ? 'opacity-60' : ''}`}
     >
       <td
         className={`border-l-4 py-3 pl-3 pr-3 ${
@@ -150,7 +164,49 @@ export default function LigneReservationAdministration({
 
       <td className="px-3 py-3">
         <div className="ml-auto flex max-w-[22rem] flex-wrap items-center justify-end gap-2">
-          {confirmation ? (
+          {archivee ? (
+            <>
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-gris-500">
+                <Archive size={13} aria-hidden />
+                Archivée
+              </span>
+              <button
+                type="button"
+                onClick={surRestaurer}
+                disabled={envoiArchivage}
+                className="inline-flex items-center gap-1 rounded-lg border border-succes/40 px-2 py-1 text-xs font-semibold text-succes hover:bg-succes/10 disabled:opacity-50"
+              >
+                <RotateCcw size={13} aria-hidden />
+                Restaurer
+              </button>
+            </>
+          ) : suppression ? (
+            <span
+              role="group"
+              aria-label={`Confirmer la suppression de la réservation n° ${reservation.id_reservation}`}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-danger/30 bg-surface px-3 py-2 shadow-lg"
+            >
+              <span className="text-xs font-medium text-danger">Supprimer ?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSuppression(false);
+                  surArchiver();
+                }}
+                disabled={envoiArchivage}
+                className="rounded-lg bg-danger px-2 py-1 text-xs font-semibold text-sur-couleur hover:opacity-90 disabled:opacity-50"
+              >
+                Oui
+              </button>
+              <button
+                type="button"
+                onClick={() => setSuppression(false)}
+                className="rounded-lg border border-gris-300 px-2 py-1 text-xs font-semibold text-gris-600 hover:bg-gris-100"
+              >
+                Non
+              </button>
+            </span>
+          ) : confirmation ? (
             <>
               <span className="w-full text-right text-xs font-medium text-danger">
                 Annuler cette réservation ?
@@ -211,6 +267,17 @@ export default function LigneReservationAdministration({
                 </Bouton>
               )}
             </>
+          )}
+          {!suppression && peutSupprimer(reservation) && (
+            <button
+              type="button"
+              onClick={() => setSuppression(true)}
+              aria-label={`Supprimer la réservation n° ${reservation.id_reservation}`}
+              title="Supprimer (archiver) cette réservation"
+              className="rounded-lg p-1.5 text-gris-400 transition hover:bg-danger/10 hover:text-danger"
+            >
+              <Trash2 size={17} aria-hidden />
+            </button>
           )}
           <Link
             to={`/personnel/reservations/${reservation.id_reservation}`}

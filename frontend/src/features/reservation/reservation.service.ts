@@ -120,16 +120,36 @@ export function imageCible(reservation: Reservation): string | null {
  * réservation restait « en attente de confirmation » sans moyen de l'accepter.
  */
 export function peutConfirmer(reservation: Reservation): boolean {
-  return reservation.statut === 'En_attente';
+  return !estArchivee(reservation) && reservation.statut === 'En_attente';
 }
 
 export function peutMarquerHonoree(reservation: Reservation): boolean {
-  return reservation.statut !== 'Honoree' && reservation.statut !== 'Annulee';
+  return (
+    !estArchivee(reservation) &&
+    reservation.statut !== 'Honoree' &&
+    reservation.statut !== 'Annulee'
+  );
 }
 
 /** Voir `peutMarquerHonoree` — même règle, même raison d'être partagée. */
 export function peutAnnuler(reservation: Reservation): boolean {
-  return reservation.statut !== 'Annulee';
+  return !estArchivee(reservation) && reservation.statut !== 'Annulee';
+}
+
+/** Archivée (« supprimée ») par l'administration : elle ne s'administre plus. */
+export function estArchivee(reservation: Reservation): boolean {
+  return reservation.supprime_le != null;
+}
+
+/**
+ * Une réservation **terminée** — honorée ou annulée — se supprime de la liste
+ * (14 octobre 2026). Le serveur refuse les autres en 409.
+ */
+export function peutSupprimer(reservation: Reservation): boolean {
+  return (
+    !estArchivee(reservation) &&
+    (reservation.statut === 'Honoree' || reservation.statut === 'Annulee')
+  );
 }
 
 /** Rubrique de « Mes réservations » où ranger une réservation. */

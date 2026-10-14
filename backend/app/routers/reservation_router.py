@@ -79,10 +79,13 @@ def lister(client: ClientConnecte, db: SessionBase) -> list[ReservationRead]:
     summary="Lister toutes les réservations",
 )
 def lister_administration(
-    admin: PersonnelAdministrateur, db: SessionBase
+    admin: PersonnelAdministrateur,
+    db: SessionBase,
+    inclure_archives: bool = False,
 ) -> list[ReservationRead]:
-    """Les 4 types confondus (`Formation`, `Salle`, `Logement`, `Table`)."""
-    reservations = ReservationService(db).lister()
+    """Les 4 types confondus (`Formation`, `Salle`, `Logement`, `Table`).
+    `inclure_archives` ajoute les réservations archivées, pour les restaurer."""
+    reservations = ReservationService(db).lister(inclure_archives=inclure_archives)
     return [ReservationRead.model_validate(r) for r in reservations]
 
 
@@ -94,8 +97,9 @@ def lister_administration(
 def obtenir_administration(
     id_reservation: int, admin: PersonnelAdministrateur, db: SessionBase
 ) -> ReservationRead:
-    """404 si l'identifiant ne désigne personne, ou une ligne archivée."""
-    reservation = ReservationService(db).obtenir(id_reservation)
+    """404 si l'identifiant ne désigne personne. Une réservation archivée
+    reste consultable ici : l'administration la restaure depuis sa fiche."""
+    reservation = ReservationService(db).obtenir(id_reservation, inclure_supprimes=True)
     return ReservationRead.model_validate(reservation)
 
 
@@ -118,6 +122,33 @@ def changer_statut_administration(
     changer.
     """
     reservation = ReservationService(db).changer_statut(id_reservation, donnees.statut)
+    return ReservationRead.model_validate(reservation)
+
+
+@router.delete(
+    "/administration/{id_reservation}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Supprimer (archiver) une réservation honorée ou annulée",
+)
+def archiver_administration(
+    id_reservation: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> None:
+    """Archivage, jamais suppression réelle : la réservation quitte la liste
+    mais reste en base, restaurable. **409** si elle est encore en cours."""
+    ReservationService(db).archiver(id_reservation)
+
+
+@router.post(
+    "/administration/{id_reservation}/restauration",
+    response_model=ReservationRead,
+    summary="Restaurer une réservation archivée",
+)
+def restaurer_administration(
+    id_reservation: int, admin: PersonnelAdministrateur, db: SessionBase
+) -> ReservationRead:
+    """Idempotent. **409** si elle était encore en cours à l'archivage, ou si
+    son créneau a été repris entre-temps."""
+    reservation = ReservationService(db).restaurer(id_reservation)
     return ReservationRead.model_validate(reservation)
 
 

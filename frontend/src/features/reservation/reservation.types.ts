@@ -38,6 +38,8 @@ export interface Reservation {
   acompte_paye?: boolean;
   /** Échéance de l'acompte ; `null` si aucun acompte n'est attendu. */
   acompte_avant?: string | null;
+  /** Archivée par l'administration (« supprimée ») ; absente ou `null` si active. */
+  supprime_le?: string | null;
 }
 
 /**

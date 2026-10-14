@@ -34,8 +34,32 @@ export async function recupererReservations(): Promise<Reservation[]> {
  * type/statut de `AdministrationReservationsPage` s'applique donc côté
  * client, sur la liste complète.
  */
-export async function recupererReservationsAdministration(): Promise<Reservation[]> {
-  const reponse = await axiosClient.get<Reservation[]>(CHEMIN_ADMINISTRATION);
+export async function recupererReservationsAdministration(
+  inclureArchives = false
+): Promise<Reservation[]> {
+  const reponse = await axiosClient.get<Reservation[]>(CHEMIN_ADMINISTRATION, {
+    params: inclureArchives ? { inclure_archives: true } : undefined,
+  });
+  return reponse.data;
+}
+
+/**
+ * Supprime une réservation honorée ou annulée — un **archivage**, jamais une
+ * suppression réelle : elle reste en base, restaurable (14 octobre 2026).
+ */
+export async function archiverReservationAdministration(
+  idReservation: number
+): Promise<void> {
+  await axiosClient.delete(`${CHEMIN_ADMINISTRATION}/${idReservation}`);
+}
+
+/** Remet une réservation archivée dans la liste. */
+export async function restaurerReservationAdministration(
+  idReservation: number
+): Promise<Reservation> {
+  const reponse = await axiosClient.post<Reservation>(
+    `${CHEMIN_ADMINISTRATION}/${idReservation}/restauration`
+  );
   return reponse.data;
 }
 

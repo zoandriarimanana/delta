@@ -68,6 +68,12 @@ STATUTS_OCCUPANTS: frozenset[StatutReservation] = frozenset(
 )
 
 
+#: Réservations terminées, que l'administration peut archiver (« supprimer »).
+STATUTS_TERMINES: frozenset[StatutReservation] = frozenset(
+    {StatutReservation.HONOREE, StatutReservation.ANNULEE}
+)
+
+
 class ReservationService:
     """Cycle de vie d'une réservation, et compteur de places de la session."""
 
@@ -80,9 +86,13 @@ class ReservationService:
 
     # --- Lecture --------------------------------------------------------------
 
-    def obtenir(self, id_reservation: int) -> Reservation:
+    def obtenir(
+        self, id_reservation: int, inclure_supprimes: bool = False
+    ) -> Reservation:
         """Retourne une réservation, ou lève `RessourceIntrouvable` (404)."""
-        reservation = self.reservations.get_by_id(id_reservation)
+        reservation = self.reservations.get_by_id(
+            id_reservation, inclure_supprimes=inclure_supprimes
+        )
         if reservation is None:
             raise RessourceIntrouvable("Réservation introuvable.")
         return reservation
@@ -102,11 +112,11 @@ class ReservationService:
         """Historique des réservations d'un client, les plus récentes d'abord."""
         return self.reservations.lister_par_client(client.id_client)
 
-    def lister(self) -> Sequence[Reservation]:
+    def lister(self, inclure_archives: bool = False) -> Sequence[Reservation]:
         """Toutes les réservations actives, les 4 types confondus. Réservé à
         l'administrateur — même patron que `AbonnementService.lister`. Les
-        plus récentes d'abord."""
-        return self.reservations.lister_recentes()
+        plus récentes d'abord ; `inclure_archives` ajoute les archivées."""
+        return self.reservations.lister_recentes(inclure_supprimes=inclure_archives)
 
     # --- Création -------------------------------------------------------------
 
@@ -557,3 +567,62 @@ class ReservationService:
             self.reservations.delete(hebergement)
         self.reservations.delete(reservation)
         self.db.commit()
+
+    # --- Archivage par l'administration (14 octobre 2026) ---------------------
+
+    def archiver(self, id_reservation: int) -> None:
+        """« Supprimer » depuis l'administration : archive une réservation
+        **terminée** — honorée ou annulée —, jamais une réservation en cours.
+
+        Même règle que les commandes : la ligne reste en base (preuve d'une
+        prestation, référencée par ses paiements et ses avis) et se restaure.
+        **Ne rend aucune place**, contrairement à `supprimer` : une
+        réservation honorée a consommé la sienne pour de bon, une annulée l'a
+        déjà rendue. Passer par `supprimer` créditerait la session d'une
+        réservation honorée (`STATUTS_OCCUPANTS` la compte comme occupante).
+        """
+        reservation = self.obtenir(id_reservation)
+        if reservation.statut not in STATUTS_TERMINES:
+            raise ConflitMetier(
+                "Seule une réservation honorée ou annulée peut être supprimée : "
+                "celle-ci est encore en cours."
+            )
+        hebergement = reservation.hebergement
+        if hebergement is not None and hebergement.supprime_le is None:
+            self.reservations.delete(hebergement)
+        self.reservations.delete(reservation)
+        self.db.commit()
+
+    def restaurer(self, id_reservation: int) -> Reservation:
+        """Remet une réservation archivée dans la liste, avec son hébergement
+        lié. Idempotent sur une réservation active.
+
+        **Seule une réservation terminée se restaure** : une réservation en
+        cours archivée a rendu ses places, la remettre exigerait de les
+        reprendre — et de pouvoir échouer faute de places.
+
+        Une réservation honorée retient de nouveau son créneau : si quelqu'un
+        l'a réservé entre-temps, la contrainte d'exclusion refuse, traduit en
+        409.
+        """
+        reservation = self.obtenir(id_reservation, inclure_supprimes=True)
+        if reservation.supprime_le is None:
+            return reservation
+        if reservation.statut not in STATUTS_TERMINES:
+            raise ConflitMetier(
+                "Cette réservation était encore en cours : elle ne peut pas être "
+                "restaurée, le client doit réserver de nouveau."
+            )
+        try:
+            hebergement = reservation.hebergement
+            if hebergement is not None and hebergement.supprime_le is not None:
+                self.reservations.restaurer(hebergement)
+            self.reservations.restaurer(reservation)
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            raise ConflitMetier(
+                "Ce créneau a été réservé entre-temps : la réservation ne peut pas "
+                "être restaurée."
+            ) from None
+        return reservation

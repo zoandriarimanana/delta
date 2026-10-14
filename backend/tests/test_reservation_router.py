@@ -825,3 +825,126 @@ def test_l_acompte_d_un_autre_client_repond_404(
     )
 
     assert reponse.status_code == 404
+
+
+# --- Supprimer (archiver) une réservation terminée (14 octobre 2026) ------
+
+
+def _reservation_au_statut(
+    client_http: TestClient, db: Session, session: SessionFormation, statut: str | None
+) -> dict:
+    """Une réservation de formation, passée au `statut` voulu par l'admin."""
+    creee = client_http.post(
+        RESERVATIONS,
+        json=_corps(session.id_session, nombre=2),
+        headers=_entete(_compte(db, "archive")),
+    ).json()
+    if statut is not None:
+        reponse = client_http.put(
+            f"{RESERVATIONS}/administration/{creee['id_reservation']}/statut",
+            json={"statut": statut},
+            headers=_entete_admin(db),
+        )
+        assert reponse.status_code == 200, reponse.text
+    return creee
+
+
+@pytest.mark.parametrize("statut", ["Honoree", "Annulee"])
+def test_administration_archive_une_reservation_terminee(
+    client_http: TestClient, session_ouverte: SessionFormation, db: Session, statut: str
+) -> None:
+    creee = _reservation_au_statut(client_http, db, session_ouverte, statut)
+    admin = _entete_admin(db)
+    places_avant = db.get(SessionFormation, session_ouverte.id_session).places_restantes
+
+    reponse = client_http.delete(
+        f"{RESERVATIONS}/administration/{creee['id_reservation']}", headers=admin
+    )
+
+    assert reponse.status_code == 204
+    actives = client_http.get(f"{RESERVATIONS}/administration", headers=admin).json()
+    assert creee["id_reservation"] not in [r["id_reservation"] for r in actives]
+    archives = client_http.get(
+        f"{RESERVATIONS}/administration?inclure_archives=true", headers=admin
+    ).json()
+    archivee = next(
+        r for r in archives if r["id_reservation"] == creee["id_reservation"]
+    )
+    assert archivee["supprime_le"] is not None
+    # Ni une honorée ni une annulée ne rend de place en partant aux archives.
+    db.expire_all()
+    assert (
+        db.get(SessionFormation, session_ouverte.id_session).places_restantes
+        == places_avant
+    )
+
+
+@pytest.mark.parametrize("statut", [None, "Confirmee"])
+def test_administration_refuse_d_archiver_une_reservation_en_cours(
+    client_http: TestClient,
+    session_ouverte: SessionFormation,
+    db: Session,
+    statut: str | None,
+) -> None:
+    creee = _reservation_au_statut(client_http, db, session_ouverte, statut)
+
+    reponse = client_http.delete(
+        f"{RESERVATIONS}/administration/{creee['id_reservation']}",
+        headers=_entete_admin(db),
+    )
+
+    assert reponse.status_code == 409
+
+
+def test_administration_archive_refuse_a_un_salarie_sans_droit(
+    client_http: TestClient, session_ouverte: SessionFormation, db: Session
+) -> None:
+    creee = _reservation_au_statut(client_http, db, session_ouverte, "Annulee")
+
+    reponse = client_http.delete(
+        f"{RESERVATIONS}/administration/{creee['id_reservation']}",
+        headers=_entete_agent(db),
+    )
+
+    assert reponse.status_code == 403
+
+
+def test_administration_restaure_une_reservation_archivee(
+    client_http: TestClient, session_ouverte: SessionFormation, db: Session
+) -> None:
+    creee = _reservation_au_statut(client_http, db, session_ouverte, "Honoree")
+    admin = _entete_admin(db)
+    url = f"{RESERVATIONS}/administration/{creee['id_reservation']}"
+    client_http.delete(url, headers=admin)
+
+    fiche = client_http.get(url, headers=admin)
+    reponse = client_http.post(f"{url}/restauration", headers=admin)
+
+    assert fiche.status_code == 200
+    assert fiche.json()["supprime_le"] is not None
+    assert reponse.status_code == 200
+    assert reponse.json()["supprime_le"] is None
+    assert reponse.json()["statut"] == "Honoree"
+
+
+def test_administration_ne_restaure_pas_une_reservation_archivee_en_cours(
+    client_http: TestClient, session_ouverte: SessionFormation, db: Session
+) -> None:
+    """Archivée par son client avant d'être terminée, elle a rendu ses places :
+    la restaurer exigerait de les reprendre."""
+    proprietaire = _compte(db, "encours")
+    creee = client_http.post(
+        RESERVATIONS,
+        json=_corps(session_ouverte.id_session),
+        headers=_entete(proprietaire),
+    ).json()
+    client_http.delete(
+        f"{RESERVATIONS}/{creee['id_reservation']}", headers=_entete(proprietaire)
+    )
+
+    reponse = client_http.post(
+        f"{RESERVATIONS}/administration/{creee['id_reservation']}/restauration",
+        headers=_entete_admin(db),
+    )
+
+    assert reponse.status_code == 409

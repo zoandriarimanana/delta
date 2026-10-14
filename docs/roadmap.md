@@ -2058,6 +2058,14 @@ Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
       note, archivage). Guides client et personnel complétés. Backend
       1 559, frontend 853 ; écrans vérifiés dans un vrai navigateur sur une
       copie du site branchée sur la base de test.
+- [x] **Supprimer une réservation terminée** (demande du 14 octobre 2026,
+      hors plan R) : corbeille sur les réservations honorées ou annulées de
+      l'administration, confirmation « Supprimer ? Oui / Non ». Archivage et
+      jamais suppression réelle, comme les commandes : `DELETE` et
+      `POST .../restauration` sur `/reservations/administration/{id}`,
+      `inclure_archives` sur la liste, fiche lisible une fois archivée. Aucune
+      place rendue (piège relevé : `STATUTS_OCCUPANTS` compte `Honoree`, passer
+      par `supprimer()` aurait recrédité la session). Aucune migration.
 - [ ] **R.2 — Réservation des salles par calendrier.** Créneaux occupés
       d'une salle exposés publiquement, **sans aucune donnée du client** ;
       calendrier mensuel sur la fiche (jours occupés grisés, choix du jour

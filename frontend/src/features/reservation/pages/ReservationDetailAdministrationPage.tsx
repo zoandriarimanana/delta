@@ -16,7 +16,7 @@
  */
 
 import { Link, useParams } from 'react-router';
-import { Check, CheckCircle2, X } from 'lucide-react';
+import { Archive, Check, CheckCircle2, RotateCcw, X } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
 import { formaterDate, formaterMontant } from '@/features/commande/commande.service';
@@ -25,6 +25,7 @@ import EtatAcompte from '../components/EtatAcompte';
 import DetailCible from '../components/DetailCible';
 import {
   useActionsReservationAdministration,
+  useArchivageReservations,
   useReservationDetailAdministration,
 } from '../reservation.administration';
 import {
@@ -42,6 +43,7 @@ export default function ReservationDetailAdministrationPage() {
 
   const detail = useReservationDetailAdministration(id);
   const actions = useActionsReservationAdministration(detail.recharger);
+  const archivage = useArchivageReservations(detail.recharger);
 
   if (detail.chargement) {
     return (
@@ -75,6 +77,33 @@ export default function ReservationDetailAdministrationPage() {
           Retour à la liste
         </Link>
       </div>
+
+      {reservation.supprime_le != null && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gris-300 bg-gris-100 p-4">
+          <p className="flex items-center gap-2 text-sm text-gris-700">
+            <Archive size={16} aria-hidden />
+            Réservation supprimée de la liste (archivée). Elle reste conservée avec ses
+            paiements et ses avis.
+          </p>
+          <Bouton
+            variante="valider"
+            icone={RotateCcw}
+            onClick={() => void archivage.restaurer(reservation.id_reservation)}
+            disabled={archivage.envoi}
+          >
+            Restaurer
+          </Bouton>
+        </div>
+      )}
+
+      {archivage.erreur !== null && (
+        <p
+          role="alert"
+          className="mt-4 rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
+        >
+          {archivage.erreur}
+        </p>
+      )}
 
       {actions.erreur !== null && (
         <p

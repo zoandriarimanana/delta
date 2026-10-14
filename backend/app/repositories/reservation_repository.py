@@ -13,7 +13,7 @@ class ReservationRepository(BaseRepository[Reservation]):
 
     modele = Reservation
 
-    def lister_recentes(self) -> Sequence[Reservation]:
+    def lister_recentes(self, inclure_supprimes: bool = False) -> Sequence[Reservation]:
         """Toutes les réservations actives, **les plus récentes d'abord**
         (demande du 13 octobre 2026).
 
@@ -22,11 +22,9 @@ class ReservationRepository(BaseRepository[Reservation]):
         lieu. `list()` triait par identifiant croissant, et l'écran
         d'administration ouvrait sur les plus anciennes.
         """
-        requete = (
-            select(Reservation)
-            .where(Reservation.supprime_le.is_(None))
-            .order_by(Reservation.id_reservation.desc())
-        )
+        requete = select(Reservation).order_by(Reservation.id_reservation.desc())
+        if not inclure_supprimes:
+            requete = requete.where(Reservation.supprime_le.is_(None))
         return self.db.scalars(requete).all()
 
     def lister_par_client(

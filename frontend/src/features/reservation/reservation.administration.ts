@@ -10,7 +10,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import {
+  archiverReservationAdministration,
   changerStatutAdministration,
+  restaurerReservationAdministration,
   recupererReservationAdministration,
   recupererReservationsAdministration,
 } from './reservation.api';
@@ -48,7 +50,9 @@ export interface ReservationsAdministration {
 }
 
 /** Toutes les réservations, les 4 types confondus. */
-export function useReservationsAdministration(): ReservationsAdministration {
+export function useReservationsAdministration(
+  inclureArchives = false
+): ReservationsAdministration {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -61,7 +65,7 @@ export function useReservationsAdministration(): ReservationsAdministration {
     setChargement(true);
     setErreur(null);
 
-    recupererReservationsAdministration()
+    recupererReservationsAdministration(inclureArchives)
       .then((donnees) => actif && setReservations(donnees))
       .catch((erreurAppel) => actif && setErreur(messageDAdministration(erreurAppel)))
       .finally(() => actif && setChargement(false));
@@ -69,7 +73,7 @@ export function useReservationsAdministration(): ReservationsAdministration {
     return () => {
       actif = false;
     };
-  }, [jeton]);
+  }, [jeton, inclureArchives]);
 
   return { reservations, chargement, erreur, recharger };
 }
@@ -161,6 +165,49 @@ export function useActionsReservationAdministration(
     marquerHonoree: (id) => changer(id, 'Honoree'),
     annuler: (id) => changer(id, 'Annulee'),
     idEnCours,
+    erreur,
+  };
+}
+
+export interface ArchivageReservations {
+  archiver: (idReservation: number) => Promise<boolean>;
+  restaurer: (idReservation: number) => Promise<boolean>;
+  envoi: boolean;
+  erreur: string | null;
+}
+
+/**
+ * Supprimer (archiver) ou restaurer une réservation, puis recharger
+ * (14 octobre 2026) — même patron que `useArchivageCommandes`. Le serveur
+ * refuse en 409 une réservation encore en cours : le message est repris tel
+ * quel.
+ */
+export function useArchivageReservations(recharger: () => void): ArchivageReservations {
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const executer = useCallback(
+    async (action: (id: number) => Promise<unknown>, id: number) => {
+      setEnvoi(true);
+      setErreur(null);
+      try {
+        await action(id);
+        recharger();
+        return true;
+      } catch (erreurAppel) {
+        setErreur(messageDAdministration(erreurAppel));
+        return false;
+      } finally {
+        setEnvoi(false);
+      }
+    },
+    [recharger]
+  );
+
+  return {
+    archiver: (id) => executer(archiverReservationAdministration, id),
+    restaurer: (id) => executer(restaurerReservationAdministration, id),
+    envoi,
     erreur,
   };
 }

@@ -111,6 +111,7 @@ def test_routes_montees_sous_le_prefixe_d_api() -> None:
         f"{prefixe}/reservations/administration",
         f"{prefixe}/reservations/administration/{{id_reservation}}",
         f"{prefixe}/reservations/administration/{{id_reservation}}/statut",
+        f"{prefixe}/reservations/administration/{{id_reservation}}/restauration",
         f"{prefixe}/reservations/{{id_reservation}}",
         f"{prefixe}/reservations/{{id_reservation}}/statut",
         f"{prefixe}/reservations/{{id_reservation}}/paiements",

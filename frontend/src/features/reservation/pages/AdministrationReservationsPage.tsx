@@ -31,10 +31,16 @@ import { CalendarCheck, Search } from 'lucide-react';
 import LigneReservationAdministration from '../components/LigneReservationAdministration';
 import {
   useActionsReservationAdministration,
+  useArchivageReservations,
   useReservationsAdministration,
 } from '../reservation.administration';
 import { cleCible, useCiblesResolues } from '../reservation.cibles';
-import { libelleCible, libelleStatut, libelleType } from '../reservation.service';
+import {
+  estArchivee,
+  libelleCible,
+  libelleStatut,
+  libelleType,
+} from '../reservation.service';
 import type { StatutReservation, TypeReservation } from '../reservation.types';
 
 const TYPES: TypeReservation[] = ['Formation', 'Salle', 'Logement', 'Table'];
@@ -61,22 +67,27 @@ const CLASSES_CHAMP =
   'rounded-lg border border-gris-300 bg-surface px-3 py-2 text-sm text-gris-700 focus:border-primaire focus:outline-none focus:ring-2 focus:ring-primaire/20';
 
 export default function AdministrationReservationsPage() {
-  const donnees = useReservationsAdministration();
+  const [archives, setArchives] = useState(false);
+  const donnees = useReservationsAdministration(archives);
   const actions = useActionsReservationAdministration(donnees.recharger);
+  const archivage = useArchivageReservations(donnees.recharger);
   const cibles = useCiblesResolues(donnees.reservations);
   const [filtreType, setFiltreType] = useState<TypeReservation | ''>('');
   const [filtreStatut, setFiltreStatut] = useState<StatutReservation | ''>('');
   const [recherche, setRecherche] = useState('');
 
   const compte = useMemo(() => {
+    // Les compteurs ne comptent que les réservations actives : une archive
+    // n'attend plus rien.
+    const actives = donnees.reservations.filter((r) => !estArchivee(r));
     const total: Record<StatutReservation | '', number> = {
-      '': donnees.reservations.length,
+      '': actives.length,
       En_attente: 0,
       Confirmee: 0,
       Honoree: 0,
       Annulee: 0,
     };
-    for (const r of donnees.reservations) total[r.statut] += 1;
+    for (const r of actives) total[r.statut] += 1;
     return total;
   }, [donnees.reservations]);
 
@@ -107,7 +118,8 @@ export default function AdministrationReservationsPage() {
           <p className="mt-0.5 text-sm text-gris-500">
             Formations, salles, hébergements et tables, les plus récentes d’abord.
             Confirmez une réservation en attente, marquez-la honorée une fois la
-            prestation réalisée, ou annulez-la.
+            prestation réalisée, ou annulez-la. Une réservation honorée ou annulée se
+            supprime de la liste (corbeille), et se restaure depuis les archives.
           </p>
         </div>
       </div>
@@ -182,6 +194,25 @@ export default function AdministrationReservationsPage() {
         </label>
       </div>
 
+      <label className="mt-3 inline-flex items-center gap-2 text-sm text-gris-600">
+        <input
+          type="checkbox"
+          checked={archives}
+          onChange={(e) => setArchives(e.target.checked)}
+          className="h-4 w-4 rounded border-gris-300"
+        />
+        Afficher les archives
+      </label>
+
+      {archivage.erreur !== null && (
+        <p
+          role="alert"
+          className="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
+        >
+          {archivage.erreur}
+        </p>
+      )}
+
       {donnees.erreur !== null && (
         <p
           role="alert"
@@ -236,6 +267,13 @@ export default function AdministrationReservationsPage() {
                     void actions.marquerHonoree(reservation.id_reservation)
                   }
                   annuler={() => void actions.annuler(reservation.id_reservation)}
+                  surArchiver={() =>
+                    void archivage.archiver(reservation.id_reservation)
+                  }
+                  surRestaurer={() =>
+                    void archivage.restaurer(reservation.id_reservation)
+                  }
+                  envoiArchivage={archivage.envoi}
                 />
               ))}
             </tbody>
