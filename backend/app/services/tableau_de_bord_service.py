@@ -1,7 +1,8 @@
 """Tableau de bord de l'administration (14 octobre 2026).
 
 Service d'**orchestration** : il croise `COMMANDE`, `LIGNE_COMMANDE`,
-`DEMANDE_PERSONNALISATION` et `PRODUIT`, d'où un fichier à part, comme
+`DEMANDE_PERSONNALISATION`, `PRODUIT` et, pour les formations,
+`RESERVATION`, `SESSION_FORMATION` et `FORMATION`, d'où un fichier à part, comme
 `ExpirationService`. Rien n'est stocké : tout se calcule à la demande, même
 principe que `calculer_solde()` (Sprint 7.2).
 """
@@ -13,9 +14,12 @@ from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session
 
 from app.models.commande import StatutCommande
+from app.models.reservation import StatutReservation
 from app.repositories.commande_repository import CommandeRepository
 from app.repositories.ligne_commande_repository import LigneCommandeRepository
+from app.repositories.reservation_repository import ReservationRepository
 from app.schemas.tableau_de_bord import (
+    InscriptionsFormationRead,
     Periode,
     PointVentes,
     TableauDeBordRead,
@@ -30,6 +34,13 @@ STATUTS_VENDUS: tuple[StatutCommande, ...] = (
     StatutCommande.EN_PREPARATION,
     StatutCommande.LIVREE,
     StatutCommande.SERVIE,
+)
+
+#: Ce qui compte comme une inscription : une réservation de formation
+#: **acquise**. Une réservation en attente d'acompte peut encore expirer.
+STATUTS_INSCRITS: tuple[StatutReservation, ...] = (
+    StatutReservation.CONFIRMEE,
+    StatutReservation.HONOREE,
 )
 
 DUREES: dict[Periode, timedelta | None] = {
@@ -55,6 +66,7 @@ class TableauDeBordService:
     def __init__(self, db: Session) -> None:
         self.commandes = CommandeRepository(db)
         self.lignes = LigneCommandeRepository(db)
+        self.reservations = ReservationRepository(db)
 
     def calculer(
         self, periode: Periode, maintenant: datetime | None = None
@@ -82,6 +94,15 @@ class TableauDeBordService:
             pas="jour" if journalier else "mois",
             evolution=self._evolution(depuis, maintenant, journalier),
             categories=self._categories(ventes),
+            formations=[
+                InscriptionsFormationRead(**f._asdict())
+                for f in sorted(
+                    self.reservations.inscriptions_par_formation(
+                        STATUTS_INSCRITS, depuis
+                    ),
+                    key=lambda f: (-f.inscrits, -f.chiffre_affaires, f.titre),
+                )
+            ],
         )
 
     def _evolution(

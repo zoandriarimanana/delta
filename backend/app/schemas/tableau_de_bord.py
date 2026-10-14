@@ -30,6 +30,16 @@ class VenteProduitRead(BaseModel):
     nombre_commandes: int
 
 
+class InscriptionsFormationRead(BaseModel):
+    """Inscriptions cumulées d'une formation sur la période."""
+
+    id_formation: int
+    titre: str
+    inscrits: int
+    chiffre_affaires: Decimal
+    nombre_reservations: int
+
+
 class PointVentes(BaseModel):
     """Un point de la courbe : un jour, ou un mois (son premier jour)."""
 
@@ -64,3 +74,5 @@ class TableauDeBordRead(BaseModel):
     evolution: list[PointVentes]
     #: Ventes par catégorie, chiffre d'affaires décroissant.
     categories: list[VentesCategorie]
+    #: Réservations de formation confirmées ou honorées sur la période.
+    formations: list[InscriptionsFormationRead]

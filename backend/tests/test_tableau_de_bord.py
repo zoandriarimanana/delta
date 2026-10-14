@@ -22,7 +22,14 @@ from app.models.commande import Commande, StatutCommande
 from app.models.produit import Produit
 from app.schemas.tableau_de_bord import Periode
 from app.services.tableau_de_bord_service import TableauDeBordService
-from tests.test_reservation_router import _entete_admin, _entete_agent
+from tests.test_reservation_router import (
+    _compte,
+    _corps,
+    _entete,
+    _entete_admin,
+    _entete_agent,
+    _session_ouverte,
+)
 
 pytestmark = pytest.mark.postgres
 
@@ -226,3 +233,53 @@ def test_repartit_les_ventes_par_categorie(
     categorie = produit.categorie.libelle
     assert categories[categorie].unites_vendues == 5
     assert categories[categorie].chiffre_affaires == Decimal("6000.00")
+
+
+def _inscrire(
+    client_http: TestClient, db: Session, id_session: int, nombre: int
+) -> int:
+    reponse = client_http.post(
+        f"{settings.API_V1_PREFIX}/reservations",
+        json=_corps(id_session, nombre=nombre),
+        headers=_entete(_compte(db, "stagiaire")),
+    )
+    assert reponse.status_code == 201, reponse.text
+    return reponse.json()["id_reservation"]
+
+
+def _statut(client_http: TestClient, db: Session, id_reservation: int, statut: str):
+    reponse = client_http.put(
+        f"{settings.API_V1_PREFIX}/reservations/administration/{id_reservation}/statut",
+        json={"statut": statut},
+        headers=_entete_admin(db),
+    )
+    assert reponse.status_code == 200, reponse.text
+
+
+def test_compte_les_inscrits_confirmes_ou_honores_par_formation(
+    client_http: TestClient, db: Session
+) -> None:
+    session = _session_ouverte(db, capacite=20)
+    confirmee = _inscrire(client_http, db, session.id_session, 3)
+    honoree = _inscrire(client_http, db, session.id_session, 2)
+    _inscrire(client_http, db, session.id_session, 4)  # reste en attente
+    annulee = _inscrire(client_http, db, session.id_session, 5)
+    _statut(client_http, db, confirmee, "Confirmee")
+    _statut(client_http, db, honoree, "Honoree")
+    _statut(client_http, db, annulee, "Annulee")
+
+    tableau = TableauDeBordService(db).calculer(Periode.TRENTE_JOURS)
+    formation = next(
+        f for f in tableau.formations if f.id_formation == session.id_formation
+    )
+
+    assert formation.inscrits == 5
+    assert formation.nombre_reservations == 2
+    assert formation.chiffre_affaires == session.formation.prix * 5
+
+
+def test_route_renvoie_les_formations(client_http: TestClient, db: Session) -> None:
+    reponse = client_http.get(TABLEAU, headers=_entete_admin(db))
+
+    assert reponse.status_code == 200
+    assert isinstance(reponse.json()["formations"], list)

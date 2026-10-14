@@ -1,6 +1,6 @@
 /** Règles d'affichage du tableau de bord, en fonctions pures. */
 
-import type { VenteProduit } from './tableauDeBord.types';
+import type { InscriptionsFormation, VenteProduit } from './tableauDeBord.types';
 
 export type Classement = 'quantite' | 'chiffre';
 
@@ -28,4 +28,19 @@ export function part(
     classement === 'quantite' ? p.unites_vendues : Number(p.chiffre_affaires);
   const max = valeur(premier);
   return max > 0 ? Math.round((valeur(produit) / max) * 100) : 0;
+}
+
+export type ClassementFormations = 'inscrits' | 'chiffre';
+
+/** Les `limite` premières formations selon le classement choisi. */
+export function classerFormations(
+  formations: InscriptionsFormation[],
+  classement: ClassementFormations,
+  limite = 10
+): InscriptionsFormation[] {
+  const valeur = (f: InscriptionsFormation) =>
+    classement === 'inscrits' ? f.inscrits : Number(f.chiffre_affaires);
+  return [...formations]
+    .sort((a, b) => valeur(b) - valeur(a) || a.titre.localeCompare(b.titre))
+    .slice(0, limite);
 }

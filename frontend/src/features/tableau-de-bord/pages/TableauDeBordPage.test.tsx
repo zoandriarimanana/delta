@@ -26,6 +26,22 @@ const DONNEES: TableauDeBord = {
     { debut: '2026-10-13', nombre_commandes: 2, chiffre_affaires: '60000.00' },
     { debut: '2026-10-14', nombre_commandes: 3, chiffre_affaires: '65000.00' },
   ],
+  formations: [
+    {
+      id_formation: 4,
+      titre: 'CAP Pâtissier',
+      inscrits: 3,
+      chiffre_affaires: '90000.00',
+      nombre_reservations: 2,
+    },
+    {
+      id_formation: 5,
+      titre: 'Viennoiserie',
+      inscrits: 8,
+      chiffre_affaires: '40000.00',
+      nombre_reservations: 4,
+    },
+  ],
   categories: [
     { categorie: 'Gâteaux', unites_vendues: 2, chiffre_affaires: '60000.00' },
     { categorie: 'Pâtisserie', unites_vendues: 12, chiffre_affaires: '42000.00' },
@@ -85,7 +101,12 @@ it('classe par quantité, puis par chiffre d’affaires à la demande', async ()
       .map((l) => l.textContent);
 
   expect(noms()).toEqual(['Éclair', 'Gâteau']);
-  await userEvent.click(screen.getByRole('button', { name: 'Chiffre d’affaires' }));
+  await userEvent.click(
+    within(screen.getByRole('group', { name: 'Classer les produits par' })).getByRole(
+      'button',
+      { name: 'Chiffre d’affaires' }
+    )
+  );
   expect(noms()).toEqual(['Gâteau', 'Éclair']);
 });
 
@@ -109,4 +130,23 @@ it('dessine la courbe et la répartition par catégorie', async () => {
   ).toBeDefined();
   // 60 000 sur 102 000 : 59 %.
   expect(screen.getByText(/59 %/)).toBeDefined();
+});
+
+it('classe les formations par inscrits, puis par chiffre d’affaires', async () => {
+  afficher();
+  const liste = await screen.findByRole('list', {
+    name: 'Formations les plus demandées',
+  });
+  const noms = () =>
+    within(liste)
+      .getAllByRole('link')
+      .map((l) => l.textContent);
+
+  expect(noms()).toEqual(['Viennoiserie', 'CAP Pâtissier']);
+  expect(screen.getByText('11 inscrit(s)')).toBeDefined();
+  const bascule = screen.getByRole('group', { name: 'Classer les formations par' });
+  await userEvent.click(
+    within(bascule).getByRole('button', { name: 'Chiffre d’affaires' })
+  );
+  expect(noms()).toEqual(['CAP Pâtissier', 'Viennoiserie']);
 });

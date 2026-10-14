@@ -2112,6 +2112,14 @@ Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
       jours et mois sans vente à zéro, à l'heure de Madagascar), barres des
       produits les plus vendus, anneau de répartition par catégorie. Dessinés
       en SVG dans le module, sans bibliothèque ajoutée.
+      — **Formations** (demande suivante, même jour) : panneau « Formations
+      les plus demandées » — inscrits (personnes), chiffre d'affaires et
+      nombre de réservations par formation, en colonnes, avec le total de
+      la période. Une inscription compte si la réservation de formation est
+      **confirmée ou honorée** (ni en attente d'acompte, ni annulée), datée
+      par `date_reservation` ; archives comprises. Chiffre d'affaires :
+      `RESERVATION.montant_total` figé (les réservations antérieures au prix
+      figé valent 0). L'hébergement lié n'y entre pas.
 - [ ] **R.2 — Réservation des salles par calendrier.** Créneaux occupés
       d'une salle exposés publiquement, **sans aucune donnée du client** ;
       calendrier mensuel sur la fiche (jours occupés grisés, choix du jour

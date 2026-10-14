@@ -22,14 +22,22 @@ import {
 } from 'lucide-react';
 
 import { formaterMontant } from '@/features/commande/commande.service';
+import { urlPhotoPartie } from '@/features/galerie/galerie.api';
 import { useCouvertures } from '@/features/galerie/galerie.hooks';
+import type { PartieCatalogue } from '@/features/galerie/galerie.types';
+import { imageFormation, imageProduit } from '@/lib/images';
 
 import GraphiqueCategories from '../components/GraphiqueCategories';
 import GraphiqueEvolution from '../components/GraphiqueEvolution';
-import GraphiqueProduits from '../components/GraphiqueProduits';
+import GraphiqueColonnes from '../components/GraphiqueColonnes';
 
 import { useTableauDeBord } from '../tableauDeBord.hooks';
-import { classer, type Classement } from '../tableauDeBord.service';
+import {
+  classer,
+  classerFormations,
+  type Classement,
+  type ClassementFormations,
+} from '../tableauDeBord.service';
 import type { Periode } from '../tableauDeBord.types';
 
 const PERIODES: { valeur: Periode; libelle: string }[] = [
@@ -46,9 +54,10 @@ export default function TableauDeBordPage() {
   const [periode, setPeriode] = useState<Periode>('30j');
   const [classement, setClassement] = useState<Classement>('quantite');
   const { donnees, chargement, erreur } = useTableauDeBord(periode);
-  const couvertures = useCouvertures('produits');
-
-  const tops = donnees === null ? [] : classer(donnees.produits, classement);
+  const [classementFormations, setClassementFormations] =
+    useState<ClassementFormations>('inscrits');
+  const couverturesProduits = useCouvertures('produits');
+  const couverturesFormations = useCouvertures('formations');
 
   return (
     <section className="mx-auto max-w-6xl">
@@ -60,8 +69,9 @@ export default function TableauDeBordPage() {
           <div>
             <h1 className="text-2xl font-semibold text-gris-700">Tableau de bord</h1>
             <p className="mt-0.5 text-sm text-gris-500">
-              Ventes de la période : commandes confirmées, en préparation, livrées ou
-              servies.
+              Ventes et inscriptions de la période. Une vente : commande confirmée, en
+              préparation, livrée ou servie ; une inscription : réservation de formation
+              confirmée ou honorée.
             </p>
           </div>
         </div>
@@ -140,40 +150,102 @@ export default function TableauDeBordPage() {
               titre="Produits les plus vendus"
               className="lg:col-span-2"
               actions={
-                <div
-                  role="group"
-                  aria-label="Classer par"
-                  className="flex gap-1 rounded-xl bg-gris-100 p-1"
-                >
-                  <button
-                    type="button"
-                    aria-pressed={classement === 'quantite'}
-                    onClick={() => setClassement('quantite')}
-                    className={`${CLASSES_BASCULE} text-gris-600`}
-                  >
-                    Quantité
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={classement === 'chiffre'}
-                    onClick={() => setClassement('chiffre')}
-                    className={`${CLASSES_BASCULE} text-gris-600`}
-                  >
-                    Chiffre d’affaires
-                  </button>
-                </div>
+                <Bascule
+                  libelle="Classer les produits par"
+                  options={[
+                    { valeur: 'quantite', libelle: 'Quantité' },
+                    { valeur: 'chiffre', libelle: 'Chiffre d’affaires' },
+                  ]}
+                  choix={classement}
+                  surChoix={setClassement}
+                />
               }
             >
-              <GraphiqueProduits
-                produits={tops}
-                classement={classement}
-                couvertures={couvertures}
+              <GraphiqueColonnes
+                titre="Produits les plus vendus"
+                vide="Aucune vente sur cette période."
+                colonnes={classer(donnees.produits, classement).map((p) => ({
+                  cle: String(p.id_produit),
+                  nom: p.nom,
+                  valeur:
+                    classement === 'quantite'
+                      ? p.unites_vendues
+                      : Number(p.chiffre_affaires),
+                  libelle:
+                    classement === 'quantite'
+                      ? String(p.unites_vendues)
+                      : formaterMontant(p.chiffre_affaires),
+                  image: imageDe(couverturesProduits, 'produits', p.id_produit, () =>
+                    imageProduit(p.id_produit, p.nom)
+                  ),
+                  lien: `/personnel/catalogue/${p.id_produit}`,
+                  detail: `${p.nom} — ${p.unites_vendues} vendu(s), ${formaterMontant(
+                    p.chiffre_affaires
+                  )}, ${p.nombre_commandes} commande(s)`,
+                }))}
               />
             </Panneau>
             <Panneau titre="Ventes par catégorie">
               <GraphiqueCategories categories={donnees.categories} />
             </Panneau>
           </div>
+
+          <Panneau
+            titre="Formations les plus demandées"
+            className="mt-6"
+            actions={
+              <Bascule
+                libelle="Classer les formations par"
+                options={[
+                  { valeur: 'inscrits', libelle: 'Inscrits' },
+                  { valeur: 'chiffre', libelle: 'Chiffre d’affaires' },
+                ]}
+                choix={classementFormations}
+                surChoix={setClassementFormations}
+              />
+            }
+          >
+            <p className="-mt-2 mb-4 text-sm text-gris-500">
+              Réservations confirmées ou honorées sur la période :{' '}
+              <strong className="text-gris-700">
+                {donnees.formations.reduce((s, f) => s + f.inscrits, 0)} inscrit(s)
+              </strong>{' '}
+              ·{' '}
+              <strong className="text-gris-700">
+                {formaterMontant(
+                  donnees.formations.reduce((s, f) => s + Number(f.chiffre_affaires), 0)
+                )}
+              </strong>
+            </p>
+            <GraphiqueColonnes
+              titre="Formations les plus demandées"
+              vide="Aucune inscription sur cette période."
+              colonnes={classerFormations(donnees.formations, classementFormations).map(
+                (f) => ({
+                  cle: String(f.id_formation),
+                  nom: f.titre,
+                  valeur:
+                    classementFormations === 'inscrits'
+                      ? f.inscrits
+                      : Number(f.chiffre_affaires),
+                  libelle:
+                    classementFormations === 'inscrits'
+                      ? `${f.inscrits} pers.`
+                      : formaterMontant(f.chiffre_affaires),
+                  image: imageDe(
+                    couverturesFormations,
+                    'formations',
+                    f.id_formation,
+                    () => imageFormation(f.id_formation)
+                  ),
+                  lien: `/personnel/formations/${f.id_formation}`,
+                  detail: `${f.titre} — ${f.inscrits} inscrit(s), ${formaterMontant(
+                    f.chiffre_affaires
+                  )}, ${f.nombre_reservations} réservation(s)`,
+                })
+              )}
+            />
+          </Panneau>
         </>
       )}
     </section>
@@ -232,5 +304,48 @@ function Panneau({
       </div>
       {children}
     </section>
+  );
+}
+
+/** Couverture déposée par l'administration, ou illustration de repli. */
+function imageDe(
+  couvertures: Record<string, string>,
+  partie: PartieCatalogue,
+  id: number,
+  repli: () => string
+): string {
+  const fichier = couvertures[String(id)];
+  return fichier === undefined ? repli() : urlPhotoPartie(partie, fichier);
+}
+
+function Bascule<T extends string>({
+  libelle,
+  options,
+  choix,
+  surChoix,
+}: {
+  libelle: string;
+  options: { valeur: T; libelle: string }[];
+  choix: T;
+  surChoix: (valeur: T) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={libelle}
+      className="flex gap-1 rounded-xl bg-gris-100 p-1"
+    >
+      {options.map((option) => (
+        <button
+          key={option.valeur}
+          type="button"
+          aria-pressed={choix === option.valeur}
+          onClick={() => surChoix(option.valeur)}
+          className={`${CLASSES_BASCULE} text-gris-600`}
+        >
+          {option.libelle}
+        </button>
+      ))}
+    </div>
   );
 }

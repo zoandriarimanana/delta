@@ -13,6 +13,16 @@ export interface VenteProduit {
   nombre_commandes: number;
 }
 
+/** Miroir de `InscriptionsFormationRead`. */
+export interface InscriptionsFormation {
+  id_formation: number;
+  titre: string;
+  /** Personnes inscrites. */
+  inscrits: number;
+  chiffre_affaires: string;
+  nombre_reservations: number;
+}
+
 /** Miroir de `PointVentes` : un jour, ou un mois (son premier jour). */
 export interface PointVentes {
   /** Date ISO `AAAA-MM-JJ`. */
@@ -42,4 +52,6 @@ export interface TableauDeBord {
   /** Périodes sans vente à zéro. */
   evolution: PointVentes[];
   categories: VentesCategorie[];
+  /** Réservations de formation confirmées ou honorées sur la période. */
+  formations: InscriptionsFormation[];
 }
