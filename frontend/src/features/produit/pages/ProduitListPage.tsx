@@ -9,11 +9,15 @@ import { useState } from 'react';
 import { useTextes } from '@/lib/langue';
 
 import { TEXTES_PRODUIT } from '../produit.textes';
+import { useImageCouverture } from '@/features/galerie/galerie.hooks';
+import { imageProduit } from '@/lib/images';
+import ExemplesRealisations from '@/features/galerie/components/ExemplesRealisations';
 import ProduitCarte from '../components/ProduitCarte';
 import { useCategories, useProduits } from '../produit.hooks';
 import { TOUTES_CATEGORIES, type FiltreCategorie } from '../produit.service';
 
 export default function ProduitListPage() {
+  const image = useImageCouverture('produits');
   const t = useTextes(TEXTES_PRODUIT);
   const [filtre, setFiltre] = useState<FiltreCategorie>(TOUTES_CATEGORIES);
   const produits = useProduits(filtre);
@@ -56,6 +60,16 @@ export default function ProduitListPage() {
         )}
       </div>
 
+      {filtre !== TOUTES_CATEGORIES && categories.donnees !== null && (
+        <ExemplesRealisations
+          key={filtre}
+          idCategorie={filtre}
+          titre={t.exemplesRealisations(
+            categories.donnees.find((c) => c.id_categorie === filtre)?.libelle ?? ''
+          )}
+        />
+      )}
+
       {produits.chargement && (
         <p role="status" className="text-center py-8 text-gris-500">
           {t.chargementProduits}
@@ -85,7 +99,14 @@ export default function ProduitListPage() {
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-8">
         {produits.donnees?.map((produit) => (
-          <ProduitCarte key={produit.id_produit} produit={produit} />
+          <ProduitCarte
+            key={produit.id_produit}
+            produit={produit}
+            image={image(
+              produit.id_produit,
+              imageProduit(produit.id_produit, produit.nom)
+            )}
+          />
         ))}
       </div>
     </section>

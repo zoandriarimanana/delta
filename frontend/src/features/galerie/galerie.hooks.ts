@@ -2,8 +2,17 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { ajouterPhoto, recupererPhotos, supprimerPhoto } from './galerie.api';
-import type { BienPhotographie, PhotoBien } from './galerie.types';
+import {
+  ajouterPhoto,
+  identifiantDe,
+  partieDe,
+  recupererCouvertures,
+  recupererPhotos,
+  urlPhotoPartie,
+  supprimerPhoto,
+  televerserPhotos,
+} from './galerie.api';
+import type { BienPhotographie, PartieCatalogue, PhotoBien } from './galerie.types';
 
 export interface Galerie {
   photos: PhotoBien[];
@@ -21,26 +30,16 @@ export interface Galerie {
  * un objet recréé à chaque rendu relancerait la requête en boucle.
  */
 export function useGalerie(bien: BienPhotographie | null): Galerie {
-  const idSalle = bien !== null && 'salle' in bien ? bien.salle : null;
-  const idLogement = bien !== null && 'logement' in bien ? bien.logement : null;
-  const idFormation = bien !== null && 'formation' in bien ? bien.formation : null;
-  const idProduit = bien !== null && 'produit' in bien ? bien.produit : null;
+  // Une clé texte et non l'objet : un objet recréé à chaque rendu relancerait
+  // la requête en boucle.
+  const cle = bien === null ? null : `${partieDe(bien)}:${identifiantDe(bien)}`;
   const [photos, setPhotos] = useState<PhotoBien[]>([]);
   const [chargement, setChargement] = useState(bien !== null);
   const [erreur, setErreur] = useState(false);
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
-    const cible: BienPhotographie | null =
-      idSalle !== null
-        ? { salle: idSalle }
-        : idLogement !== null
-          ? { logement: idLogement }
-          : idFormation !== null
-            ? { formation: idFormation }
-            : idProduit !== null
-              ? { produit: idProduit }
-              : null;
+    const cible = bienDepuisCle(cle);
     if (cible === null) {
       setPhotos([]);
       setChargement(false);
@@ -61,10 +60,62 @@ export function useGalerie(bien: BienPhotographie | null): Galerie {
     return () => {
       actif = false;
     };
-  }, [idSalle, idLogement, idFormation, idProduit, version]);
+  }, [cle, version]);
 
   const recharger = useCallback(() => setVersion((v) => v + 1), []);
   return { photos, chargement, erreur, recharger };
+}
+
+const CLES_PAR_PARTIE = {
+  salles: 'salle',
+  logements: 'logement',
+  formations: 'formation',
+  produits: 'produit',
+  categories: 'categorie',
+} as const;
+
+function bienDepuisCle(cle: string | null): BienPhotographie | null {
+  if (cle === null) return null;
+  const [partie, identifiant] = cle.split(':');
+  const nom = CLES_PAR_PARTIE[partie as keyof typeof CLES_PAR_PARTIE];
+  return { [nom]: Number(identifiant) } as BienPhotographie;
+}
+
+/**
+ * Première photo de chaque élément d'une partie (14 octobre 2026), pour les
+ * cartes d'une liste : une seule requête, et rien en cas d'échec — la carte
+ * garde alors son illustration.
+ */
+export function useCouvertures(partie: PartieCatalogue): Record<string, string> {
+  const [couvertures, setCouvertures] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let actif = true;
+    recupererCouvertures(partie)
+      .then((lues) => actif && setCouvertures(lues))
+      .catch(() => undefined);
+    return () => {
+      actif = false;
+    };
+  }, [partie]);
+  return couvertures;
+}
+
+/**
+ * Image d'une carte de liste : la première photo de l'élément si
+ * l'administration en a déposé, l'illustration de repli sinon — jamais un
+ * cadre vide (14 octobre 2026).
+ */
+export function useImageCouverture(
+  partie: PartieCatalogue
+): (id: number, repli: string) => string {
+  const couvertures = useCouvertures(partie);
+  return useCallback(
+    (id, repli) => {
+      const fichier = couvertures[String(id)];
+      return fichier === undefined ? repli : urlPhotoPartie(partie, fichier);
+    },
+    [couvertures, partie]
+  );
 }
 
 const MESSAGE_PAR_DEFAUT = 'L’opération a échoué. Réessayez dans un instant.';
@@ -121,5 +172,42 @@ export function useGestionGalerie(
     },
     envoi,
     erreur,
+  };
+}
+
+/**
+ * Photos choisies dans un formulaire de création (14 octobre 2026). La page
+ * vérifie qu'il y en a au moins une **avant** de créer l'élément, puis les
+ * envoie une fois l'identifiant connu. Un envoi refusé ne défait pas la
+ * création : l'avertissement renvoie vers la fiche pour compléter.
+ */
+export function usePhotosCreation() {
+  const [fichiers, setFichiers] = useState<File[]>([]);
+  const [avertissement, setAvertissement] = useState<string | null>(null);
+
+  const manquantes = fichiers.length === 0 ? 'Ajoutez au moins une photo.' : null;
+
+  const envoyer = useCallback(
+    async (bien: BienPhotographie) => {
+      const echecs = await televerserPhotos(bien, fichiers);
+      setAvertissement(
+        echecs > 0
+          ? `Élément créé, mais ${echecs} photo(s) refusée(s) : ajoutez-les depuis sa fiche.`
+          : null
+      );
+      setFichiers([]);
+    },
+    [fichiers]
+  );
+
+  const reinitialiser = useCallback(() => setFichiers([]), []);
+
+  return {
+    fichiers,
+    setFichiers,
+    manquantes,
+    envoyer,
+    avertissement,
+    reinitialiser,
   };
 }

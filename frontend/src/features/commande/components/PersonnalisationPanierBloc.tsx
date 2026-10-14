@@ -10,6 +10,7 @@ import { Pencil, Sparkles, X } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
+import { urlExemple } from '@/features/galerie/galerie.api';
 import { useTextes } from '@/lib/langue';
 
 import { TEXTES_COMMANDE } from '../commande.textes';
@@ -91,6 +92,13 @@ export default function PersonnalisationPanierBloc({
           </button>
         </div>
       </div>
+      {ligne.personnalisation.modele !== undefined && (
+        <img
+          src={urlExemple(ligne.personnalisation.modele)}
+          alt={t.modeleChoisi}
+          className="mt-2 h-16 w-16 rounded-lg object-cover"
+        />
+      )}
       <p className="mt-1 whitespace-pre-line text-gris-600">
         {descriptionDemande(ligne.personnalisation, t.rubriques)}
       </p>

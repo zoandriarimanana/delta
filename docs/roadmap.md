@@ -2007,7 +2007,7 @@ non payée annulée après **2 h**, réservation sans acompte annulée après
 Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
 (décision de l'utilisateur) :
 
-- [ ] **R.0 — Photos (demande du 14 octobre 2026, insérée avant R.2 sur
+- [x] **R.0 — Photos (demande du 14 octobre 2026, insérée avant R.2 sur
       décision de l'utilisateur).** Décisions : **au moins une photo** à la
       création d'une salle, d'une chambre, d'une formation ou d'un produit ;
       **photos de catégorie** montrées au client comme exemples de
@@ -2028,6 +2028,16 @@ Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
       réalisations » sur la fiche produit ; choix du modèle dans le bloc
       « Personnaliser », visible ensuite dans le récapitulatif de la
       commande (client et administration).
+      — Livré. Migration `46679ef760e3`. Les photos choisies à la création
+      restent dans le navigateur et partent juste après « Créer », dans
+      l'ordre (`televerserPhotos`) ; un envoi refusé ne défait pas la
+      création, un avertissement renvoie vers la fiche. Un modèle seul est
+      une personnalisation valable : la demande le dit en toutes lettres.
+      Backend 1563/1563 sur base vierge, frontend 859/859, build compris ;
+      vérifié dans un vrai navigateur sur la base de CI (salle créée avec
+      photo, couverture sur la liste, exemples sur le catalogue filtré et la
+      fiche, modèle choisi jusqu'au panier puis sur la fiche
+      d'administration de la commande).
 - [x] **R.1 — Formation sur commande.** Nouvelle entité
       `DEMANDE_FORMATION` : sujet souhaité, nombre de participants, niveau,
       période, lieu (chez Delta ou en entreprise), nom et contact du

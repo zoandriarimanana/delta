@@ -12,6 +12,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { televerserPhotos } from '@/features/galerie/galerie.api';
 import RoutePersonnel from '@/lib/RoutePersonnel';
 import { definirSession, effacerSession } from '@/lib/session.store';
 
@@ -23,6 +24,16 @@ import {
 import AdministrationFormationsPage from './AdministrationFormationsPage';
 
 vi.mock('../formation.api');
+vi.mock('@/features/galerie/galerie.api', async (original) => ({
+  ...(await original<typeof import('@/features/galerie/galerie.api')>()),
+  televerserPhotos: vi.fn(),
+}));
+
+// jsdom ne fabrique pas d'URL locale pour un fichier : les miniatures en ont besoin.
+URL.createObjectURL = vi.fn(() => 'blob:apercu');
+URL.revokeObjectURL = vi.fn();
+
+const PHOTO = new File(['x'], 'atelier.jpg', { type: 'image/jpeg' });
 
 const DOMAINE = {
   id_domaine: 1,
@@ -179,31 +190,64 @@ describe('liste', () => {
 });
 
 describe('création', () => {
-  beforeEach(() => definirSession('personnel'));
+  beforeEach(() => {
+    definirSession('personnel');
+    vi.mocked(televerserPhotos).mockResolvedValue(0);
+  });
 
-  it('crée une formation', async () => {
+  async function ouvrirEtRemplir(titre: string, avecPhoto = true) {
     afficher();
     await screen.findByText('CAP Pâtissier');
-
     await userEvent.click(screen.getByRole('button', { name: /nouvelle formation/i }));
-    await userEvent.type(screen.getByLabelText(/^titre$/i), 'Boulangerie de base');
+    await userEvent.type(screen.getByLabelText(/^titre$/i), titre);
+    if (avecPhoto) {
+      await userEvent.upload(screen.getByLabelText(/ajouter des photos/i), PHOTO);
+    }
     await userEvent.click(screen.getByRole('button', { name: /^créer$/i }));
+  }
+
+  it('crée une formation puis envoie sa photo', async () => {
+    await ouvrirEtRemplir('Boulangerie de base');
 
     await waitFor(() =>
       expect(creerFormation).toHaveBeenCalledWith(
         expect.objectContaining({ titre: 'Boulangerie de base' })
       )
     );
+    await waitFor(() =>
+      expect(televerserPhotos).toHaveBeenCalledWith(
+        { formation: ACTIVE.id_formation },
+        [PHOTO]
+      )
+    );
+  });
+
+  it('exige au moins une photo, sans rien créer', async () => {
+    await ouvrirEtRemplir('Sans photo', false);
+
+    expect((await screen.findByRole('alert')).textContent).toMatch(
+      /au moins une photo/i
+    );
+    expect(creerFormation).not.toHaveBeenCalled();
+  });
+
+  it('marque la première photo comme couverture', async () => {
+    afficher();
+    await screen.findByText('CAP Pâtissier');
+    await userEvent.click(screen.getByRole('button', { name: /nouvelle formation/i }));
+    await userEvent.upload(screen.getByLabelText(/ajouter des photos/i), [
+      PHOTO,
+      PHOTO,
+    ]);
+
+    expect(screen.getAllByText('Couverture')).toHaveLength(1);
+    await userEvent.click(screen.getByRole('button', { name: /retirer la photo 1/i }));
+    expect(screen.getAllByRole('img', { name: /^photo \d$/i })).toHaveLength(1);
   });
 
   it('rend le 403 lisible', async () => {
     vi.mocked(creerFormation).mockRejectedValue({ response: { status: 403 } });
-    afficher();
-    await screen.findByText('CAP Pâtissier');
-
-    await userEvent.click(screen.getByRole('button', { name: /nouvelle formation/i }));
-    await userEvent.type(screen.getByLabelText(/^titre$/i), 'X');
-    await userEvent.click(screen.getByRole('button', { name: /^créer$/i }));
+    await ouvrirEtRemplir('X');
 
     expect((await screen.findByRole('alert')).textContent).toMatch(/administrateur/i);
   });

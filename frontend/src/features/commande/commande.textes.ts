@@ -103,6 +103,10 @@ const fr = {
   champIngredients: 'Ingrédients à éviter ou allergies',
   exempleIngredients: 'Ex. : sans fruits à coque',
   personnalisationDemandee: 'Personnalisation demandée',
+  choisirModele: 'Choisissez un modèle parmi nos réalisations (facultatif)',
+  jeVeuxCeModele: 'Je veux ce modèle',
+  modeleChoisi: 'Modèle choisi',
+  retirerModele: 'Retirer le modèle',
   ingredientsAllergies: 'Ingrédients à éviter ou allergies :',
   supplementCalcul: (unitaire: string, quantite: number, total: string) =>
     `Supplément : ${unitaire} × ${quantite} = ${total}`,
@@ -295,6 +299,10 @@ export const TEXTES_COMMANDE: Textes<typeof fr> = {
     champIngredients: 'Ingredients to avoid or allergies',
     exempleIngredients: 'E.g. no nuts',
     personnalisationDemandee: 'Requested customisation',
+    choisirModele: 'Pick a design from our creations (optional)',
+    jeVeuxCeModele: 'I want this design',
+    modeleChoisi: 'Chosen design',
+    retirerModele: 'Remove the design',
     ingredientsAllergies: 'Ingredients to avoid or allergies:',
     supplementCalcul: (unitaire: string, quantite: number, total: string) =>
       `Extra: ${unitaire} × ${quantite} = ${total}`,

@@ -16,9 +16,11 @@ import type { Produit } from '../produit.types';
 
 interface Proprietes {
   produit: Produit;
+  /** Photo de couverture ; l'illustration du catalogue à défaut. */
+  image?: string;
 }
 
-export default function ProduitCarte({ produit }: Proprietes) {
+export default function ProduitCarte({ produit, image }: Proprietes) {
   const t = useTextes(TEXTES_PRODUIT);
   const prix = useFormaterPrix();
   const disponible = estDisponible(produit);
@@ -27,7 +29,7 @@ export default function ProduitCarte({ produit }: Proprietes) {
   return (
     <Link to={`/produits/${produit.id_produit}`} className="no-underline">
       <Carte
-        image={imageProduit(produit.id_produit, produit.nom)}
+        image={image ?? imageProduit(produit.id_produit, produit.nom)}
         titre={produit.nom}
         description={produit.description}
         pied={

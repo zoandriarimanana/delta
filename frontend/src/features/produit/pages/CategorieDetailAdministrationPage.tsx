@@ -12,6 +12,7 @@ import { Link, useParams } from 'react-router';
 import Badge from '@/components/ui/Badge';
 import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
+import GestionGalerie from '@/features/galerie/components/GestionGalerie';
 import {
   CLASSES_LIGNE_CLIQUABLE,
   useNavigationAuClic,
@@ -221,6 +222,22 @@ export default function CategorieDetailAdministrationPage() {
             })}
           </tbody>
         </table>
+      )}
+
+      {archive ? (
+        <p className="mt-6 rounded-xl border border-gris-200 bg-surface p-4 text-sm text-gris-500">
+          Les photos d’une catégorie archivée sont conservées, mais ne se gèrent qu’une
+          fois restaurée.
+        </p>
+      ) : (
+        <>
+          <p className="mt-6 text-sm text-gris-500">
+            Exemples de réalisations : montrés aux clients sur le catalogue et sur la
+            fiche de chaque produit de la catégorie, qui peuvent en choisir un comme
+            modèle à la personnalisation.
+          </p>
+          <GestionGalerie bien={{ categorie: id }} />
+        </>
       )}
     </section>
   );

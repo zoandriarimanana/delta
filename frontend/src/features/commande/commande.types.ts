@@ -29,6 +29,8 @@ export interface PersonnalisationLue {
   ingredients_specifiques: string | null;
   /** Supplément **par unité**, figé à la commande — fixé par le catalogue. */
   supplement_prix: string;
+  /** Copie du modèle choisi parmi les exemples de la catégorie (partie `modeles`). */
+  photo_modele?: string | null;
 }
 
 /**
@@ -42,12 +44,15 @@ export interface PersonnalisationPanier {
   theme: string;
   precisions: string;
   ingredients: string;
+  /** Exemple de réalisation retenu (« Je veux ce modèle »), nom de fichier. */
+  modele?: string;
 }
 
 /** Miroir de `DemandePersonnalisationCreate` — sans supplément, jamais envoyé. */
 export interface PersonnalisationEnvoyee {
   description_demande: string;
   ingredients_specifiques?: string;
+  photo_modele?: string;
 }
 
 export interface Commande {

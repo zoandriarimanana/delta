@@ -10,6 +10,7 @@ import { Link } from 'react-router';
 
 import Carte from '@/components/ui/Carte';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
+import { useImageCouverture } from '@/features/galerie/galerie.hooks';
 import { imagePour } from '@/lib/images';
 import { useTextes } from '@/lib/langue';
 
@@ -18,6 +19,7 @@ import { useSalles } from '../salle.hooks';
 import { libelleTarif } from '../salle.service';
 
 export default function SalleListPage() {
+  const image = useImageCouverture('salles');
   const t = useTextes(TEXTES_SALLE);
   const prix = useFormaterPrix();
   const [capacite, setCapacite] = useState<number | null>(null);
@@ -88,7 +90,7 @@ export default function SalleListPage() {
             className="no-underline"
           >
             <Carte
-              image={imagePour('salle', salle.id_salle)}
+              image={image(salle.id_salle, imagePour('salle', salle.id_salle))}
               titre={salle.nom}
               description={t.personnes(salle.capacite)}
               pied={

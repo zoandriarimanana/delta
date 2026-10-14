@@ -19,6 +19,8 @@ import { Link } from 'react-router';
 import { Plus } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
+import SelecteurPhotos from '@/features/galerie/components/SelecteurPhotos';
+import { usePhotosCreation } from '@/features/galerie/galerie.hooks';
 
 import FormulaireProduit from '../components/FormulaireProduit';
 import LigneProduitAdministration from '../components/LigneProduitAdministration';
@@ -40,6 +42,8 @@ export default function AdministrationProduitsPage() {
   const catalogue = useCatalogueAdministration();
   const actions = useActionsCatalogue(catalogue.recharger);
   const [edition, setEdition] = useState<Edition>({ mode: 'ferme' });
+  const photos = usePhotosCreation();
+  const { reinitialiser: oublierPhotos } = photos;
   const [avecArchives, setAvecArchives] = useState(false);
   const [envoiFormulaire, setEnvoiFormulaire] = useState(false);
   const [erreurFormulaire, setErreurFormulaire] = useState<string | null>(null);
@@ -47,7 +51,8 @@ export default function AdministrationProduitsPage() {
   const fermer = useCallback(() => {
     setEdition({ mode: 'ferme' });
     setErreurFormulaire(null);
-  }, []);
+    oublierPhotos();
+  }, [oublierPhotos]);
 
   // Les archives sont masquées par défaut : elles ne font pas partie du travail
   // courant, et les afficher toujours noierait le catalogue actif.
@@ -57,13 +62,18 @@ export default function AdministrationProduitsPage() {
   const nombreArchives = catalogue.produits.filter(estArchive).length;
 
   async function enregistrer(donnees: ProduitEnvoye) {
+    if (edition.mode === 'creation' && photos.manquantes !== null) {
+      setErreurFormulaire(photos.manquantes);
+      return;
+    }
     setEnvoiFormulaire(true);
     setErreurFormulaire(null);
     try {
       if (edition.mode === 'modification') {
         await modifierProduit(edition.produit.id_produit, donnees);
       } else {
-        await creerProduit(donnees);
+        const produit = await creerProduit(donnees);
+        await photos.envoyer({ produit: produit.id_produit });
       }
       catalogue.recharger();
       fermer();
@@ -84,6 +94,15 @@ export default function AdministrationProduitsPage() {
           Gérer les catégories
         </Link>
       </div>
+
+      {photos.avertissement !== null && (
+        <p
+          role="alert"
+          className="mt-4 rounded border border-attente/30 bg-attente/10 p-3 text-sm text-gris-700"
+        >
+          {photos.avertissement}
+        </p>
+      )}
 
       {catalogue.erreur !== null && (
         <p
@@ -131,6 +150,12 @@ export default function AdministrationProduitsPage() {
           <h2 className="mb-4 text-lg font-medium text-gris-700">
             {edition.mode === 'creation' ? 'Nouveau produit' : 'Modifier le produit'}
           </h2>
+          {edition.mode === 'creation' && (
+            <SelecteurPhotos
+              fichiers={photos.fichiers}
+              surChange={photos.setFichiers}
+            />
+          )}
           <FormulaireProduit
             categories={catalogue.categories}
             produit={edition.mode === 'modification' ? edition.produit : undefined}

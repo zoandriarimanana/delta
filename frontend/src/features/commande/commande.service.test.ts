@@ -257,6 +257,16 @@ describe('personnalisation', () => {
     ).not.toHaveProperty('ingredients_specifiques');
   });
 
+  it('un modèle choisi part à part et se dit dans la demande, même seul', () => {
+    const seul = { ...PERSONNALISATION_VIDE, modele: '4-2.jpg' };
+
+    expect(descriptionDemande(seul)).toMatch(/^Modèle : /);
+    expect(versPersonnalisationEnvoyee(seul)).toMatchObject({
+      photo_modele: '4-2.jpg',
+    });
+    expect(versPersonnalisationEnvoyee(DEMANDE)).not.toHaveProperty('photo_modele');
+  });
+
   it('la ligne porte la personnalisation et le supplément compte dans le total', () => {
     const panier = ajouterAuPanier([], GATEAU, 2, DEMANDE);
 

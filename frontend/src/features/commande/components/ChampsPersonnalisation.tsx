@@ -7,6 +7,10 @@
  * panier gardent eux-mêmes la saisie, ce composant ne fait que l'afficher.
  */
 
+import { X } from 'lucide-react';
+
+import ExemplesRealisations from '@/features/galerie/components/ExemplesRealisations';
+import { urlExemple } from '@/features/galerie/galerie.api';
 import { useTextes } from '@/lib/langue';
 
 import { TEXTES_COMMANDE } from '../commande.textes';
@@ -19,12 +23,31 @@ const LONGUEUR_RUBRIQUE = 600;
 interface Proprietes {
   valeurs: PersonnalisationPanier;
   surChangement: (valeurs: PersonnalisationPanier) => void;
+  /**
+   * Catégorie du produit : ses exemples de réalisations sont proposés comme
+   * modèles. Absente (panier), seul le modèle déjà retenu s'affiche.
+   */
+  idCategorie?: number;
+}
+
+/** La saisie sans le modèle retenu — retirer un modèle, c'est omettre la clé. */
+function sansModele(v: PersonnalisationPanier): PersonnalisationPanier {
+  return {
+    message: v.message,
+    theme: v.theme,
+    precisions: v.precisions,
+    ingredients: v.ingredients,
+  };
 }
 
 const CLASSES_CHAMP =
   'mt-1 block w-full rounded-lg border border-gris-300 bg-surface px-3 py-2 text-sm text-gris-700 focus:border-primaire focus:outline-none focus:ring-2 focus:ring-primaire/20';
 
-export default function ChampsPersonnalisation({ valeurs, surChangement }: Proprietes) {
+export default function ChampsPersonnalisation({
+  valeurs,
+  surChangement,
+  idCategorie,
+}: Proprietes) {
   const t = useTextes(TEXTES_COMMANDE);
   function modifier(champ: keyof PersonnalisationPanier, valeur: string) {
     surChangement({ ...valeurs, [champ]: valeur });
@@ -32,6 +55,40 @@ export default function ChampsPersonnalisation({ valeurs, surChangement }: Propr
 
   return (
     <div className="space-y-3">
+      {idCategorie !== undefined ? (
+        <ExemplesRealisations
+          idCategorie={idCategorie}
+          titre={t.choisirModele}
+          choix={valeurs.modele}
+          surChoix={(modele) => {
+            const reste = sansModele(valeurs);
+            surChangement(modele === undefined ? reste : { ...reste, modele });
+          }}
+          libelleChoix={t.jeVeuxCeModele}
+        />
+      ) : (
+        valeurs.modele !== undefined && (
+          <div className="flex items-center gap-3">
+            <img
+              src={urlExemple(valeurs.modele)}
+              alt={t.modeleChoisi}
+              className="h-16 w-16 rounded-lg object-cover"
+            />
+            <span className="text-sm font-medium text-gris-700">{t.modeleChoisi}</span>
+            <button
+              type="button"
+              onClick={() => {
+                const reste = sansModele(valeurs);
+                surChangement(reste);
+              }}
+              className="ml-auto inline-flex items-center gap-1 text-sm text-danger hover:underline"
+            >
+              <X size={14} aria-hidden />
+              {t.retirerModele}
+            </button>
+          </div>
+        )
+      )}
       <label className="block">
         <span className="text-sm font-medium text-gris-700">
           {t.champMessage}{' '}

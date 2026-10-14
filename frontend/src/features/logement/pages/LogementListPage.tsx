@@ -13,6 +13,7 @@ import { Link } from 'react-router';
 import Badge from '@/components/ui/Badge';
 import Carte from '@/components/ui/Carte';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
+import { useImageCouverture } from '@/features/galerie/galerie.hooks';
 import { imagePour } from '@/lib/images';
 import { useTextes } from '@/lib/langue';
 
@@ -21,6 +22,7 @@ import { libelleStatut, varianteStatut } from '../logement.service';
 import { useLogements } from '../logement.hooks';
 
 export default function LogementListPage() {
+  const image = useImageCouverture('logements');
   const t = useTextes(TEXTES_LOGEMENT);
   const prix = useFormaterPrix();
   const [capacite, setCapacite] = useState<number | null>(null);
@@ -91,7 +93,10 @@ export default function LogementListPage() {
             className="no-underline"
           >
             <Carte
-              image={imagePour('logement', logement.id_logement)}
+              image={image(
+                logement.id_logement,
+                imagePour('logement', logement.id_logement)
+              )}
               titre={t.chambre(logement.type_chambre)}
               description={t.personnes(logement.capacite)}
               pied={

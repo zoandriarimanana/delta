@@ -94,6 +94,7 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
               <p className="mb-3 text-xs text-gris-500">{t.decrireDemande}</p>
               <ChampsPersonnalisation
                 valeurs={personnalisation}
+                idCategorie={produit.id_categorie}
                 surChangement={(valeurs) => {
                   setPersonnalisation(valeurs);
                   setErreurPersonnalisation(false);

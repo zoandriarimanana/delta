@@ -19,6 +19,8 @@ import { useCallback, useState } from 'react';
 import { Plus } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
+import SelecteurPhotos from '@/features/galerie/components/SelecteurPhotos';
+import { usePhotosCreation } from '@/features/galerie/galerie.hooks';
 
 import FormulaireLogement from '../components/FormulaireLogement';
 import LigneLogementAdministration from '../components/LigneLogementAdministration';
@@ -40,6 +42,8 @@ export default function AdministrationLogementsPage() {
   const catalogue = useLogementsAdministration();
   const actions = useActionsLogements(catalogue.recharger);
   const [edition, setEdition] = useState<Edition>({ mode: 'ferme' });
+  const photos = usePhotosCreation();
+  const { reinitialiser: oublierPhotos } = photos;
   const [avecArchives, setAvecArchives] = useState(false);
   const [envoiFormulaire, setEnvoiFormulaire] = useState(false);
   const [erreurFormulaire, setErreurFormulaire] = useState<string | null>(null);
@@ -47,7 +51,8 @@ export default function AdministrationLogementsPage() {
   const fermer = useCallback(() => {
     setEdition({ mode: 'ferme' });
     setErreurFormulaire(null);
-  }, []);
+    oublierPhotos();
+  }, [oublierPhotos]);
 
   // Les archives sont masquées par défaut : elles ne font pas partie du
   // travail courant, et les afficher toujours noierait le catalogue actif.
@@ -57,17 +62,22 @@ export default function AdministrationLogementsPage() {
   const nombreArchives = catalogue.logements.filter(estArchive).length;
 
   async function enregistrer(donnees: LogementModifie) {
+    if (edition.mode === 'creation' && photos.manquantes !== null) {
+      setErreurFormulaire(photos.manquantes);
+      return;
+    }
     setEnvoiFormulaire(true);
     setErreurFormulaire(null);
     try {
       if (edition.mode === 'modification') {
         await modifierLogement(edition.logement.id_logement, donnees);
       } else {
-        await creerLogement({
+        const logement = await creerLogement({
           type_chambre: donnees.type_chambre ?? '',
           capacite: donnees.capacite ?? 1,
           tarif_nuitee: donnees.tarif_nuitee ?? '0.00',
         });
+        await photos.envoyer({ logement: logement.id_logement });
       }
       catalogue.recharger();
       fermer();
@@ -83,6 +93,15 @@ export default function AdministrationLogementsPage() {
       <h1 className="text-2xl font-semibold text-gris-700">
         Administration des logements
       </h1>
+
+      {photos.avertissement !== null && (
+        <p
+          role="alert"
+          className="mt-4 rounded border border-attente/30 bg-attente/10 p-3 text-sm text-gris-700"
+        >
+          {photos.avertissement}
+        </p>
+      )}
 
       {catalogue.erreur !== null && (
         <p
@@ -130,6 +149,12 @@ export default function AdministrationLogementsPage() {
           <h2 className="mb-4 text-lg font-medium text-gris-700">
             {edition.mode === 'creation' ? 'Nouveau logement' : 'Modifier le logement'}
           </h2>
+          {edition.mode === 'creation' && (
+            <SelecteurPhotos
+              fichiers={photos.fichiers}
+              surChange={photos.setFichiers}
+            />
+          )}
           <FormulaireLogement
             logement={edition.mode === 'modification' ? edition.logement : undefined}
             envoi={envoiFormulaire}

@@ -9,6 +9,7 @@
 
 import { Sparkles } from 'lucide-react';
 
+import { urlModele } from '@/features/galerie/galerie.api';
 import { useTextes } from '@/lib/langue';
 
 import { TEXTES_COMMANDE } from '../commande.textes';
@@ -33,6 +34,20 @@ export default function DemandePersonnalisationLue({
         <Sparkles size={15} aria-hidden className="text-attente" />
         {t.personnalisationDemandee}
       </p>
+      {personnalisation.photo_modele && (
+        <a
+          href={urlModele(personnalisation.photo_modele)}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-2 inline-block"
+        >
+          <img
+            src={urlModele(personnalisation.photo_modele)}
+            alt={t.modeleChoisi}
+            className="h-24 w-24 rounded-lg object-cover"
+          />
+        </a>
+      )}
       <p className="mt-1 whitespace-pre-line text-gris-700">
         {personnalisation.description_demande}
       </p>

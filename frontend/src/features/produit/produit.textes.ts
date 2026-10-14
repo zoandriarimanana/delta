@@ -46,6 +46,8 @@ const fr = {
   unite: 'unité',
   // Ajout au panier
   personnaliserProduit: 'Personnaliser ce produit',
+  exemplesRealisations: (categorie: string) =>
+    `Exemples de réalisations — ${categorie}`,
   decrireDemande: 'Décrivez votre demande : notre équipe la reçoit avec la commande.',
   personnalisationVide: 'Indiquez au moins un message, un thème ou une précision.',
   nombrePersonnes: 'Nombre de personnes',
@@ -115,6 +117,7 @@ export const TEXTES_PRODUIT: Textes<typeof fr> = {
     personne: 'person',
     unite: 'unit',
     personnaliserProduit: 'Customise this product',
+    exemplesRealisations: (categorie: string) => `Examples of our work — ${categorie}`,
     decrireDemande: 'Describe your request: our team receives it with the order.',
     personnalisationVide: 'Enter at least a message, a theme or a detail.',
     nombrePersonnes: 'Number of people',

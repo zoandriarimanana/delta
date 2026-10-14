@@ -13,11 +13,15 @@ export interface PhotoBien {
 
 /**
  * L'élément dont on affiche ou gère les photos : une salle, un logement, une
- * formation **ou** un produit — jamais deux à la fois, ce que l'union rend
- * inexprimable.
+ * formation, un produit **ou** une catégorie (ses exemples de réalisations,
+ * 14 octobre 2026) — jamais deux à la fois, ce que l'union rend inexprimable.
  */
 export type BienPhotographie =
   | { salle: number }
   | { logement: number }
   | { formation: number }
-  | { produit: number };
+  | { produit: number }
+  | { categorie: number };
+
+/** Parties dont une liste affiche les couvertures. */
+export type PartieCatalogue = 'salles' | 'logements' | 'formations' | 'produits';

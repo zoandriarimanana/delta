@@ -11,13 +11,20 @@ import { TEXTES_FORMATION } from '../formation.textes';
 import { formaterDuree } from '../formation.service';
 import type { Formation } from '../formation.types';
 
-export default function CarteFormation({ formation }: { formation: Formation }) {
+export default function CarteFormation({
+  formation,
+  image,
+}: {
+  formation: Formation;
+  /** Photo de couverture ; l'illustration de repli à défaut. */
+  image?: string;
+}) {
   const t = useTextes(TEXTES_FORMATION);
   const prix = useFormaterPrix();
   return (
     <Link to={`/formations/${formation.id_formation}`} className="no-underline">
       <Carte
-        image={imageFormation(formation.id_formation)}
+        image={image ?? imageFormation(formation.id_formation)}
         titre={formation.titre}
         description={`${formaterDuree(formation.duree_heures)}${formation.niveau ? ` • ${t.niveau(formation.niveau)}` : ''}`}
         pied={

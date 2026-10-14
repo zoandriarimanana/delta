@@ -137,6 +137,13 @@ export function definirPersonnalisation(
   });
 }
 
+/**
+ * Ligne ajoutée quand le client a choisi un modèle : la photo voyage à part
+ * (`photo_modele`), mais la demande doit le dire en toutes lettres — et un
+ * modèle seul, sans autre précision, est une personnalisation valable.
+ */
+const LIGNE_MODELE = 'Modèle : photo d’exemple choisie, jointe à la demande';
+
 type Rubriques = Record<'message' | 'theme' | 'precisions', string>;
 
 /** Rubriques **envoyées** : en français, c'est l'équipe Delta qui les lit. */
@@ -158,6 +165,7 @@ export function descriptionDemande(
     .map((champ) => [rubriques[champ], personnalisation[champ].trim()])
     .filter(([, valeur]) => valeur !== '')
     .map(([libelle, valeur]) => `${libelle} : ${valeur}`)
+    .concat(personnalisation.modele ? [LIGNE_MODELE] : [])
     .join('\n');
 }
 
@@ -169,6 +177,7 @@ export function versPersonnalisationEnvoyee(
   return {
     description_demande: descriptionDemande(personnalisation),
     ...(ingredients === '' ? {} : { ingredients_specifiques: ingredients }),
+    ...(personnalisation.modele ? { photo_modele: personnalisation.modele } : {}),
   };
 }
 

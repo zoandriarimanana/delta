@@ -10,11 +10,14 @@ import { useState } from 'react';
 import { useTextes } from '@/lib/langue';
 
 import { TEXTES_FORMATION } from '../formation.textes';
+import { useImageCouverture } from '@/features/galerie/galerie.hooks';
+import { imageFormation } from '@/lib/images';
 import CarteFormation from '../components/CarteFormation';
 import DemandeFormationSurMesure from '../components/DemandeFormationSurMesure';
 import { useDomaines, useFormations } from '../formation.hooks';
 
 export default function FormationListPage() {
+  const image = useImageCouverture('formations');
   const t = useTextes(TEXTES_FORMATION);
   const [idDomaine, setIdDomaine] = useState<number | null>(null);
   const domaines = useDomaines();
@@ -82,7 +85,13 @@ export default function FormationListPage() {
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {(formations.donnees ?? []).map((formation) => (
           <div key={formation.id_formation}>
-            <CarteFormation formation={formation} />
+            <CarteFormation
+              formation={formation}
+              image={image(
+                formation.id_formation,
+                imageFormation(formation.id_formation)
+              )}
+            />
           </div>
         ))}
       </div>
