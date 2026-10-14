@@ -528,6 +528,14 @@ dépendent de l'image, pas du thème.
 
 ### Devises : afficher en devise, payer au taux figé
 
+> **Retiré de l'interface le 14 octobre 2026** (demande de l'utilisateur) :
+> plus d'écran « Taux de change » dans l'administration, plus de choix
+> « Payer en » au tunnel — le site reste en Ariary de bout en bout, et
+> `features/devise/` ne garde que le formateur des prix. Le serveur garde
+> `TAUX_CHANGE` et les colonnes de devise de `COMMANDE`/`PAIEMENT`, inactifs :
+> les commandes passées en devise restent lisibles, et le retour en arrière
+> ne demanderait que l'interface. Ce qui suit décrit l'état antérieur.
+
 Ouverture internationale (8 octobre 2026). Le catalogue est tenu **en
 Ariary**, un prix n'existe qu'une fois. `features/devise/` (module de
 `TAUX_CHANGE`) porte trois choses distinctes :

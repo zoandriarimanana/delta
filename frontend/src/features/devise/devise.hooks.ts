@@ -1,88 +1,19 @@
 /**
  * Hooks du module devise.
  *
- * Les taux sont chargés **une fois** par page et partagés : chaque prix
- * affiché ne déclenche pas sa propre requête.
+ * Depuis le 14 octobre 2026, le site reste **en Ariary** de bout en bout :
+ * plus de choix de devise au tunnel, plus d'écran de taux. Ne reste que le
+ * formateur des prix.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
-import { recupererTaux } from './devise.api';
-import { convertir, formaterDevise } from './devise.service';
-import type { Devise, TauxChange } from './devise.types';
+import { formaterDevise } from './devise.service';
 
-let enCache: TauxChange[] | null = null;
-let enCours: Promise<TauxChange[]> | null = null;
-// Incrémentée par `oublierTaux()` : une réponse partie avant l'oubli arrive
-// parfois après, et réécrivait alors des taux périmés — jusqu'à remettre à
-// zéro le champ qu'un administrateur venait de saisir (test intermittent du
-// 13 octobre 2026).
-let generation = 0;
-const abonnes = new Set<(taux: TauxChange[]) => void>();
-
-function charger(): Promise<TauxChange[]> {
-  if (enCours === null) {
-    const lancement = generation;
-    enCours = recupererTaux()
-      .then((taux) => {
-        if (lancement !== generation) return taux;
-        enCache = taux;
-        abonnes.forEach((notifier) => notifier(taux));
-        return taux;
-      })
-      .catch(() => {
-        // Sans taux, les prix restent en Ariary ; on réessaiera plus tard.
-        if (lancement === generation) enCours = null;
-        return [];
-      });
-  }
-  return enCours;
-}
-
-/** Oublie les taux en cache — après un réglage administrateur, et en test. */
-export function oublierTaux(): void {
-  generation += 1;
-  enCache = null;
-  enCours = null;
-}
-
-/** Taux courants (liste vide tant qu'ils ne sont pas arrivés). */
-export function useTaux(): TauxChange[] {
-  const [taux, setTaux] = useState<TauxChange[]>(enCache ?? []);
-  useEffect(() => {
-    abonnes.add(setTaux);
-    if (enCache === null) void charger();
-    else setTaux(enCache);
-    return () => {
-      abonnes.delete(setTaux);
-    };
-  }, []);
-  return taux;
-}
-
-/**
- * Formateur des prix affichés au client : **toujours en Ariary** (demande du
- * 12 octobre 2026). La devise choisie au tunnel ne décide que du paiement ;
- * elle ne convertit plus l'affichage — sans quoi, après une commande en
- * dollars, tout le catalogue restait en dollars.
- */
+/** Formateur des prix affichés au client : toujours en Ariary. */
 export function useFormaterPrix(): (montantAriary: number | string) => string {
   return useCallback(
     (montantAriary: number | string) => formaterDevise(montantAriary, 'MGA'),
     []
   );
-}
-
-/**
- * Montant en Ariary converti dans `devise` — l'indication « soit 4,44 $ » du
- * tunnel. `null` en Ariary, ou tant que le taux n'est pas connu.
- */
-export function useConversionIndicative(
-  montantAriary: number,
-  devise: Devise
-): string | null {
-  const taux = useTaux();
-  if (devise === 'MGA') return null;
-  const converti = convertir(montantAriary, devise, taux);
-  return converti === null ? null : formaterDevise(converti, devise);
 }

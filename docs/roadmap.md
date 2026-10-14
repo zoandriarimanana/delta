@@ -2076,6 +2076,12 @@ Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
       (`source_modele`, toujours accepté par l'API) : il ne couvrait pas le
       choix fait dans la galerie, d'où ce correctif ; le doublon a été
       retiré de l'écran.
+- [x] **Ariary seulement** (demande du 14 octobre 2026, hors plan R) :
+      écran « Taux de change » de l'administration et choix « Payer en »
+      (EUR / USD) du tunnel retirés ; les commandes partent en Ariary.
+      Interface seulement : `TAUX_CHANGE` et les colonnes de devise restent
+      en base, inactifs, pour les commandes déjà passées en devise (voir
+      `docs/architecture.md`, « Devises »). Aucune migration.
 - [ ] **R.2 — Réservation des salles par calendrier.** Créneaux occupés
       d'une salle exposés publiquement, **sans aucune donnée du client** ;
       calendrier mensuel sur la fiche (jours occupés grisés, choix du jour

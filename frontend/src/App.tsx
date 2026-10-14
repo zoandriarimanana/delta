@@ -20,7 +20,6 @@ import HistoriqueCommandesPage from '@/features/commande/pages/HistoriqueCommand
 import PanierPage from '@/features/commande/pages/PanierPage';
 import PriseDeCommandePage from '@/features/commande/pages/PriseDeCommandePage';
 import TunnelCommandePage from '@/features/commande/pages/TunnelCommandePage';
-import TauxChangePage from '@/features/devise/pages/TauxChangePage';
 import AdministrationDomainesPage from '@/features/formation/pages/AdministrationDomainesPage';
 import AdministrationDemandesFormationPage from '@/features/formation/pages/AdministrationDemandesFormationPage';
 import AdministrationFormationsPage from '@/features/formation/pages/AdministrationFormationsPage';
@@ -180,7 +179,6 @@ export default function App() {
             element={<AdministrationDemandesFormationPage />}
           />
           <Route path="tarif-livraison" element={<TarifLivraisonPage />} />
-          <Route path="taux-change" element={<TauxChangePage />} />
           <Route
             path="formations/:idFormation"
             element={<FormationDetailAdministrationPage />}

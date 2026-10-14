@@ -4,7 +4,6 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
-import type { Devise } from '@/features/devise/devise.types';
 import type { Produit } from '@/features/produit/produit.types';
 import { textesCourants } from '@/lib/langue';
 
@@ -121,8 +120,7 @@ export interface ValidationCommande {
   valider: (
     type: TypeCommande,
     invite?: { nom_invite: string; contact_invite: string },
-    adresseLivraison?: string,
-    devise?: Devise
+    adresseLivraison?: string
   ) => Promise<Commande | null>;
   envoi: boolean;
   erreur: string | null;
@@ -146,8 +144,7 @@ export function useValidationCommande(): ValidationCommande {
     async (
       type: TypeCommande,
       invite?: { nom_invite: string; contact_invite: string },
-      adresseLivraison?: string,
-      devise?: Devise
+      adresseLivraison?: string
     ): Promise<Commande | null> => {
       setEnvoi(true);
       setErreur(null);
@@ -158,8 +155,8 @@ export function useValidationCommande(): ValidationCommande {
         adresseLivraison !== undefined && adresseLivraison.trim() !== ''
           ? { adresse_livraison: adresseLivraison.trim() }
           : {};
-      // L'Ariary est la valeur par défaut du serveur : inutile de l'envoyer.
-      const enDevise = devise !== undefined && devise !== 'MGA' ? { devise } : {};
+      // Aucune devise envoyée : la commande reste en Ariary, la valeur par
+      // défaut du serveur (14 octobre 2026).
 
       try {
         const commande =
@@ -168,13 +165,11 @@ export function useValidationCommande(): ValidationCommande {
                 type_commande: type,
                 lignes,
                 ...adresse,
-                ...enDevise,
               })
             : await creerCommandeInvite({
                 type_commande: type,
                 lignes,
                 ...adresse,
-                ...enDevise,
                 ...invite,
               });
         panier.vider();

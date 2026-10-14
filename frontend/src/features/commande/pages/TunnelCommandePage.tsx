@@ -15,7 +15,6 @@ import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ShoppingBag, UserRound } from 'lucide-react';
 
-import { useDevise } from '@/features/devise/devise.store';
 import { useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
@@ -37,7 +36,6 @@ export default function TunnelCommandePage() {
   const t = useTextes(TEXTES_COMMANDE);
   const panier = usePanier();
   const connecte = useEstConnecte();
-  const devise = useDevise();
   const { valider, envoi, erreur } = useValidationCommande();
   const naviguer = useNavigate();
 
@@ -76,8 +74,7 @@ export default function TunnelCommandePage() {
     const commande = await valider(
       TYPE_PAR_MODE[mode],
       connecte ? undefined : { nom_invite: nom, contact_invite: contact },
-      mode === 'livraison' ? adresse : undefined,
-      devise
+      mode === 'livraison' ? adresse : undefined
     );
     if (commande === null) {
       // Échec : le panier est intact, l'erreur est affichée, on reste ici.
