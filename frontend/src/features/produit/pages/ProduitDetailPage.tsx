@@ -7,7 +7,6 @@ import Badge from '@/components/ui/Badge';
 import BoutonRetour from '@/components/ui/BoutonRetour';
 import NoteMoyenne from '@/components/ui/NoteMoyenne';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
-import ExemplesRealisations from '@/features/galerie/components/ExemplesRealisations';
 import GaleriePhotos from '@/features/galerie/components/GaleriePhotos';
 import { useGalerie } from '@/features/galerie/galerie.hooks';
 import { imageProduit } from '@/lib/images';
@@ -64,15 +63,7 @@ export default function ProduitDetailPage() {
       <LienRetour />
       <EtatRequete chargement={produit.chargement} erreur={produit.erreur}>
         {produit.donnees !== null && (
-          <>
-            <Fiche produit={produit.donnees} categorie={categorie} />
-            <div className="mt-10">
-              <ExemplesRealisations
-                idCategorie={produit.donnees.id_categorie}
-                titre={t.exemplesRealisations(categorie ?? '')}
-              />
-            </div>
-          </>
+          <Fiche produit={produit.donnees} categorie={categorie} />
         )}
       </EtatRequete>
     </section>

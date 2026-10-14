@@ -2024,8 +2024,9 @@ Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
       la première en couverture, au moins une) dans les quatre formulaires
       de création ; galerie sur la fiche d'une catégorie.
       — **PH.3 Client** : première photo sur chaque carte des listes ;
-      photos de la catégorie en tête du catalogue filtré et en « Exemples de
-      réalisations » sur la fiche produit ; choix du modèle dans le bloc
+      photos de la catégorie en tête du catalogue filtré ; sur la fiche
+      produit, seulement dans le bloc « Personnaliser » (retirées du bas de
+      la fiche à la demande de l'utilisateur) ; choix du modèle dans le bloc
       « Personnaliser », visible ensuite dans le récapitulatif de la
       commande (client et administration).
       — Livré. Migration `46679ef760e3`. Les photos choisies à la création

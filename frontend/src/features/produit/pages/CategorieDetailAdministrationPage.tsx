@@ -180,9 +180,9 @@ export default function CategorieDetailAdministrationPage() {
       ) : (
         <>
           <p className="mt-6 text-sm text-gris-500">
-            Exemples de réalisations : montrés aux clients sur le catalogue et sur la
-            fiche de chaque produit de la catégorie, qui peuvent en choisir un comme
-            modèle à la personnalisation.
+            Exemples de réalisations : montrés aux clients sur le catalogue filtré par
+            cette catégorie, et proposés comme modèles quand ils personnalisent un de
+            ses produits.
           </p>
           <GestionGalerie bien={{ categorie: id }} />
         </>
