@@ -421,3 +421,43 @@ def test_le_code_n_est_jamais_stocke_en_clair(
     assert client is not None
     assert client.code_verification is not None
     assert code not in client.code_verification
+
+
+def test_en_developpement_un_envoi_refuse_ecrit_le_code_au_journal(
+    client_http: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Serveur configuré mais qui refuse (mot de passe d'application révoqué,
+    par exemple) : en développement, le code reste lisible pour tester."""
+    monkeypatch.setattr(settings, "ENVIRONMENT", "developpement")
+    monkeypatch.setattr(
+        "app.services.verification_email_service.envoyer_courriel",
+        lambda *args: False,
+    )
+
+    with caplog.at_level("WARNING"):
+        client_http.post(f"{AUTH}/inscription", json=INSCRIPTION)
+
+    assert any(
+        "Code de vérification" in r.getMessage()
+        and INSCRIPTION["email"] in r.getMessage()
+        for r in caplog.records
+    )
+
+
+def test_en_production_le_code_n_est_jamais_ecrit_au_journal(
+    client_http: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(
+        "app.services.verification_email_service.envoyer_courriel",
+        lambda *args: False,
+    )
+
+    with caplog.at_level("WARNING"):
+        client_http.post(f"{AUTH}/inscription", json=INSCRIPTION)
+
+    assert not any("Code de vérification" in r.getMessage() for r in caplog.records)

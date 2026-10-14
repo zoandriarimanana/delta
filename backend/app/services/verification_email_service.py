@@ -21,7 +21,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.courriel import envoyer_courriel, smtp_configure
+from app.core.courriel import envoyer_courriel
 from app.core.exceptions import ReferenceInvalide
 from app.core.logging import get_logger
 from app.models.client import Client
@@ -115,11 +115,8 @@ class VerificationEmailService:
             "Si vous n'avez pas créé de compte, ignorez cet e-mail.\n\n"
             "L'équipe Delta",
         )
-        if (
-            not envoye
-            and not smtp_configure()
-            and settings.ENVIRONMENT == "developpement"
-        ):
-            # Développement sans serveur de messagerie : le code reste
-            # accessible pour tester. Jamais en production.
+        if not envoye and settings.ENVIRONMENT == "developpement":
+            # Développement : serveur de messagerie absent ou qui refuse
+            # l'envoi, le code reste accessible pour tester. Jamais en
+            # production.
             journal.warning("Code de vérification de %s : %s", client.email, code)

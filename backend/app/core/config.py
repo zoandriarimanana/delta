@@ -88,8 +88,9 @@ class Settings(BaseSettings):
 
     # --- Envoi d'e-mails (vérification de l'adresse, 14 octobre 2026) ---
     # Serveur SMTP standard : Gmail (mot de passe d'application), Brevo…
-    # Vide : aucun e-mail ne part ; en `developpement` seulement, le code de
-    # vérification s'écrit dans le journal du serveur pour pouvoir tester.
+    # Vide : aucun e-mail ne part. En `developpement` seulement, un code de
+    # vérification qui n'a pas pu partir (serveur absent ou qui refuse)
+    # s'écrit dans le journal du serveur, pour pouvoir tester.
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_UTILISATEUR: str = ""
