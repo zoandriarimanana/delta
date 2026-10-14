@@ -18,9 +18,15 @@ const MAX = 10;
 interface Proprietes {
   fichiers: File[];
   surChange: (fichiers: File[]) => void;
+  /** Exemples d'une catégorie : utiles, jamais exigés. */
+  facultatif?: boolean;
 }
 
-export default function SelecteurPhotos({ fichiers, surChange }: Proprietes) {
+export default function SelecteurPhotos({
+  fichiers,
+  surChange,
+  facultatif = false,
+}: Proprietes) {
   const apercus = useMemo(
     () => fichiers.map((f) => URL.createObjectURL(f)),
     [fichiers]
@@ -30,10 +36,16 @@ export default function SelecteurPhotos({ fichiers, surChange }: Proprietes) {
   return (
     <fieldset className="mb-4 rounded-xl border border-dashed border-gris-300 p-4">
       <legend className="px-1 text-sm font-medium text-gris-700">
-        Photos <span className="text-danger">*</span>
+        Photos{' '}
+        {facultatif ? (
+          <span className="font-normal text-gris-500">(facultatif)</span>
+        ) : (
+          <span className="text-danger">*</span>
+        )}
       </legend>
       <p className="text-xs text-gris-500">
-        Au moins une photo, {MAX} au plus (JPEG, PNG ou WebP, 5 Mio chacune). La
+        {facultatif ? 'Jusqu’à' : 'Au moins une photo,'} {MAX}{' '}
+        {facultatif ? 'photos' : 'au plus'} (JPEG, PNG ou WebP, 5 Mio chacune). La
         première sert de couverture sur le site.
       </p>
       <ul className="mt-3 flex flex-wrap gap-3">

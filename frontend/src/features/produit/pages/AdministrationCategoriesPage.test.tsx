@@ -11,6 +11,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { recupererPhotos, televerserPhotos } from '@/features/galerie/galerie.api';
 import { definirSession, effacerSession } from '@/lib/session.store';
 
 import {
@@ -23,6 +24,15 @@ import {
 import AdministrationCategoriesPage from './AdministrationCategoriesPage';
 
 vi.mock('../produit.api');
+vi.mock('@/features/galerie/galerie.api', async (original) => ({
+  ...(await original<typeof import('@/features/galerie/galerie.api')>()),
+  recupererPhotos: vi.fn(),
+  televerserPhotos: vi.fn(),
+}));
+
+// jsdom ne fabrique pas d'URL locale pour un fichier : les miniatures en ont besoin.
+URL.createObjectURL = vi.fn(() => 'blob:apercu');
+URL.revokeObjectURL = vi.fn();
 
 const ACTIVE = { id_categorie: 1, libelle: 'Pâtisserie', supprime_le: null };
 const ARCHIVEE = {
@@ -46,6 +56,8 @@ beforeEach(() => {
   vi.mocked(creerCategorie).mockResolvedValue(ACTIVE);
   vi.mocked(archiverCategorie).mockResolvedValue(undefined);
   vi.mocked(restaurerCategorie).mockResolvedValue(ACTIVE);
+  vi.mocked(recupererPhotos).mockResolvedValue([{ fichier: '1-1.jpg' }]);
+  vi.mocked(televerserPhotos).mockResolvedValue(0);
 });
 
 afterEach(() => {
@@ -158,5 +170,29 @@ describe('refus', () => {
     await userEvent.click(screen.getByRole('button', { name: /ajouter/i }));
 
     expect((await screen.findByRole('alert')).textContent).toMatch(/administrateur/i);
+  });
+});
+
+describe('photos des catégories', () => {
+  it('envoie les exemples choisis à la création, sans les exiger', async () => {
+    const photo = new File(['x'], 'gateau.jpg', { type: 'image/jpeg' });
+    afficher();
+    await screen.findByText('Pâtisserie');
+
+    await userEvent.type(screen.getByLabelText(/libellé/i), 'Gâteaux');
+    await userEvent.upload(screen.getByLabelText(/ajouter des photos/i), photo);
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
+
+    await waitFor(() =>
+      expect(televerserPhotos).toHaveBeenCalledWith({ categorie: 1 }, [photo])
+    );
+  });
+
+  it('« Modifier » ouvre les photos de la catégorie', async () => {
+    afficher();
+    await userEvent.click(await screen.findByRole('button', { name: 'Modifier' }));
+
+    await waitFor(() => expect(recupererPhotos).toHaveBeenCalledWith({ categorie: 1 }));
+    expect(await screen.findByRole('heading', { name: 'Photos' })).toBeDefined();
   });
 });

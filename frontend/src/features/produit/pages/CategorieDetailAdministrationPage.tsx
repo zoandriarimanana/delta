@@ -151,7 +151,7 @@ export default function CategorieDetailAdministrationPage() {
                   icone={Pencil}
                   onClick={() => setLibelle(categorie.libelle)}
                 >
-                  Renommer
+                  Modifier le nom
                 </Bouton>
                 <Bouton
                   variante="danger-contour"
@@ -172,6 +172,21 @@ export default function CategorieDetailAdministrationPage() {
         )}
       </div>
 
+      {archive ? (
+        <p className="mt-6 rounded-xl border border-gris-200 bg-surface p-4 text-sm text-gris-500">
+          Les photos d’une catégorie archivée sont conservées, mais ne se gèrent qu’une
+          fois restaurée.
+        </p>
+      ) : (
+        <>
+          <p className="mt-6 text-sm text-gris-500">
+            Exemples de réalisations : montrés aux clients sur le catalogue et sur la
+            fiche de chaque produit de la catégorie, qui peuvent en choisir un comme
+            modèle à la personnalisation.
+          </p>
+          <GestionGalerie bien={{ categorie: id }} />
+        </>
+      )}
       <h2 className="mt-8 text-lg font-medium text-gris-700">
         Produits de la catégorie
       </h2>
@@ -222,22 +237,6 @@ export default function CategorieDetailAdministrationPage() {
             })}
           </tbody>
         </table>
-      )}
-
-      {archive ? (
-        <p className="mt-6 rounded-xl border border-gris-200 bg-surface p-4 text-sm text-gris-500">
-          Les photos d’une catégorie archivée sont conservées, mais ne se gèrent qu’une
-          fois restaurée.
-        </p>
-      ) : (
-        <>
-          <p className="mt-6 text-sm text-gris-500">
-            Exemples de réalisations : montrés aux clients sur le catalogue et sur la
-            fiche de chaque produit de la catégorie, qui peuvent en choisir un comme
-            modèle à la personnalisation.
-          </p>
-          <GestionGalerie bien={{ categorie: id }} />
-        </>
       )}
     </section>
   );

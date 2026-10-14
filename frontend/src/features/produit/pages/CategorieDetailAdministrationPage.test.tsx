@@ -104,7 +104,9 @@ describe('CategorieDetailAdministrationPage', () => {
     vi.mocked(modifierCategorie).mockResolvedValue(CATEGORIE);
     afficher();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Renommer' }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Modifier le nom' })
+    );
     const champ = screen.getByLabelText('Libellé');
     await userEvent.clear(champ);
     await userEvent.type(champ, 'Pâtisserie fine');

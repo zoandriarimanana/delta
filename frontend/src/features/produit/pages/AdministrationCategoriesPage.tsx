@@ -16,6 +16,9 @@ import { Link } from 'react-router';
 import Badge from '@/components/ui/Badge';
 import { Archive, Pencil, RotateCcw } from 'lucide-react';
 import Bouton from '@/components/ui/Bouton';
+import GestionGalerie from '@/features/galerie/components/GestionGalerie';
+import SelecteurPhotos from '@/features/galerie/components/SelecteurPhotos';
+import { usePhotosCreation } from '@/features/galerie/galerie.hooks';
 
 import {
   estArchive,
@@ -41,12 +44,17 @@ export default function AdministrationCategoriesPage() {
   const [avecArchives, setAvecArchives] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  // Exemples de réalisations choisis à la création (14 octobre 2026) :
+  // facultatifs, envoyés une fois la catégorie créée.
+  const photos = usePhotosCreation();
+  const { reinitialiser: oublierPhotos } = photos;
 
   const reinitialiser = useCallback(() => {
     setLibelle('');
     setEnEdition(null);
     setErreur(null);
-  }, []);
+    oublierPhotos();
+  }, [oublierPhotos]);
 
   const visibles = catalogue.categories.filter(
     (categorie) => avecArchives || !estArchive(categorie)
@@ -60,7 +68,10 @@ export default function AdministrationCategoriesPage() {
       if (enEdition !== null) {
         await modifierCategorie(enEdition.id_categorie, { libelle });
       } else {
-        await creerCategorie({ libelle });
+        const categorie = await creerCategorie({ libelle });
+        if (photos.fichiers.length > 0) {
+          await photos.envoyer({ categorie: categorie.id_categorie });
+        }
       }
       catalogue.recharger();
       reinitialiser();
@@ -110,6 +121,32 @@ export default function AdministrationCategoriesPage() {
           </Bouton>
         )}
       </form>
+
+      {/* Les photos d'une catégorie sont ses exemples de réalisations : on
+          les choisit dès la création, et « Modifier » les gère ensuite. */}
+      <div className="mt-4">
+        {enEdition === null ? (
+          <SelecteurPhotos
+            fichiers={photos.fichiers}
+            surChange={photos.setFichiers}
+            facultatif
+          />
+        ) : (
+          <GestionGalerie
+            key={enEdition.id_categorie}
+            bien={{ categorie: enEdition.id_categorie }}
+          />
+        )}
+      </div>
+
+      {photos.avertissement !== null && (
+        <p
+          role="alert"
+          className="mt-4 rounded border border-attente/30 bg-attente/10 p-3 text-sm text-gris-700"
+        >
+          {photos.avertissement}
+        </p>
+      )}
 
       {[erreur, actions.erreur, catalogue.erreur].map(
         (message, index) =>
@@ -188,9 +225,10 @@ export default function AdministrationCategoriesPage() {
                       onClick={() => {
                         setEnEdition(categorie);
                         setLibelle(categorie.libelle);
+                        window.scrollTo?.({ top: 0, behavior: 'smooth' });
                       }}
                     >
-                      Renommer
+                      Modifier
                     </Bouton>
                     <Bouton
                       variante="danger-contour"
