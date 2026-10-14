@@ -86,6 +86,19 @@ class Settings(BaseSettings):
     # Sprint 9.5, docs/mld.md).
     ENVIRONMENT: Literal["developpement", "production"] = "production"
 
+    # --- Envoi d'e-mails (vérification de l'adresse, 14 octobre 2026) ---
+    # Serveur SMTP standard : Gmail (mot de passe d'application), Brevo…
+    # Vide : aucun e-mail ne part ; en `developpement` seulement, le code de
+    # vérification s'écrit dans le journal du serveur pour pouvoir tester.
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_UTILISATEUR: str = ""
+    SMTP_MOT_DE_PASSE: str = ""
+    #: Adresse affichée comme expéditeur ; l'utilisateur SMTP à défaut.
+    SMTP_EXPEDITEUR: str = ""
+    #: Durée de validité d'un code de vérification.
+    CODE_VERIFICATION_MINUTES: int = 15
+
     # --- Assistant IA générative (Sprint 12) ---
     # Interrupteur général, **automatique par défaut** (décision du 7 octobre
     # 2026 : l'assistant doit rester allumé sans qu'on y pense). Non renseigné,

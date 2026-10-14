@@ -221,3 +221,19 @@ describe('message de confirmation', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 });
+
+it('propose la saisie du code quand l’adresse n’est pas confirmée', async () => {
+  vi.mocked(connecterClient).mockRejectedValue({
+    response: {
+      status: 403,
+      data: { detail: 'Votre adresse e-mail n’est pas encore confirmée.' },
+    },
+  });
+  afficher();
+
+  await soumettre();
+
+  expect(
+    await screen.findByRole('link', { name: /saisir mon code de vérification/i })
+  ).toBeDefined();
+});

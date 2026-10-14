@@ -32,6 +32,11 @@ class AutorisationInsuffisante(ErreurMetier):
     """
 
 
+class CompteNonVerifie(AutorisationInsuffisante):
+    """Identifiants justes, mais adresse e-mail pas encore confirmée — 403 :
+    on sait qui appelle, il lui manque une étape (14 octobre 2026)."""
+
+
 class RessourceIntrouvable(ErreurMetier):
     """La ressource désignée par l'URL n'existe pas (HTTP 404)."""
 

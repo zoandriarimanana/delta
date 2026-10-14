@@ -112,6 +112,37 @@ def _expiration_periodique_coupee(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "EXPIRATION_AUTOMATIQUE", False)
 
 
+class BoiteMail(list[tuple[str, str]]):
+    """E-mails « envoyés » pendant un test : (destinataire, texte)."""
+
+    def code_pour(self, email: str) -> str:
+        """Dernier code de vérification adressé à `email`."""
+        import re
+
+        for destinataire, texte in reversed(self):
+            if destinataire == email:
+                trouve = re.search(r"\b(\d{6})\b", texte)
+                if trouve is not None:
+                    return trouve.group(1)
+        raise AssertionError(f"Aucun code envoyé à {email}")
+
+
+@pytest.fixture(autouse=True)
+def courriels(monkeypatch: pytest.MonkeyPatch) -> BoiteMail:
+    """Aucun e-mail ne part pendant les tests : ils sont gardés ici, et un
+    test peut y lire le code de vérification (14 octobre 2026)."""
+    boite = BoiteMail()
+
+    def _envoyer(destinataire: str, sujet: str, texte: str) -> bool:
+        boite.append((destinataire, texte))
+        return True
+
+    monkeypatch.setattr(
+        "app.services.verification_email_service.envoyer_courriel", _envoyer
+    )
+    return boite
+
+
 @pytest.fixture(autouse=True)
 def _assistant_eteint_par_defaut(monkeypatch: pytest.MonkeyPatch) -> None:
     """Éteint l'assistant dans chaque test, quel que soit le `.env` local.

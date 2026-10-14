@@ -8,7 +8,11 @@ l'inscription diffère, par la table fille qu'elle renseigne.
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import AuthentificationInvalide, ConflitMetier
+from app.core.exceptions import (
+    AuthentificationInvalide,
+    CompteNonVerifie,
+    ConflitMetier,
+)
 from app.core.integrite import viole_contrainte
 from app.core.security import hacher_mot_de_passe, verifier_mot_de_passe
 from app.models.client import Client, TypeClient
@@ -25,6 +29,10 @@ INDICE_EMAIL = "client.email"
 INDICE_FISCAL = "client_entreprise.numero_id_fiscal"
 
 MESSAGE_EMAIL_PRIS = "Cet e-mail est déjà utilisé."
+MESSAGE_NON_VERIFIE = (
+    "Votre adresse e-mail n'est pas encore confirmée : saisissez le code reçu "
+    "par e-mail, ou demandez-en un nouveau."
+)
 MESSAGE_FISCAL_PRIS = "Ce numéro d'identification fiscale est déjà utilisé."
 
 # Hash bcrypt d'une valeur arbitraire, comparé quand l'e-mail est inconnu afin
@@ -192,5 +200,9 @@ class AuthService:
             raise AuthentificationInvalide("E-mail ou mot de passe incorrect.")
         if client is None:
             raise AuthentificationInvalide("E-mail ou mot de passe incorrect.")
+        # Après le mot de passe, jamais avant : seul le titulaire apprend que
+        # son adresse reste à confirmer (14 octobre 2026).
+        if client.email_verifie_le is None:
+            raise CompteNonVerifie(MESSAGE_NON_VERIFIE)
 
         return client

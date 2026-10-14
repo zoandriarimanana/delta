@@ -26,6 +26,8 @@ export interface Connexion {
   connecter: (identifiants: Identifiants) => Promise<boolean>;
   envoi: boolean;
   erreur: string | null;
+  /** Identifiants justes, adresse e-mail pas encore confirmée (403). */
+  nonVerifie: boolean;
 }
 
 /**
@@ -62,11 +64,13 @@ function useConnexion(
 ): Connexion {
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [nonVerifie, setNonVerifie] = useState(false);
 
   const connecter = useCallback(
     async (identifiants: Identifiants): Promise<boolean> => {
       setEnvoi(true);
       setErreur(null);
+      setNonVerifie(false);
       try {
         const session = await appeler(identifiants);
         // Le type est connu localement (c'est l'endpoint qu'on vient d'appeler),
@@ -81,6 +85,10 @@ function useConnexion(
         // Rien n'est écrit ni effacé : la session éventuellement en cours reste
         // intacte. Le seul effet d'un refus est le message affiché.
         setErreur(messageDeRefus(erreurAppel));
+        setNonVerifie(
+          (erreurAppel as { response?: { status?: number } } | null)?.response
+            ?.status === 403
+        );
         return false;
       } finally {
         setEnvoi(false);
@@ -89,7 +97,7 @@ function useConnexion(
     [appeler, type]
   );
 
-  return { connecter, envoi, erreur };
+  return { connecter, envoi, erreur, nonVerifie };
 }
 
 /** Ouvre une session **client**. */

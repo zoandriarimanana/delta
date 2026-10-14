@@ -42,3 +42,9 @@ LIMITE_PAIEMENT_INVITE = "10/minute"
 #: Demande de formation sur commande (14 octobre 2026) : formulaire public,
 #: donc cible de spam — quelques envois par minute suffisent à un humain.
 LIMITE_DEMANDE_FORMATION = "5/minute"
+
+#: Inscription et renvoi d'un code de vérification : chacun envoie un e-mail,
+#: et un formulaire qui en envoie ne doit pas servir à inonder une boîte
+#: (14 octobre 2026).
+LIMITE_INSCRIPTION = "5/hour"
+LIMITE_ENVOI_CODE = "5/hour"

@@ -18,11 +18,13 @@ from sqlalchemy.pool import StaticPool
 from app.core.config import settings
 from app.core.cookies import NOM_COOKIE_CSRF, NOM_COOKIE_SESSION
 from app.core.database import Base, get_db
+from app.core.rate_limit import limiter
 from app.core.security import decoder_jeton_acces
 from app.main import app
 from app.models.client import Client
 from app.models.client_entreprise import ClientEntreprise
 from app.models.client_particulier import ClientParticulier
+from tests.conftest import BoiteMail
 
 AUTH = f"{settings.API_V1_PREFIX}/auth"
 
@@ -129,7 +131,18 @@ def test_inscription_mot_de_passe_trop_long_en_octets_retourne_422(
     assert reponse.status_code == 422
 
 
-def test_connexion_retourne_un_jeton_exploitable(client_http: TestClient) -> None:
+def _verifier(client_http: TestClient, courriels: BoiteMail, email: str) -> None:
+    """Saisit le code reçu par e-mail, comme le client le ferait."""
+    reponse = client_http.post(
+        f"{AUTH}/verification",
+        json={"email": email, "code": courriels.code_pour(email)},
+    )
+    assert reponse.status_code == 204, reponse.text
+
+
+def test_connexion_retourne_un_jeton_exploitable(
+    client_http: TestClient, courriels: BoiteMail
+) -> None:
     """Depuis T0.10, le jeton est posé en cookie `httpOnly`, plus dans le corps.
 
     Le corps ne confirme plus que la population ouverte ; le jeton lui-même
@@ -137,6 +150,7 @@ def test_connexion_retourne_un_jeton_exploitable(client_http: TestClient) -> Non
     navigateur le ferait.
     """
     inscrit = client_http.post(f"{AUTH}/inscription", json=INSCRIPTION).json()
+    _verifier(client_http, courriels, INSCRIPTION["email"])
 
     reponse = client_http.post(
         f"{AUTH}/connexion",
@@ -257,11 +271,14 @@ def test_numero_fiscal_en_double_retourne_409_avec_son_propre_message(
     assert "fiscale" in reponse.json()["detail"]
 
 
-def test_entreprise_se_connecte_sur_le_meme_endpoint(client_http: TestClient) -> None:
+def test_entreprise_se_connecte_sur_le_meme_endpoint(
+    client_http: TestClient, courriels: BoiteMail
+) -> None:
     """La connexion n'a pas été dupliquée : elle porte sur CLIENT."""
     inscrit = client_http.post(
         f"{AUTH}/inscription-entreprise", json=INSCRIPTION_ENTREPRISE
     ).json()
+    _verifier(client_http, courriels, INSCRIPTION_ENTREPRISE["email"])
 
     reponse = client_http.post(
         f"{AUTH}/connexion",
@@ -293,3 +310,114 @@ def test_champs_obligatoires_manquants_retournent_422(
     )
 
     assert reponse.status_code == 422
+
+
+# --- Vérification de l'adresse e-mail (14 octobre 2026) -------------------
+
+
+def _connexion(client_http: TestClient):
+    return client_http.post(
+        f"{AUTH}/connexion",
+        json={
+            "email": INSCRIPTION["email"],
+            "mot_de_passe": INSCRIPTION["mot_de_passe"],
+        },
+    )
+
+
+def test_un_compte_inscrit_ne_se_connecte_qu_une_fois_verifie(
+    client_http: TestClient, courriels: BoiteMail
+) -> None:
+    client_http.post(f"{AUTH}/inscription", json=INSCRIPTION)
+
+    refus = _connexion(client_http)
+    assert refus.status_code == 403
+    assert "confirm" in refus.json()["detail"]
+    assert courriels[-1][0] == INSCRIPTION["email"]
+
+    _verifier(client_http, courriels, INSCRIPTION["email"])
+    assert _connexion(client_http).status_code == 200
+
+
+def test_un_mauvais_mot_de_passe_ne_revele_pas_le_compte_non_verifie(
+    client_http: TestClient,
+) -> None:
+    client_http.post(f"{AUTH}/inscription", json=INSCRIPTION)
+
+    reponse = client_http.post(
+        f"{AUTH}/connexion",
+        json={"email": INSCRIPTION["email"], "mot_de_passe": "Faux-Mot2Passe!"},
+    )
+
+    assert reponse.status_code == 401
+
+
+def test_un_code_faux_est_refuse_comme_une_adresse_inconnue(
+    client_http: TestClient, courriels: BoiteMail
+) -> None:
+    client_http.post(f"{AUTH}/inscription", json=INSCRIPTION)
+    bon = courriels.code_pour(INSCRIPTION["email"])
+    faux = "000000" if bon != "000000" else "111111"
+
+    mauvais = client_http.post(
+        f"{AUTH}/verification", json={"email": INSCRIPTION["email"], "code": faux}
+    )
+    inconnu = client_http.post(
+        f"{AUTH}/verification", json={"email": "personne@example.mg", "code": bon}
+    )
+
+    assert mauvais.status_code == inconnu.status_code == 422
+    assert mauvais.json()["detail"] == inconnu.json()["detail"]
+
+
+def test_le_code_est_invalide_apres_cinq_erreurs(
+    client_http: TestClient, courriels: BoiteMail
+) -> None:
+    client_http.post(f"{AUTH}/inscription", json=INSCRIPTION)
+    bon = courriels.code_pour(INSCRIPTION["email"])
+    faux = "000000" if bon != "000000" else "111111"
+    for _ in range(5):
+        client_http.post(
+            f"{AUTH}/verification", json={"email": INSCRIPTION["email"], "code": faux}
+        )
+    # La limite de débit (5/minute) bloquerait la tentative suivante en 429 :
+    # on la lève pour vérifier la règle des cinq essais elle-même.
+    limiter.reset()
+
+    reponse = client_http.post(
+        f"{AUTH}/verification", json={"email": INSCRIPTION["email"], "code": bon}
+    )
+
+    assert reponse.status_code == 422
+
+
+def test_le_renvoi_donne_un_nouveau_code_et_ne_trahit_aucun_compte(
+    client_http: TestClient, courriels: BoiteMail
+) -> None:
+    client_http.post(f"{AUTH}/inscription", json=INSCRIPTION)
+    nombre = len(courriels)
+
+    renvoi = client_http.post(
+        f"{AUTH}/verification/renvoi", json={"email": INSCRIPTION["email"]}
+    )
+    inconnu = client_http.post(
+        f"{AUTH}/verification/renvoi", json={"email": "personne@example.mg"}
+    )
+
+    assert renvoi.status_code == inconnu.status_code == 202
+    assert len(courriels) == nombre + 1
+    _verifier(client_http, courriels, INSCRIPTION["email"])
+
+
+def test_le_code_n_est_jamais_stocke_en_clair(
+    client_http: TestClient, courriels: BoiteMail
+) -> None:
+    inscrit = client_http.post(f"{AUTH}/inscription", json=INSCRIPTION).json()
+    code = courriels.code_pour(INSCRIPTION["email"])
+
+    db = next(app.dependency_overrides[get_db]())
+    client = db.get(Client, inscrit["id_client"])
+
+    assert client is not None
+    assert client.code_verification is not None
+    assert code not in client.code_verification

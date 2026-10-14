@@ -75,6 +75,7 @@ const CHEMINS_PUBLICS = [
   '/auth/connexion',
   '/auth/personnel/connexion',
   '/auth/inscription',
+  '/auth/verification',
   '/auth/moi',
 ];
 

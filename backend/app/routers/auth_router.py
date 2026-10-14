@@ -12,16 +12,24 @@ from sqlalchemy.orm import Session
 
 from app.core.cookies import poser_cookies_session
 from app.core.database import get_db
-from app.core.rate_limit import LIMITE_CONNEXION, limiter
+from app.core.rate_limit import (
+    LIMITE_CONNEXION,
+    LIMITE_ENVOI_CODE,
+    LIMITE_INSCRIPTION,
+    limiter,
+)
 from app.core.security import TypeSujet, creer_jeton_acces
 from app.schemas.auth import (
     Connexion,
     InscriptionEntreprise,
     InscriptionParticulier,
+    RenvoiCode,
     SessionActive,
+    VerificationEmail,
 )
 from app.schemas.client import ClientRead
 from app.services.auth_service import AuthService
+from app.services.verification_email_service import VerificationEmailService
 
 router = APIRouter(prefix="/auth", tags=["authentification"])
 
@@ -38,7 +46,10 @@ SessionBase = Annotated[Session, Depends(get_db)]
     status_code=status.HTTP_201_CREATED,
     summary="Inscrire un client particulier",
 )
-def inscrire(donnees: InscriptionParticulier, db: SessionBase) -> ClientRead:
+@limiter.limit(LIMITE_INSCRIPTION)
+def inscrire(
+    request: Request, donnees: InscriptionParticulier, db: SessionBase
+) -> ClientRead:
     """Crée un compte particulier.
 
     Répond 409 si l'e-mail est déjà pris (`EmailDejaUtilise`, traduite
@@ -47,6 +58,8 @@ def inscrire(donnees: InscriptionParticulier, db: SessionBase) -> ClientRead:
     auditer.
     """
     client = AuthService(db).inscrire_particulier(donnees)
+    # Le compte naît non vérifié : un code part par e-mail (14 octobre 2026).
+    VerificationEmailService(db).exiger_verification(client)
     return ClientRead.model_validate(client)
 
 
@@ -56,7 +69,10 @@ def inscrire(donnees: InscriptionParticulier, db: SessionBase) -> ClientRead:
     status_code=status.HTTP_201_CREATED,
     summary="Inscrire un client entreprise",
 )
-def inscrire_entreprise(donnees: InscriptionEntreprise, db: SessionBase) -> ClientRead:
+@limiter.limit(LIMITE_INSCRIPTION)
+def inscrire_entreprise(
+    request: Request, donnees: InscriptionEntreprise, db: SessionBase
+) -> ClientRead:
     """Crée un compte entreprise.
 
     Répond 409 si l'e-mail **ou** le numéro d'identification fiscale est déjà
@@ -64,6 +80,7 @@ def inscrire_entreprise(donnees: InscriptionEntreprise, db: SessionBase) -> Clie
     même choix que pour le particulier, un seul chemin d'émission à auditer.
     """
     client = AuthService(db).inscrire_entreprise(donnees)
+    VerificationEmailService(db).exiger_verification(client)
     return ClientRead.model_validate(client)
 
 
@@ -95,3 +112,30 @@ def se_connecter(
     jeton = creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
     poser_cookies_session(response, jeton.jeton, jeton.csrf)
     return SessionActive(type=TypeSujet.CLIENT)
+
+
+@router.post(
+    "/verification",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Confirmer son adresse e-mail avec le code reçu",
+)
+@limiter.limit(LIMITE_CONNEXION)
+def verifier_email(
+    request: Request, donnees: VerificationEmail, db: SessionBase
+) -> None:
+    """Active le compte. **422** si le code est faux, expiré, épuisé — ou si
+    l'adresse n'a pas de compte : même message, aucune énumération. Débit
+    limité comme la connexion : six chiffres se devinent sinon."""
+    VerificationEmailService(db).verifier(donnees.email, donnees.code)
+
+
+@router.post(
+    "/verification/renvoi",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Recevoir un nouveau code de vérification",
+)
+@limiter.limit(LIMITE_ENVOI_CODE)
+def renvoyer_code(request: Request, donnees: RenvoiCode, db: SessionBase) -> None:
+    """Toujours 202, que l'adresse ait un compte non vérifié ou non : la
+    réponse ne renseigne sur aucun compte."""
+    VerificationEmailService(db).renvoyer(donnees.email)

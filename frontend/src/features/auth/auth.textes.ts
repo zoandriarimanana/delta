@@ -36,6 +36,18 @@ const fr = {
   aideFiscal: 'NIF à Madagascar, n° de TVA ou identifiant fiscal national à l’étranger',
   secteur: 'Secteur d’activité',
   contactReferent: 'Contact référent',
+  verification: 'Confirmez votre adresse e-mail',
+  verificationSousTitre:
+    'Nous vous avons envoyé un code à 6 chiffres par e-mail. Saisissez-le pour activer votre compte : il est valable 15 minutes.',
+  code: 'Code reçu par e-mail',
+  valider: 'Activer mon compte',
+  validation: 'Vérification…',
+  renvoyerCode: 'Renvoyer le code',
+  codeRenvoye:
+    'Si un compte attend une confirmation pour cette adresse, un nouveau code vient d’être envoyé. Pensez à regarder dans les courriers indésirables.',
+  adresseConfirmee: 'Adresse confirmée : vous pouvez vous connecter.',
+  saisirMonCode: 'Saisir mon code de vérification',
+  erreurVerification: 'La vérification a échoué. Réessayez dans un instant.',
 };
 
 export const TEXTES_AUTH: Textes<typeof fr> = {
@@ -74,5 +86,17 @@ export const TEXTES_AUTH: Textes<typeof fr> = {
     aideFiscal: 'NIF in Madagascar, VAT number or national tax ID abroad',
     secteur: 'Business sector',
     contactReferent: 'Contact person',
+    verification: 'Confirm your e-mail address',
+    verificationSousTitre:
+      'We e-mailed you a 6-digit code. Enter it to activate your account: it is valid for 15 minutes.',
+    code: 'Code received by e-mail',
+    valider: 'Activate my account',
+    validation: 'Checking…',
+    renvoyerCode: 'Send the code again',
+    codeRenvoye:
+      'If an account is awaiting confirmation for this address, a new code has just been sent. Check your spam folder.',
+    adresseConfirmee: 'Address confirmed: you can now sign in.',
+    saisirMonCode: 'Enter my verification code',
+    erreurVerification: 'Verification failed. Please try again shortly.',
   },
 };

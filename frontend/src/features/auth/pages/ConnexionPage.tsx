@@ -28,7 +28,7 @@ export default function ConnexionPage() {
   // comportement voulu — c'est une confirmation ponctuelle, pas un contenu de
   // la page.
   const confirmation = (useLocation().state as { message?: string } | null)?.message;
-  const { connecter, envoi, erreur } = useConnexionClient();
+  const { connecter, envoi, erreur, nonVerifie } = useConnexionClient();
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
 
@@ -89,6 +89,15 @@ export default function ConnexionPage() {
             className="rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger"
           >
             {erreur}
+            {nonVerifie && (
+              <Link
+                to="/verification"
+                state={{ email }}
+                className="mt-2 block font-semibold text-primaire underline"
+              >
+                {t.saisirMonCode}
+              </Link>
+            )}
           </p>
         )}
 

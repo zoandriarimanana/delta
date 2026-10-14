@@ -31,6 +31,7 @@ function afficher() {
       <Routes>
         <Route path="/inscription" element={<InscriptionPage />} />
         <Route path="/connexion" element={<p>page de connexion</p>} />
+        <Route path="/verification" element={<p>page de vérification</p>} />
       </Routes>
     </MemoryRouter>
   );
@@ -153,10 +154,10 @@ describe('après une inscription réussie', () => {
     await soumettre();
   }
 
-  it('redirige vers l’écran de connexion', async () => {
+  it('mène à la saisie du code reçu par e-mail', async () => {
     await inscrire();
 
-    expect(await screen.findByText('page de connexion')).toBeDefined();
+    expect(await screen.findByText('page de vérification')).toBeDefined();
   });
 
   it('n’ouvre aucune session et n’appelle pas la connexion', async () => {
@@ -165,7 +166,7 @@ describe('après une inscription réussie', () => {
     // raisonner. Sans ce test, l'enchaînement automatique pourrait revenir.
     await inscrire();
 
-    await screen.findByText('page de connexion');
+    await screen.findByText('page de vérification');
     expect(lireSession()).toEqual({
       type: null,
       chargement: false,
@@ -181,7 +182,7 @@ describe('après une inscription réussie', () => {
 
     await inscrire();
 
-    await screen.findByText('page de connexion');
+    await screen.findByText('page de vérification');
     expect(lireSession()).toEqual({
       type: 'client',
       chargement: false,

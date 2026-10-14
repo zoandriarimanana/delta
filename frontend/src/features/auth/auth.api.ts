@@ -96,3 +96,16 @@ export async function lireSessionCourante(): Promise<SessionActive> {
 export async function deconnecter(): Promise<void> {
   await axiosClient.post('/auth/deconnexion');
 }
+
+/**
+ * Confirme l'adresse e-mail avec le code reçu (14 octobre 2026). 422 si le
+ * code est faux ou expiré — même refus qu'une adresse inconnue.
+ */
+export async function verifierEmail(email: string, code: string): Promise<void> {
+  await axiosClient.post('/auth/verification', { email, code });
+}
+
+/** Demande un nouveau code. Le serveur répond pareil que le compte existe ou non. */
+export async function renvoyerCode(email: string): Promise<void> {
+  await axiosClient.post('/auth/verification/renvoi', { email });
+}

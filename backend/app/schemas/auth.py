@@ -70,6 +70,19 @@ class Connexion(BaseModel):
     mot_de_passe: str
 
 
+class VerificationEmail(BaseModel):
+    """Saisie du code reçu par e-mail (14 octobre 2026)."""
+
+    email: EmailStr
+    code: str = Field(pattern=r"^\d{6}$")
+
+
+class RenvoiCode(BaseModel):
+    """Demande d'un nouveau code de vérification."""
+
+    email: EmailStr
+
+
 class SessionActive(BaseModel):
     """Réponse d'une connexion réussie, et de `GET /auth/moi`.
 

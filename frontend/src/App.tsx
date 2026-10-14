@@ -13,6 +13,7 @@ import AdministrationAssistantPage from '@/features/assistant/pages/Administrati
 import ConnexionPage from '@/features/auth/pages/ConnexionPage';
 import ConnexionPersonnelPage from '@/features/auth/pages/ConnexionPersonnelPage';
 import InscriptionPage from '@/features/auth/pages/InscriptionPage';
+import VerificationEmailPage from '@/features/auth/pages/VerificationEmailPage';
 import AdministrationCommandesPage from '@/features/commande/pages/AdministrationCommandesPage';
 import CommandeDetailAdministrationPage from '@/features/commande/pages/CommandeDetailAdministrationPage';
 import CommandeInviteePage from '@/features/commande/pages/CommandeInviteePage';
@@ -95,6 +96,7 @@ export default function App() {
             <Route path="reservations" element={<MesReservationsPage />} />
             <Route path="connexion" element={<ConnexionPage />} />
             <Route path="inscription" element={<InscriptionPage />} />
+            <Route path="verification" element={<VerificationEmailPage />} />
             {/* Reste sur `MainLayout`, hors de la sidebar `personnel/*`
                 ci-dessous : c'est la porte d'entrée de cet espace, pas
                 l'espace lui-même — une sidebar n'a pas de sens avant qu'une

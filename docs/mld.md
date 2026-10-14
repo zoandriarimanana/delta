@@ -6,7 +6,7 @@ Notation : `TABLE(cle_primaire, attribut, ..., #cle_etrangere)`.
 ## Acteurs
 
 ```
-CLIENT(id_client, type_client, email, telephone, adresse, mot_de_passe, date_creation_compte)
+CLIENT(id_client, type_client, email, telephone, adresse, mot_de_passe, date_creation_compte, email_verifie_le, code_verification, code_expire_le, essais_code)
 CLIENT_PARTICULIER(#id_client, nom, prenom, date_naissance)
 CLIENT_ENTREPRISE(#id_client, raison_sociale, numero_id_fiscal, secteur_activite, nom_contact_referent, pays)
 BENEFICIAIRE(id_beneficiaire, nom, prenom, identifiant_badge, statut, #id_abonnement)
@@ -63,6 +63,16 @@ toute façon jamais soumis à `supprimer_definitivement()`.
   entreprise, jamais les deux comptes séparément. Une même personne physique qui
   représente aussi une société doit donc utiliser deux adresses distinctes.
   C'est aussi l'identifiant de connexion (voir `docs/roadmap.md`, T0.6).
+
+- **Vérification de l'adresse e-mail** (14 octobre 2026) :
+  `CLIENT.email_verifie_le` (`TIMESTAMPTZ`, nullable) — `NULL` : adresse pas
+  encore confirmée, **connexion refusée** (403). Défaut `now()` en base :
+  seule l'inscription par l'API pose `NULL` et envoie un code ; un compte
+  créé par un script d'amorçage, et tous les comptes antérieurs (migration
+  `7103ca685912`), sont vérifiés. `code_verification` porte l'**empreinte
+  HMAC** du code à 6 chiffres envoyé par e-mail, jamais le code ;
+  `code_expire_le` son échéance (15 min) ; `essais_code` les erreurs, cinq
+  au plus avant qu'il faille en redemander un.
 
 - `PERSONNEL.fonction` ∈ {Formateur, Livreur, Cuisinier, Receptionniste, Autre}.
   Domaine formel, `CHECK` en base, et non chaîne libre : deux règles de service

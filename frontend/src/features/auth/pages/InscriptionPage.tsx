@@ -70,10 +70,9 @@ export default function InscriptionPage() {
 
     void promesse.then((reussi) => {
       if (reussi) {
-        naviguer('/connexion', {
-          replace: true,
-          state: { message: t.compteCree },
-        });
+        // Le compte naît non vérifié : on enchaîne sur la saisie du code
+        // reçu par e-mail (14 octobre 2026).
+        naviguer('/verification', { replace: true, state: { email } });
       }
     });
   }

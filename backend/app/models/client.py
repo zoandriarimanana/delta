@@ -80,6 +80,19 @@ class Client(SoftDeleteMixin, Base):
     date_creation_compte: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    # --- Vérification de l'adresse e-mail (14 octobre 2026) ---
+    #: `NULL` : adresse pas encore confirmée, connexion refusée. Défaut
+    #: `now()` en base : seule l'inscription par l'API pose `NULL` et envoie
+    #: un code — un compte créé par un script d'amorçage reste utilisable.
+    email_verifie_le: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=True
+    )
+    #: Empreinte HMAC du code en cours, jamais le code en clair.
+    code_verification: Mapped[str | None] = mapped_column(String(64))
+    code_expire_le: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    essais_code: Mapped[int] = mapped_column(
+        nullable=False, server_default=text("0"), default=0
+    )
 
     particulier: Mapped[ClientParticulier | None] = relationship(
         back_populates="client", cascade="all, delete-orphan"

@@ -48,6 +48,9 @@ CHEMINS_EXEMPTES = (
     "/auth/personnel/connexion",
     "/auth/inscription",
     "/auth/inscription-entreprise",
+    # Vérification de l'adresse (14 octobre 2026) : avant toute session.
+    "/auth/verification",
+    "/auth/verification/renvoi",
 )
 
 

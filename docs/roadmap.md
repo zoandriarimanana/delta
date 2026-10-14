@@ -2120,6 +2120,30 @@ Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
       par `date_reservation` ; archives comprises. Chiffre d'affaires :
       `RESERVATION.montant_total` figé (les réservations antérieures au prix
       figé valent 0). L'hébergement lié n'y entre pas.
+- [x] **Vérification de l'adresse e-mail à l'inscription** (demande du
+      14 octobre 2026, hors plan R : limiter les comptes créés « pour rien »).
+      Options présentées : frais d'inscription (déconseillés — l'expiration
+      des impayés empêche déjà un faux compte de bloquer stock ou créneaux),
+      limite par IP, retrait de la date de naissance, code de vérification.
+      **Choix de l'utilisateur : le code de vérification.**
+      — Un compte naît **non vérifié** ; un code à 6 chiffres part par
+      e-mail (15 min, 5 essais). La connexion d'un compte non vérifié est
+      refusée en 403 avec un message qui mène à la saisie du code ; « Renvoyer
+      le code » en génère un nouveau. Réponses identiques que l'adresse
+      existe ou non (aucune énumération des comptes).
+      — `CLIENT.email_verifie_le`, `code_verification` (empreinte HMAC, jamais
+      le code en clair), `code_expire_le`, `essais_code` ; migration qui
+      marque **vérifiés** tous les comptes existants.
+      — Envoi par SMTP standard (`SMTP_*` dans `.env`), après le `commit` :
+      un échec d'envoi ne défait pas l'inscription. Sans SMTP configuré, en
+      développement seulement, le code s'écrit dans le journal du serveur.
+      — Inscription et renvoi limités par IP : un formulaire qui envoie des
+      e-mails ne doit pas servir à en inonder une boîte.
+      — Livré. Migration `7103ca685912`. Écart au plan : `email_verifie_le`
+      a pour défaut `now()` en base plutôt que `NULL`, l'inscription posant
+      elle-même `NULL` — un compte de démonstration créé par script reste
+      utilisable. Vérifié dans un vrai navigateur sur la base de test
+      (inscription, connexion refusée avec lien, code, connexion).
 - [ ] **R.2 — Réservation des salles par calendrier.** Créneaux occupés
       d'une salle exposés publiquement, **sans aucune donnée du client** ;
       calendrier mensuel sur la fiche (jours occupés grisés, choix du jour
