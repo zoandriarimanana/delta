@@ -25,7 +25,16 @@ from PIL import Image
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.exceptions import ConflitMetier, ErreurMetier, RessourceIntrouvable
+from app.core.exceptions import (
+    ConflitMetier,
+    ErreurMetier,
+    ReferenceInvalide,
+    RessourceIntrouvable,
+)
+from app.repositories.demande_personnalisation_repository import (
+    DemandePersonnalisationRepository,
+)
+from app.services.categorie_produit_service import CategorieProduitService
 from app.services.formation_service import FormationService
 from app.services.logement_service import LogementService
 from app.services.produit_service import ProduitService
@@ -39,6 +48,13 @@ class Partie(StrEnum):
     LOGEMENTS = "logements"
     FORMATIONS = "formations"
     PRODUITS = "produits"
+    #: Exemples de réalisations d'une catégorie (14 octobre 2026) : montrés
+    #: au client, et parmi lesquels il choisit un modèle à personnaliser.
+    CATEGORIES = "categories"
+    #: Copie du modèle choisi par un client, rangée sous le numéro de sa
+    #: demande de personnalisation : elle reste celle qu'il a vue, même si la
+    #: catégorie change ensuite de photos. Jamais téléversée directement.
+    MODELES = "modeles"
 
 
 #: 5 Mio : une photo prise au téléphone dépasse souvent 2 Mio.
@@ -84,6 +100,8 @@ class GalerieService:
             Partie.LOGEMENTS: LogementService(db).obtenir,
             Partie.FORMATIONS: FormationService(db).obtenir,
             Partie.PRODUITS: ProduitService(db).obtenir,
+            Partie.CATEGORIES: CategorieProduitService(db).obtenir,
+            Partie.MODELES: self._demande_existante,
         }
 
     # --- Lecture -------------------------------------------------------------
@@ -111,7 +129,56 @@ class GalerieService:
             raise RessourceIntrouvable(MESSAGE_PHOTO_INTROUVABLE)
         return chemin, TYPE_MIME_PAR_EXTENSION[correspondance.group(3)]
 
+    def couvertures(self, partie: Partie) -> dict[int, str]:
+        """Première photo de chaque élément de la partie, en **une** lecture
+        du dossier — pour qu'une liste montre ses couvertures sans une
+        requête par carte (14 octobre 2026).
+
+        Ne vérifie pas que chaque élément est actif : la liste qui les affiche
+        ne contient que des éléments actifs, et la route de l'image refuse de
+        toute façon celle d'un élément archivé.
+        """
+        dossier = self._dossier(partie)
+        if not dossier.is_dir():
+            return {}
+        premieres: dict[int, tuple[int, str]] = {}
+        for chemin in dossier.iterdir():
+            correspondance = MOTIF_FICHIER.match(chemin.name)
+            if correspondance is None or not chemin.is_file():
+                continue
+            identifiant, numero = int(correspondance.group(1)), int(
+                correspondance.group(2)
+            )
+            if identifiant not in premieres or numero < premieres[identifiant][0]:
+                premieres[identifiant] = (numero, chemin.name)
+        return {identifiant: nom for identifiant, (_, nom) in premieres.items()}
+
     # --- Écriture ------------------------------------------------------------
+
+    def copier_modele(
+        self, fichier: str, id_categorie: int, id_personnalisation: int
+    ) -> str:
+        """Copie le modèle choisi par un client et retourne le nom de la copie.
+
+        Le modèle doit être une photo **de la catégorie du produit commandé** :
+        un nom pris ailleurs — une autre catégorie, une salle — est refusé en
+        422, comme toute référence invalide venue du corps de la requête.
+        """
+        correspondance = MOTIF_FICHIER.match(fichier)
+        source = self._dossier(Partie.CATEGORIES) / fichier
+        if (
+            correspondance is None
+            or int(correspondance.group(1)) != id_categorie
+            or not source.is_file()
+        ):
+            raise ReferenceInvalide(
+                "Ce modèle ne fait pas partie des exemples de ce produit."
+            )
+        dossier = self._dossier(Partie.MODELES)
+        dossier.mkdir(parents=True, exist_ok=True)
+        nom = f"{id_personnalisation}-1.{correspondance.group(3)}"
+        (dossier / nom).write_bytes(source.read_bytes())
+        return nom
 
     def ajouter(
         self, partie: Partie, identifiant: int, contenu: bytes, type_mime: str | None
@@ -147,6 +214,14 @@ class GalerieService:
         chemin.unlink(missing_ok=True)
 
     # --- Interne -------------------------------------------------------------
+
+    def _demande_existante(self, id_personnalisation: int) -> object:
+        demande = DemandePersonnalisationRepository(self.db).get_by_id(
+            id_personnalisation
+        )
+        if demande is None:
+            raise RessourceIntrouvable(MESSAGE_PHOTO_INTROUVABLE)
+        return demande
 
     def _dossier(self, partie: Partie) -> Path:
         return Path(settings.UPLOAD_DIR) / partie.value

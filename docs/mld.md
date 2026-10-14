@@ -257,6 +257,18 @@ LOGEMENT(id_logement, type_chambre, capacite, tarif_nuitee, statut, description)
   jamais servi), mais un identifiant n'étant jamais réattribué par PostgreSQL,
   ils ne ressortiront pas.
 
+  **Catégories et modèles** (14 octobre 2026) : deux parties s'ajoutent.
+  `categories/` porte les **exemples de réalisations** d'une catégorie,
+  montrés au client ; `modeles/` porte la **copie** du modèle qu'un client
+  a choisi parmi eux en personnalisant, nommée d'après sa demande
+  (`<id_personnalisation>-1.<ext>`). Copiée et non référencée : un numéro
+  libéré par un retrait peut être réattribué à une autre image, et le
+  modèle doit rester celui que le client a vu.
+  `DEMANDE_PERSONNALISATION.photo_modele` (`VARCHAR(100)`, nullable) porte
+  le nom de cette copie ; le serveur vérifie que la source appartient à la
+  **catégorie du produit commandé** (422 sinon), jamais un nom recopié tel
+  quel depuis la requête.
+
   **Limite majeure, acceptée par l'utilisateur** : le disque d'un service
   Render est effacé à chaque déploiement. Voir la dette « Photos du catalogue
   sur disque » dans `docs/roadmap.md`.
@@ -470,7 +482,7 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 ```
 COMMANDE(id_commande, date_commande, reference_publique, adresse_livraison, nom_invite, contact_invite, type_commande, statut, montant_total, frais_livraison, devise, taux_change, montant_total_devise, #id_client, #id_reservation, #id_personnel)
 LIGNE_COMMANDE(id_ligne, quantite, prix_unitaire_applique, #id_commande, #id_produit)
-DEMANDE_PERSONNALISATION(id_personnalisation, description_demande, ingredients_specifiques, supplement_prix, #id_ligne, #id_produit_base)
+DEMANDE_PERSONNALISATION(id_personnalisation, description_demande, ingredients_specifiques, photo_modele, supplement_prix, #id_ligne, #id_produit_base)
 RESERVATION(id_reservation, type_reservation, date_debut, date_fin, date_reservation, nombre_personnes, statut, avec_hebergement, montant_total, montant_acompte, #id_client, #id_session, #id_salle, #id_logement, #id_reservation_hebergement)
 ```
 

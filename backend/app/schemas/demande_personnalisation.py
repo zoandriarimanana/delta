@@ -31,6 +31,10 @@ class DemandePersonnalisationCreate(BaseModel):
     ingredients_specifiques: str | None = Field(
         default=None, max_length=LONGUEUR_DESCRIPTION
     )
+    #: Modèle choisi parmi les photos de la catégorie du produit (nom tel que
+    #: `GET /categories-produit/{id}/photos` le donne). Vérifié puis copié par
+    #: le serveur (14 octobre 2026).
+    photo_modele: str | None = Field(default=None, pattern=r"^\d+-\d+\.(jpg|png|webp)$")
 
 
 class DemandePersonnalisationRead(BaseModel):
@@ -43,3 +47,5 @@ class DemandePersonnalisationRead(BaseModel):
     ingredients_specifiques: str | None = None
     supplement_prix: Decimal
     id_produit_base: int
+    #: Copie du modèle choisi, lisible par `GET /photos/modeles/{fichier}`.
+    photo_modele: str | None = None

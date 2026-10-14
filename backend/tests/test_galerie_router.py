@@ -403,3 +403,123 @@ def test_retirer_une_photo_exige_un_administrateur(
 
     reponse = client_http.delete(f"{PREFIXE}/photos/salles/{nom}", headers=salarie)
     assert reponse.status_code == 403
+
+
+# --- Catégories, couvertures et modèles (14 octobre 2026) ----------------------
+
+
+def test_une_categorie_porte_des_exemples_de_realisations(
+    client_http: TestClient, admin: dict[str, str], produit: Produit, dossier: Path
+) -> None:
+    id_categorie = produit.id_categorie
+    for _ in range(2):
+        _envoyer(client_http, f"/categories-produit/{id_categorie}/photos", admin)
+
+    liste = client_http.get(f"{PREFIXE}/categories-produit/{id_categorie}/photos")
+
+    assert [p["fichier"] for p in liste.json()] == [
+        f"{id_categorie}-1.png",
+        f"{id_categorie}-2.png",
+    ]
+    assert (dossier / "categories" / f"{id_categorie}-1.png").is_file()
+
+
+def test_les_couvertures_d_une_partie_arrivent_en_une_requete(
+    client_http: TestClient, admin: dict[str, str], salle: Salle
+) -> None:
+    for _ in range(3):
+        _envoyer(client_http, f"/salles/{salle.id_salle}/photos", admin)
+    client_http.delete(f"{PREFIXE}/photos/salles/{salle.id_salle}-1.png", headers=admin)
+
+    couvertures = client_http.get(f"{PREFIXE}/photos/salles/couvertures")
+
+    assert couvertures.status_code == 200
+    # La première photo **restante** sert de couverture.
+    assert couvertures.json()[str(salle.id_salle)] == f"{salle.id_salle}-2.png"
+
+
+def _client_personnalisant(db: Session, produit: Produit) -> dict[str, str]:
+    from app.models.client import Client, TypeClient
+
+    produit.est_personnalisable = True
+    produit.supplement_personnalisation = Decimal("2.00")
+    compte = Client(
+        type_client=TypeClient.PARTICULIER,
+        email=f"modele_{uuid4().hex[:8]}@example.mg",
+        mot_de_passe=hacher_mot_de_passe("MotDePasse123!"),
+    )
+    db.add(compte)
+    db.commit()
+    return authentifier(compte.id_client, TypeSujet.CLIENT)
+
+
+def _commander(
+    client_http: TestClient, entete: dict[str, str], produit: Produit, modele: str
+):
+    return client_http.post(
+        f"{PREFIXE}/commandes",
+        headers=entete,
+        json={
+            "type_commande": "A_emporter",
+            "lignes": [
+                {
+                    "id_produit": produit.id_produit,
+                    "quantite": 1,
+                    "personnalisation": {
+                        "description_demande": "Message : Joyeux anniversaire",
+                        "photo_modele": modele,
+                    },
+                }
+            ],
+        },
+    )
+
+
+def test_le_modele_choisi_est_copie_avec_la_commande(
+    client_http: TestClient,
+    admin: dict[str, str],
+    produit: Produit,
+    db: Session,
+    dossier: Path,
+) -> None:
+    id_categorie = produit.id_categorie
+    contenu = _image("JPEG")
+    _envoyer(
+        client_http,
+        f"/categories-produit/{id_categorie}/photos",
+        admin,
+        contenu,
+        "image/jpeg",
+    )
+    entete = _client_personnalisant(db, produit)
+
+    reponse = _commander(client_http, entete, produit, f"{id_categorie}-1.jpg")
+
+    assert reponse.status_code == 201, reponse.text
+    demande = reponse.json()["lignes"][0]["personnalisation"]
+    copie = demande["photo_modele"]
+    assert copie == f"{demande['id_personnalisation']}-1.jpg"
+    assert (dossier / "modeles" / copie).read_bytes() == contenu
+    # La copie se lit comme toute photo, et survit au retrait de l'original.
+    client_http.delete(
+        f"{PREFIXE}/photos/categories/{id_categorie}-1.jpg", headers=admin
+    )
+    assert client_http.get(f"{PREFIXE}/photos/modeles/{copie}").status_code == 200
+
+
+def test_un_modele_d_une_autre_categorie_est_refuse(
+    client_http: TestClient,
+    admin: dict[str, str],
+    produit: Produit,
+    salle: Salle,
+    db: Session,
+) -> None:
+    _envoyer(client_http, f"/salles/{salle.id_salle}/photos", admin)
+    entete = _client_personnalisant(db, produit)
+
+    reponse = _commander(
+        client_http, entete, produit, f"{produit.id_categorie + 999}-1.png"
+    )
+
+    assert reponse.status_code == 422
+    assert "exemples" in reponse.json()["detail"]

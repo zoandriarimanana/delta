@@ -5,7 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Numeric, Text
+from sqlalchemy import ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, SoftDeleteMixin
@@ -28,6 +28,11 @@ class DemandePersonnalisation(SoftDeleteMixin, Base):
     id_personnalisation: Mapped[int] = mapped_column(primary_key=True)
     description_demande: Mapped[str] = mapped_column(Text, nullable=False)
     ingredients_specifiques: Mapped[str | None] = mapped_column(Text)
+    #: Modèle choisi par le client parmi les exemples de la catégorie
+    #: (14 octobre 2026) : nom de la **copie** rangée dans
+    #: `static/upload/modeles/`, `NULL` sans modèle. Jamais un nom envoyé tel
+    #: quel par le client — le serveur vérifie la source puis la copie.
+    photo_modele: Mapped[str | None] = mapped_column(String(100))
     supplement_prix: Mapped[Decimal] = mapped_column(
         Numeric(10, 2), nullable=False, server_default="0"
     )

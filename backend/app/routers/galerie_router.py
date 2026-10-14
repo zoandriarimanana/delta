@@ -1,4 +1,5 @@
-"""Endpoints des photos du catalogue — salles, logements, formations, produits.
+"""Endpoints des photos du catalogue — salles, logements, formations, produits,
+catégories (exemples de réalisations), et modèles choisis par les clients.
 
 **Lecture publique, écriture réservée aux administrateurs** — même réglage que
 le catalogue lui-même : un visiteur doit voir les lieux et les produits avant
@@ -148,6 +149,40 @@ def ajouter_photo_produit(
     fichier: FichierPhoto,
 ) -> PhotoRead:
     return _ajouter(db, Partie.PRODUITS, id_produit, fichier)
+
+
+@router.get(
+    "/categories-produit/{id_categorie}/photos",
+    summary="Lister les exemples de réalisations d'une catégorie",
+    **LISTER,
+)
+def lister_photos_categorie(id_categorie: int, db: SessionBase) -> list[PhotoRead]:
+    return _lister(db, Partie.CATEGORIES, id_categorie)
+
+
+@router.post(
+    "/categories-produit/{id_categorie}/photos",
+    summary="Ajouter un exemple de réalisation à une catégorie",
+    **AJOUTER,
+)
+def ajouter_photo_categorie(
+    id_categorie: int,
+    fichier: FichierPhoto,
+    admin: PersonnelAdministrateur,
+    db: SessionBase,
+) -> PhotoRead:
+    return _ajouter(db, Partie.CATEGORIES, id_categorie, fichier)
+
+
+@router.get(
+    "/photos/{partie}/couvertures",
+    response_model=dict[int, str],
+    summary="Première photo de chaque élément d'une partie",
+)
+def couvertures(partie: Partie, db: SessionBase) -> dict[int, str]:
+    """`{identifiant: fichier}` en une requête, pour les cartes d'une liste.
+    Déclarée **avant** `/photos/{partie}/{fichier}`, qui la capterait."""
+    return GalerieService(db).couvertures(partie)
 
 
 @router.get(

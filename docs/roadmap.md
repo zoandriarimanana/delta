@@ -2007,6 +2007,27 @@ non payée annulée après **2 h**, réservation sans acompte annulée après
 Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
 (décision de l'utilisateur) :
 
+- [ ] **R.0 — Photos (demande du 14 octobre 2026, insérée avant R.2 sur
+      décision de l'utilisateur).** Décisions : **au moins une photo** à la
+      création d'une salle, d'une chambre, d'une formation ou d'un produit ;
+      **photos de catégorie** montrées au client comme exemples de
+      réalisations ; le client peut choisir **« Je veux ce modèle »** en
+      personnalisant.
+      — **PH.1 Backend** : partie `categories` de la galerie
+      (`/categories-produit/{id}/photos`) ; `GET /photos/{partie}/couvertures`
+      (première photo de chaque élément, une requête par liste) ;
+      `DEMANDE_PERSONNALISATION.photo_modele` : le modèle choisi parmi les
+      photos de la catégorie du produit, vérifié par le serveur, **copié** à
+      la commande (partie `modeles`) pour rester celui que le client a vu
+      même si la catégorie change de photos. Migration + `docs/mld.md`.
+      — **PH.2 Administration** : champ « Photos » (plusieurs, miniatures,
+      la première en couverture, au moins une) dans les quatre formulaires
+      de création ; galerie sur la fiche d'une catégorie.
+      — **PH.3 Client** : première photo sur chaque carte des listes ;
+      photos de la catégorie en tête du catalogue filtré et en « Exemples de
+      réalisations » sur la fiche produit ; choix du modèle dans le bloc
+      « Personnaliser », visible ensuite dans le récapitulatif de la
+      commande (client et administration).
 - [x] **R.1 — Formation sur commande.** Nouvelle entité
       `DEMANDE_FORMATION` : sujet souhaité, nombre de participants, niveau,
       période, lieu (chez Delta ou en entreprise), nom et contact du

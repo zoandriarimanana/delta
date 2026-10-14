@@ -171,14 +171,23 @@ class CommandeService:
 
         self._refuser_produit_non_personnalisable(produit)
 
+        demande = demandee.personnalisation
         creee = self.personnalisations.create(
             {
                 "id_ligne": ligne.id_ligne,
                 "id_produit_base": produit.id_produit,
                 "supplement_prix": produit.supplement_personnalisation,
-                **demandee.personnalisation.model_dump(),
+                **demande.model_dump(exclude={"photo_modele"}),
             }
         )
+        if demande.photo_modele is not None:
+            # Copié, jamais recopié tel quel : le serveur vérifie que le modèle
+            # est un exemple de la catégorie du produit (14 octobre 2026).
+            from app.services.galerie_service import GalerieService
+
+            creee.photo_modele = GalerieService(self.db).copier_modele(
+                demande.photo_modele, produit.id_categorie, creee.id_personnalisation
+            )
         return creee.supplement_prix * demandee.quantite
 
     def _refuser_produit_non_personnalisable(self, produit: Produit) -> None:
