@@ -109,7 +109,14 @@ export async function televerserPhotos(
   return echecs;
 }
 
-/** URL d'un exemple de réalisation d'une catégorie, désigné par son fichier. */
-export function urlExemple(fichier: string): string {
-  return `${axiosClient.defaults.baseURL}/photos/categories/${fichier}`;
+/** Où un client peut prendre son modèle : la galerie du produit, ou les
+ * exemples de sa catégorie (14 octobre 2026). */
+export type SourceModele = 'produits' | 'categories';
+
+/** URL d'une photo proposée comme modèle, désignée par sa source et son fichier. */
+export function urlExemple(
+  fichier: string,
+  source: SourceModele = 'categories'
+): string {
+  return `${axiosClient.defaults.baseURL}/photos/${source}/${fichier}`;
 }

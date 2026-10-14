@@ -27,7 +27,7 @@ afterEach(() => {
 it('lit les photos de la catégorie et n’affiche rien sans photo', async () => {
   vi.mocked(recupererPhotos).mockResolvedValue([]);
   const { container } = render(
-    <ExemplesRealisations idCategorie={4} titre="Exemples" />
+    <ExemplesRealisations bien={{ categorie: 4 }} titre="Exemples" />
   );
 
   await vi.waitFor(() =>
@@ -37,7 +37,7 @@ it('lit les photos de la catégorie et n’affiche rien sans photo', async () =>
 });
 
 it('agrandit un exemple en consultation', async () => {
-  render(<ExemplesRealisations idCategorie={4} titre="Exemples" />);
+  render(<ExemplesRealisations bien={{ categorie: 4 }} titre="Exemples" />);
 
   const premier = await screen.findByRole('img', { name: 'Exemple 1' });
   expect(premier.getAttribute('src')).toMatch(/\/photos\/categories\/4-1\.jpg$/);
@@ -48,7 +48,7 @@ it('agrandit un exemple en consultation', async () => {
 it('désigne puis retire le modèle voulu', async () => {
   const surChoix = vi.fn();
   const { rerender } = render(
-    <ExemplesRealisations idCategorie={4} titre="Modèles" surChoix={surChoix} />
+    <ExemplesRealisations bien={{ categorie: 4 }} titre="Modèles" surChoix={surChoix} />
   );
 
   await userEvent.click(
@@ -58,7 +58,7 @@ it('désigne puis retire le modèle voulu', async () => {
 
   rerender(
     <ExemplesRealisations
-      idCategorie={4}
+      bien={{ categorie: 4 }}
       titre="Modèles"
       choix="4-2.png"
       surChoix={surChoix}

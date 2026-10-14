@@ -454,7 +454,11 @@ def _client_personnalisant(db: Session, produit: Produit) -> dict[str, str]:
 
 
 def _commander(
-    client_http: TestClient, entete: dict[str, str], produit: Produit, modele: str
+    client_http: TestClient,
+    entete: dict[str, str],
+    produit: Produit,
+    modele: str,
+    source: str = "categories",
 ):
     return client_http.post(
         f"{PREFIXE}/commandes",
@@ -468,6 +472,7 @@ def _commander(
                     "personnalisation": {
                         "description_demande": "Message : Joyeux anniversaire",
                         "photo_modele": modele,
+                        "source_modele": source,
                     },
                 }
             ],
@@ -523,3 +528,38 @@ def test_un_modele_d_une_autre_categorie_est_refuse(
 
     assert reponse.status_code == 422
     assert "exemples" in reponse.json()["detail"]
+
+
+def test_une_photo_du_produit_peut_servir_de_modele(
+    client_http: TestClient,
+    admin: dict[str, str],
+    produit: Produit,
+    db: Session,
+    dossier: Path,
+) -> None:
+    """Demande du 14 octobre 2026 : le client choisit une photo de la galerie
+    du produit lui-même, et la retrouve avec sa commande."""
+    contenu = _image("JPEG")
+    galerie = f"/produits/{produit.id_produit}/photos"
+    _envoyer(client_http, galerie, admin, contenu, "image/jpeg")
+    entete = _client_personnalisant(db, produit)
+
+    reponse = _commander(
+        client_http, entete, produit, f"{produit.id_produit}-1.jpg", "produits"
+    )
+
+    assert reponse.status_code == 201, reponse.text
+    copie = reponse.json()["lignes"][0]["personnalisation"]["photo_modele"]
+    assert (dossier / "modeles" / copie).read_bytes() == contenu
+
+
+def test_la_photo_d_un_autre_produit_est_refusee(
+    client_http: TestClient, produit: Produit, db: Session
+) -> None:
+    entete = _client_personnalisant(db, produit)
+
+    reponse = _commander(
+        client_http, entete, produit, f"{produit.id_produit + 999}-1.jpg", "produits"
+    )
+
+    assert reponse.status_code == 422

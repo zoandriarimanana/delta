@@ -44,8 +44,10 @@ export interface PersonnalisationPanier {
   theme: string;
   precisions: string;
   ingredients: string;
-  /** Exemple de réalisation retenu (« Je veux ce modèle »), nom de fichier. */
+  /** Photo retenue (« Je veux ce modèle »), nom de fichier. */
   modele?: string;
+  /** Où elle a été prise : galerie du produit, ou exemples de sa catégorie. */
+  modeleSource?: 'produits' | 'categories';
 }
 
 /** Miroir de `DemandePersonnalisationCreate` — sans supplément, jamais envoyé. */
@@ -53,6 +55,7 @@ export interface PersonnalisationEnvoyee {
   description_demande: string;
   ingredients_specifiques?: string;
   photo_modele?: string;
+  source_modele?: 'produits' | 'categories';
 }
 
 export interface Commande {

@@ -177,7 +177,12 @@ export function versPersonnalisationEnvoyee(
   return {
     description_demande: descriptionDemande(personnalisation),
     ...(ingredients === '' ? {} : { ingredients_specifiques: ingredients }),
-    ...(personnalisation.modele ? { photo_modele: personnalisation.modele } : {}),
+    ...(personnalisation.modele
+      ? {
+          photo_modele: personnalisation.modele,
+          source_modele: personnalisation.modeleSource ?? 'categories',
+        }
+      : {}),
   };
 }
 

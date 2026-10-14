@@ -265,6 +265,12 @@ describe('personnalisation', () => {
       photo_modele: '4-2.jpg',
     });
     expect(versPersonnalisationEnvoyee(DEMANDE)).not.toHaveProperty('photo_modele');
+    expect(
+      versPersonnalisationEnvoyee({ ...seul, modeleSource: 'produits' })
+    ).toMatchObject({ photo_modele: '4-2.jpg', source_modele: 'produits' });
+    expect(versPersonnalisationEnvoyee(seul)).toMatchObject({
+      source_modele: 'categories',
+    });
   });
 
   it('la ligne porte la personnalisation et le supplément compte dans le total', () => {

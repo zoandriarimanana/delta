@@ -265,9 +265,11 @@ LOGEMENT(id_logement, type_chambre, capacite, tarif_nuitee, statut, description)
   libéré par un retrait peut être réattribué à une autre image, et le
   modèle doit rester celui que le client a vu.
   `DEMANDE_PERSONNALISATION.photo_modele` (`VARCHAR(100)`, nullable) porte
-  le nom de cette copie ; le serveur vérifie que la source appartient à la
-  **catégorie du produit commandé** (422 sinon), jamais un nom recopié tel
-  quel depuis la requête.
+  le nom de cette copie ; le serveur vérifie que la source appartient au
+  **produit commandé** ou à **sa catégorie** (422 sinon), jamais un nom
+  recopié tel quel depuis la requête. La requête dit d'où vient la photo
+  (`source_modele` : `produits` ou `categories`, défaut `categories`) ; ce
+  choix n'est pas stocké, seule la copie l'est.
 
   **Limite majeure, acceptée par l'utilisateur** : le disque d'un service
   Render est effacé à chaque déploiement. Voir la dette « Photos du catalogue

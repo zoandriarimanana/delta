@@ -1,6 +1,7 @@
 """Schemas Pydantic de l'entité DEMANDE_PERSONNALISATION."""
 
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -31,10 +32,14 @@ class DemandePersonnalisationCreate(BaseModel):
     ingredients_specifiques: str | None = Field(
         default=None, max_length=LONGUEUR_DESCRIPTION
     )
-    #: Modèle choisi parmi les photos de la catégorie du produit (nom tel que
-    #: `GET /categories-produit/{id}/photos` le donne). Vérifié puis copié par
-    #: le serveur (14 octobre 2026).
+    #: Modèle choisi : une photo du produit commandé, ou de sa catégorie (nom
+    #: tel que la galerie le donne). Vérifié puis copié par le serveur
+    #: (14 octobre 2026).
     photo_modele: str | None = Field(default=None, pattern=r"^\d+-\d+\.(jpg|png|webp)$")
+    #: Où le modèle a été pris : galerie du **produit** ou exemples de sa
+    #: **catégorie**. Le serveur vérifie que la photo appartient bien à l'un
+    #: ou à l'autre, jamais à un tiers.
+    source_modele: Literal["produits", "categories"] = "categories"
 
 
 class DemandePersonnalisationRead(BaseModel):

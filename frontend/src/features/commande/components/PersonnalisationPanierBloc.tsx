@@ -94,7 +94,10 @@ export default function PersonnalisationPanierBloc({
       </div>
       {ligne.personnalisation.modele !== undefined && (
         <img
-          src={urlExemple(ligne.personnalisation.modele)}
+          src={urlExemple(
+            ligne.personnalisation.modele,
+            ligne.personnalisation.modeleSource
+          )}
           alt={t.modeleChoisi}
           className="mt-2 h-16 w-16 rounded-lg object-cover"
         />

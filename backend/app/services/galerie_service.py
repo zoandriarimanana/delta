@@ -156,19 +156,26 @@ class GalerieService:
     # --- Écriture ------------------------------------------------------------
 
     def copier_modele(
-        self, fichier: str, id_categorie: int, id_personnalisation: int
+        self,
+        fichier: str,
+        partie: Partie,
+        identifiant: int,
+        id_personnalisation: int,
     ) -> str:
         """Copie le modèle choisi par un client et retourne le nom de la copie.
 
-        Le modèle doit être une photo **de la catégorie du produit commandé** :
-        un nom pris ailleurs — une autre catégorie, une salle — est refusé en
-        422, comme toute référence invalide venue du corps de la requête.
+        Le modèle doit être une photo **du produit commandé** ou **de sa
+        catégorie** (`partie` et `identifiant` le disent) : un nom pris
+        ailleurs — un autre produit, une autre catégorie, une salle — est
+        refusé en 422, comme toute référence invalide venue du corps de la
+        requête.
         """
         correspondance = MOTIF_FICHIER.match(fichier)
-        source = self._dossier(Partie.CATEGORIES) / fichier
+        source = self._dossier(partie) / fichier
         if (
-            correspondance is None
-            or int(correspondance.group(1)) != id_categorie
+            partie not in (Partie.PRODUITS, Partie.CATEGORIES)
+            or correspondance is None
+            or int(correspondance.group(1)) != identifiant
             or not source.is_file()
         ):
             raise ReferenceInvalide(

@@ -177,16 +177,20 @@ class CommandeService:
                 "id_ligne": ligne.id_ligne,
                 "id_produit_base": produit.id_produit,
                 "supplement_prix": produit.supplement_personnalisation,
-                **demande.model_dump(exclude={"photo_modele"}),
+                **demande.model_dump(exclude={"photo_modele", "source_modele"}),
             }
         )
         if demande.photo_modele is not None:
             # Copié, jamais recopié tel quel : le serveur vérifie que le modèle
-            # est un exemple de la catégorie du produit (14 octobre 2026).
-            from app.services.galerie_service import GalerieService
+            # est une photo du produit ou de sa catégorie (14 octobre 2026).
+            from app.services.galerie_service import GalerieService, Partie
 
+            depuis_produit = demande.source_modele == "produits"
             creee.photo_modele = GalerieService(self.db).copier_modele(
-                demande.photo_modele, produit.id_categorie, creee.id_personnalisation
+                demande.photo_modele,
+                Partie.PRODUITS if depuis_produit else Partie.CATEGORIES,
+                produit.id_produit if depuis_produit else produit.id_categorie,
+                creee.id_personnalisation,
             )
         return creee.supplement_prix * demandee.quantite
 

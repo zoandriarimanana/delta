@@ -63,7 +63,7 @@ export default function ProduitListPage() {
       {filtre !== TOUTES_CATEGORIES && categories.donnees !== null && (
         <ExemplesRealisations
           key={filtre}
-          idCategorie={filtre}
+          bien={{ categorie: filtre }}
           titre={t.exemplesRealisations(
             categories.donnees.find((c) => c.id_categorie === filtre)?.libelle ?? ''
           )}

@@ -1,7 +1,7 @@
 /**
- * Exemples de réalisations d'une catégorie (14 octobre 2026) : les photos que
- * l'administration a déposées sur la catégorie, pour que le client voie ce
- * qu'il peut commander.
+ * Photos proposées comme modèles (14 octobre 2026) : les exemples de
+ * réalisations d'une catégorie, ou la galerie d'un produit, pour que le
+ * client voie — et désigne — ce qu'il veut commander.
  *
  * Deux usages, un seul rendu :
  * - **consultation** (catalogue filtré, fiche produit) : un clic agrandit ;
@@ -15,11 +15,13 @@
 import { useState } from 'react';
 import { Check, X } from 'lucide-react';
 
-import { urlExemple } from '../galerie.api';
+import { urlPhoto } from '../galerie.api';
 import { useGalerie } from '../galerie.hooks';
+import type { BienPhotographie } from '../galerie.types';
 
 interface Proprietes {
-  idCategorie: number;
+  /** Une catégorie (ses exemples) ou un produit (sa galerie). */
+  bien: BienPhotographie;
   titre: string;
   /** Fichier du modèle retenu ; mode choix seulement. */
   choix?: string;
@@ -28,13 +30,13 @@ interface Proprietes {
 }
 
 export default function ExemplesRealisations({
-  idCategorie,
+  bien,
   titre,
   choix,
   surChoix,
   libelleChoix = 'Je veux ce modèle',
 }: Proprietes) {
-  const galerie = useGalerie({ categorie: idCategorie });
+  const galerie = useGalerie(bien);
   const [agrandie, setAgrandie] = useState<string | null>(null);
 
   if (galerie.photos.length === 0) return null;
@@ -68,7 +70,7 @@ export default function ExemplesRealisations({
                 }`}
               >
                 <img
-                  src={urlExemple(fichier)}
+                  src={urlPhoto(bien, fichier)}
                   alt={`Exemple ${rang + 1}`}
                   loading="lazy"
                   className={`${modeChoix ? 'h-24 w-24' : 'h-32 w-44'} object-cover`}
@@ -100,7 +102,7 @@ export default function ExemplesRealisations({
             <X size={20} aria-hidden />
           </button>
           <img
-            src={urlExemple(agrandie)}
+            src={urlPhoto(bien, agrandie)}
             alt={titre}
             className="max-h-full max-w-full rounded-lg object-contain"
           />

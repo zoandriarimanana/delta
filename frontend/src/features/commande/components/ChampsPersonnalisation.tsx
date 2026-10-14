@@ -10,7 +10,7 @@
 import { X } from 'lucide-react';
 
 import ExemplesRealisations from '@/features/galerie/components/ExemplesRealisations';
-import { urlExemple } from '@/features/galerie/galerie.api';
+import { urlExemple, type SourceModele } from '@/features/galerie/galerie.api';
 import { useTextes } from '@/lib/langue';
 
 import { TEXTES_COMMANDE } from '../commande.textes';
@@ -24,9 +24,11 @@ interface Proprietes {
   valeurs: PersonnalisationPanier;
   surChangement: (valeurs: PersonnalisationPanier) => void;
   /**
-   * Catégorie du produit : ses exemples de réalisations sont proposés comme
-   * modèles. Absente (panier), seul le modèle déjà retenu s'affiche.
+   * Produit et catégorie : les photos du produit, puis les exemples de sa
+   * catégorie, sont proposés comme modèles. Absents (panier), seul le modèle
+   * déjà retenu s'affiche.
    */
+  idProduit?: number;
   idCategorie?: number;
 }
 
@@ -46,9 +48,17 @@ const CLASSES_CHAMP =
 export default function ChampsPersonnalisation({
   valeurs,
   surChangement,
+  idProduit,
   idCategorie,
 }: Proprietes) {
   const t = useTextes(TEXTES_COMMANDE);
+  const source = valeurs.modeleSource ?? 'categories';
+  function choisir(modele: string | undefined, depuis: SourceModele) {
+    const reste = sansModele(valeurs);
+    surChangement(
+      modele === undefined ? reste : { ...reste, modele, modeleSource: depuis }
+    );
+  }
   function modifier(champ: keyof PersonnalisationPanier, valeur: string) {
     surChangement({ ...valeurs, [champ]: valeur });
   }
@@ -56,21 +66,29 @@ export default function ChampsPersonnalisation({
   return (
     <div className="space-y-3">
       {idCategorie !== undefined ? (
-        <ExemplesRealisations
-          idCategorie={idCategorie}
-          titre={t.choisirModele}
-          choix={valeurs.modele}
-          surChoix={(modele) => {
-            const reste = sansModele(valeurs);
-            surChangement(modele === undefined ? reste : { ...reste, modele });
-          }}
-          libelleChoix={t.jeVeuxCeModele}
-        />
+        <>
+          {idProduit !== undefined && (
+            <ExemplesRealisations
+              bien={{ produit: idProduit }}
+              titre={t.choisirPhotoProduit}
+              choix={source === 'produits' ? valeurs.modele : undefined}
+              surChoix={(modele) => choisir(modele, 'produits')}
+              libelleChoix={t.jeVeuxCeModele}
+            />
+          )}
+          <ExemplesRealisations
+            bien={{ categorie: idCategorie }}
+            titre={t.choisirModele}
+            choix={source === 'categories' ? valeurs.modele : undefined}
+            surChoix={(modele) => choisir(modele, 'categories')}
+            libelleChoix={t.jeVeuxCeModele}
+          />
+        </>
       ) : (
         valeurs.modele !== undefined && (
           <div className="flex items-center gap-3">
             <img
-              src={urlExemple(valeurs.modele)}
+              src={urlExemple(valeurs.modele, source)}
               alt={t.modeleChoisi}
               className="h-16 w-16 rounded-lg object-cover"
             />
