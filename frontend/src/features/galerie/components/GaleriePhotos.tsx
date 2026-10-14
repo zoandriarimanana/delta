@@ -26,12 +26,21 @@ interface Proprietes {
   repli: string;
   /** Nom du bien, pour le texte alternatif des photos. */
   nomBien: string;
+  /** Prévenu de la photo affichée (son fichier, `null` sans photo) : la
+   * fiche produit l'emporte au panier (14 octobre 2026). */
+  surPhotoAffichee?: (fichier: string | null) => void;
 }
 
 const CLASSES_FLECHE =
   'absolute top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-gris-700 shadow-md transition hover:bg-surface';
 
-export default function GaleriePhotos({ bien, photos, repli, nomBien }: Proprietes) {
+export default function GaleriePhotos({
+  bien,
+  photos,
+  repli,
+  nomBien,
+  surPhotoAffichee,
+}: Proprietes) {
   const t = useTextes(TEXTES_GALERIE);
   const [index, setIndex] = useState(0);
   const [pleinEcran, setPleinEcran] = useState(false);
@@ -39,6 +48,11 @@ export default function GaleriePhotos({ bien, photos, repli, nomBien }: Propriet
   // Une photo retirée entre deux rendus ne doit pas laisser l'index dehors.
   const courant = nombre === 0 ? 0 : Math.min(index, nombre - 1);
   const photo = photos[courant];
+
+  const fichierAffiche = photo?.fichier ?? null;
+  useEffect(() => {
+    surPhotoAffichee?.(fichierAffiche);
+  }, [fichierAffiche, surPhotoAffichee]);
 
   function aller(decalage: number) {
     setIndex((nombre + courant + decalage) % nombre);

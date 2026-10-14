@@ -22,6 +22,7 @@ import { useTextes } from '@/lib/langue';
 
 import { TEXTES_COMMANDE } from '../commande.textes';
 import DemandePersonnalisationLue from './DemandePersonnalisationLue';
+import { urlPhotoLigne } from '@/features/galerie/galerie.api';
 import VignetteProduit from './VignetteProduit';
 import {
   estTerminee,
@@ -135,6 +136,7 @@ function LigneAvecAvis({
         <VignetteProduit
           idProduit={ligne.id_produit}
           nom={ligne.nom_produit}
+          image={ligne.photo_produit ? urlPhotoLigne(ligne.photo_produit) : undefined}
           className="h-14 w-14 shrink-0"
         />
         <div className="min-w-0 flex-1">

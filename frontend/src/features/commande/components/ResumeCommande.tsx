@@ -19,6 +19,7 @@ import { TEXTES_COMMANDE } from '../commande.textes';
 import { supplementLigne } from '../commande.service';
 import type { LignePanier } from '../commande.types';
 import RecapitulatifMontants from './RecapitulatifMontants';
+import { urlPhoto } from '@/features/galerie/galerie.api';
 import VignetteProduit from './VignetteProduit';
 
 interface Proprietes {
@@ -64,6 +65,11 @@ export default function ResumeCommande({
               <VignetteProduit
                 idProduit={ligne.id_produit}
                 nom={ligne.nom}
+                image={
+                  ligne.photo
+                    ? urlPhoto({ produit: ligne.id_produit }, ligne.photo)
+                    : undefined
+                }
                 className="h-14 w-14"
               />
               <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-gris-600 px-1 text-xs font-semibold text-white">

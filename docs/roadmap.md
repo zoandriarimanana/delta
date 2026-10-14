@@ -2066,12 +2066,16 @@ Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
       `inclure_archives` sur la liste, fiche lisible une fois archivée. Aucune
       place rendue (piège relevé : `STATUTS_OCCUPANTS` compte `Honoree`, passer
       par `supprimer()` aurait recrédité la session). Aucune migration.
-- [x] **Modèle pris dans les photos du produit** (demande du 14 octobre
-      2026) : le bloc « Personnaliser » propose d'abord la galerie du produit
-      (« Je veux ce modèle »), puis les exemples de sa catégorie. La photo
-      choisie suit la ligne jusqu'au panier et à la fiche d'administration
-      de la commande. `source_modele` dans la demande, vérifié et copié par
-      le serveur comme un exemple de catégorie ; aucune migration.
+- [x] **La photo affichée dans la galerie est celle commandée** (demande
+      du 14 octobre 2026) : la photo de la galerie du produit affichée quand
+      le client clique « Ajouter au panier » — personnalisé ou non — suit la
+      ligne : vignette du panier, puis de la commande côté client et
+      administration. Nouvelle colonne `LIGNE_COMMANDE.photo_produit`
+      (migration `8b497d2c5f24`), copie vérifiée par le serveur (partie
+      `lignes`). Un premier essai la plaçait dans le bloc « Personnaliser »
+      (`source_modele`, toujours accepté par l'API) : il ne couvrait pas le
+      choix fait dans la galerie, d'où ce correctif ; le doublon a été
+      retiré de l'écran.
 - [ ] **R.2 — Réservation des salles par calendrier.** Créneaux occupés
       d'une salle exposés publiquement, **sans aucune donnée du client** ;
       calendrier mensuel sur la fiche (jours occupés grisés, choix du jour

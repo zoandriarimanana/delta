@@ -38,6 +38,7 @@ import {
   varianteStatutCommande,
 } from '../commande.service';
 import type { Commande, TypeCommande } from '../commande.types';
+import { urlPhotoLigne } from '@/features/galerie/galerie.api';
 import VignetteProduit from './VignetteProduit';
 
 /** Libellé court du mode, pour tenir dans une colonne de tableau. */
@@ -123,6 +124,9 @@ export default function LigneCommandeAdministration({
                 key={ligne.id_ligne}
                 idProduit={ligne.id_produit}
                 nom={ligne.nom_produit}
+                image={
+                  ligne.photo_produit ? urlPhotoLigne(ligne.photo_produit) : undefined
+                }
                 className="h-10 w-10 rounded-lg ring-2 ring-surface"
               />
             ))}

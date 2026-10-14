@@ -1,6 +1,6 @@
 /** Fiche d'un produit du catalogue. Publique, comme la liste. */
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useParams } from 'react-router';
 
 import Badge from '@/components/ui/Badge';
@@ -81,6 +81,8 @@ function Fiche({
   const prix = useFormaterPrix();
   const disponible = estDisponible(produit);
   const galerie = useGalerie({ produit: produit.id_produit });
+  // La photo affichée dans la galerie est celle que le client commande.
+  const [photoAffichee, setPhotoAffichee] = useState<string | null>(null);
 
   return (
     <article className="mt-6 grid gap-8 md:grid-cols-2">
@@ -89,6 +91,7 @@ function Fiche({
         photos={galerie.photos}
         repli={imageProduit(produit.id_produit, produit.nom, 900)}
         nomBien={produit.nom}
+        surPhotoAffichee={setPhotoAffichee}
       />
 
       <div className="flex flex-col gap-5">
@@ -166,7 +169,7 @@ function Fiche({
         {/* Un produit épuisé ne peut pas être ajouté : le bloc d'achat
             disparaît plutôt que d'échouer silencieusement au clic. */}
         {disponible ? (
-          <AjoutPanierProduit produit={produit} />
+          <AjoutPanierProduit produit={produit} photo={photoAffichee} />
         ) : (
           <p className="rounded-lg bg-danger/10 px-4 py-3 text-danger">
             {t.produitEpuise}

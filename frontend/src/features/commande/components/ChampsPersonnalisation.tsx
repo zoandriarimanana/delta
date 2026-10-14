@@ -24,11 +24,10 @@ interface Proprietes {
   valeurs: PersonnalisationPanier;
   surChangement: (valeurs: PersonnalisationPanier) => void;
   /**
-   * Produit et catégorie : les photos du produit, puis les exemples de sa
-   * catégorie, sont proposés comme modèles. Absents (panier), seul le modèle
-   * déjà retenu s'affiche.
+   * Catégorie du produit : ses exemples de réalisations sont proposés comme
+   * modèles. Absente (panier), seul le modèle déjà retenu s'affiche. Les
+   * photos du produit lui-même se choisissent dans sa galerie.
    */
-  idProduit?: number;
   idCategorie?: number;
 }
 
@@ -48,7 +47,6 @@ const CLASSES_CHAMP =
 export default function ChampsPersonnalisation({
   valeurs,
   surChangement,
-  idProduit,
   idCategorie,
 }: Proprietes) {
   const t = useTextes(TEXTES_COMMANDE);
@@ -66,24 +64,13 @@ export default function ChampsPersonnalisation({
   return (
     <div className="space-y-3">
       {idCategorie !== undefined ? (
-        <>
-          {idProduit !== undefined && (
-            <ExemplesRealisations
-              bien={{ produit: idProduit }}
-              titre={t.choisirPhotoProduit}
-              choix={source === 'produits' ? valeurs.modele : undefined}
-              surChoix={(modele) => choisir(modele, 'produits')}
-              libelleChoix={t.jeVeuxCeModele}
-            />
-          )}
-          <ExemplesRealisations
-            bien={{ categorie: idCategorie }}
-            titre={t.choisirModele}
-            choix={source === 'categories' ? valeurs.modele : undefined}
-            surChoix={(modele) => choisir(modele, 'categories')}
-            libelleChoix={t.jeVeuxCeModele}
-          />
-        </>
+        <ExemplesRealisations
+          bien={{ categorie: idCategorie }}
+          titre={t.choisirModele}
+          choix={source === 'categories' ? valeurs.modele : undefined}
+          surChoix={(modele) => choisir(modele, 'categories')}
+          libelleChoix={t.jeVeuxCeModele}
+        />
       ) : (
         valeurs.modele !== undefined && (
           <div className="flex items-center gap-3">

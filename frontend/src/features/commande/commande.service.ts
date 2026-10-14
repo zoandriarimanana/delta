@@ -64,7 +64,8 @@ export function ajouterAuPanier(
   panier: LignePanier[],
   produit: Produit,
   quantite = 1,
-  personnalisation?: PersonnalisationPanier
+  personnalisation?: PersonnalisationPanier,
+  photo?: string
 ): LignePanier[] {
   if (produit.stock_disponible <= 0 || quantite <= 0) {
     return panier;
@@ -81,9 +82,16 @@ export function ajouterAuPanier(
     );
     // Une nouvelle personnalisation remplace l'ancienne : la ligne n'en porte
     // qu'une, appliquée à toute la quantité.
-    return personnalisation === undefined
-      ? augmente
-      : definirPersonnalisation(augmente, produit.id_produit, personnalisation);
+    const personnalisee =
+      personnalisation === undefined
+        ? augmente
+        : definirPersonnalisation(augmente, produit.id_produit, personnalisation);
+    // La dernière photo choisie remplace la précédente : une ligne, un modèle.
+    return photo === undefined
+      ? personnalisee
+      : personnalisee.map((l) =>
+          l.id_produit === produit.id_produit ? { ...l, photo } : l
+        );
   }
 
   const ligne: LignePanier = {
@@ -105,6 +113,7 @@ export function ajouterAuPanier(
       quantite: bornerQuantite(ligne, quantite),
       supplement_personnalisation: produit.supplement_personnalisation,
       ...(personnalisation === undefined ? {} : { personnalisation }),
+      ...(photo === undefined ? {} : { photo }),
     },
   ];
 }
@@ -288,6 +297,7 @@ export function versLignesEnvoyees(panier: LignePanier[]): LigneCommandeEnvoyee[
     ...(ligne.personnalisation === undefined
       ? {}
       : { personnalisation: versPersonnalisationEnvoyee(ligne.personnalisation) }),
+    ...(ligne.photo === undefined ? {} : { photo_produit: ligne.photo }),
   }));
 }
 

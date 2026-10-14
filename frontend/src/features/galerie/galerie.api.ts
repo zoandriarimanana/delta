@@ -44,6 +44,12 @@ export function urlPhoto(bien: BienPhotographie, fichier: string): string {
   return `${axiosClient.defaults.baseURL}/photos/${partieDe(bien)}/${fichier}`;
 }
 
+/** URL de la copie de la photo choisie pour une ligne de commande (partie
+ * `lignes`, 14 octobre 2026). */
+export function urlPhotoLigne(fichier: string): string {
+  return `${axiosClient.defaults.baseURL}/photos/lignes/${fichier}`;
+}
+
 /** URL de la copie du modèle choisi par un client (partie `modeles`). */
 export function urlModele(fichier: string): string {
   return `${axiosClient.defaults.baseURL}/photos/modeles/${fichier}`;

@@ -5,7 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Numeric
+from sqlalchemy import ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, SoftDeleteMixin
@@ -38,6 +38,9 @@ class LigneCommande(SoftDeleteMixin, Base):
     id_produit: Mapped[int] = mapped_column(
         ForeignKey("produit.id_produit", ondelete="RESTRICT"), nullable=False
     )
+    #: Copie de la photo du produit que le client avait choisie dans la
+    #: galerie (14 octobre 2026), partie `lignes` ; `NULL` sinon.
+    photo_produit: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     commande: Mapped[Commande] = relationship(back_populates="lignes")
     produit: Mapped[Produit] = relationship(back_populates="lignes_commande")

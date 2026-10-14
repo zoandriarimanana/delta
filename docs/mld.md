@@ -271,6 +271,14 @@ LOGEMENT(id_logement, type_chambre, capacite, tarif_nuitee, statut, description)
   (`source_modele` : `produits` ou `categories`, défaut `categories`) ; ce
   choix n'est pas stocké, seule la copie l'est.
 
+  **Photo choisie par ligne** (14 octobre 2026) : `LIGNE_COMMANDE.photo_produit`
+  (`VARCHAR(100)`, nullable) porte la copie, rangée dans `lignes/`
+  (`<id_ligne>-1.<ext>`), de la photo de la galerie du produit que le
+  client avait affichée en le mettant au panier. Même règle que les
+  modèles : le serveur vérifie que la photo appartient au **produit
+  commandé** (422 sinon) et la copie, pour qu'elle reste celle que le client
+  a vue. `NULL` : produit sans photo, ou ligne antérieure.
+
   **Limite majeure, acceptée par l'utilisateur** : le disque d'un service
   Render est effacé à chaque déploiement. Voir la dette « Photos du catalogue
   sur disque » dans `docs/roadmap.md`.
@@ -483,7 +491,7 @@ CONSOMMATION_REPAS(id_consommation, date_consommation, quantite, #id_abonnement,
 
 ```
 COMMANDE(id_commande, date_commande, reference_publique, adresse_livraison, nom_invite, contact_invite, type_commande, statut, montant_total, frais_livraison, devise, taux_change, montant_total_devise, #id_client, #id_reservation, #id_personnel)
-LIGNE_COMMANDE(id_ligne, quantite, prix_unitaire_applique, #id_commande, #id_produit)
+LIGNE_COMMANDE(id_ligne, quantite, prix_unitaire_applique, photo_produit, #id_commande, #id_produit)
 DEMANDE_PERSONNALISATION(id_personnalisation, description_demande, ingredients_specifiques, photo_modele, supplement_prix, #id_ligne, #id_produit_base)
 RESERVATION(id_reservation, type_reservation, date_debut, date_fin, date_reservation, nombre_personnes, statut, avec_hebergement, montant_total, montant_acompte, #id_client, #id_session, #id_salle, #id_logement, #id_reservation_hebergement)
 ```

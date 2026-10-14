@@ -22,6 +22,7 @@ import {
 import type { PersonnalisationPanier } from '@/features/commande/commande.types';
 import ChampsPersonnalisation from '@/features/commande/components/ChampsPersonnalisation';
 import { useFormaterPrix } from '@/features/devise/devise.hooks';
+import { urlPhoto } from '@/features/galerie/galerie.api';
 import { useTextes } from '@/lib/langue';
 
 import { TEXTES_PRODUIT } from '../produit.textes';
@@ -31,12 +32,15 @@ import ComparaisonLivraison from './ComparaisonLivraison';
 
 interface Proprietes {
   produit: Produit;
+  /** Photo affichée dans la galerie : c'est elle que le client commande
+   * (14 octobre 2026). `null` si le produit n'a pas de photo. */
+  photo?: string | null;
 }
 
 const CLASSES_PAS =
   'flex h-11 w-11 items-center justify-center text-gris-600 transition-colors hover:bg-gris-100 disabled:cursor-not-allowed disabled:opacity-40';
 
-export default function AjoutPanierProduit({ produit }: Proprietes) {
+export default function AjoutPanierProduit({ produit, photo = null }: Proprietes) {
   const t = useTextes(TEXTES_PRODUIT);
   const prix = useFormaterPrix();
   const panier = usePanier();
@@ -94,7 +98,6 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
               <p className="mb-3 text-xs text-gris-500">{t.decrireDemande}</p>
               <ChampsPersonnalisation
                 valeurs={personnalisation}
-                idProduit={produit.id_produit}
                 idCategorie={produit.id_categorie}
                 surChangement={(valeurs) => {
                   setPersonnalisation(valeurs);
@@ -116,6 +119,21 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
         quantite={quantite}
         supplementUnitaire={supplement}
       />
+
+      {photo !== null && (
+        <div className="flex items-center gap-3 rounded-xl border border-primaire/30 bg-primaire/5 p-3">
+          <img
+            src={urlPhoto({ produit: produit.id_produit }, photo)}
+            alt={t.photoChoisie}
+            className="h-14 w-14 shrink-0 rounded-lg object-cover"
+          />
+          <p className="text-sm text-gris-700">
+            <span className="font-semibold">{t.photoChoisie}</span>
+            <span className="block text-xs text-gris-500">{t.photoChoisieAide}</span>
+          </p>
+        </div>
+      )}
+
       {parPersonne && (
         <p className="text-sm font-medium text-gris-700">
           {t.nombrePersonnes}{' '}
@@ -164,9 +182,9 @@ export default function AjoutPanierProduit({ produit }: Proprietes) {
                 setErreurPersonnalisation(true);
                 return;
               }
-              panier.ajouter(produit, quantite, personnalisation);
+              panier.ajouter(produit, quantite, personnalisation, photo ?? undefined);
             } else {
-              panier.ajouter(produit, quantite);
+              panier.ajouter(produit, quantite, undefined, photo ?? undefined);
             }
             setAjoute(true);
           }}

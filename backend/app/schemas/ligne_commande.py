@@ -27,6 +27,11 @@ class LigneCommandeCreate(BaseModel):
     id_produit: int
     quantite: int = Field(gt=0)
     personnalisation: DemandePersonnalisationCreate | None = None
+    #: Photo de la galerie du produit affichée au moment de l'ajout au
+    #: panier (14 octobre 2026). Vérifiée puis copiée par le serveur.
+    photo_produit: str | None = Field(
+        default=None, pattern=r"^\d+-\d+\.(jpg|png|webp)$"
+    )
 
 
 class LigneCommandeRead(BaseModel):
@@ -48,3 +53,5 @@ class LigneCommandeRead(BaseModel):
     #: Absente pour la grande majorité des lignes : seuls les produits
     #: `est_personnalisable` peuvent en porter une.
     personnalisation: DemandePersonnalisationRead | None = None
+    #: Copie de la photo choisie, lisible par `GET /photos/lignes/{fichier}`.
+    photo_produit: str | None = None

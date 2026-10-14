@@ -563,3 +563,64 @@ def test_la_photo_d_un_autre_produit_est_refusee(
     )
 
     assert reponse.status_code == 422
+
+
+# --- Photo de la galerie choisie à l'ajout au panier (14 octobre 2026) ----
+
+
+def _commander_avec_photo(
+    client_http: TestClient, entete: dict[str, str], produit: Produit, photo: str
+):
+    return client_http.post(
+        f"{PREFIXE}/commandes",
+        headers=entete,
+        json={
+            "type_commande": "A_emporter",
+            "lignes": [
+                {
+                    "id_produit": produit.id_produit,
+                    "quantite": 1,
+                    "photo_produit": photo,
+                }
+            ],
+        },
+    )
+
+
+def test_la_photo_choisie_dans_la_galerie_suit_la_ligne(
+    client_http: TestClient,
+    admin: dict[str, str],
+    produit: Produit,
+    db: Session,
+    dossier: Path,
+) -> None:
+    """Sans personnalisation : la photo affichée quand le client a mis le
+    produit au panier est copiée avec sa ligne de commande."""
+    galerie = f"/produits/{produit.id_produit}/photos"
+    _envoyer(client_http, galerie, admin)
+    contenu = _image("JPEG")
+    _envoyer(client_http, galerie, admin, contenu, "image/jpeg")
+    entete = _client_personnalisant(db, produit)
+
+    reponse = _commander_avec_photo(
+        client_http, entete, produit, f"{produit.id_produit}-2.jpg"
+    )
+
+    assert reponse.status_code == 201, reponse.text
+    ligne = reponse.json()["lignes"][0]
+    assert ligne["photo_produit"] == f"{ligne['id_ligne']}-1.jpg"
+    assert (dossier / "lignes" / ligne["photo_produit"]).read_bytes() == contenu
+    lue = client_http.get(f"{PREFIXE}/photos/lignes/{ligne['photo_produit']}")
+    assert lue.status_code == 200
+
+
+def test_la_photo_d_un_autre_produit_est_refusee_sur_la_ligne(
+    client_http: TestClient, produit: Produit, db: Session
+) -> None:
+    entete = _client_personnalisant(db, produit)
+
+    reponse = _commander_avec_photo(
+        client_http, entete, produit, f"{produit.id_produit + 999}-1.jpg"
+    )
+
+    assert reponse.status_code == 422

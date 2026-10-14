@@ -14,20 +14,26 @@ interface Proprietes {
   idProduit: number;
   nom: string;
   className?: string;
+  /** Photo choisie par le client (URL complète) : elle prime sur la
+   * couverture (14 octobre 2026). */
+  image?: string;
 }
 
 export default function VignetteProduit({
   idProduit,
   nom,
   className = '',
+  image: choisie,
 }: Proprietes) {
   const bien = { produit: idProduit };
-  const { photos } = useGalerie(bien);
+  // Inutile de lire la galerie quand la photo est déjà connue.
+  const { photos } = useGalerie(choisie === undefined ? bien : null);
   const couverture = photos[0];
   const image =
-    couverture !== undefined
+    choisie ??
+    (couverture !== undefined
       ? urlPhoto(bien, couverture.fichier)
-      : imageProduit(idProduit, nom);
+      : imageProduit(idProduit, nom));
 
   return (
     <span className={`block overflow-hidden rounded-xl bg-gris-200 ${className}`}>

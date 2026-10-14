@@ -13,6 +13,7 @@ import { supplementLigne } from '../commande.service';
 import type { LignePanier, PersonnalisationPanier } from '../commande.types';
 import ChampQuantite from './ChampQuantite';
 import PersonnalisationPanierBloc from './PersonnalisationPanierBloc';
+import { urlPhoto } from '@/features/galerie/galerie.api';
 import VignetteProduit from './VignetteProduit';
 
 interface Proprietes {
@@ -41,6 +42,11 @@ export default function LignePanierCarte({
         <VignetteProduit
           idProduit={ligne.id_produit}
           nom={ligne.nom}
+          image={
+            ligne.photo
+              ? urlPhoto({ produit: ligne.id_produit }, ligne.photo)
+              : undefined
+          }
           className="h-24 w-24 sm:h-28 sm:w-28"
         />
       </Link>

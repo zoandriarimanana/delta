@@ -34,6 +34,7 @@ from app.core.exceptions import (
 from app.repositories.demande_personnalisation_repository import (
     DemandePersonnalisationRepository,
 )
+from app.repositories.ligne_commande_repository import LigneCommandeRepository
 from app.services.categorie_produit_service import CategorieProduitService
 from app.services.formation_service import FormationService
 from app.services.logement_service import LogementService
@@ -55,7 +56,13 @@ class Partie(StrEnum):
     #: demande de personnalisation : elle reste celle qu'il a vue, même si la
     #: catégorie change ensuite de photos. Jamais téléversée directement.
     MODELES = "modeles"
+    #: Copie de la photo du produit affichée quand le client l'a mis au
+    #: panier (14 octobre 2026), rangée sous le numéro de sa ligne de
+    #: commande. Même raison que les modèles : elle reste celle qu'il a vue.
+    LIGNES = "lignes"
 
+
+MESSAGE_MODELE_INVALIDE = "Ce modèle ne fait pas partie des exemples de ce produit."
 
 #: 5 Mio : une photo prise au téléphone dépasse souvent 2 Mio.
 TAILLE_MAX_PHOTO_OCTETS = 5 * 1024 * 1024
@@ -102,6 +109,7 @@ class GalerieService:
             Partie.PRODUITS: ProduitService(db).obtenir,
             Partie.CATEGORIES: CategorieProduitService(db).obtenir,
             Partie.MODELES: self._demande_existante,
+            Partie.LIGNES: self._ligne_existante,
         }
 
     # --- Lecture -------------------------------------------------------------
@@ -170,20 +178,39 @@ class GalerieService:
         refusé en 422, comme toute référence invalide venue du corps de la
         requête.
         """
+        if partie not in (Partie.PRODUITS, Partie.CATEGORIES):
+            raise ReferenceInvalide(MESSAGE_MODELE_INVALIDE)
+        return self._copier(
+            fichier, partie, identifiant, Partie.MODELES, id_personnalisation
+        )
+
+    def copier_photo_ligne(self, fichier: str, id_produit: int, id_ligne: int) -> str:
+        """Copie la photo du produit que le client a choisie dans la galerie
+        et retourne le nom de la copie, rangée sous le numéro de la ligne.
+        Une photo d'un autre produit est refusée en 422."""
+        return self._copier(
+            fichier, Partie.PRODUITS, id_produit, Partie.LIGNES, id_ligne
+        )
+
+    def _copier(
+        self,
+        fichier: str,
+        partie: Partie,
+        identifiant: int,
+        destination: Partie,
+        numero: int,
+    ) -> str:
         correspondance = MOTIF_FICHIER.match(fichier)
         source = self._dossier(partie) / fichier
         if (
-            partie not in (Partie.PRODUITS, Partie.CATEGORIES)
-            or correspondance is None
+            correspondance is None
             or int(correspondance.group(1)) != identifiant
             or not source.is_file()
         ):
-            raise ReferenceInvalide(
-                "Ce modèle ne fait pas partie des exemples de ce produit."
-            )
-        dossier = self._dossier(Partie.MODELES)
+            raise ReferenceInvalide(MESSAGE_MODELE_INVALIDE)
+        dossier = self._dossier(destination)
         dossier.mkdir(parents=True, exist_ok=True)
-        nom = f"{id_personnalisation}-1.{correspondance.group(3)}"
+        nom = f"{numero}-1.{correspondance.group(3)}"
         (dossier / nom).write_bytes(source.read_bytes())
         return nom
 
@@ -221,6 +248,12 @@ class GalerieService:
         chemin.unlink(missing_ok=True)
 
     # --- Interne -------------------------------------------------------------
+
+    def _ligne_existante(self, id_ligne: int) -> object:
+        ligne = LigneCommandeRepository(self.db).get_by_id(id_ligne)
+        if ligne is None:
+            raise RessourceIntrouvable(MESSAGE_PHOTO_INTROUVABLE)
+        return ligne
 
     def _demande_existante(self, id_personnalisation: int) -> object:
         demande = DemandePersonnalisationRepository(self.db).get_by_id(

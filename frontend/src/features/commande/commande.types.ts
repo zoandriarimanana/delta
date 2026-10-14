@@ -21,6 +21,8 @@ export interface LigneCommandeLue {
   prix_unitaire_applique: string;
   /** Demande jointe à la ligne, `null`/absente si le produit n'est pas personnalisé. */
   personnalisation?: PersonnalisationLue | null;
+  /** Copie de la photo du produit choisie par le client (partie `lignes`). */
+  photo_produit?: string | null;
 }
 
 /** Miroir de `DemandePersonnalisationRead`. */
@@ -116,6 +118,7 @@ export interface LigneCommandeEnvoyee {
   id_produit: number;
   quantite: number;
   personnalisation?: PersonnalisationEnvoyee;
+  photo_produit?: string;
 }
 
 export interface CommandeEnvoyee {
@@ -185,6 +188,9 @@ export interface LignePanier {
    * la demande est rattachée à la ligne de commande.
    */
   personnalisation?: PersonnalisationPanier;
+  /** Photo de la galerie du produit affichée à l'ajout (14 octobre 2026) :
+   * c'est elle que le client commande, et elle accompagne la ligne. */
+  photo?: string;
   /**
    * Supplément par unité lu au catalogue lors de l'ajout, pour l'affichage
    * seulement : le serveur le relit et le fige à la commande.

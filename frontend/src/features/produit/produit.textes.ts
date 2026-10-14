@@ -46,6 +46,9 @@ const fr = {
   unite: 'unité',
   // Ajout au panier
   personnaliserProduit: 'Personnaliser ce produit',
+  photoChoisie: 'Modèle choisi : la photo affichée',
+  photoChoisieAide:
+    'C’est ce modèle que vous commandez. Cliquez sur une autre miniature de la galerie pour en changer.',
   exemplesRealisations: (categorie: string) =>
     `Exemples de réalisations — ${categorie}`,
   decrireDemande: 'Décrivez votre demande : notre équipe la reçoit avec la commande.',
@@ -117,6 +120,9 @@ export const TEXTES_PRODUIT: Textes<typeof fr> = {
     personne: 'person',
     unite: 'unit',
     personnaliserProduit: 'Customise this product',
+    photoChoisie: 'Chosen design: the photo shown',
+    photoChoisieAide:
+      'This is the design you are ordering. Click another thumbnail in the gallery to change it.',
     exemplesRealisations: (categorie: string) => `Examples of our work — ${categorie}`,
     decrireDemande: 'Describe your request: our team receives it with the order.',
     personnalisationVide: 'Enter at least a message, a theme or a detail.',

@@ -35,6 +35,7 @@ import {
 import type { Commande } from '../commande.types';
 import PaiementCommandeClient from './PaiementCommandeClient';
 import RecapitulatifCommande from './RecapitulatifCommande';
+import { urlPhotoLigne } from '@/features/galerie/galerie.api';
 import VignetteProduit from './VignetteProduit';
 
 const ICONES_MODE = { En_ligne: Truck, A_emporter: Store, Sur_place: UtensilsCrossed };
@@ -86,6 +87,9 @@ export default function CarteCommandeClient({
                 <VignetteProduit
                   idProduit={ligne.id_produit}
                   nom={ligne.nom_produit}
+                  image={
+                    ligne.photo_produit ? urlPhotoLigne(ligne.photo_produit) : undefined
+                  }
                   className="h-12 w-12"
                 />
               </li>

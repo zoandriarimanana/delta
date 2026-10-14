@@ -441,3 +441,22 @@ describe('etapeAdministration', () => {
     expect(etapeAdministration({ ...base, statut })).toBeNull();
   });
 });
+
+describe('photo choisie dans la galerie (14 octobre 2026)', () => {
+  const ARTICLE = produit({ id_produit: 9, nom: 'Gâteau', stock_disponible: 5 });
+
+  it('suit la ligne jusqu’à l’envoi, et la dernière choisie remplace la précédente', () => {
+    const panier = ajouterAuPanier([], ARTICLE, 1, undefined, '9-4.jpg');
+    expect(panier[0]?.photo).toBe('9-4.jpg');
+    expect(versLignesEnvoyees(panier)[0]).toMatchObject({ photo_produit: '9-4.jpg' });
+
+    const change = ajouterAuPanier(panier, ARTICLE, 1, undefined, '9-2.jpg');
+    expect(change).toHaveLength(1);
+    expect(change[0]?.photo).toBe('9-2.jpg');
+  });
+
+  it('n’envoie rien sans photo choisie', () => {
+    const panier = ajouterAuPanier([], ARTICLE, 1);
+    expect(versLignesEnvoyees(panier)[0]).not.toHaveProperty('photo_produit');
+  });
+});

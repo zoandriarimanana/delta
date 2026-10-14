@@ -48,7 +48,8 @@ export interface Panier {
   ajouter: (
     produit: Produit,
     quantite?: number,
-    personnalisation?: PersonnalisationPanier
+    personnalisation?: PersonnalisationPanier,
+    photo?: string
   ) => void;
   /** Pose, remplace ou retire (`null`) la personnalisation d'une ligne. */
   personnaliser: (
@@ -85,9 +86,14 @@ export function usePanier(): Panier {
     nombre: nombreArticles(lignes),
     total: totalPanier(lignes),
     ajouter: useCallback(
-      (produit: Produit, quantite = 1, personnalisation?: PersonnalisationPanier) =>
+      (
+        produit: Produit,
+        quantite = 1,
+        personnalisation?: PersonnalisationPanier,
+        photo?: string
+      ) =>
         ecrirePanier(
-          ajouterAuPanier(lirePanier(), produit, quantite, personnalisation)
+          ajouterAuPanier(lirePanier(), produit, quantite, personnalisation, photo)
         ),
       []
     ),

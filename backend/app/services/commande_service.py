@@ -478,6 +478,14 @@ class CommandeService:
                     "prix_unitaire_applique": produit.prix_unitaire,
                 }
             )
+            if ligne.photo_produit is not None:
+                # Copiée, jamais recopiée telle quelle : le serveur vérifie
+                # qu'elle appartient au produit commandé (14 octobre 2026).
+                from app.services.galerie_service import GalerieService
+
+                ligne_creee.photo_produit = GalerieService(self.db).copier_photo_ligne(
+                    ligne.photo_produit, produit.id_produit, ligne_creee.id_ligne
+                )
             montant += produit.prix_unitaire * ligne.quantite
             montant += self._rattacher_personnalisation(ligne, produit, ligne_creee)
 
