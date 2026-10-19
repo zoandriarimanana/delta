@@ -1,0 +1,66 @@
+# Delta en production : base, backend, site (Caddy, HTTPS).
+# Lancer depuis la racine du projet (voir docs/deploiement.md) :
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+# docker-compose.yml, lui, reste la base de développement locale.
+
+services:
+  db:
+    # pgvector : l'assistant IA exige l'extension `vector`.
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    env_file: .env.production
+    volumes:
+      - donnees_postgres:/var/lib/postgresql/data
+    # Aucun port publié : la base n'est joignable que par le backend.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      # Construits ici pour rester cohérents avec la base et le domaine.
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      BACKEND_CORS_ORIGINS: https://${DOMAINE}
+      # Défaut fermé : cookies « Secure », simulation de paiement coupée,
+      # code de vérification jamais écrit au journal.
+      ENVIRONMENT: production
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Photos du catalogue et du personnel : elles survivent aux mises à jour.
+      - photos_catalogue:/app/static/upload
+      - photos_personnel:/app/stockage
+    # Aucun port publié : seul Caddy lui parle, par le réseau interne.
+
+  site:
+    build:
+      context: ./frontend
+      args:
+        VITE_FACEBOOK_URL: ${VITE_FACEBOOK_URL:-}
+        VITE_TELEPHONE_FORMATION: ${VITE_TELEPHONE_FORMATION:-}
+    restart: unless-stopped
+    environment:
+      DOMAINE: ${DOMAINE}
+    depends_on:
+      - backend
+    ports:
+      - "${PORT_HTTP:-80}:80"
+      - "${PORT_HTTPS:-443}:443"
+      - "${PORT_HTTPS:-443}:443/udp"
+    volumes:
+      # Certificats HTTPS : les garder évite d'en redemander à chaque démarrage.
+      - caddy_donnees:/data
+      - caddy_config:/config
+
+volumes:
+  donnees_postgres:
+  photos_catalogue:
+  photos_personnel:
+  caddy_donnees:
+  caddy_config:
