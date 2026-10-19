@@ -19,6 +19,7 @@ import { Link } from 'react-router';
 import { Plus } from 'lucide-react';
 
 import Bouton from '@/components/ui/Bouton';
+import GestionGalerie from '@/features/galerie/components/GestionGalerie';
 import SelecteurPhotos from '@/features/galerie/components/SelecteurPhotos';
 import { usePhotosCreation } from '@/features/galerie/galerie.hooks';
 
@@ -150,11 +151,20 @@ export default function AdministrationProduitsPage() {
           <h2 className="mb-4 text-lg font-medium text-gris-700">
             {edition.mode === 'creation' ? 'Nouveau produit' : 'Modifier le produit'}
           </h2>
-          {edition.mode === 'creation' && (
+          {edition.mode === 'creation' ? (
             <SelecteurPhotos
               fichiers={photos.fichiers}
               surChange={photos.setFichiers}
             />
+          ) : (
+            // « Modifier » montre aussi les photos actuelles : les ajouter ou
+            // les retirer ne demande plus d'ouvrir la fiche (19 octobre 2026).
+            <div className="mb-4">
+              <GestionGalerie
+                key={edition.produit.id_produit}
+                bien={{ produit: edition.produit.id_produit }}
+              />
+            </div>
           )}
           <FormulaireProduit
             categories={catalogue.categories}

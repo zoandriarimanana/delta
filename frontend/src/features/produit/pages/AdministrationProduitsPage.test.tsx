@@ -15,6 +15,7 @@ import { userEvent } from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { recupererPhotos } from '@/features/galerie/galerie.api';
 import RoutePersonnel from '@/lib/RoutePersonnel';
 import { definirSession, effacerSession } from '@/lib/session.store';
 
@@ -27,6 +28,10 @@ import {
 import AdministrationProduitsPage from './AdministrationProduitsPage';
 
 vi.mock('../produit.api');
+vi.mock('@/features/galerie/galerie.api', async (original) => ({
+  ...(await original<typeof import('@/features/galerie/galerie.api')>()),
+  recupererPhotos: vi.fn(),
+}));
 
 const CATEGORIE = { id_categorie: 1, libelle: 'Pâtisserie', supprime_le: null };
 
@@ -222,4 +227,18 @@ describe('refus du serveur', () => {
       'Refus explicite du serveur.'
     );
   });
+});
+
+it('« Modifier » montre aussi les photos actuelles du produit', async () => {
+  definirSession('personnel');
+  vi.mocked(recupererPhotos).mockResolvedValue([{ fichier: '1-1.jpg' }]);
+  afficherSousGarde();
+
+  await userEvent.click(
+    (await screen.findAllByRole('button', { name: /modifier/i }))[0]!
+  );
+
+  expect(await screen.findByRole('img', { name: 'Photo 1' })).toBeDefined();
+  expect(recupererPhotos).toHaveBeenCalledWith({ produit: ACTIF.id_produit });
+  expect(screen.getByRole('button', { name: /ajouter la photo/i })).toBeDefined();
 });
