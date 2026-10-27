@@ -1,15 +1,14 @@
-name: CI (develop)
+name: CI
 
-# Déclenchement : les deux branches durables. `main` doit y figurer, sinon une
-# PR vers `main` n'obtiendrait jamais les checks exigés par la protection de
-# branche et resterait bloquee indefiniment en « Waiting for status ».
-# Le `push` donne en plus une verification apres merge, la ou seule la PR etait
-# controlee jusqu'ici.
+# Une seule branche, `main` (voir CONTRIBUTING.md, §1) : on y pousse
+# directement, et cette CI tourne APRÈS le push — elle signale un échec, elle
+# ne l'empêche plus. D'où l'obligation de la rejouer en local avant de pousser.
+# Les PR vers `main`, devenues facultatives, sont vérifiées de même.
 on:
   pull_request:
-    branches: [develop, main]
+    branches: [main]
   push:
-    branches: [develop, main]
+    branches: [main]
 
 # Annule les exécutions obsolètes quand une PR reçoit un nouveau push.
 concurrency:
@@ -18,12 +17,6 @@ concurrency:
 
 jobs:
   backend:
-    # ⚠️ IDENTIFIANT FIGÉ. Ce libellé est le nom du check exigé par la
-    # protection de branche sur `develop` et `main`. Le renommer désactiverait
-    # silencieusement la vérification : GitHub attendrait indéfiniment un check
-    # qui ne se produirait plus, et la règle « CI verte obligatoire » ne serait
-    # plus tenue par rien. Pour le changer, mettre à jour d'abord
-    # `required_status_checks.contexts` sur les deux branches.
     name: Backend (lint, migration, tests)
     runs-on: ubuntu-latest
 
@@ -105,8 +98,6 @@ jobs:
         run: pytest -q
 
   frontend:
-    # ⚠️ IDENTIFIANT FIGÉ — même remarque que pour le job backend ci-dessus :
-    # ce libellé est un check requis par la protection de branche.
     name: Frontend (lint, tests, build)
     runs-on: ubuntu-latest
 

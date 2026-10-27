@@ -6,129 +6,37 @@ générique, découpage par module métier).
 
 ---
 
-## 1. Modèle de branches
+## 1. Modèle de branches : une seule branche, `main`
 
-| Branche | Rôle |
-|---|---|
-| `main` | Code de production. Toujours stable et déployable. Jamais de commit direct, **jamais cible d'une PR de sprint** — voir ci-dessous. |
-| `develop` | Branche d'intégration de tous les sprints en cours. |
-| `feature/<sprint>-<module>-<description>` | Une fonctionnalité, un module. |
-| `fix/<module>-<description>` | Correction de bug hors urgence. |
-| `hotfix/<description>` | Correction urgente directement sur `main`, puis répercutée sur `develop`. |
+**Décision du 27 octobre 2026** (propriétaire du dépôt) : le projet est en
+production et ne garde **qu'une branche, `main`** — c'est elle qui tourne sur
+le serveur. `develop`, les branches `feature/*`, `fix/*`, `docs/*` et le
+circuit branche → PR → `develop` sont **abandonnés** ; leur contenu a été
+intégré à `main` (PR #152) ou récupéré avant suppression.
 
-**Exemples** :
-```
-feature/sprint2-commande-creation
-feature/sprint4-formation-session
-fix/produit-validation-prix
-hotfix/livraison-statut-bloque
-```
+- On **pousse directement sur `main`**. Aucune PR n'est exigée.
+- `main` reste protégée contre le **force-push** et la **suppression** : on
+  n'efface jamais l'historique de ce qui tourne en production.
+- Une branche locale de travail reste possible pour un chantier long, mais
+  elle ne vit pas sur GitHub et se fond dans `main` une fois finie.
 
-Règle d'or : **une branche = un seul module métier**, sauf pour les tâches du Sprint 0
-(fondations transverses).
+**Contrepartie assumée : plus rien ne bloque un code cassé avant `main`.** La
+CI tourne toujours à chaque push, mais **après coup** : elle signale, elle
+n'empêche plus. D'où une règle qui remplace la protection perdue :
 
-### `main` ne reçoit du contenu que par une release explicite, jamais par une PR de sprint
+> **Rejouer la CI en local (§8) avant chaque `git push`.** Un push sur `main`
+> est une mise en production en attente : le prochain `git pull` du serveur
+> l'embarque.
 
-**Règle absolue** : une PR de sprint ordinaire — `feature/*`, `fix/*`, ou toute
-PR née d'une tâche du roadmap — cible **toujours** `develop`, jamais `main`.
-`main` est une branche de **release délibérée** : elle ne reçoit du contenu que
-par un processus de release explicite (à définir quand le projet en aura
-besoin), jamais comme effet de bord d'un travail de sprint courant.
-
-**Cet incident est arrivé** : une PR de Sprint 10 (#119) a été ouverte contre
-`main` au lieu de `develop` — `--base` omis en relançant `gh pr create` après un
-blocage, retombée sur la branche par défaut du dépôt plutôt que sur `develop`.
-`main` n'avait plus été touché depuis le commit initial de documentation :
-la PR y a donc posé l'intégralité de l'historique cumulé du projet en un seul
-squash, hors du flux `develop` habituel et sans aucune promotion délibérée.
-
-Le correctif s'est révélé plus coûteux que l'erreur elle-même. `develop` a pu
-recevoir le même contenu par un chemin correct sans difficulté (#120). Mais
-corriger `main` en le ramenant à son état antérieur s'est heurté à sa propre
-protection de branche : les checks CI qu'elle exige n'avaient jamais eu de
-raison d'exister sur `main` avant cet incident, donc aucun workflow ne pouvait
-les produire pour la PR de revert — blocage indéfini en « Waiting for status »
-(voir issue #122). Il a fallu doter `main` d'un workflow CI dédié, minimal et
-**auto-désactivant** — il exécute la vraie suite (lint/migration/tests côté
-backend, lint/typage/tests/build côté frontend) quand du code y est
-exceptionnellement présent, et se contente de le constater sinon — avant de
-pouvoir enfin merger le revert (#123, #124).
-
-Autrement dit : la protection qui aurait dû empêcher le merge erroné a aussi,
-un temps, empêché sa propre correction. `main` porte désormais ce workflow en
-permanence, précisément pour que ce blocage ne se reproduise pas — mais la
-vraie garantie reste en amont, dans cette règle : **ne jamais ouvrir de PR de
-sprint contre `main`**. Avant tout `gh pr create`, vérifier explicitement la
-base :
-
-```bash
-gh pr create --base develop ...
-```
-
-### Point de départ obligatoire : `origin/develop`, jamais la `develop` locale
-
-```bash
-git fetch origin && git checkout -b feature/sprintN-module-description origin/develop
-```
-
-Et **non** `git checkout -b <branche> develop`.
-
-La différence n'est pas cosmétique. Une `develop` locale peut diverger
-**silencieusement** — travail exploratoire non poussé, autre outil, autre
-session ouverte sur le même dépôt — et rien ne le signale au moment de brancher.
-La nouvelle branche embarque alors ces commits, la PR les présente comme siens,
-et le mélange n'est attrapé qu'en aval, par la CI, sur des fichiers que l'auteur
-n'a jamais touchés.
-
-C'est arrivé : une PR de documentation d'une ligne s'est retrouvée à porter onze
-commits de refonte visuelle et à échouer sur `prettier --check`, pour du code
-qui n'était pas le sien. La CI a fait son travail — elle a arrêté le mélange
-avant `develop` — mais le diagnostic a coûté plus cher que la règle.
-
-Partir de `origin/develop` rend la divergence **impossible à embarquer par
-accident** : la branche naît exactement de ce que le dépôt distant contient, qui
-est aussi la base contre laquelle la PR sera comparée.
-
-Avant d'ouvrir une PR, vérifier ce qu'elle apporte réellement :
-
-```bash
-git log --oneline origin/develop..HEAD    # doit ne montrer que vos commits
-git diff --stat origin/develop..HEAD      # doit ne montrer que vos fichiers
-```
-
-### Jamais de commit direct sur `develop`, même pour de la documentation
-
-**Règle absolue** : créer une branche dédiée **en premier geste**, avant le premier
-commit, jamais après coup. S'applique même aux corrections mineures, aux ajustements
-de doc, aux changements qui semblent triviaux.
-
-La tentation est forte sur une correction « cinq minutes » — ajouter une règle au
-roadmap, fixer une typo dans le MLD, clarifier une note. Les pousser directement sur
-`develop` contourne le circuit branche → PR → CI → review, qui existe précisément pour
-attraper ces cas en aval.
-
-**Cet incident est arrivé** : trois commits de documentation (retrait d'une référence
-fantôme #58, clarification d'une dette, ajout d'une documentation de contrainte) ont
-été faits directement sur `develop` locale avant d'être découverts en avance de
-`origin/develop`. Aucun d'eux n'aurait échoué la CI, mais le contournement du circuit
-reste un risque structurel. Deux étapes, point final :
+Avant de pousser, vérifier ce qui part réellement :
 
 ```bash
 git fetch origin
-git checkout -b docs/mon-ajustement origin/develop    # AVANT tout commit
-# ... faire les commits localement ...
-git push -u origin docs/mon-ajustement
-# Ouvrir une PR depuis GitHub
+git log --oneline origin/main..HEAD    # doit ne montrer que vos commits
+git diff --stat origin/main..HEAD      # doit ne montrer que vos fichiers
 ```
 
-Si vous vous retrouvez avec des commits sur `develop` local : les extraire vers une
-vraie branche avec `git checkout -b`, `git push`, puis reset `develop` :
-
-```bash
-git checkout -b docs/extracted origin/develop  # avant le premier commit
-git push -u origin docs/extracted
-git checkout develop && git reset --hard origin/develop
-```
+Et ne jamais pousser par `--force` : la protection le refuse, et c'est voulu.
 
 ---
 
@@ -152,19 +60,13 @@ test(produit): ajoute les tests du repository
 
 ---
 
-## 3. Règles de Pull Request
+## 3. Pull Requests
 
-- **Une PR = une tâche de sprint = un module.** Pas de PR touchant plusieurs entités
-  métier à la fois (sauf Sprint 0).
-- Titre de PR = même convention que les commits.
-- Description obligatoire : *quoi*, *pourquoi*, *comment tester*.
-- Lien vers l'issue GitHub correspondante (voir §10).
-- **Revue obligatoire** : au moins 1 relecteur avant merge (2 si la PR touche une
-  dépendance partagée, ex. `BaseRepository`).
-- **CI verte obligatoire** avant merge — aucune exception.
-- Stratégie de merge : *squash and merge* vers `develop` (historique propre, un commit
-  = une PR).
-- Suppression de la branche après merge.
+Plus obligatoires depuis le passage à une seule branche (§1). Une PR vers
+`main` reste possible pour faire relire un changement risqué (migration,
+`BaseRepository`, authentification) : titre selon la convention des commits,
+description *quoi*, *pourquoi*, *comment tester*, et attendre la CI verte
+avant de fusionner.
 
 ---
 
@@ -182,7 +84,7 @@ test(produit): ajoute les tests du repository
 - [ ] Migration Alembic générée et testée si le schéma a changé
 - [ ] Lint backend (`ruff` + `black`) et frontend (`eslint` + `prettier`) sans erreur
 - [ ] Docstring / commentaire minimal sur les méthodes non triviales
-- [ ] PR revue, approuvée, CI verte, mergée
+- [ ] CI rejouée en local et verte avant le push, puis verte sur GitHub après
 
 ---
 
@@ -222,14 +124,17 @@ test(produit): ajoute les tests du repository
 
 ## 8. Intégration continue (GitHub Actions)
 
-Pipeline déclenché à chaque Pull Request vers `develop` :
+Pipeline déclenché à chaque push sur `main` (et sur une éventuelle PR vers
+`main`) :
 
 1. Installation des dépendances (backend + frontend)
 2. Lint backend (`ruff`, `black --check`) + lint frontend (`eslint`)
 3. Tests backend (`pytest`) + tests frontend (`vitest`)
 4. Build frontend (vérifie que le projet compile)
 
-**Le merge est bloqué si une seule étape échoue.**
+**Rien n'est plus bloqué** : un push arrive sur `main` même si la CI échoue
+ensuite. Un échec se corrige aussitôt par un nouveau commit, avant tout
+`git pull` sur le serveur — d'où l'obligation de rejouer la CI en local.
 
 ### Rejouer la CI en local avant de pousser
 
