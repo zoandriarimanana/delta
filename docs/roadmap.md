@@ -2171,6 +2171,12 @@ Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
       téléversée, arrêt complet puis redémarrage sans perte, sauvegarde et
       restauration de la base. Écart au plan : image du site en **Node 24**,
       le `package-lock.json` étant produit par npm 11 (npm 10 le refusait).
+      — **Caddy remplacé par Nginx** (27 octobre 2026, décision de
+      l'utilisateur) : le VPS visé sert déjà d'autres projets par son propre
+      Nginx, avec Certbot. Le conteneur `site` (Nginx) ne fait plus que
+      servir le site et relayer `/api` ; il est publié sur `127.0.0.1:8081`
+      seulement, et le Nginx du serveur tient le domaine et le HTTPS
+      (`nginx-serveur.conf.example`). `frontend/Caddyfile` retiré.
 - [ ] **R.2 — Réservation des salles par calendrier.** Créneaux occupés
       d'une salle exposés publiquement, **sans aucune donnée du client** ;
       calendrier mensuel sur la fiche (jours occupés grisés, choix du jour

@@ -6,24 +6,40 @@ Mise en ligne de Delta sur un serveur, avec Docker. Trois conteneurs :
 |---|---|
 | `db` | PostgreSQL 16 avec pgvector (l'assistant IA en a besoin) |
 | `backend` | API FastAPI ; applique les migrations à chaque démarrage |
-| `site` | Caddy : sert le site, relaie `/api` au backend, gère le HTTPS |
+| `site` | Nginx : sert le site et relaie `/api` au backend |
 
 Le site et l'API partagent **le même domaine** : `https://delta.mg/` pour le
-site, `https://delta.mg/api/v1/...` pour l'API. Seul `site` est joignable
-depuis Internet (ports 80 et 443) ; la base et le backend ne le sont pas.
+site, `https://delta.mg/api/v1/...` pour l'API.
 
-Fichiers : `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/Caddyfile`,
-`docker-compose.prod.yml` et `.env.production.example`, à la racine.
+**Le domaine et le HTTPS sont tenus par le Nginx du serveur**, comme pour les
+autres projets qu'il héberge, avec un certificat Certbot. Le conteneur `site`
+n'est publié que sur `127.0.0.1:8081` (`PORT_SITE`) : il ne prend ni le port
+80 ni le 443, et seul le Nginx du serveur lui parle. La base et le backend ne
+sont publiés nulle part.
+
+```
+Internet → Nginx du serveur (443, Certbot) → 127.0.0.1:8081 → site (Nginx)
+                                                              ├─ /      fichiers du site
+                                                              └─ /api/  → backend:8000
+```
+
+Fichiers : `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`,
+`docker-compose.prod.yml`, `.env.production.example` et
+`nginx-serveur.conf.example`, à la racine.
 `docker-compose.yml` reste la base de **développement** locale, sans rapport.
 
 ## 1. Préparer le serveur
 
 1. Un serveur Linux avec **Docker** et le plugin **Docker Compose** installés
-   (`docker compose version` doit répondre).
-2. Les ports **80** et **443** ouverts dans le pare-feu.
+   (`docker compose version` doit répondre), **Nginx** et **Certbot**
+   (`certbot --version`, avec son greffon Nginx).
+2. Les ports **80** et **443** ouverts dans le pare-feu (déjà le cas si
+   d'autres sites y tournent en HTTPS).
 3. Le **nom de domaine** pointé vers l'adresse IP du serveur
-   (enregistrement DNS de type A). Sans cela, Caddy ne peut pas obtenir le
+   (enregistrement DNS de type A). Sans cela, Certbot ne peut pas obtenir le
    certificat HTTPS.
+4. Le port **8081** libre en local (`ss -ltn | grep 8081` ne doit rien
+   afficher) ; sinon, choisir un autre `PORT_SITE`.
 
 ## 2. Installer
 
@@ -63,7 +79,28 @@ docker compose --env-file .env.production -f docker-compose.prod.yml ps
 docker compose --env-file .env.production -f docker-compose.prod.yml logs -f backend
 ```
 
-Le site répond ensuite sur `https://<DOMAINE>/`.
+Le site répond alors en local : `curl -I http://127.0.0.1:8081/` doit
+renvoyer `200`, et `curl http://127.0.0.1:8081/api/v1/assistant/disponibilite`
+du JSON.
+
+### Brancher le domaine sur le Nginx du serveur
+
+```bash
+sudo cp nginx-serveur.conf.example /etc/nginx/sites-available/delta
+sudo nano /etc/nginx/sites-available/delta    # remplacer delta.example.mg par le domaine
+sudo ln -s /etc/nginx/sites-available/delta /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d <DOMAINE>
+```
+
+Certbot ajoute le bloc HTTPS et la redirection http → https, et renouvelle
+le certificat tout seul. Si `PORT_SITE` n'est pas 8081, reporter la valeur
+dans `proxy_pass`.
+
+Le site répond ensuite sur `https://<DOMAINE>/`. **Le HTTPS est
+obligatoire** : en production, les cookies de session sont `Secure`, et un
+navigateur ne les renvoie pas en http — sans lui, personne ne peut se
+connecter.
 
 Pour raccourcir les commandes, on peut définir un alias :
 
@@ -108,8 +145,9 @@ delta up -d --build
 ```
 
 Les migrations de la base s'appliquent toutes seules au redémarrage du
-backend. Les données, les photos et les certificats sont dans des volumes
-Docker : une mise à jour ne les touche pas.
+backend. Les données et les photos sont dans des volumes
+Docker : une mise à jour ne les touche pas. Les certificats appartiennent au
+Nginx du serveur, hors de Docker.
 
 Les variables `VITE_*` sont figées dans le site à sa construction : les
 modifier dans `.env.production` demande `delta up -d --build`.

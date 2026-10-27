@@ -1,0 +1,35 @@
+# Nginx du SERVEUR (pas du conteneur) devant Delta — voir docs/deploiement.md.
+# À copier dans /etc/nginx/sites-available/delta, en remplaçant delta.example.mg
+# par le domaine (le même que DOMAINE dans .env.production), puis :
+#   sudo ln -s /etc/nginx/sites-available/delta /etc/nginx/sites-enabled/
+#   sudo nginx -t && sudo systemctl reload nginx
+#   sudo certbot --nginx -d delta.example.mg
+# Certbot ajoute lui-même le bloc HTTPS (443) et la redirection http → https.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name delta.example.mg;
+
+    # Photos téléversées : 5 Mio côté API, un peu de marge ici.
+    client_max_body_size 10M;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header X-Frame-Options DENY always;
+
+    location / {
+        # PORT_SITE de .env.production (8081 par défaut).
+        proxy_pass http://127.0.0.1:8081;
+
+        # Le flux de l'assistant IA (SSE) part au fil de l'eau.
+        proxy_http_version 1.1;
+        proxy_buffering off;
+        proxy_read_timeout 120s;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

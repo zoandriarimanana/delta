@@ -57,9 +57,9 @@ lui-même qui échoue bruyamment s'il manque, faute d'`env_file` trouvé.
 ## Production : Docker
 
 La mise en ligne passe par `docker-compose.prod.yml` (base pgvector,
-backend, Caddy) — procédure complète dans `docs/deploiement.md`. Deux choix
+backend, site sous Nginx) — procédure complète dans `docs/deploiement.md`. Deux choix
 d'architecture y sont portés : le site et l'API partagent **un seul
-domaine** (Caddy relaie `/api`), ce qui garde `SameSite=Lax` valable ; et le
+domaine** (le Nginx du conteneur `site` relaie `/api`, celui du serveur tient le HTTPS), ce qui garde `SameSite=Lax` valable ; et le
 backend tourne sur **un seul processus**, le limiteur de débit étant en
 mémoire. Les migrations s'appliquent au démarrage du conteneur backend.
 
