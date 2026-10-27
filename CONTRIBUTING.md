@@ -10,7 +10,7 @@ générique, découpage par module métier).
 
 | Branche | Rôle |
 |---|---|
-| `main` | Code de production. Toujours stable et déployable. Jamais de commit direct. |
+| `main` | Code de production. Toujours stable et déployable. Jamais de commit direct, **jamais cible d'une PR de sprint** — voir ci-dessous. |
 | `develop` | Branche d'intégration de tous les sprints en cours. |
 | `feature/<sprint>-<module>-<description>` | Une fonctionnalité, un module. |
 | `fix/<module>-<description>` | Correction de bug hors urgence. |
@@ -26,6 +26,109 @@ hotfix/livraison-statut-bloque
 
 Règle d'or : **une branche = un seul module métier**, sauf pour les tâches du Sprint 0
 (fondations transverses).
+
+### `main` ne reçoit du contenu que par une release explicite, jamais par une PR de sprint
+
+**Règle absolue** : une PR de sprint ordinaire — `feature/*`, `fix/*`, ou toute
+PR née d'une tâche du roadmap — cible **toujours** `develop`, jamais `main`.
+`main` est une branche de **release délibérée** : elle ne reçoit du contenu que
+par un processus de release explicite (à définir quand le projet en aura
+besoin), jamais comme effet de bord d'un travail de sprint courant.
+
+**Cet incident est arrivé** : une PR de Sprint 10 (#119) a été ouverte contre
+`main` au lieu de `develop` — `--base` omis en relançant `gh pr create` après un
+blocage, retombée sur la branche par défaut du dépôt plutôt que sur `develop`.
+`main` n'avait plus été touché depuis le commit initial de documentation :
+la PR y a donc posé l'intégralité de l'historique cumulé du projet en un seul
+squash, hors du flux `develop` habituel et sans aucune promotion délibérée.
+
+Le correctif s'est révélé plus coûteux que l'erreur elle-même. `develop` a pu
+recevoir le même contenu par un chemin correct sans difficulté (#120). Mais
+corriger `main` en le ramenant à son état antérieur s'est heurté à sa propre
+protection de branche : les checks CI qu'elle exige n'avaient jamais eu de
+raison d'exister sur `main` avant cet incident, donc aucun workflow ne pouvait
+les produire pour la PR de revert — blocage indéfini en « Waiting for status »
+(voir issue #122). Il a fallu doter `main` d'un workflow CI dédié, minimal et
+**auto-désactivant** — il exécute la vraie suite (lint/migration/tests côté
+backend, lint/typage/tests/build côté frontend) quand du code y est
+exceptionnellement présent, et se contente de le constater sinon — avant de
+pouvoir enfin merger le revert (#123, #124).
+
+Autrement dit : la protection qui aurait dû empêcher le merge erroné a aussi,
+un temps, empêché sa propre correction. `main` porte désormais ce workflow en
+permanence, précisément pour que ce blocage ne se reproduise pas — mais la
+vraie garantie reste en amont, dans cette règle : **ne jamais ouvrir de PR de
+sprint contre `main`**. Avant tout `gh pr create`, vérifier explicitement la
+base :
+
+```bash
+gh pr create --base develop ...
+```
+
+### Point de départ obligatoire : `origin/develop`, jamais la `develop` locale
+
+```bash
+git fetch origin && git checkout -b feature/sprintN-module-description origin/develop
+```
+
+Et **non** `git checkout -b <branche> develop`.
+
+La différence n'est pas cosmétique. Une `develop` locale peut diverger
+**silencieusement** — travail exploratoire non poussé, autre outil, autre
+session ouverte sur le même dépôt — et rien ne le signale au moment de brancher.
+La nouvelle branche embarque alors ces commits, la PR les présente comme siens,
+et le mélange n'est attrapé qu'en aval, par la CI, sur des fichiers que l'auteur
+n'a jamais touchés.
+
+C'est arrivé : une PR de documentation d'une ligne s'est retrouvée à porter onze
+commits de refonte visuelle et à échouer sur `prettier --check`, pour du code
+qui n'était pas le sien. La CI a fait son travail — elle a arrêté le mélange
+avant `develop` — mais le diagnostic a coûté plus cher que la règle.
+
+Partir de `origin/develop` rend la divergence **impossible à embarquer par
+accident** : la branche naît exactement de ce que le dépôt distant contient, qui
+est aussi la base contre laquelle la PR sera comparée.
+
+Avant d'ouvrir une PR, vérifier ce qu'elle apporte réellement :
+
+```bash
+git log --oneline origin/develop..HEAD    # doit ne montrer que vos commits
+git diff --stat origin/develop..HEAD      # doit ne montrer que vos fichiers
+```
+
+### Jamais de commit direct sur `develop`, même pour de la documentation
+
+**Règle absolue** : créer une branche dédiée **en premier geste**, avant le premier
+commit, jamais après coup. S'applique même aux corrections mineures, aux ajustements
+de doc, aux changements qui semblent triviaux.
+
+La tentation est forte sur une correction « cinq minutes » — ajouter une règle au
+roadmap, fixer une typo dans le MLD, clarifier une note. Les pousser directement sur
+`develop` contourne le circuit branche → PR → CI → review, qui existe précisément pour
+attraper ces cas en aval.
+
+**Cet incident est arrivé** : trois commits de documentation (retrait d'une référence
+fantôme #58, clarification d'une dette, ajout d'une documentation de contrainte) ont
+été faits directement sur `develop` locale avant d'être découverts en avance de
+`origin/develop`. Aucun d'eux n'aurait échoué la CI, mais le contournement du circuit
+reste un risque structurel. Deux étapes, point final :
+
+```bash
+git fetch origin
+git checkout -b docs/mon-ajustement origin/develop    # AVANT tout commit
+# ... faire les commits localement ...
+git push -u origin docs/mon-ajustement
+# Ouvrir une PR depuis GitHub
+```
+
+Si vous vous retrouvez avec des commits sur `develop` local : les extraire vers une
+vraie branche avec `git checkout -b`, `git push`, puis reset `develop` :
+
+```bash
+git checkout -b docs/extracted origin/develop  # avant le premier commit
+git push -u origin docs/extracted
+git checkout develop && git reset --hard origin/develop
+```
 
 ---
 
@@ -96,6 +199,11 @@ test(produit): ajoute les tests du repository
 - Formatter : `prettier`
 - Linter : `eslint` (règles strictes, `no-unused-vars`, `react-hooks/exhaustive-deps`)
 - `strict: true` dans `tsconfig.json`
+- `noUncheckedIndexedAccess: true` en plus de `strict: true` : un accès indexé
+  (`tableau[0]`, `objet[cle]`) est typé `T | undefined` et doit être traité.
+  C'est ce qui attrape les accès hors bornes et les clés absentes, que `strict`
+  seul laisse passer. Règle d'équipe, pas une option laissée au hasard d'un
+  fichier de config.
 - Un composant = un fichier. Page approchant ~500 lignes → extraction obligatoire
   d'un sous-composant dans le module concerné.
 
@@ -122,6 +230,56 @@ Pipeline déclenché à chaque Pull Request vers `develop` :
 4. Build frontend (vérifie que le projet compile)
 
 **Le merge est bloqué si une seule étape échoue.**
+
+### Rejouer la CI en local avant de pousser
+
+Les commandes ci-dessous sont **exactement** celles de
+`.github/workflows/ci.yml`. Les rejouer intégralement avant de pousser, sans en
+retirer un répertoire ni une étape.
+
+Backend, depuis `backend/` (préfixer par `.venv/bin/` selon l'installation) :
+
+```bash
+ruff check app tests alembic
+black --check app tests alembic
+alembic upgrade head        # sur une base VIERGE, pas celle de développement
+alembic check
+pytest -q
+```
+
+Frontend, depuis `frontend/` :
+
+```bash
+npm run lint
+npm run format:check
+npm run typecheck
+npm run test
+npm run build
+```
+
+**Les répertoires font partie de la commande.** `ruff check app tests` passe là
+où `ruff check app tests alembic` échoue : un fichier de migration mal trié
+n'est vu que par la seconde. C'est arrivé — la PR #69 a échoué sur un `I001`
+dans une migration après une vérification locale annoncée verte.
+
+Et comme le lint s'arrête au premier échec, **rien de ce qui suit ne tourne** :
+migration et tests restent inconnus. Vérifier un sous-ensemble puis conclure
+« c'est vert » est pire que ne rien vérifier, cela transforme une incertitude en
+fausse certitude.
+
+**`alembic upgrade head` se joue sur une base vierge**, comme en CI, et jamais
+sur la base de développement : celle-ci peut porter des données de seed qui font
+échouer des tests sans que le code soit en cause (voir #68). Devant un échec
+local, le reproduire sur une base neuve avant de conclure :
+
+```bash
+docker compose exec postgres psql -U delta_user -d postgres -c "CREATE DATABASE delta_ci_local OWNER delta_user;"
+DATABASE_URL="postgresql+psycopg2://delta_user:...@localhost:5433/delta_ci_local" alembic upgrade head
+DATABASE_URL="..." pytest -q
+```
+
+Ne pas composer ces commandes de mémoire : `.github/workflows/ci.yml` en est la
+seule source de vérité, et c'est lui qui décide du merge.
 
 ---
 

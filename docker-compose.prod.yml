@@ -1,0 +1,52 @@
+# Delta en production : base, backend, site (Nginx).
+# Le HTTPS et le domaine sont tenus par le Nginx du serveur, devant « site ».
+# Lancer depuis la racine du projet (voir docs/deploiement.md) :
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    env_file: .env.production
+    volumes:
+      - donnees_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      BACKEND_CORS_ORIGINS: https://${DOMAINE}
+      ENVIRONMENT: production
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - photos_catalogue:/app/static/upload
+      - photos_personnel:/app/stockage
+
+  site:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_FACEBOOK_URL: ${VITE_FACEBOOK_URL:-}
+        VITE_TELEPHONE_FORMATION: ${VITE_TELEPHONE_FORMATION:-}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    # Publié sur 127.0.0.1 seulement : le Nginx du serveur y relaie le
+    # domaine, personne n'y accède directement depuis Internet.
+    ports:
+      - "127.0.0.1:${PORT_SITE:-8081}:80"
+
+volumes:
+  donnees_postgres:
+  photos_catalogue:
+  photos_personnel:

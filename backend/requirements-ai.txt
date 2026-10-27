@@ -1,0 +1,37 @@
+# Dépendances de l'assistant IA générative (Sprint 12, docs/roadmap.md).
+#
+# Fichier dédié, hors du socle de pyproject.toml : le module reste
+# désactivable (AI_ENABLED=false) sans alourdir l'installation de base.
+# S'installe EN PLUS du socle :
+#
+#     pip install -e ".[dev]" -r requirements-ai.txt
+#
+# Aucune dépendance ML lourde (torch, sentence-transformers) : LLM (Groq) et
+# embeddings (Hugging Face Inference) sont des API distantes — cible Render,
+# dont l'instance doit rester légère. Vérifié par résolution à blanc
+# (`pip install --dry-run --report`) avant d'écrire ce fichier.
+#
+# Bornes majeures fermées : une mise à jour majeure de LangChain se décide,
+# elle ne doit pas arriver toute seule le jour d'un déploiement.
+
+# Runnables LCEL, prompts, documents, parseurs.
+langchain-core>=1.6,<2
+# Découpage du texte indexable en chunks.
+langchain-text-splitters>=1.1,<2
+# LLM : ChatGroq. Tire le SDK `groq`, utilisé aussi pour sonder la
+# disponibilité du fournisseur.
+langchain-groq>=1.1,<2
+# Embeddings via l'API d'inférence Hugging Face (HuggingFaceEndpointEmbeddings).
+langchain-huggingface>=1.2,<2
+# Embeddings Gemini (EMBEDDINGS_FOURNISSEUR=google), ajouté le 9 octobre 2026.
+langchain-google-genai>=4.4,<5
+# Vector store PGVector. Encore en 0.0.x : borne serrée, son schéma de
+# tables (langchain_pg_*) suit la version de la bibliothèque.
+langchain-postgres>=0.0.18,<0.1
+# Driver psycopg 3, exigé par langchain-postgres — cohabite avec
+# psycopg2-binary du socle, qu'utilisent SQLAlchemy et Alembic.
+psycopg[binary]>=3.2,<4
+# Extraction du texte des documents téléversés (12.9) : PDF et Word. Légères,
+# sans dépendance propre — vérifié par résolution à blanc.
+pypdf>=6.0,<7
+docx2txt>=0.9,<1

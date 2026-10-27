@@ -1,0 +1,111 @@
+"""Schemas Pydantic du parcours d'authentification.
+
+Ces charges utiles ne correspondent à aucune entité unique : l'inscription d'un
+particulier écrit à la fois dans `CLIENT` et dans `CLIENT_PARTICULIER`. Elles
+vivent donc ici plutôt que dans le schema d'une des deux entités.
+"""
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from app.core.security import LONGUEUR_MAX_MOT_DE_PASSE_OCTETS, TypeSujet
+from app.schemas.client_entreprise import ClientEntrepriseCreate
+from app.schemas.client_particulier import ClientParticulierCreate
+
+LONGUEUR_MIN_MOT_DE_PASSE = 8
+
+
+def _valider_longueur_mot_de_passe(mot_de_passe: str) -> str:
+    """Vérifie la longueur en octets, pas en caractères.
+
+    bcrypt refuse au-delà de 72 octets : 40 lettres accentuées suffisent à
+    dépasser la limite en UTF-8 alors que `max_length=72` côté Pydantic les
+    laisserait passer, l'erreur ne surgissant qu'au hachage.
+    """
+    if len(mot_de_passe.encode("utf-8")) > LONGUEUR_MAX_MOT_DE_PASSE_OCTETS:
+        raise ValueError(
+            f"Le mot de passe ne doit pas dépasser "
+            f"{LONGUEUR_MAX_MOT_DE_PASSE_OCTETS} octets en UTF-8."
+        )
+    return mot_de_passe
+
+
+class InscriptionParticulier(BaseModel):
+    """Charge utile d'inscription d'un client particulier."""
+
+    email: EmailStr
+    mot_de_passe: str = Field(min_length=LONGUEUR_MIN_MOT_DE_PASSE)
+    telephone: str | None = Field(default=None, max_length=30)
+    adresse: str | None = Field(default=None, max_length=255)
+    identite: ClientParticulierCreate
+
+    @field_validator("mot_de_passe")
+    @classmethod
+    def _mot_de_passe_pas_trop_long(cls, valeur: str) -> str:
+        return _valider_longueur_mot_de_passe(valeur)
+
+
+class InscriptionEntreprise(BaseModel):
+    """Charge utile d'inscription d'un client entreprise.
+
+    Mêmes champs de compte que le particulier — l'e-mail et le mot de passe
+    vivent sur CLIENT, communs aux deux sous-types. Seule `identite` change.
+    """
+
+    email: EmailStr
+    mot_de_passe: str = Field(min_length=LONGUEUR_MIN_MOT_DE_PASSE)
+    telephone: str | None = Field(default=None, max_length=30)
+    adresse: str | None = Field(default=None, max_length=255)
+    identite: ClientEntrepriseCreate
+
+    @field_validator("mot_de_passe")
+    @classmethod
+    def _mot_de_passe_pas_trop_long(cls, valeur: str) -> str:
+        return _valider_longueur_mot_de_passe(valeur)
+
+
+class Connexion(BaseModel):
+    """Identifiants de connexion. L'e-mail sert d'identifiant."""
+
+    email: EmailStr
+    mot_de_passe: str
+
+
+class VerificationEmail(BaseModel):
+    """Saisie du code reçu par e-mail (14 octobre 2026)."""
+
+    email: EmailStr
+    code: str = Field(pattern=r"^\d{6}$")
+
+
+class RenvoiCode(BaseModel):
+    """Demande d'un nouveau code de vérification."""
+
+    email: EmailStr
+
+
+class SessionActive(BaseModel):
+    """Réponse d'une connexion réussie, et de `GET /auth/moi`.
+
+    Depuis T0.10, le jeton ne transite plus dans le corps de la réponse : il
+    est posé par le serveur en cookie `httpOnly`, invisible en JS. Ce schema
+    ne porte donc plus que ce que le frontend a réellement besoin de savoir —
+    quelle population vient de s'ouvrir une session, et depuis le chantier
+    sidebar, si elle porte le droit d'administration.
+
+    Volontairement le **même** schema pour la connexion et pour `/auth/moi` :
+    les deux répondent à la même question, et deux schemas distincts
+    auraient pu diverger l'un de l'autre sans que rien ne le signale.
+    """
+
+    type: TypeSujet
+    #: `None` pour un `CLIENT` — la notion n'existe pas pour cette population.
+    #: `True`/`False` pour un `PERSONNEL`.
+    #:
+    #: **Champ d'affichage uniquement, jamais une garde.** Il sert à décider
+    #: quels liens montrer dans l'interface (cf. la sidebar `personnel/*`) ;
+    #: il ne protège rien. La garantie reste, comme partout ailleurs,
+    #: `get_current_personnel_administrateur` côté serveur — un client qui
+    #: modifierait cette valeur dans sa requête (elle n'en fait d'ailleurs
+    #: partie sur aucun endpoint d'écriture) n'obtiendrait toujours qu'un 403
+    #: à la première tentative d'écriture réservée aux administrateurs.
+    est_administrateur: bool | None = None
