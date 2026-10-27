@@ -1,0 +1,100 @@
+/**
+ * Règles d'affichage du suivi — fonctions pures, sans appel ni rendu.
+ *
+ * Les valeurs de `StatutLivraison` sont des identifiants techniques
+ * (`En_attente`, `Echouee`) : lisibles dans une base, illisibles pour un client.
+ * Les traduire est une règle métier, pas de la mise en forme — d'où sa place
+ * ici et non dans le composant.
+ */
+
+import { textesCourants } from '@/lib/langue';
+
+import { TEXTES_LIVRAISON } from './livraison.textes';
+import type { StatutLivraison, TarifLivraison } from './livraison.types';
+
+/** Ce qu'un statut dit au client, et ce qu'il lui demande. */
+export interface LibelleStatut {
+  /** Titre court, affiché en tête. */
+  titre: string;
+  /** Une phrase qui répond à « et maintenant ? ». */
+  explication: string;
+  /**
+   * Vrai quand le client n'a **rien** à faire et que quelqu'un s'en occupe.
+   * Sert à choisir un ton rassurant plutôt qu'une alerte.
+   */
+  priseEnCharge: boolean;
+}
+
+/** Seuls `Annulee` et un statut inconnu ne sont pas pris en charge. */
+const PRIS_EN_CHARGE: Record<StatutLivraison, boolean> = {
+  En_attente: true,
+  En_cours: true,
+  Livree: true,
+  // Le seul statut qui pourrait inquiéter, et le seul où le client risque de
+  // croire qu'il doit agir. Il ne le doit pas : la suite — nouvelle tentative,
+  // remboursement, annulation — est traitée par l'équipe, et l'explication le
+  // dit explicitement.
+  Echouee: true,
+  Annulee: false,
+};
+
+/**
+ * Traduit un statut en libellé lisible.
+ *
+ * Un statut inconnu — API en avance sur le frontend — retombe sur un libellé
+ * neutre plutôt que sur une page vide ou un identifiant technique brut. Le
+ * `Record` typé rend le cas impossible tant que les deux restent synchronisés ;
+ * la garde couvre le déploiement décalé.
+ */
+export function libelleStatut(statut: StatutLivraison): LibelleStatut {
+  const t = textesCourants(TEXTES_LIVRAISON);
+  const libelle = t.statuts[statut];
+  return libelle === undefined
+    ? { ...t.inconnu, priseEnCharge: false }
+    : { ...libelle, priseEnCharge: PRIS_EN_CHARGE[statut] };
+}
+
+/** Ordre d'avancement, pour situer le statut courant dans le parcours. */
+export const ETAPES: readonly StatutLivraison[] = [
+  'En_attente',
+  'En_cours',
+  'Livree',
+] as const;
+
+/**
+ * Indique si le statut fait partie du parcours nominal.
+ *
+ * `Echouee` et `Annulee` en sortent : les afficher comme une étape parmi
+ * d'autres suggérerait que le parcours continue, alors qu'il s'est arrêté.
+ */
+export function estParcoursNominal(statut: StatutLivraison): boolean {
+  return ETAPES.includes(statut);
+}
+
+/**
+ * Frais de livraison pour un montant de produits — **indicatifs**.
+ *
+ * Même règle que `TarifLivraisonService.calculer_frais`, et c'est le serveur
+ * qui fait foi : le montant enregistré est calculé et figé à la commande.
+ * Le seuil se compare aux **produits seuls**, jamais à un total contenant
+ * déjà les frais.
+ */
+export function fraisLivraison(tarif: TarifLivraison, sousTotal: number): number {
+  const seuil = tarif.seuil_gratuite === null ? null : Number(tarif.seuil_gratuite);
+  if (seuil !== null && sousTotal >= seuil) {
+    return 0;
+  }
+  return Number(tarif.forfait);
+}
+
+/** Ce qu'il reste à acheter pour que la livraison soit offerte, ou `null`. */
+export function resteAvantGratuite(
+  tarif: TarifLivraison,
+  sousTotal: number
+): number | null {
+  if (tarif.seuil_gratuite === null) {
+    return null;
+  }
+  const reste = Number(tarif.seuil_gratuite) - sousTotal;
+  return reste > 0 ? reste : null;
+}

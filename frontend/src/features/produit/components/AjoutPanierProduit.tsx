@@ -1,0 +1,212 @@
+/**
+ * Bloc d'achat de la fiche produit : quantité, ajout au panier, confirmation.
+ *
+ * Extrait de `ProduitDetailPage` pour que la page reste une mise en page : la
+ * saisie et son état local vivent ici.
+ *
+ * La quantité est bornée au stock **à l'affichage seulement** — c'est
+ * `ajouterAuPanier` qui garantit la borne, et le serveur qui tranche à la
+ * commande. Le panier reste un brouillon, pas une réservation de stock.
+ */
+
+import { useState } from 'react';
+import { Link } from 'react-router';
+import { Check, Minus, Plus, ShoppingCart, Sparkles } from 'lucide-react';
+
+import { usePanier } from '@/features/commande/commande.hooks';
+import {
+  descriptionDemande,
+  PERSONNALISATION_VIDE,
+  PERSONNES_MAX,
+} from '@/features/commande/commande.service';
+import type { PersonnalisationPanier } from '@/features/commande/commande.types';
+import ChampsPersonnalisation from '@/features/commande/components/ChampsPersonnalisation';
+import { useFormaterPrix } from '@/features/devise/devise.hooks';
+import { urlPhoto } from '@/features/galerie/galerie.api';
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_PRODUIT } from '../produit.textes';
+import { quantiteMinimale } from '../produit.service';
+import type { Produit } from '../produit.types';
+import ComparaisonLivraison from './ComparaisonLivraison';
+
+interface Proprietes {
+  produit: Produit;
+  /** Photo affichée dans la galerie : c'est elle que le client commande
+   * (14 octobre 2026). `null` si le produit n'a pas de photo. */
+  photo?: string | null;
+}
+
+const CLASSES_PAS =
+  'flex h-11 w-11 items-center justify-center text-gris-600 transition-colors hover:bg-gris-100 disabled:cursor-not-allowed disabled:opacity-40';
+
+export default function AjoutPanierProduit({ produit, photo = null }: Proprietes) {
+  const t = useTextes(TEXTES_PRODUIT);
+  const prix = useFormaterPrix();
+  const panier = usePanier();
+  const minimum = quantiteMinimale(produit);
+  const [quantite, setQuantite] = useState(minimum);
+  const [ajoute, setAjoute] = useState(false);
+  const [personnaliser, setPersonnaliser] = useState(false);
+  const [personnalisation, setPersonnalisation] =
+    useState<PersonnalisationPanier>(PERSONNALISATION_VIDE);
+  const [erreurPersonnalisation, setErreurPersonnalisation] = useState(false);
+  const supplement =
+    personnaliser && produit.supplement_personnalisation !== null
+      ? Number(produit.supplement_personnalisation)
+      : 0;
+  // À la personne, la quantité compte des personnes : elle n'est pas bornée au
+  // stock, qui compte des gâteaux entiers (une commande en consomme un).
+  const maximum = produit.vendu_par_personne ? PERSONNES_MAX : produit.stock_disponible;
+  const parPersonne = produit.vendu_par_personne;
+
+  function changer(valeur: number) {
+    setQuantite(Math.min(Math.max(valeur, minimum), maximum));
+    // Une nouvelle quantité appelle un nouvel ajout : la confirmation
+    // précédente ne doit pas laisser croire qu'il a déjà eu lieu.
+    setAjoute(false);
+  }
+
+  return (
+    <div className="space-y-3">
+      {produit.est_personnalisable && (
+        <div className="rounded-xl border border-gris-200 bg-surface">
+          <label className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
+            <span className="flex items-center gap-2 text-sm font-semibold text-gris-700">
+              <Sparkles size={18} aria-hidden className="text-attente" />
+              {t.personnaliserProduit}
+              {produit.supplement_personnalisation !== null && (
+                <span className="font-normal text-gris-500">
+                  (+{prix(produit.supplement_personnalisation)} /{' '}
+                  {parPersonne ? t.personne : t.unite})
+                </span>
+              )}
+            </span>
+            <input
+              type="checkbox"
+              checked={personnaliser}
+              onChange={(e) => {
+                setPersonnaliser(e.target.checked);
+                setErreurPersonnalisation(false);
+                setAjoute(false);
+              }}
+              className="h-5 w-5 accent-primaire"
+            />
+          </label>
+          {personnaliser && (
+            <div className="border-t border-gris-200 px-4 py-4">
+              <p className="mb-3 text-xs text-gris-500">{t.decrireDemande}</p>
+              <ChampsPersonnalisation
+                valeurs={personnalisation}
+                idCategorie={produit.id_categorie}
+                surChangement={(valeurs) => {
+                  setPersonnalisation(valeurs);
+                  setErreurPersonnalisation(false);
+                  setAjoute(false);
+                }}
+              />
+              {erreurPersonnalisation && (
+                <p role="alert" className="mt-3 text-sm text-danger">
+                  {t.personnalisationVide}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      <ComparaisonLivraison
+        produit={produit}
+        quantite={quantite}
+        supplementUnitaire={supplement}
+      />
+
+      {photo !== null && (
+        <div className="flex items-center gap-3 rounded-xl border border-primaire/30 bg-primaire/5 p-3">
+          <img
+            src={urlPhoto({ produit: produit.id_produit }, photo)}
+            alt={t.photoChoisie}
+            className="h-14 w-14 shrink-0 rounded-lg object-cover"
+          />
+          <p className="text-sm text-gris-700">
+            <span className="font-semibold">{t.photoChoisie}</span>
+            <span className="block text-xs text-gris-500">{t.photoChoisieAide}</span>
+          </p>
+        </div>
+      )}
+
+      {parPersonne && (
+        <p className="text-sm font-medium text-gris-700">
+          {t.nombrePersonnes}{' '}
+          <span className="font-normal text-gris-500">{t.aPartirDe(minimum)}</span>
+        </p>
+      )}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div
+          role="group"
+          aria-label={parPersonne ? t.nombrePersonnes : t.quantite}
+          className="flex w-fit items-center overflow-hidden rounded-full border border-gris-300 bg-surface"
+        >
+          <button
+            type="button"
+            onClick={() => changer(quantite - 1)}
+            disabled={quantite <= minimum}
+            aria-label={parPersonne ? t.retirerPersonne : t.diminuer}
+            className={CLASSES_PAS}
+          >
+            <Minus size={16} aria-hidden />
+          </button>
+          <span
+            aria-live="polite"
+            className="min-w-10 text-center font-semibold text-gris-700"
+          >
+            {quantite}
+          </span>
+          <button
+            type="button"
+            onClick={() => changer(quantite + 1)}
+            disabled={quantite >= maximum}
+            aria-label={parPersonne ? t.ajouterPersonne : t.augmenter}
+            className={CLASSES_PAS}
+          >
+            <Plus size={16} aria-hidden />
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (personnaliser) {
+              // Une personnalisation vide n'apprendrait rien à l'équipe, et le
+              // serveur la refuserait : on le dit avant l'ajout.
+              if (descriptionDemande(personnalisation) === '') {
+                setErreurPersonnalisation(true);
+                return;
+              }
+              panier.ajouter(produit, quantite, personnalisation, photo ?? undefined);
+            } else {
+              panier.ajouter(produit, quantite, undefined, photo ?? undefined);
+            }
+            setAjoute(true);
+          }}
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-action-fonce hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaire active:translate-y-0"
+        >
+          <ShoppingCart size={20} aria-hidden />
+          {t.ajouterAuPanier}
+        </button>
+      </div>
+
+      {ajoute && (
+        <p
+          role="status"
+          className="flex flex-wrap items-center gap-2 rounded-lg bg-succes/15 px-4 py-2 text-sm text-succes"
+        >
+          <Check size={16} aria-hidden />
+          {t.ajoute}
+          <Link to="/panier" className="font-semibold underline">
+            {t.voirPanier}
+          </Link>
+        </p>
+      )}
+    </div>
+  );
+}

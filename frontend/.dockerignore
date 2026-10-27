@@ -1,0 +1,7 @@
+# Jamais dans l'image : dépendances locales, construction locale, secrets.
+node_modules
+dist
+.env
+.env.*
+!.env.example
+coverage

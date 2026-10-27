@@ -1,0 +1,141 @@
+"""Endpoints d'authentification : inscription et connexion.
+
+Aucune traduction d'erreur ici : les erreurs métier levées par `AuthService`
+remontent telles quelles et sont converties en réponses HTTP par les
+gestionnaires globaux de `app/main.py`.
+"""
+
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Request, Response, status
+from sqlalchemy.orm import Session
+
+from app.core.cookies import poser_cookies_session
+from app.core.database import get_db
+from app.core.rate_limit import (
+    LIMITE_CONNEXION,
+    LIMITE_ENVOI_CODE,
+    LIMITE_INSCRIPTION,
+    limiter,
+)
+from app.core.security import TypeSujet, creer_jeton_acces
+from app.schemas.auth import (
+    Connexion,
+    InscriptionEntreprise,
+    InscriptionParticulier,
+    RenvoiCode,
+    SessionActive,
+    VerificationEmail,
+)
+from app.schemas.client import ClientRead
+from app.services.auth_service import AuthService
+from app.services.verification_email_service import VerificationEmailService
+
+router = APIRouter(prefix="/auth", tags=["authentification"])
+
+# Style `Annotated` plutôt que `db: Session = Depends(get_db)` : la dépendance
+# cesse d'être une valeur par défaut mutable (que `ruff` signale à juste titre
+# en B008) et l'annotation devient réutilisable. À déplacer dans un module de
+# dépendances partagé quand un deuxième router apparaîtra.
+SessionBase = Annotated[Session, Depends(get_db)]
+
+
+@router.post(
+    "/inscription",
+    response_model=ClientRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Inscrire un client particulier",
+)
+@limiter.limit(LIMITE_INSCRIPTION)
+def inscrire(
+    request: Request, donnees: InscriptionParticulier, db: SessionBase
+) -> ClientRead:
+    """Crée un compte particulier.
+
+    Répond 409 si l'e-mail est déjà pris (`EmailDejaUtilise`, traduite
+    globalement). Ne renvoie pas de jeton : le client enchaîne sur
+    `/auth/connexion`, ce qui garde un seul chemin d'émission de jeton à
+    auditer.
+    """
+    client = AuthService(db).inscrire_particulier(donnees)
+    # Le compte naît non vérifié : un code part par e-mail (14 octobre 2026).
+    VerificationEmailService(db).exiger_verification(client)
+    return ClientRead.model_validate(client)
+
+
+@router.post(
+    "/inscription-entreprise",
+    response_model=ClientRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Inscrire un client entreprise",
+)
+@limiter.limit(LIMITE_INSCRIPTION)
+def inscrire_entreprise(
+    request: Request, donnees: InscriptionEntreprise, db: SessionBase
+) -> ClientRead:
+    """Crée un compte entreprise.
+
+    Répond 409 si l'e-mail **ou** le numéro d'identification fiscale est déjà
+    pris, avec un message distinct dans chaque cas. Ne renvoie pas de jeton :
+    même choix que pour le particulier, un seul chemin d'émission à auditer.
+    """
+    client = AuthService(db).inscrire_entreprise(donnees)
+    VerificationEmailService(db).exiger_verification(client)
+    return ClientRead.model_validate(client)
+
+
+@router.post(
+    "/connexion", response_model=SessionActive, summary="Ouvrir une session client"
+)
+@limiter.limit(LIMITE_CONNEXION)
+def se_connecter(
+    request: Request, identifiants: Connexion, db: SessionBase, response: Response
+) -> SessionActive:
+    """Vérifie les identifiants et ouvre une session.
+
+    Répond 401 sans préciser si c'est l'e-mail ou le mot de passe qui est en
+    cause (`AuthentificationInvalide`, traduite globalement). Au-delà de
+    `LIMITE_CONNEXION` tentatives par adresse IP, répond 429 (dette technique
+    T0.6) — le hachage bcrypt ralentit une attaque par force brute sans
+    l'empêcher, et rien ne freinait jusqu'ici le bourrage d'identifiants.
+
+    **Depuis T0.10, le jeton ne transite plus dans le corps de la réponse** :
+    il est posé en cookie `httpOnly` par `poser_cookies_session`, avec son
+    cookie CSRF associé. Le corps ne porte plus que la population ouverte —
+    le frontend le sait déjà (c'est l'endpoint qu'il vient d'appeler), ce
+    champ ne fait que confirmer.
+
+    `request: Request` est exigé par `@limiter.limit` pour identifier
+    l'appelant, pas par la logique métier de cet endpoint.
+    """
+    client = AuthService(db).authentifier(identifiants)
+    jeton = creer_jeton_acces(client.id_client, TypeSujet.CLIENT)
+    poser_cookies_session(response, jeton.jeton, jeton.csrf)
+    return SessionActive(type=TypeSujet.CLIENT)
+
+
+@router.post(
+    "/verification",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Confirmer son adresse e-mail avec le code reçu",
+)
+@limiter.limit(LIMITE_CONNEXION)
+def verifier_email(
+    request: Request, donnees: VerificationEmail, db: SessionBase
+) -> None:
+    """Active le compte. **422** si le code est faux, expiré, épuisé — ou si
+    l'adresse n'a pas de compte : même message, aucune énumération. Débit
+    limité comme la connexion : six chiffres se devinent sinon."""
+    VerificationEmailService(db).verifier(donnees.email, donnees.code)
+
+
+@router.post(
+    "/verification/renvoi",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Recevoir un nouveau code de vérification",
+)
+@limiter.limit(LIMITE_ENVOI_CODE)
+def renvoyer_code(request: Request, donnees: RenvoiCode, db: SessionBase) -> None:
+    """Toujours 202, que l'adresse ait un compte non vérifié ou non : la
+    réponse ne renseigne sur aucun compte."""
+    VerificationEmailService(db).renvoyer(donnees.email)

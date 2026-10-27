@@ -1,0 +1,197 @@
+/**
+ * Tests de la page liste d'administration des commandes.
+ *
+ * Deux points portent l'essentiel : le filtre par statut, côté client
+ * (`GET /commandes/administration` ne porte aucun paramètre de filtre) —
+ * et la présence des liens vers les écrans « Abonnements »/« Réservations »
+ * déjà livrés, plutôt qu'une page agrégée.
+ */
+
+import { cleanup, render, screen, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  archiverCommandeAdministration,
+  recupererCommandesAdministration,
+  restaurerCommandeAdministration,
+} from '../commande.api';
+import type { Commande } from '../commande.types';
+import AdministrationCommandesPage from './AdministrationCommandesPage';
+
+vi.mock('../commande.api');
+
+function commande(surcharge: Partial<Commande> = {}): Commande {
+  return {
+    id_commande: 7,
+    date_commande: '2026-07-29T09:30:00+00:00',
+    reference_publique: null,
+    type_commande: 'En_ligne',
+    statut: 'En_attente',
+    montant_total: '7000.00',
+    frais_livraison: '0.00',
+    id_client: 3,
+    nom_invite: null,
+    contact_invite: null,
+    lignes: [],
+    rembourse_le: null,
+    ...surcharge,
+  };
+}
+
+const EN_ATTENTE = commande({ id_commande: 1, statut: 'En_attente' });
+const ANNULEE = commande({ id_commande: 2, statut: 'Annulee' });
+
+function afficher() {
+  return render(
+    <MemoryRouter>
+      <AdministrationCommandesPage />
+    </MemoryRouter>
+  );
+}
+
+afterEach(() => {
+  cleanup();
+  vi.resetAllMocks();
+});
+
+it('affiche toutes les commandes une fois chargées', async () => {
+  vi.mocked(recupererCommandesAdministration).mockResolvedValue([EN_ATTENTE, ANNULEE]);
+
+  afficher();
+
+  const tableau = await screen.findByRole('table');
+  expect(within(tableau).getByText('Commande n° 1')).toBeTruthy();
+  expect(within(tableau).getByText('Commande n° 2')).toBeTruthy();
+});
+
+it('filtre par statut, côté client', async () => {
+  vi.mocked(recupererCommandesAdministration).mockResolvedValue([EN_ATTENTE, ANNULEE]);
+  afficher();
+  const tableau = await screen.findByRole('table');
+  expect(within(tableau).getByText('Commande n° 2')).toBeTruthy();
+
+  await userEvent.selectOptions(screen.getByLabelText(/^statut$/i), 'Annulee');
+
+  expect(within(tableau).queryByText('Commande n° 1')).toBeNull();
+  expect(within(tableau).getByText('Commande n° 2')).toBeTruthy();
+});
+
+describe('liens vers les écrans existants', () => {
+  it('propose des liens vers Abonnements et Réservations, pas une page agrégée', async () => {
+    vi.mocked(recupererCommandesAdministration).mockResolvedValue([]);
+    afficher();
+    await screen.findByText(/aucune commande/i);
+
+    const lienAbonnements = screen.getByRole('link', { name: /abonnements/i });
+    const lienReservations = screen.getByRole('link', { name: /réservations/i });
+
+    expect(lienAbonnements.getAttribute('href')).toBe('/personnel/abonnements');
+    expect(lienReservations.getAttribute('href')).toBe('/personnel/reservations');
+  });
+});
+
+describe('lecture enrichie', () => {
+  it('nomme l’invité et son contact', async () => {
+    vi.mocked(recupererCommandesAdministration).mockResolvedValue([
+      commande({
+        id_commande: 9,
+        id_client: null,
+        nom_invite: 'Rasoa Hery',
+        contact_invite: '034 12 345 67',
+      }),
+    ]);
+    afficher();
+
+    const tableau = await screen.findByRole('table');
+    expect(within(tableau).getByText(/Rasoa Hery/)).toBeTruthy();
+    expect(within(tableau).getByText(/034 12 345 67/)).toBeTruthy();
+  });
+
+  it('compte par étape et filtre au clic', async () => {
+    vi.mocked(recupererCommandesAdministration).mockResolvedValue([
+      EN_ATTENTE,
+      ANNULEE,
+    ]);
+    afficher();
+    const tableau = await screen.findByRole('table');
+
+    await userEvent.click(screen.getByRole('button', { name: /1\s*Annulées/ }));
+
+    expect(within(tableau).queryByText('Commande n° 1')).toBeNull();
+    expect(within(tableau).getByText('Commande n° 2')).toBeTruthy();
+  });
+
+  it('recherche dans les produits', async () => {
+    vi.mocked(recupererCommandesAdministration).mockResolvedValue([
+      commande({
+        id_commande: 1,
+        lignes: [
+          {
+            id_ligne: 1,
+            id_produit: 4,
+            nom_produit: 'Éclair au chocolat',
+            quantite: 2,
+            prix_unitaire_applique: '3.50',
+          },
+        ],
+      }),
+      ANNULEE,
+    ]);
+    afficher();
+    const tableau = await screen.findByRole('table');
+
+    await userEvent.type(screen.getByRole('searchbox'), 'éclair');
+
+    expect(within(tableau).getByText('Commande n° 1')).toBeTruthy();
+    expect(within(tableau).queryByText('Commande n° 2')).toBeNull();
+  });
+});
+
+describe('supprimer une commande (13 octobre 2026)', () => {
+  it('ne propose la corbeille que sur une commande terminée ou annulée', async () => {
+    vi.mocked(recupererCommandesAdministration).mockResolvedValue([
+      EN_ATTENTE,
+      ANNULEE,
+    ]);
+    afficher();
+
+    expect(
+      await screen.findByRole('button', { name: 'Supprimer la commande n° 2' })
+    ).toBeDefined();
+    expect(
+      screen.queryByRole('button', { name: 'Supprimer la commande n° 1' })
+    ).toBeNull();
+  });
+
+  it('demande confirmation, archive, puis recharge la liste', async () => {
+    vi.mocked(recupererCommandesAdministration).mockResolvedValue([ANNULEE]);
+    vi.mocked(archiverCommandeAdministration).mockResolvedValue();
+    afficher();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Supprimer la commande n° 2' })
+    );
+    expect(archiverCommandeAdministration).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Oui' }));
+
+    expect(archiverCommandeAdministration).toHaveBeenCalledWith(2);
+    expect(recupererCommandesAdministration).toHaveBeenCalledTimes(2);
+  });
+
+  it('affiche les archives à la demande, restaurables', async () => {
+    const archivee = { ...ANNULEE, supprime_le: '2026-10-13T10:00:00Z' };
+    vi.mocked(recupererCommandesAdministration).mockImplementation(async (avec) =>
+      avec ? [archivee] : []
+    );
+    vi.mocked(restaurerCommandeAdministration).mockResolvedValue(ANNULEE);
+    afficher();
+
+    await userEvent.click(await screen.findByLabelText('Afficher les archives'));
+    await userEvent.click(await screen.findByRole('button', { name: /Restaurer/ }));
+
+    expect(recupererCommandesAdministration).toHaveBeenCalledWith(true);
+    expect(restaurerCommandeAdministration).toHaveBeenCalledWith(2);
+  });
+});

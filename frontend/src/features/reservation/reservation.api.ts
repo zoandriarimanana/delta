@@ -1,0 +1,116 @@
+/** Appels HTTP du module réservation — et rien d'autre. */
+
+import { axiosClient } from '@/lib/axiosClient';
+
+import type { Reservation, ReservationEnvoyee } from './reservation.types';
+
+const CHEMIN_ADMINISTRATION = '/reservations/administration';
+
+/**
+ * Réserve des places sur une session.
+ *
+ * Le jeton est ajouté par l'intercepteur ; sans lui l'API répond 401. Elle ne
+ * bascule pas en mode invité — réserver exige un compte, contrairement à
+ * commander (cf. `docs/mld.md`).
+ */
+export async function creerReservation(
+  donnees: ReservationEnvoyee
+): Promise<Reservation> {
+  const reponse = await axiosClient.post<Reservation>('/reservations', donnees);
+  return reponse.data;
+}
+
+/** Réservations du client connecté, les plus récentes d'abord. */
+export async function recupererReservations(): Promise<Reservation[]> {
+  const reponse = await axiosClient.get<Reservation[]>('/reservations');
+  return reponse.data;
+}
+
+/**
+ * Toutes les réservations, les 4 types confondus. Réservé à l'administration.
+ *
+ * Ne porte aucun paramètre de filtre côté serveur — `GET
+ * /reservations/administration` n'en expose pas (Sprint 10.2). Le filtre par
+ * type/statut de `AdministrationReservationsPage` s'applique donc côté
+ * client, sur la liste complète.
+ */
+export async function recupererReservationsAdministration(
+  inclureArchives = false
+): Promise<Reservation[]> {
+  const reponse = await axiosClient.get<Reservation[]>(CHEMIN_ADMINISTRATION, {
+    params: inclureArchives ? { inclure_archives: true } : undefined,
+  });
+  return reponse.data;
+}
+
+/**
+ * Supprime une réservation honorée ou annulée — un **archivage**, jamais une
+ * suppression réelle : elle reste en base, restaurable (14 octobre 2026).
+ */
+export async function archiverReservationAdministration(
+  idReservation: number
+): Promise<void> {
+  await axiosClient.delete(`${CHEMIN_ADMINISTRATION}/${idReservation}`);
+}
+
+/** Remet une réservation archivée dans la liste. */
+export async function restaurerReservationAdministration(
+  idReservation: number
+): Promise<Reservation> {
+  const reponse = await axiosClient.post<Reservation>(
+    `${CHEMIN_ADMINISTRATION}/${idReservation}/restauration`
+  );
+  return reponse.data;
+}
+
+/** Une réservation par son identifiant. Réservé à l'administration. */
+export async function recupererReservationAdministration(
+  idReservation: number
+): Promise<Reservation> {
+  const reponse = await axiosClient.get<Reservation>(
+    `${CHEMIN_ADMINISTRATION}/${idReservation}`
+  );
+  return reponse.data;
+}
+
+/**
+ * Marque une réservation `Honoree` ou `Annulee` — réservé à l'administration.
+ *
+ * C'est le **seul** point d'accès à `Honoree` : le client, lui, ne peut
+ * demander que `Annulee` sur sa propre réservation (cf. `docs/mld.md`,
+ * Sprint 10.2 — un client pouvait auparavant se déclarer lui-même « servi »
+ * sans prestation réelle).
+ */
+export async function changerStatutAdministration(
+  idReservation: number,
+  statut: 'Confirmee' | 'Honoree' | 'Annulee'
+): Promise<Reservation> {
+  const reponse = await axiosClient.put<Reservation>(
+    `${CHEMIN_ADMINISTRATION}/${idReservation}/statut`,
+    { statut }
+  );
+  return reponse.data;
+}
+
+/**
+ * Annule une de ses propres réservations — seule transition ouverte au client
+ * (`ReservationAnnulation.statut: Literal[Annulee]` côté serveur). Annuler une
+ * formation rend la place et annule l'hébergement lié, dans la même
+ * transaction (cf. `docs/mld.md`).
+ */
+export async function annulerReservation(idReservation: number): Promise<Reservation> {
+  const reponse = await axiosClient.put<Reservation>(
+    `/reservations/${idReservation}/statut`,
+    {
+      statut: 'Annulee',
+    }
+  );
+  return reponse.data;
+}
+
+/** Une réservation du client connecté (`GET /reservations/{id}`) — sert à
+ * voir arriver la confirmation d'un acompte. */
+export async function obtenirReservation(idReservation: number): Promise<Reservation> {
+  const reponse = await axiosClient.get<Reservation>(`/reservations/${idReservation}`);
+  return reponse.data;
+}

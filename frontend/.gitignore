@@ -1,0 +1,18 @@
+# Dépendances
+node_modules/
+
+# Build
+dist/
+dist-ssr/
+
+# Environnement local
+.env
+.env.local
+
+# Caches outils
+.eslintcache
+*.tsbuildinfo
+
+# Logs
+npm-debug.log*
+yarn-error.log*

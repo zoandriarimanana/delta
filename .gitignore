@@ -1,0 +1,2 @@
+# Secrets de production (docker-compose.prod.yml) : jamais dans le dépôt.
+.env.production

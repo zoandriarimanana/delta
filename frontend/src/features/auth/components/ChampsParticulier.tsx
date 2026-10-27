@@ -1,0 +1,68 @@
+/**
+ * Champs d'identité d'un client particulier.
+ *
+ * Extrait de la page d'inscription : les deux blocs d'identité y sont
+ * interchangeables, et les garder en ligne aurait fait un composant dont la
+ * moitié des champs sont inertes selon le type choisi — le défaut que la
+ * séparation des formulaires de réservation évitait déjà.
+ */
+
+import { useTextes } from '@/lib/langue';
+
+import { TEXTES_AUTH } from '../auth.textes';
+import type { IdentiteParticulier } from '../auth.types';
+
+interface Proprietes {
+  valeurs: IdentiteParticulier;
+  surChangement: (valeurs: IdentiteParticulier) => void;
+}
+
+export default function ChampsParticulier({ valeurs, surChangement }: Proprietes) {
+  const t = useTextes(TEXTES_AUTH);
+  return (
+    <>
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
+        {t.nom}
+        <input
+          type="text"
+          required
+          value={valeurs.nom}
+          onChange={(evenement) =>
+            surChangement({ ...valeurs, nom: evenement.target.value })
+          }
+          className="rounded border border-gris-300 px-2 py-1"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
+        {t.prenom}
+        <input
+          type="text"
+          required
+          value={valeurs.prenom}
+          onChange={(evenement) =>
+            surChangement({ ...valeurs, prenom: evenement.target.value })
+          }
+          className="rounded border border-gris-300 px-2 py-1"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm text-gris-700">
+        {t.dateNaissance} <span className="text-gris-500">{t.facultative}</span>
+        <input
+          type="date"
+          value={valeurs.date_naissance ?? ''}
+          onChange={(evenement) =>
+            surChangement({
+              ...valeurs,
+              // Une chaîne vide n'est pas une date : on retire la clé plutôt
+              // que d'envoyer `""`, que le serveur refuserait en 422.
+              date_naissance: evenement.target.value || undefined,
+            })
+          }
+          className="rounded border border-gris-300 px-2 py-1"
+        />
+      </label>
+    </>
+  );
+}

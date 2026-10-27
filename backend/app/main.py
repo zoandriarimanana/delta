@@ -1,0 +1,228 @@
+"""Point d'assemblage de l'application FastAPI.
+
+Ce fichier ne contient aucune logique métier : il monte les routers, configure
+le CORS et enregistre la traduction des erreurs métier en réponses HTTP.
+
+Cette traduction est **globale** et non répétée dans chaque router : le mapping
+« erreur métier → code HTTP » est une décision d'application, pas de module. Un
+service lève `ConflitMetier` sans jamais savoir que cela vaudra un 409.
+"""
+
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+
+from app.core import expiration_periodique
+from app.core.config import settings
+from app.core.csrf import middleware_csrf
+from app.core.exceptions import (
+    AuthentificationInvalide,
+    AutorisationInsuffisante,
+    ConflitMetier,
+    ErreurMetier,
+    ReferenceInvalide,
+    RessourceIntrouvable,
+    ServiceIndisponible,
+)
+from app.core.rate_limit import limiter
+from app.routers import (
+    abonnement_router,
+    assistant_router,
+    auth_router,
+    avis_router,
+    beneficiaire_router,
+    categorie_produit_router,
+    client_entreprise_router,
+    commande_router,
+    consommation_repas_router,
+    demande_formation_router,
+    document_connaissance_router,
+    domaine_formation_router,
+    formation_router,
+    galerie_router,
+    livraison_router,
+    logement_router,
+    paiement_router,
+    personnel_auth_router,
+    personnel_router,
+    produit_router,
+    reservation_router,
+    salle_router,
+    session_formation_router,
+    session_router,
+    tableau_de_bord_router,
+    tarif_livraison_router,
+    taux_change_router,
+)
+
+
+@asynccontextmanager
+async def _cycle_de_vie(_: FastAPI) -> AsyncIterator[None]:
+    """Démarre l'expiration périodique des impayés, l'arrête à l'extinction
+    (13 octobre 2026, cf. `app/core/expiration_periodique.py`)."""
+    tache = expiration_periodique.demarrer()
+    yield
+    await expiration_periodique.arreter(tache)
+
+
+app = FastAPI(title=settings.PROJECT_NAME, lifespan=_cycle_de_vie)
+
+# Requis par `slowapi` : c'est ici qu'il va chercher le limiteur pour
+# appliquer les décorateurs `@limiter.limit(...)` posés sur les routers.
+app.state.limiter = limiter
+
+# Enregistré **avant** CORSMiddleware : Starlette empile les middlewares dans
+# l'ordre inverse d'enregistrement (le dernier ajouté devient le plus
+# extérieur). CORS doit envelopper le middleware CSRF, pas l'inverse — sinon
+# un 403 anti-CSRF, produit sans jamais atteindre CORSMiddleware, arriverait
+# au navigateur sans les en-têtes CORS attendus, illisible pour le frontend.
+app.middleware("http")(middleware_csrf)
+
+app.add_middleware(
+    CORSMiddleware,
+    # Liste explicite d'origines, jamais "*" : `allow_credentials=True` et
+    # l'origine joker sont incompatibles, et les navigateurs rejettent la
+    # combinaison. L'origine du frontend Vite vient de BACKEND_CORS_ORIGINS.
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.exception_handler(AuthentificationInvalide)
+async def _gerer_authentification_invalide(
+    request: Request, exc: AuthentificationInvalide
+) -> JSONResponse:
+    """Identifiants refusés → 401, avec l'en-tête d'authentification attendu."""
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={"detail": str(exc)},
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+@app.exception_handler(AutorisationInsuffisante)
+async def _gerer_autorisation_insuffisante(
+    request: Request, exc: AutorisationInsuffisante
+) -> JSONResponse:
+    """Droits insuffisants → 403.
+
+    Pas d'en-tête `WWW-Authenticate` ici, contrairement au 401 : il invite à
+    fournir des identifiants, or ceux-ci sont valides. Ce n'est pas
+    l'authentification qui manque, c'est le droit.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN, content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(ConflitMetier)
+async def _gerer_conflit_metier(request: Request, exc: ConflitMetier) -> JSONResponse:
+    """Ressource déjà existante ou état incompatible → 409."""
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(RessourceIntrouvable)
+async def _gerer_ressource_introuvable(
+    request: Request, exc: RessourceIntrouvable
+) -> JSONResponse:
+    """Ressource désignée par l'URL absente → 404."""
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(ReferenceInvalide)
+async def _gerer_reference_invalide(
+    request: Request, exc: ReferenceInvalide
+) -> JSONResponse:
+    """Clé étrangère du corps ne désignant rien → 422, jamais 404.
+
+    L'URL est valide, c'est le contenu envoyé qui ne l'est pas — au même titre
+    qu'un prix négatif. Voir `docs/architecture.md`.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(RateLimitExceeded)
+async def _gerer_limite_de_debit(
+    request: Request, exc: RateLimitExceeded
+) -> JSONResponse:
+    """Trop de tentatives → 429.
+
+    Traduit ici plutôt que de garder la réponse par défaut de `slowapi`
+    (`{"error": ...}`) : le reste de l'API répond toujours `{"detail": ...}`,
+    et ce n'est pas au client de connaître la bibliothèque qui applique la
+    limite.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={"detail": "Trop de tentatives. Réessayez dans un instant."},
+    )
+
+
+@app.exception_handler(ServiceIndisponible)
+async def _gerer_service_indisponible(
+    request: Request, exc: ServiceIndisponible
+) -> JSONResponse:
+    """503 : un fournisseur externe ne répond pas, ou l'assistant est coupé.
+
+    Ni la faute de la requête (4xx) ni un bogue (500) : l'appelant peut
+    réessayer plus tard. `Retry-After` le lui dit explicitement.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"detail": str(exc)},
+        headers={"Retry-After": "30"},
+    )
+
+
+@app.exception_handler(ErreurMetier)
+async def _gerer_erreur_metier(request: Request, exc: ErreurMetier) -> JSONResponse:
+    """Filet pour toute erreur métier sans traduction dédiée → 400.
+
+    Enregistré en dernier recours : Starlette parcourt la MRO de l'exception et
+    retient le gestionnaire le plus spécifique, donc une `ConflitMetier` est
+    bien servie par le handler ci-dessus, pas par celui-ci.
+    """
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(exc)}
+    )
+
+
+app.include_router(auth_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(session_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(categorie_produit_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(produit_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(commande_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(personnel_auth_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(personnel_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(livraison_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(domaine_formation_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(formation_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(session_formation_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(reservation_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(salle_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(logement_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(galerie_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(tarif_livraison_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(taux_change_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(abonnement_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(beneficiaire_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(client_entreprise_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(consommation_repas_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(avis_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(paiement_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(assistant_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(document_connaissance_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(demande_formation_router.router, prefix=settings.API_V1_PREFIX)
+app.include_router(tableau_de_bord_router.router, prefix=settings.API_V1_PREFIX)
