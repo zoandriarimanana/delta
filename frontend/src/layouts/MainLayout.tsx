@@ -16,17 +16,22 @@
  * **Sur grand écran**, les pages du compte vivent dans le menu « Mon compte »
  * et le panier est une icône : une fois connecté, huit liens à plat faisaient
  * déborder la barre (logo tronqué, libellés sur deux lignes).
+ *
+ * **Sur l'accueil**, l'en-tête flotte transparent sur la photo du bandeau,
+ * liens et logo en blanc, et redevient plein dès qu'on fait défiler ou qu'on
+ * ouvre le menu mobile. Partout ailleurs, il reste plein et collant.
  */
 
 import { useState } from 'react';
 import { Menu, ShoppingCart, UserRound, X } from 'lucide-react';
-import { NavLink, Outlet, useNavigate } from 'react-router';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 
 import LogoDelta from '@/components/ui/LogoDelta';
 import BulleAssistant from '@/features/assistant/components/BulleAssistant';
 import { useDeconnexion } from '@/features/auth/auth.hooks';
 import { usePanier } from '@/features/commande/commande.hooks';
 import { useLangue, useTextes } from '@/lib/langue';
+import { useDefilement } from '@/lib/useDefilement';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
 import BoutonTheme from './BoutonTheme';
@@ -63,14 +68,21 @@ const LIENS_COMPTE: Lien[] = [
   { vers: '/reservations', cle: 'mesReservations' },
 ];
 
-function classeLien({ isActive }: { isActive: boolean }): string {
-  // Soulignement plutôt que pavé plein : la rubrique active se lit sans que
-  // la barre change de hauteur ni de largeur d'une page à l'autre.
-  const base =
-    'relative whitespace-nowrap px-3 py-2 text-sm font-medium no-underline transition-colors after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded-full after:transition-colors';
-  return isActive
-    ? `${base} text-primaire after:bg-primaire`
-    : `${base} text-gris-700 hover:text-primaire after:bg-transparent`;
+function classeLien(surPhoto: boolean) {
+  return ({ isActive }: { isActive: boolean }): string => {
+    // Soulignement plutôt que pavé plein : la rubrique active se lit sans que
+    // la barre change de hauteur ni de largeur d'une page à l'autre.
+    const base =
+      'relative whitespace-nowrap px-3 py-2 text-sm font-medium no-underline transition-colors after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded-full after:transition-colors';
+    if (surPhoto) {
+      return isActive
+        ? `${base} text-white after:bg-amber-300`
+        : `${base} text-white/80 hover:text-white after:bg-transparent`;
+    }
+    return isActive
+      ? `${base} text-primaire after:bg-primaire`
+      : `${base} text-gris-700 hover:text-primaire after:bg-transparent`;
+  };
 }
 
 function classeLienMobile({ isActive }: { isActive: boolean }): string {
@@ -96,6 +108,12 @@ export default function MainLayout() {
 
   const [menuOuvert, setMenuOuvert] = useState(false);
   const fermerMenu = () => setMenuOuvert(false);
+
+  const surAccueil = useLocation().pathname === '/';
+  const defile = useDefilement();
+  // En-tête transparent sur la photo de l'accueil, tant qu'on est en haut de
+  // page et que le menu mobile est fermé (il lui faut un fond lisible).
+  const surPhoto = surAccueil && !defile && !menuOuvert;
   const deconnecter = useDeconnexion();
   const naviguer = useNavigate();
 
@@ -118,9 +136,18 @@ export default function MainLayout() {
 
   return (
     <div className="flex min-h-screen flex-col overflow-x-clip bg-fond">
-      <header className="sticky top-0 z-20 border-b border-gris-200 bg-surface/95 shadow-sm backdrop-blur">
+      <header
+        className={`${surAccueil ? 'fixed inset-x-0' : 'sticky'} top-0 z-30 border-b transition-colors duration-300 ${
+          surPhoto
+            ? 'border-transparent bg-transparent'
+            : 'border-gris-200 bg-surface/95 shadow-sm backdrop-blur'
+        }`}
+      >
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <NavLink to="/" className="shrink-0 transition-opacity hover:opacity-80">
+          <NavLink
+            to="/"
+            className={`shrink-0 transition-opacity hover:opacity-80 ${surPhoto ? 'logo-sur-photo' : ''}`}
+          >
             <LogoDelta />
           </NavLink>
 
@@ -133,7 +160,7 @@ export default function MainLayout() {
                 key={lien.vers}
                 to={lien.vers}
                 end={lien.exact}
-                className={classeLien}
+                className={classeLien(surPhoto)}
               >
                 {t[lien.cle]}
               </NavLink>
@@ -141,15 +168,17 @@ export default function MainLayout() {
           </nav>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <BoutonTheme />
+            <BoutonTheme surPhoto={surPhoto} />
             <NavLink
               to="/panier"
               aria-label={nombre > 0 ? t.panierArticles(nombre) : t.panier}
               className={({ isActive }) =>
                 `relative rounded-full p-2.5 transition-colors ${
-                  isActive
-                    ? 'bg-primaire/10 text-primaire'
-                    : 'text-gris-700 hover:bg-gris-100 hover:text-primaire'
+                  surPhoto
+                    ? 'text-white hover:bg-white/10 hover:text-amber-200'
+                    : isActive
+                      ? 'bg-primaire/10 text-primaire'
+                      : 'text-gris-700 hover:bg-gris-100 hover:text-primaire'
                 }`
               }
             >
@@ -159,7 +188,7 @@ export default function MainLayout() {
 
             <div className="hidden lg:block">
               {connecte ? (
-                <MenuCompte surDeconnexion={seDeconnecter} />
+                <MenuCompte surDeconnexion={seDeconnecter} surPhoto={surPhoto} />
               ) : (
                 <NavLink
                   to="/connexion"
@@ -174,7 +203,11 @@ export default function MainLayout() {
             <button
               type="button"
               onClick={() => setMenuOuvert(!menuOuvert)}
-              className="rounded-lg p-2 text-gris-700 transition-colors hover:bg-gris-100 lg:hidden"
+              className={`rounded-lg p-2 transition-colors lg:hidden ${
+                surPhoto
+                  ? 'text-white hover:bg-white/10'
+                  : 'text-gris-700 hover:bg-gris-100'
+              }`}
               aria-label={menuOuvert ? t.fermerMenu : t.ouvrirMenu}
               aria-expanded={menuOuvert}
             >

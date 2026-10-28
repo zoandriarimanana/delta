@@ -104,3 +104,11 @@ body {
 .dark .logo-delta-symbole {
   filter: brightness(2.2) saturate(1.2);
 }
+
+/* Logo en blanc sur la photo de l'accueil (en-tête transparent), dans les
+   deux thèmes : le second sélecteur l'emporte sur l'éclaircissement du mode
+   sombre ci-dessus. */
+.logo-sur-photo img,
+.dark .logo-sur-photo img.logo-delta-symbole {
+  filter: brightness(0) invert(1);
+}

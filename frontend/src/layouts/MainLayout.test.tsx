@@ -240,3 +240,45 @@ it('se déconnecte sans rechargement : la nav se met à jour, le panier survit',
   // (`commande.panier.ts`), indépendant de la session.
   expect(screen.getByTestId('compteur-panier').textContent).toBe('2');
 });
+
+it('rend l’en-tête transparent sur l’accueil, puis plein au défilement', () => {
+  // Sur la photo du bandeau, l'en-tête flotte transparent ; dès qu'on
+  // descend, il retrouve son fond pour rester lisible sur la page.
+  afficher();
+
+  expect(screen.getByRole('banner').className).toContain('bg-transparent');
+
+  act(() => {
+    window.scrollY = 200;
+    window.dispatchEvent(new Event('scroll'));
+  });
+  expect(screen.getByRole('banner').className).toContain('bg-surface');
+
+  act(() => {
+    window.scrollY = 0;
+    window.dispatchEvent(new Event('scroll'));
+  });
+});
+
+it('garde l’en-tête plein quand le menu mobile est ouvert sur l’accueil', async () => {
+  afficher();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Ouvrir le menu' }));
+
+  expect(screen.getByRole('banner').className).toContain('bg-surface');
+});
+
+it('garde l’en-tête plein hors de l’accueil', () => {
+  render(
+    <MemoryRouter initialEntries={['/produits']}>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          <Route path="produits" element={<p>catalogue</p>} />
+        </Route>
+      </Routes>
+    </MemoryRouter>
+  );
+
+  expect(screen.getByRole('banner').className).toContain('bg-surface');
+  expect(screen.getByRole('banner').className).not.toContain('bg-transparent');
+});

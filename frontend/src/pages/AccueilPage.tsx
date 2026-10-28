@@ -1,5 +1,15 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+/**
+ * Page d'accueil.
+ *
+ * La photo d'une boutique couvre tout le haut de la page, sous l'en-tête
+ * transparent (`MainLayout`), et porte à la fois le bandeau et les cartes
+ * des modules, en verre. Le voile chocolat et les accents dorés sont des
+ * couleurs fixes : ils dépendent de la photo, pas du thème — le texte reste
+ * lisible en mode clair comme en mode sombre. Les boutons gardent l'orange
+ * du logo (`action`).
+ */
+
+import { Link } from 'react-router';
 import {
   ArrowRight,
   Bed,
@@ -9,216 +19,178 @@ import {
   Croissant,
   ShoppingCart,
   User,
+  type LucideIcon,
 } from 'lucide-react';
 
 import fondAccueil from '@/assets/accueil-fond.jpg';
 
+import { imagePour } from '@/lib/images';
 import { useTextes } from '@/lib/langue';
 import { useEstConnecte } from '@/lib/useEstConnecte';
 
+import CarteModule from './accueil/CarteModule';
 import { TEXTES_PAGES } from './pages.textes';
 
 type Textes = (typeof TEXTES_PAGES)['fr'];
 
-function modules(t: Textes, connecte: boolean) {
+interface Module {
+  vers: string;
+  titre: string;
+  description: string;
+  icone: LucideIcon;
+  image?: string;
+}
+
+function modules(t: Textes, connecte: boolean): Module[] {
   return [
     {
-      href: '/produits',
-      title: t.produits,
+      vers: '/produits',
+      titre: t.produits,
       description: t.produitsDescription,
-      icon: Croissant,
+      icone: Croissant,
+      image: imagePour('patisserie', 0, 600),
     },
     {
-      href: '/formations',
-      title: t.formations,
+      vers: '/formations',
+      titre: t.formations,
       description: t.formationsDescription,
-      icon: ChefHat,
+      icone: ChefHat,
+      image: imagePour('formation', 0, 600),
     },
     {
-      href: '/salles',
-      title: t.salles,
+      vers: '/salles',
+      titre: t.salles,
       description: t.sallesDescription,
-      icon: Building2,
+      icone: Building2,
+      image: imagePour('salle', 0, 600),
     },
     {
-      href: '/logements',
-      title: t.hebergement,
+      vers: '/logements',
+      titre: t.hebergement,
       description: t.hebergementDescription,
-      icon: Bed,
+      icone: Bed,
+      image: imagePour('logement', 0, 600),
     },
     {
-      href: '/panier',
-      title: t.panier,
+      vers: '/panier',
+      titre: t.panier,
       description: t.panierDescription,
-      icon: ShoppingCart,
+      icone: ShoppingCart,
     },
-    connecte
-      ? {
-          href: '/commandes',
-          title: t.monCompte,
-          description: t.compteClient,
-          icon: User,
-        }
-      : {
-          href: '/connexion',
-          title: t.monCompte,
-          description: t.compteVisiteur,
-          icon: User,
-        },
+    {
+      vers: connecte ? '/commandes' : '/connexion',
+      titre: t.monCompte,
+      description: connecte ? t.compteClient : t.compteVisiteur,
+      icone: User,
+    },
   ];
 }
 
 export default function AccueilPage() {
   const t = useTextes(TEXTES_PAGES);
-  const [selectedHref, setSelectedHref] = useState<string | null>(null);
-  const navigate = useNavigate();
   const connecte = useEstConnecte();
-  const liste = modules(t, connecte);
-
-  const handleModuleClick = (href: string) => {
-    setSelectedHref(href);
-    setTimeout(() => {
-      navigate(href);
-    }, 200);
-  };
 
   return (
-    <div className="space-y-12">
-      {/* Bandeau d'accueil : la photo d'une boutique occupe toute la largeur
-          de l'écran, au-delà du conteneur du layout. Le voile sombre est fixe
-          (il dépend de la photo, pas du thème) : le texte reste lisible en
-          mode clair comme en mode sombre. */}
+    <div className="space-y-16 pb-8">
+      {/* Bandeau pleine largeur, au-delà du conteneur du layout, qui remonte
+          sous l'en-tête transparent. */}
       <section className="relative -mt-8 left-1/2 w-screen -translate-x-1/2 overflow-hidden">
         <img
           src={fondAccueil}
           alt=""
           aria-hidden
           fetchPriority="high"
-          className="absolute inset-0 h-full w-full object-cover object-center"
+          className="absolute inset-0 h-full w-full scale-105 object-cover object-center blur-[2px]"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0a1633]/95 via-[#0a1633]/70 to-[#0a1633]/20" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-fond to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#1a0f08]/85 via-[#1a0f08]/70 to-[#1a0f08]/90" />
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-fond to-transparent" />
 
-        <div className="relative mx-auto flex min-h-[520px] max-w-6xl flex-col justify-center px-4 pb-28 pt-16 md:min-h-[600px]">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#ffb37a] sm:text-sm">
-            {t.surtitre}
-          </p>
-          <h1 className="mt-4 max-w-2xl text-balance font-serif text-4xl font-bold leading-tight text-white sm:text-5xl md:text-6xl">
-            {t.bienvenue}
-          </h1>
-          <p className="mt-5 max-w-xl text-lg text-white/85">{t.accroche}</p>
+        <div className="relative mx-auto max-w-6xl px-4 pb-28 pt-32 sm:pt-40">
+          <div className="mx-auto max-w-3xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-300 sm:text-sm">
+              {t.surtitre}
+            </p>
+            <h1 className="mt-6 text-balance font-serif text-4xl font-bold leading-[1.1] tracking-tight text-white sm:text-6xl md:text-7xl">
+              {t.bienvenue}
+            </h1>
+            <div
+              aria-hidden
+              className="mx-auto mt-6 h-px w-24 bg-gradient-to-r from-transparent via-amber-300 to-transparent"
+            />
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-white/85 sm:text-xl">
+              {t.accroche}
+            </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
-              to="/produits"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-action px-7 py-3.5 font-semibold text-white no-underline shadow-lg transition hover:-translate-y-0.5 hover:bg-action-fonce"
-            >
-              {t.commanderProduits}
-              <ArrowRight size={18} aria-hidden />
-            </Link>
-            <Link
-              to="/formations"
-              className="inline-flex items-center justify-center rounded-full border-2 border-white/70 px-7 py-3 font-semibold text-white no-underline backdrop-blur-sm transition hover:bg-white/10"
-            >
-              {t.voirFormations}
-            </Link>
+            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Link
+                to="/produits"
+                className="inline-flex transform items-center justify-center gap-2 rounded-full bg-action px-8 py-3.5 font-semibold text-white no-underline shadow-lg shadow-black/30 transition-all duration-300 hover:scale-105 hover:bg-action-fonce hover:shadow-xl hover:shadow-action/30"
+              >
+                {t.commanderProduits}
+                <ArrowRight size={18} aria-hidden />
+              </Link>
+              <Link
+                to="/formations"
+                className="inline-flex transform items-center justify-center rounded-full border border-white/30 bg-white/10 px-8 py-3.5 font-semibold text-white no-underline shadow-lg shadow-black/20 backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-amber-300/60 hover:bg-white/15"
+              >
+                {t.voirFormations}
+              </Link>
+            </div>
+
+            <ul className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-3 text-sm text-white/80">
+              {t.atouts.map((atout) => (
+                <li key={atout} className="flex items-center gap-2">
+                  <Check size={16} aria-hidden className="text-amber-300" />
+                  {atout}
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/80">
-            {t.atouts.map((atout) => (
-              <li key={atout} className="flex items-center gap-1.5">
-                <Check size={16} aria-hidden className="text-[#ffb37a]" />
-                {atout}
-              </li>
+          <div className="mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {modules(t, connecte).map((module) => (
+              <CarteModule
+                key={module.titre}
+                vers={module.vers}
+                titre={module.titre}
+                description={module.description}
+                icone={module.icone}
+                image={module.image}
+                appel={t.decouvrirCarte}
+              />
             ))}
-          </ul>
+          </div>
         </div>
         <p className="absolute bottom-2 right-3 text-[10px] text-white/50">
           {t.credit}
         </p>
       </section>
 
-      {/* Grille de modules, remontée sur le bas de la photo */}
-      <section className="relative z-10 -mt-32 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {liste.map((module) => (
-          <ModuleCard
-            key={module.href}
-            href={module.href}
-            title={module.title}
-            description={module.description}
-            icon={module.icon}
-            isSelected={selectedHref === module.href}
-            otherSelected={selectedHref !== null && selectedHref !== module.href}
-            onSelect={handleModuleClick}
-          />
-        ))}
-      </section>
+      <div className="flex items-center justify-center gap-4">
+        <span aria-hidden className="h-px w-12 bg-amber-400/60" />
+        <p className="text-center font-serif text-sm italic text-gris-500">
+          {t.devise}
+        </p>
+        <span aria-hidden className="h-px w-12 bg-amber-400/60" />
+      </div>
 
-      <p className="text-center text-sm italic text-gris-500">{t.devise}</p>
-
-      {/* CTA section */}
-      <section className="bg-primaire rounded-xl p-8 text-center">
-        <h2 className="text-2xl font-serif font-bold text-sur-couleur mb-3">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primaire to-primaire-fonce px-6 py-12 text-center shadow-xl sm:px-12">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent"
+        />
+        <h2 className="font-serif text-2xl font-bold text-sur-couleur sm:text-3xl">
           {t.decouvrir}
         </h2>
-        <p className="text-sur-couleur/85 mb-6">{t.decouvrirTexte}</p>
-        <a
-          href="/produits"
-          className="inline-block px-6 py-3 bg-surface text-primaire font-semibold rounded-lg hover:bg-gris-100 transition-colors"
+        <p className="mx-auto mt-3 max-w-xl text-sur-couleur/85">{t.decouvrirTexte}</p>
+        <Link
+          to="/produits"
+          className="mt-8 inline-flex transform items-center gap-2 rounded-full bg-surface px-7 py-3 font-semibold text-primaire no-underline shadow-md transition-all duration-300 hover:scale-105 hover:shadow-lg"
         >
           {t.explorer}
-        </a>
+          <ArrowRight size={18} aria-hidden />
+        </Link>
       </section>
-    </div>
-  );
-}
-
-import type { LucideIcon } from 'lucide-react';
-
-interface ModuleCardProps {
-  href: string;
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  isSelected: boolean;
-  otherSelected: boolean;
-  onSelect: (href: string) => void;
-}
-
-function ModuleCard({
-  href,
-  title,
-  description,
-  icon: Icon,
-  isSelected,
-  otherSelected,
-  onSelect,
-}: ModuleCardProps) {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onSelect(href);
-    }
-  };
-
-  const baseClasses =
-    'p-6 bg-surface rounded-xl border-l-4 border-primaire cursor-pointer transition-all duration-300';
-  const selectedClasses = isSelected
-    ? 'scale-105 shadow-xl'
-    : 'shadow-md hover:shadow-xl hover:-translate-y-1 focus:ring-2 focus:ring-primaire';
-  const fadeClasses = otherSelected ? 'opacity-60' : '';
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onSelect(href)}
-      onKeyDown={handleKeyDown}
-      className={`${baseClasses} ${selectedClasses} ${fadeClasses}`}
-    >
-      <Icon className="w-8 h-8 text-primaire mb-3" />
-      <h3 className="text-lg font-serif font-bold text-primaire mb-2">{title}</h3>
-      <p className="text-sm text-gris-600">{description}</p>
     </div>
   );
 }

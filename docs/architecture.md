@@ -535,6 +535,12 @@ l'en-tête public et dans la barre latérale du personnel. Les voiles posés
 sur une photo (`bg-white/85`, dégradés noirs) restent fixes : ils
 dépendent de l'image, pas du thème.
 
+**Accueil** (28 octobre 2026) : la photo du bandeau porte aussi les cartes
+des modules, en verre, et l'en-tête y flotte transparent (`MainLayout`,
+seulement sur `/`, plein dès qu'on défile). Tout ce qui est posé sur la
+photo — voile chocolat, verre, texte blanc, **accents dorés** (`amber-*`) —
+est en couleurs fixes, pour la même raison. Les boutons restent `action`.
+
 ### Devises : afficher en devise, payer au taux figé
 
 > **Retiré de l'interface le 14 octobre 2026** (demande de l'utilisateur) :

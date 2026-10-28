@@ -2201,6 +2201,37 @@ Quatre chantiers, livrés et vérifiés l'un après l'autre, dans cet ordre
       l'administration fixe le prix (devis), le client l'accepte et paie un
       acompte.
 
+**Travaux hors sprint : refonte de la page d'accueil (demande du 28 octobre
+2026).** Hors roadmap, signalé à l'utilisateur avant le code. Demande : un
+accueil plus moderne et haut de gamme, effet de verre (« glassmorphism »).
+Décision de l'utilisateur : **palette du logo gardée** (bouton orange
+`action`), voile chocolat sur la photo et **accents dorés** en touche.
+
+- [x] **Bandeau** : la photo de boutique couvre tout le haut de page, titre
+      et sous-titre centrés, deux boutons (survol agrandi, ombre douce).
+- [x] **Cartes en verre** posées **sur la photo** (le verre ne se voit que
+      sur un fond sombre) : fond translucide, bordure claire, flou, ombre,
+      lévitation et bordure dorée au survol, icône Lucide, titre gras,
+      description sur deux lignes au plus. Les quatre cartes du catalogue
+      portent une illustration discrète qui zoome au survol.
+- [x] **Barre de navigation transparente sur l'accueil seulement**, liens et
+      logo en blanc sur la photo ; elle redevient pleine dès qu'on fait
+      défiler ou qu'on ouvre le menu mobile. Les autres pages ne changent
+      pas. Couleurs fixes sur la photo (elles dépendent de l'image, pas du
+      thème), comme le voile existant.
+      — Livré. `pages/accueil/CarteModule.tsx` (carte en verre, lien
+      entier, plus d'animation au clic qui retardait la navigation),
+      `lib/useDefilement.ts`, variantes `surPhoto` de `BoutonTheme` et
+      `MenuCompte`, logo passé en blanc par un filtre CSS
+      (`.logo-sur-photo`). Le léger flou demandé est posé **sur la photo**
+      et non en `backdrop-filter` sur le voile : même effet, moins coûteux.
+      Frontend vert (tests de l'accueil et de l'en-tête transparent
+      ajoutés). Vérifié dans Chromium headless, clair, sombre et mobile ;
+      positions relevées dans le DOM (en-tête et bandeau en haut, aucun
+      défilement horizontal). Les captures headless très hautes montraient
+      une bande vide en haut : un artefact de capture (fenêtre plus haute
+      que la zone d'affichage), pas un défaut de la page.
+
 **Travaux hors sprint : paiement mobile money à la validation, y compris sans
 compte (demande du 9 octobre 2026).** Hors roadmap, signalé à l'utilisateur.
 Jusqu'ici, seul un client connecté pouvait payer, et seulement depuis « Mes

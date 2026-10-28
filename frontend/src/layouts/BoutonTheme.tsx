@@ -15,11 +15,14 @@ import { TEXTES_LAYOUT } from './layout.textes';
 interface Proprietes {
   /** Avec libellé visible (barre latérale) ou icône seule (en-tête). */
   avecLibelle?: boolean;
+  /** Icône blanche, posée sur la photo de l'accueil (en-tête transparent). */
+  surPhoto?: boolean;
   className?: string;
 }
 
 export default function BoutonTheme({
   avecLibelle = false,
+  surPhoto = false,
   className = '',
 }: Proprietes) {
   const { theme, basculer } = useTheme();
@@ -34,7 +37,11 @@ export default function BoutonTheme({
       onClick={basculer}
       aria-label={libelle}
       title={libelle}
-      className={`flex items-center gap-3 rounded-full p-2.5 text-gris-700 transition-colors hover:bg-gris-100 hover:text-primaire ${className}`}
+      className={`flex items-center gap-3 rounded-full p-2.5 transition-colors ${
+        surPhoto
+          ? 'text-white hover:bg-white/10 hover:text-amber-200'
+          : 'text-gris-700 hover:bg-gris-100 hover:text-primaire'
+      } ${className}`}
     >
       <Icone size={20} aria-hidden />
       {avecLibelle && (

@@ -26,6 +26,8 @@ import { TEXTES_LAYOUT } from './layout.textes';
 
 interface Proprietes {
   surDeconnexion: () => void;
+  /** Bouton blanc, posé sur la photo de l'accueil (en-tête transparent). */
+  surPhoto?: boolean;
 }
 
 const ENTREES = [
@@ -33,7 +35,7 @@ const ENTREES = [
   { vers: '/reservations', cle: 'mesReservations' as const, icone: CalendarCheck },
 ] as const;
 
-export default function MenuCompte({ surDeconnexion }: Proprietes) {
+export default function MenuCompte({ surDeconnexion, surPhoto = false }: Proprietes) {
   const t = useTextes(TEXTES_LAYOUT);
   const [ouvert, setOuvert] = useState(false);
   const conteneur = useRef<HTMLDivElement>(null);
@@ -62,7 +64,11 @@ export default function MenuCompte({ surDeconnexion }: Proprietes) {
         onClick={() => setOuvert((valeur) => !valeur)}
         aria-expanded={ouvert}
         aria-haspopup="menu"
-        className="flex items-center gap-2 rounded-full border border-gris-300 px-3 py-2 text-sm font-medium text-gris-700 transition-colors hover:border-primaire hover:text-primaire"
+        className={`flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition-colors ${
+          surPhoto
+            ? 'border-white/40 text-white hover:border-amber-300 hover:text-amber-200'
+            : 'border-gris-300 text-gris-700 hover:border-primaire hover:text-primaire'
+        }`}
       >
         <UserRound size={18} aria-hidden />
         {t.monCompte}

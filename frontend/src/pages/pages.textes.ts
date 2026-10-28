@@ -33,6 +33,7 @@ const fr = {
   decouvrirTexte:
     'Explorez notre catalogue de produits, formations et services. Tous les détails vous attendent.',
   explorer: 'Commencer à explorer',
+  decouvrirCarte: 'Découvrir',
   introuvable: 'Cette page n’existe pas.',
   retourAccueil: 'Retour à l’accueil',
 };
@@ -70,6 +71,7 @@ export const TEXTES_PAGES: Textes<typeof fr> = {
     decouvrirTexte:
       'Browse our catalogue of products, training and services. Every detail is waiting for you.',
     explorer: 'Start exploring',
+    decouvrirCarte: 'Explore',
     introuvable: 'This page does not exist.',
     retourAccueil: 'Back to home',
   },
