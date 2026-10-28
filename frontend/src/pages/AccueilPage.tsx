@@ -161,9 +161,6 @@ export default function AccueilPage() {
             ))}
           </div>
         </div>
-        <p className="absolute bottom-2 right-3 text-[10px] text-white/50">
-          {t.credit}
-        </p>
       </section>
 
       <div className="flex items-center justify-center gap-4">
