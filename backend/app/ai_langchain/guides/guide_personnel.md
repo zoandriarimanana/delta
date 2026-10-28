@@ -1,7 +1,7 @@
 # Guide du back-office Delta, pour le personnel
 
 ## Accéder à l'espace personnel
-Depuis la page « Connexion » du site, suivez le lien « Espace personnel ». Saisissez votre « Adresse professionnelle » et votre « Mot de passe ». L'espace personnel s'ouvre avec un menu à gauche : la section « Général » contient « Prise de commande » ; la section « Gestion » contient « Personnel », « Réservations », « Commandes », « Abonnements », « Catalogue », « Catégories », « Salles », « Logements », « Domaines » et « Assistant IA ». La section « Gestion » n'apparaît qu'aux administrateurs : un salarié sans ce droit ne la voit pas, et le serveur refuserait de toute façon ses actions. « Déconnexion » est en bas du menu.
+En bas de n'importe quelle page du site, suivez le lien « Administration » (à côté d'un cadenas). Saisissez votre « Adresse professionnelle » et votre « Mot de passe ». L'espace personnel s'ouvre avec un menu à gauche : la section « Général » contient « Prise de commande » ; la section « Gestion » contient « Personnel », « Réservations », « Commandes », « Abonnements », « Catalogue », « Catégories », « Salles », « Logements », « Domaines » et « Assistant IA ». La section « Gestion » n'apparaît qu'aux administrateurs : un salarié sans ce droit ne la voit pas, et le serveur refuserait de toute façon ses actions. « Déconnexion » est en bas du menu.
 
 
 ## Consulter le tableau de bord

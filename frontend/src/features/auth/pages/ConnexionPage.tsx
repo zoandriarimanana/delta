@@ -116,13 +116,6 @@ export default function ConnexionPage() {
           {t.creerCompte}
         </Link>
       </p>
-
-      <p className="mt-2 text-sm text-gris-600">
-        {t.membreEquipe}{' '}
-        <Link to="/personnel/connexion" className="text-gris-700 underline">
-          {t.espacePersonnel}
-        </Link>
-      </p>
     </section>
   );
 }
